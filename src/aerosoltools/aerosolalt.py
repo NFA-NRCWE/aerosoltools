@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from aerosol1d import Aerosol1D
+from .aerosol1d import Aerosol1D
 params = {'legend.fontsize': 15,
          'axes.labelsize': 20,
          'axes.titlesize': 20,
