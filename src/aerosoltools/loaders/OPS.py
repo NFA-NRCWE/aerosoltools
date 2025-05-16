@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 import datetime as datetime
-import Common as Com
+from .Common import detect_delimiter
 from ..aerosol2d import Aerosol2D
 
 ###############################################################################
@@ -40,7 +40,7 @@ def Load_OPS_file(file: str, extra_data: bool = False):
       or direct instrument export file formats.
     - If new formats are introduced, this function should be updated accordingly.
     """
-    encoding, delimiter = Com.detect_delimiter(file)
+    encoding, delimiter = detect_delimiter(file)
 
     # Peek at the first line to determine file type
     first_line = np.genfromtxt(
@@ -98,7 +98,7 @@ def Load_OPS_AIM(file: str, extra_data: bool = False, encoding: str = None, deli
     """
     # Auto-detect encoding and delimiter if not provided
     if encoding is None and delimiter is None:
-        encoding, delimiter = Com.detect_delimiter(file)
+        encoding, delimiter = detect_delimiter(file)
     elif encoding is None or delimiter is None:
         raise ValueError("Provide both encoding and delimiter, or let them be auto-detected.")
 
@@ -225,7 +225,7 @@ def Load_OPS_Direct(file: str, extra_data: bool = False, encoding: str = None, d
     - Requires `Com.detect_delimiter()` for auto-formatting detection.
     """
     if encoding is None and delimiter is None:
-        encoding, delimiter = Com.detect_delimiter(file)
+        encoding, delimiter = detect_delimiter(file)
 
     # Load measurement data, excluding last header-only bin
     df = pd.read_csv(file, header=37, encoding=encoding, delimiter=delimiter)
