@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import datetime as datetime
 import Common as Com
-from aerosolalt import AerosolAlt
+from ..aerosolalt import AerosolAlt
 from matplotlib.dates import date2num
 
 ###############################################################################
