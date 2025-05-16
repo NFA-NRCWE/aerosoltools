@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 from aerosoltools.loaders import Load_ELPI_file
 import os
 
