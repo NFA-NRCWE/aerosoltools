@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 import Common as Com
-from aerosol2d import Aerosol2D
+from ..aerosol2d import Aerosol2D
 
 ###############################################################################
 
