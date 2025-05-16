@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 import datetime as datetime
-import Common as Com
+from .Common import detect_delimiter
 from ..aerosolalt import AerosolAlt
 from matplotlib.dates import date2num
 
@@ -40,7 +40,7 @@ def Load_Partector_file(file: str, extra_data: bool = False):
     """
 
     try:
-        encoding, delimiter = Com.detect_delimiter(file, sample_lines=30)
+        encoding, delimiter = detect_delimiter(file, sample_lines=30)
     except Exception:
         delimiter = "\t"
 
