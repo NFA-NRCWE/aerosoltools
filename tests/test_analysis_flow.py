@@ -36,7 +36,16 @@ def test_full_elpi_pipeline_with_plotting():
     data.plot_timeseries(y_3d=(1, 0), mark_activities=True, ax1=axs[0, 1], ax2=axs[1, 1])
 
     summary_table = data.summarize()
+    
+    # Must be a DataFrame
     assert isinstance(summary_table, pd.DataFrame), "summary_table is not a DataFrame"
-    expected_cols = ["All data", "Background", "Emission", "Decay"]
-    assert list(summary_table.columns) == expected_cols, f"Unexpected columns: {list(summary_table.columns)}"
+    
+    # Must have a 'Segment' column
+    assert "Segment" in summary_table.columns, "'Segment' column missing from summary_table"
+    
+    # Must include expected segment names
+    expected_segments = {"All data", "Background", "Emission", "Decay"}
+    found_segments = set(summary_table["Segment"])
+    missing = expected_segments - found_segments
+    assert not missing, f"Missing expected segments: {missing}"
   
