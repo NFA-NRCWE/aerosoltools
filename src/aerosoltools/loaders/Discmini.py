@@ -44,7 +44,7 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False):
         raise Exception("DiSCmini data has not been converted or delimiter could not be detected.")
 
     # Load selected columns: DateTime, Number, Size, LDSA, etc.
-    df = pd.read_csv(file, header=4, encoding=encoding, delimiter=delimiter, usecols=range(0, 7))
+    df = pd.read_csv(file, header=4, encoding=encoding, delimiter=delimiter, usecols=range(0, 6))
     df.drop(columns=['Time'], inplace=True)
     df.rename(columns={'TimeStamp': 'Datetime', 'Number': 'Total_conc'}, inplace=True)
 
