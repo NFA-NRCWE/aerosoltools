@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-import Common as Com
+from .Common import detect_delimiter
 from ..aerosol2d import Aerosol2D
 
 ###############################################################################
@@ -35,7 +35,7 @@ def Load_NS_file(file: str, extra_data: bool = False) -> Aerosol2D:
     - Total concentration is recomputed by summing over bins.
     """
     # Auto-detect encoding and delimiter
-    encoding, delimiter = Com.detect_delimiter(file)
+    encoding, delimiter = detect_delimiter(file)
 
     # Load full dataset
     ns_df = pd.read_csv(file, delimiter=delimiter, decimal='.', header=5, encoding=encoding)
