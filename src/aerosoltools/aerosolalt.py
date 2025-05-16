@@ -8,6 +8,6 @@ params = {'legend.fontsize': 15,
          'figure.figsize' : (19, 10)}
 plt.rcParams.update(params)
 
-class Aerosolalt(Aerosol1D):
+class AerosolAlt(Aerosol1D):
     def __init__(self, dataframe):
         super().__init__(dataframe)
