@@ -3,9 +3,9 @@
 import pandas as pd
 import os
 from collections import Counter
-from aerosol1d import Aerosol1D
-from aerosol2d import Aerosol2D
-from aerosolalt import AerosolAlt
+from ..aerosol1d import Aerosol1D
+from ..aerosol2d import Aerosol2D
+from ..aerosolalt import AerosolAlt
 from typing import Union, List
 
 ###############################################################################
