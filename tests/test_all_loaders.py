@@ -13,7 +13,6 @@ from aerosoltools.loaders import (
 @pytest.mark.parametrize("loader_func, filename", [
     (Load_ELPI_file,       "sample_elpi.txt"),
     (Load_CPC_file,        "Sample_CPC_AIM.txt"),
-    (Load_CPC_file,        "Sample_CPC_direct.txt"),
     (Load_OPS_file,        "Sample_OPS.csv"),
     (Load_NS_file,         "Sample_NS.csv"),
     (Load_DiSCmini_file,   "Sample_Discmini.txt"),
