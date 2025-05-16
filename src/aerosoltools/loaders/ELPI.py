@@ -189,6 +189,7 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
 
     ELPI._meta = meta
     if extra_data:
+        extra_df.set_index('Datetime',inplace=True)
         ELPI._extra_data = extra_df
 
     return ELPI
