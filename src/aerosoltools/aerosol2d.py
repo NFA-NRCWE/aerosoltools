@@ -7,7 +7,7 @@ import matplotlib.dates as mdates
 from matplotlib.colors import LogNorm, Normalize
 from typing import Optional, Union
 from tabulate import tabulate
-from aerosol1d import Aerosol1D
+from .aerosol1d import Aerosol1D
 params = {'legend.fontsize': 15,
          'axes.labelsize': 20,
          'axes.titlesize': 20,
