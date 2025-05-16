@@ -4,7 +4,7 @@ from typing import Union
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from aerosol2d import Aerosol2D
+from ..aerosol2d import Aerosol2D
 from Common import detect_delimiter
 
 def load_ELPI_metadata(file_path: Union[str, Path], 
