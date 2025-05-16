@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu May 15 12:42:50 2025
 
-@author: B279683
-"""
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,6 +17,83 @@ params = {'legend.fontsize': 15,
 plt.rcParams.update(params)
 
 class Aerosol2D(Aerosol1D):
+    """
+    A class for managing time-resolved, size-distributed aerosol data.
+
+    This class extends `Aerosol1D` to handle datasets that contain particle
+    size distributions (e.g., number, mass, or surface area concentration 
+    across particle size bins). It supports transformation between physical 
+    representations (dN, dS, dV, dW), visualization, activity segmentation, 
+    and summary statistics including PM values and particle size metrics.
+
+    Parameters
+    ----------
+    dataframe : pandas.DataFrame
+        A DataFrame containing the data to load. The first column should 
+        contain time stamps or be the DataFrame index. The second column should 
+        be the total concentration. All remaining columns must represent 
+        concentration values in size bins with bin midpoints as column headers.
+
+    Attributes
+    ----------
+    time : pandas.DatetimeIndex
+        Time index of the measurement series.
+    total_concentration : pandas.Series
+        Total concentration (e.g., number, mass, or surface) over time.
+    size_data : pandas.DataFrame
+        Data matrix of the particle concentration in each size bin.
+    activities : list of str
+        List of activity labels (e.g., tasks, locations) applied to the time series.
+    instrument : str
+        Instrument type as recorded in metadata (e.g., "ELPI", "OPS").
+    unit : str
+        Measurement unit (e.g., "cm⁻³", "µg/m³").
+    dtype : str
+        Type of measurement, e.g., "dN", "dS", "dV", "dW", optionally normalized with "/dlogDp".
+    bin_edges : list of float
+        Lower and upper edges for all size bins in nanometers.
+    bin_mids : list of float
+        Midpoint diameters for all size bins in nanometers.
+    density : float
+        Particle density in g/cm³.
+    metadata : dict
+        Dictionary containing all metadata fields loaded with the dataset.
+    extra_data : pandas.DataFrame
+        Additional non-size-resolved data associated with the file (optional).
+
+    Methods
+    -------
+    convert_to_number_concentration(inplace=True)
+        Convert dataset to number concentration (dN).
+    convert_to_mass_concentration(inplace=True)
+        Convert dataset to mass concentration (dW).
+    convert_to_surface_concentration(inplace=True)
+        Convert dataset to surface area concentration (dS).
+    convert_to_volume_concentration(inplace=True)
+        Convert dataset to volume concentration (dV).
+    normalize_logdp(inplace=True)
+        Normalize the data by bin width in logDp (i.e., compute dX/dlogDp).
+    unnormalize_logdp(inplace=True)
+        Reverse a dlogDp normalization (i.e., get back dX).
+    set_density(density)
+        Update the assumed particle density for use in mass/surface calculations.
+    correct_diffusion_losses(D_tube, L, Q, T=293, P=101300, inplace=True)
+        Apply a correction to compensate for diffusional losses in sampling tubing.
+    plot_total_conc(ax=None, mark_activities=False)
+        Plot the total concentration over time.
+    plot_psd(activities=None, normalize=True, ax=None)
+        Plot the average particle size distribution for the full dataset or per activity.
+    plot_timeseries(y_tot=(0,0), y_3d=(0,0), log=True, ax1=None, ax2=None, mark_activities=False)
+        Plot a combined time series of total and size-resolved concentration.
+    summarize(filename=None)
+        Generate summary statistics including PNC, PM levels, and size metrics for each activity.
+
+    Notes
+    -----
+    All data handling is done with `pandas`. Input DataFrames are expected to
+    have particle size bin midpoints as column headers, and the class assumes
+    these are numeric and represent diameters in nanometers.
+    """
     def __init__(self, dataframe):
         super().__init__(dataframe)
         
@@ -164,6 +237,8 @@ class Aerosol2D(Aerosol1D):
 
         return target_instance
 
+    ###########################################################################
+
     def convert_to_number_concentration(self, inplace: bool = True):
         """
         Convert particle size distribution data to number concentration (cm⁻³) 
@@ -224,6 +299,8 @@ class Aerosol2D(Aerosol1D):
         
         return target_instance
     
+    ###########################################################################
+
     def convert_to_surface_concentration(self, inplace: bool = True):
         """
         Convert particle size distribution data to surface area concentration (nm²/cm³)
@@ -284,6 +361,8 @@ class Aerosol2D(Aerosol1D):
         
         return target_instance
 
+    ###########################################################################
+
     def convert_to_volume_concentration(self, inplace: bool = True):
         """
         Convert particle size distribution data to volume concentration (nm³/cm³)
@@ -342,6 +421,8 @@ class Aerosol2D(Aerosol1D):
         
         return target_instance
 
+    ###########################################################################
+
     def set_density(self, density : Union[float, int] = 1.):
         """
         Set density of the aerosol particles in g/cm3
@@ -353,7 +434,7 @@ class Aerosol2D(Aerosol1D):
 
         Returns
         -------
-        class: aerosol2d
+        class: Aerosol2D
             The updated density data. If the data was already mass-based then the
             updated density is applied immidiatly.
         """
@@ -365,6 +446,8 @@ class Aerosol2D(Aerosol1D):
         self._meta["density"] = density
         return self
     
+    ###########################################################################
+
     def normalize_logdp(self, inplace: bool = True):
         """
         Normalize the size distribution data by dlogDp to obtain, e.g., dN/dlogDp.
@@ -397,6 +480,8 @@ class Aerosol2D(Aerosol1D):
             target._meta["dtype"] = f"{self.dtype}/dlogDp"
     
         return target
+
+    ###########################################################################
 
     def unnormalize_logdp(self, inplace: bool = True):
         """
@@ -433,6 +518,7 @@ class Aerosol2D(Aerosol1D):
     
         return target
 
+    ###########################################################################
     
     def plot_psd(self, activities: Optional[list[str]] = None, normalize: bool = True, ax=None):
         """
@@ -527,6 +613,8 @@ class Aerosol2D(Aerosol1D):
     
         return fig, ax
 
+    ###########################################################################
+
     def correct_diffusion_losses(self, D_tube: float, L: float, Q: float,
                                  T: float = 293, P: float = 101300,
                                  inplace: bool = True):
@@ -551,7 +639,7 @@ class Aerosol2D(Aerosol1D):
     
         Returns
         -------
-        aerosol2d
+        Aerosol2D
             Instance with diffusion-corrected sizebin data.
         """
         # Constants
@@ -603,7 +691,7 @@ class Aerosol2D(Aerosol1D):
     
         return corrected
 
-    
+    ###########################################################################
     
     def plot_timeseries(self, y_tot=(0, 0), y_3d=(0, 0), log=True,
                         ax1=None, ax2=None, mark_activities=False):
@@ -702,6 +790,8 @@ class Aerosol2D(Aerosol1D):
         ax2.tick_params(axis="y", which="both", direction='out', length=6, width=2)
     
         return fig, np.append([ax1, ax2], col)
+
+    ###########################################################################
 
     def summarize(self, filename=None):
         """
@@ -847,4 +937,3 @@ class Aerosol2D(Aerosol1D):
         
         
         return summary
-    
