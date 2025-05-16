@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu May 15 12:41:09 2025
-
-@author: B279683
-"""
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -237,11 +232,11 @@ class Aerosol1D:
     
     def copy_self(self):
         """
-        Create a deep copy of the current aerosol1d object.
+        Create a deep copy of the current Aerosol1D  object.
 
         Returns
         -------
-        aerosol1d
+        Aerosol1D 
             A deep copy of the current instance.
         """
         return copy.deepcopy(self)
@@ -438,7 +433,7 @@ class Aerosol1D:
     
     def timecrop(self, start: Optional[Union[str, pd.Timestamp]] = None,
                  end: Optional[Union[str, pd.Timestamp]] = None,
-                 inplace: bool = True) -> "aerosol1d":
+                 inplace: bool = True) -> "Aerosol1D":
         """
         Crop the data to a specified time window.
     
@@ -456,8 +451,8 @@ class Aerosol1D:
     
         Returns
         -------
-        aerosol1d
-            Instance of `aerosol1d`. Either the modified current object (if inplace=True) or a new cropped object (if inplace=False).
+        Aerosol1D 
+            Instance of `Aerosol1D `. Either the modified current object (if inplace=True) or a new cropped object (if inplace=False).
         """
         mask = pd.Series(True, index=self.time)
     
@@ -494,8 +489,8 @@ class Aerosol1D:
     
         Returns
         -------
-        aerosol1d
-            Instance of `aerosol1d` with rebinned time index.
+        Aerosol1D 
+            Instance of `Aerosol1D ` with rebinned time index.
         """
         numeric_cols = self._data.select_dtypes(exclude="bool").columns
         bool_cols = self._data.select_dtypes(include="bool").columns
@@ -530,8 +525,8 @@ class Aerosol1D:
     
         Returns
         -------
-        aerosol1d
-            Instance of `aerosol1d` with shifted time index. Either the modified current object (if inplace=True) or a new shifted object (if inplace=False).
+        Aerosol1D 
+            Instance of `Aerosol1D ` with shifted time index. Either the modified current object (if inplace=True) or a new shifted object (if inplace=False).
         """
         total_seconds = seconds + 60 * minutes + 3600 * hours
         total_shift = pd.to_timedelta(total_seconds, unit='s')
@@ -561,8 +556,8 @@ class Aerosol1D:
     
         Returns
         -------
-        aerosol1d
-            Instance of `aerosol1d` with smoothed data.
+        Aerosol1D 
+            Instance of `Aerosol1D ` with smoothed data.
         """
         if method not in ["mean", "median", "sum", "min", "max"]:
             raise ValueError("Invalid method. Choose from 'mean', 'median', 'sum', 'min', 'max'.")
