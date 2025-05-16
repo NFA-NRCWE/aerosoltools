@@ -20,7 +20,7 @@ from .ELPI import Load_ELPI_file
 from .NS import Load_NS_file
 from .OPS import Load_OPS_file
 from .Partector import Load_Partector_file
-from .common import Load_data_from_folder
+from .Common import Load_data_from_folder
 
 __all__ = [
     "Load_CPC_file",
