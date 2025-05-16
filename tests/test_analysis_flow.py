@@ -1,0 +1,41 @@
+import matplotlib.pyplot as plt
+from aerosoltools.loaders import Load_ELPI_file
+import os
+
+def test_full_elpi_pipeline_with_plotting():
+    
+
+    test_file = os.path.join(os.path.dirname(__file__), "data", "sample_elpi.txt")
+    data = Load_ELPI_file(test_file)
+
+    activity_periods = {
+        "Background": [("2023-09-03 10:30:00", "2023-09-06 12:40:00")],
+        "Emission":   [("2023-09-06 12:53:00", "2023-09-06 13:15:00")],
+        "Decay":      [("2023-09-06 13:30:00", "2023-09-06 14:30:00")]
+    }
+
+    data.mark_activities(activity_periods)
+      
+    data.convert_to_volume_concentration()
+    # Check dtype or column name contains 'dV'
+    assert "dV" in str(data.dtype), f"Expected 'dV' in dtype, got: {data.dtype}"
+    
+    # Check unit
+    assert getattr(data, "unit", None) == "nm³/cm³", f"Unexpected unit: {data.unit}"
+
+    fig, axs = plt.subplots(ncols=2, nrows=2)
+    data.plot_psd(["Decay", "Emission"], ax=axs[0, 0], normalize=False)
+    data.plot_psd(["All data"], ax=axs[0, 0])
+    data.plot_psd(normalize=True, ax=axs[1, 0])
+
+    data.normalize_logdp()
+    # Check dtype for "dlogDp"
+    assert "dlogDp" in str(data.dtype), f"Expected 'dlogDp' in dtype, got: {data.dtype}"
+  
+    data.plot_timeseries(y_3d=(1, 0), mark_activities=True, ax1=axs[0, 1], ax2=axs[1, 1])
+
+    summary_table = data.summarize()
+    assert isinstance(summary_table, pd.DataFrame), "summary_table is not a DataFrame"
+    expected_cols = ["All data", "Background", "Emission", "Decay"]
+    assert list(summary_table.columns) == expected_cols, f"Unexpected columns: {list(summary_table.columns)}"
+  
