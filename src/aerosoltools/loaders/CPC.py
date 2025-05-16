@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 import datetime as datetime
-import Common as Com
+from .Common import detect_delimiter
 from ..aerosol1d import Aerosol1D
 
 ###############################################################################
