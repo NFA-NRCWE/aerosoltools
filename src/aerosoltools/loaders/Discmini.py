@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-import Common as Com
+from .Common import detect_delimiter
 from ..aerosolalt import AerosolAlt
 
 ###############################################################################
@@ -39,7 +39,7 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False):
     - Two known datetime formats are supported: `%d-%b-%Y %H:%M:%S` and `%d-%m-%Y %H:%M:%S`.
     """
     try:
-        encoding, delimiter = Com.detect_delimiter(file, sample_lines=12)
+        encoding, delimiter = detect_delimiter(file, sample_lines=12)
     except Exception:
         raise Exception("DiSCmini data has not been converted or delimiter could not be detected.")
 
