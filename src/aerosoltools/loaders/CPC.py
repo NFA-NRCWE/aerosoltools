@@ -34,7 +34,7 @@ def Load_CPC_file(file: str):
     - Requires `Com.detect_delimiter()` for automatic encoding/delimiter detection.
     """
     # Detect encoding and delimiter
-    encoding, delimiter = Com.detect_delimiter(file)
+    encoding, delimiter = detect_delimiter(file)
 
     # Read CPC data block (time, concentration), ignoring last lines
     df = pd.read_csv(
