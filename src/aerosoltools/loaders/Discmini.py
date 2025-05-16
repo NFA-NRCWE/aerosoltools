@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 import Common as Com
-from aerosolalt import AerosolAlt
+from ..aerosolalt import AerosolAlt
 
 ###############################################################################
 
