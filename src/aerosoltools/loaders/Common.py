@@ -70,40 +70,39 @@ def detect_delimiter(
     for encoding in encodings:
         try:
             with open(file_path, 'r', encoding=encoding) as f:
-                lines = [
-                    line.strip()
-                    for _, line in zip(range(sample_lines), f)
-                    if line.strip() and not line.startswith('#')
-                ]
-            break  # success
+                lines = f.readlines()
+            break
         except UnicodeDecodeError:
             continue
     else:
-        raise UnicodeDecodeError("Could not decode file with any provided encodings.")
-
-    # Track best scoring delimiter
+        raise UnicodeDecodeError("Could not decode file with given encodings.")
+    # Filter non-empty, non-comment lines from the bottom
+    valid_lines = [line for line in reversed(lines) if line.strip() and not line.strip().startswith('#')]
+    lines = list(reversed(valid_lines[:sample_lines]))  # Keep original order
+    if not lines:
+        raise ValueError("No valid lines found to analyze.")
+ 
     best_delim = None
     best_score = 0
-
-    # Evaluate each delimiter
+ 
     for delim in delimiters:
         counts = [line.count(delim) for line in lines]
         if not counts:
             continue
-
         mode = Counter(counts).most_common(1)[0][0]
+ 
         consistent = [c for c in counts if abs(c - mode) <= tolerance and c > 0]
-
+ 
         if len(consistent) >= min_count_threshold:
             score = len(consistent)
             if score > best_score:
                 best_score = score
                 best_delim = delim
-
+ 
     if best_delim:
         return encoding, best_delim
     else:
-        raise ValueError("Could not reliably detect a delimiter from the sampled lines.")
+        raise ValueError("Could not reliably detect a delimiter.")
 
 ###############################################################################
 
