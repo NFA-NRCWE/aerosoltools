@@ -10,9 +10,9 @@ def test_full_elpi_pipeline_with_plotting():
     data = Load_ELPI_file(test_file)
 
     activity_periods = {
-        "Background": [("2023-09-03 10:30:00", "2023-09-06 12:40:00")],
-        "Emission":   [("2023-09-06 12:53:00", "2023-09-06 13:15:00")],
-        "Decay":      [("2023-09-06 13:30:00", "2023-09-06 14:30:00")]
+        "Background": [("2023/09/07 09:06:50", "2023/09/07 09:07:50")],
+        "Emission":   [("2023/09/07 09:07:55", "2023/09/07 09:08:30")],
+        "Decay":      [("2023/09/07 09:09:00", "2023/09/07 09:10:50")]
     }
 
     data.mark_activities(activity_periods)
