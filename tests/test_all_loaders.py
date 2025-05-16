@@ -12,11 +12,12 @@ from aerosoltools.loaders import (
 
 @pytest.mark.parametrize("loader_func, filename", [
     (Load_ELPI_file,       "sample_elpi.txt"),
-    (Load_CPC_file,        "sample_cpc.txt"),
-    (Load_OPS_file,        "sample_ops.txt"),
-    (Load_NS_file,         "sample_ns.txt"),
-    (Load_DiSCmini_file,   "sample_discmini.txt"),
-    (Load_Partector_file,  "sample_partector.txt"),
+    (Load_CPC_file,        "Sample_CPC_AIM.txt"),
+    (Load_CPC_file,        "Sample_CPC_direct.txt"),
+    (Load_OPS_file,        "Sample_OPS.csv"),
+    (Load_NS_file,         "Sample_NS.csv"),
+    (Load_DiSCmini_file,   "Sample_Discmini.txt"),
+    (Load_Partector_file,  "Sample_Partector.txt"),
 ])
 def test_loader_smoke(loader_func, filename):
     test_file = os.path.join(os.path.dirname(__file__), "data", filename)
