@@ -265,7 +265,8 @@ def Load_data_from_folder(
     Combined_extra_data = None
 
     for file_path in file_list(folder_path, search_word, max_subfolder):
-        print(f"Loading: {file_path}")
+        file_name = file_path.split("\\")[-1]
+        print(f"Loading: {file_name}")
         next_data = load_function(file_path, **kwargs)
 
         if counter == 0:
