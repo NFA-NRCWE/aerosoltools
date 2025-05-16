@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from aerosoltools.loaders import Load_ELPI_file
 
 def test_load_elpi_smoke():
