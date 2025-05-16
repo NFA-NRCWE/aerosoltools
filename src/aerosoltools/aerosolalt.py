@@ -1,9 +1,13 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu May 15 16:05:43 2025
+import matplotlib.pyplot as plt
+from aerosol1d import Aerosol1d
+params = {'legend.fontsize': 15,
+         'axes.labelsize': 20,
+         'axes.titlesize': 20,
+         'xtick.labelsize': 13,
+         'ytick.labelsize': 13,
+         'figure.figsize' : (19, 10)}
+plt.rcParams.update(params)
 
-@author: B279683
-"""
-
-def AerosolAlt():
-    return 1
+class Aerosolalt(Aerosol1d):
+    def __init__(self, dataframe):
+        super().__init__(dataframe)
