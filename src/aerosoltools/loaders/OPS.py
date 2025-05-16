@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import datetime as datetime
 import Common as Com
-from aerosol2d import Aerosol2D
+from ..aerosol2d import Aerosol2D
 
 ###############################################################################
 
