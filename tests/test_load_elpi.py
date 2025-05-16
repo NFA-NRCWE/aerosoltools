@@ -15,3 +15,5 @@ def test_load_elpi_smoke():
     assert data is not None
     assert hasattr(data, "data"), "Missing 'data' attribute"
     assert hasattr(data, "metadata"), "Missing 'metadata' attribute"
+    assert isinstance(data.data, pd.DataFrame)
+    assert isinstance(data.metadata, dict)
