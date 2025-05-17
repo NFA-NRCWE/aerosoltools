@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 from .Common import detect_delimiter
-from .aerosolalt import AerosolAlt
+from ..aerosolalt import AerosolAlt
 
 ###############################################################################
 
