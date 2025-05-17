@@ -16,8 +16,26 @@ dependencies = [
     "tabulate>=0.8.0"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "black"
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]
+include = '\.py$'
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]  # line too long, let black handle this
