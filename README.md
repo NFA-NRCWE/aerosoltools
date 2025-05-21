@@ -46,15 +46,13 @@ elpi.plot_total()
 
 ### Access metadata
 
-print(elpi._meta["instrument"])
+elpi.metadata
 
 ### Batch-load a folder of files
- 
-from aerosoltools import Load_data_from_folder, Load_CPC_file
 
 folder_path = "data/cpc_campaign/"
 
-data = Load_data_from_folder(folder_path, loader=Load_CPC_file)
+data = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file)
 
 ## 🧰 Provided Loaders
 
