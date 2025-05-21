@@ -39,7 +39,9 @@ Soon to be published on PyPI
 ### Load a single instrument file
 
 import aerosoltools as at
+
 elpi = at.Load_ELPI_file("data/elpi_sample.txt")
+
 elpi.plot_total()
 
 ### Access metadata
@@ -49,7 +51,9 @@ print(elpi._meta["instrument"])
 ### Batch-load a folder of files
  
 from aerosoltools import Load_data_from_folder, Load_CPC_file
+
 folder_path = "data/cpc_campaign/"
+
 data = Load_data_from_folder(folder_path, loader=Load_CPC_file)
 
 ## 🧰 Provided Loaders
