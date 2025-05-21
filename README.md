@@ -39,36 +39,47 @@ Soon to be published on PyPI
 - Load a single instrument file
 
 import aerosoltools as at
+
 elpi = at.Load_ELPI_file("data/elpi_sample.txt")
+
 elpi.plot_total()
 
 - Access metadata
+- 
 print(elpi._meta["instrument"])
 
 - Batch-load a folder of files
+- 
 from aerosoltools import Load_data_from_folder, Load_CPC_file
+
 folder_path = "data/cpc_campaign/"
+
 data = Load_data_from_folder(folder_path, loader=Load_CPC_file)
 
-🧰 Provided Loaders
-Instrument	Function
-Aethalometer	Load_Aethalometer_file()
-CPC	Load_CPC_file()
-DiSCmini	Load_DiSCmini_file()
-ELPI	Load_ELPI_file()
-FMPS	Load_FMPS_file()
-Fourtec	Load_Fourtec()
-Grimm	Load_Grimm_file()
-NS (NanoScan)	Load_NS_file()
-OPC-N3	Load_OPCN3_file()
-OPS	Load_OPS_file()
-Partector	Load_Partector_file()
-SMPS	Load_SMPS_file()
+## 🧰 Provided Loaders
+
+| Instrument      | Function                  |
+|-----------------|---------------------------|
+| Aethalometer    | `Load_Aethalometer_file()` |
+| CPC             | `Load_CPC_file()`          |
+| DiSCmini        | `Load_DiSCmini_file()`     |
+| ELPI            | `Load_ELPI_file()`         |
+| FMPS            | `Load_FMPS_file()`         |
+| Fourtec         | `Load_Fourtec()`           |
+| Grimm           | `Load_Grimm_file()`        |
+| NS (NanoScan)   | `Load_NS_file()`           |
+| OPC-N3          | `Load_OPCN3_file()`        |
+| OPS             | `Load_OPS_file()`          |
+| Partector       | `Load_Partector_file()`    |
+| SMPS            | `Load_SMPS_file()`         |
+
 
 📄 License
+
 This project is licensed under the MIT License — see the LICENSE file for details.
 
 🙌 Acknowledgments
+
 Developed by the NRCWE / NFA community to standardize and accelerate aerosol data workflows.
 
 Feel free to contribute, submit issues, or request support!
