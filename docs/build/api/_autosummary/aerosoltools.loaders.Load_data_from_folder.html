@@ -1,0 +1,200 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>aerosoltools.loaders.Load_data_from_folder &mdash; aerosoltools 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="aerosoltools.loaders.Load_DiSCmini_file" href="aerosoltools.loaders.Load_DiSCmini_file.html" />
+    <link rel="prev" title="aerosoltools.loaders.Load_CPC_file" href="aerosoltools.loaders.Load_CPC_file.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            aerosoltools
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Aerosol Classes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../aerosol1d.html">Aerosol1D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../aerosol2d.html">Aerosol2D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../aerosolalt.html">AerosolAlt</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Loaders</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../loaders.html">Loaders</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../loaders.html#functions">Functions</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_Aethalometer_file.html">aerosoltools.loaders.Load_Aethalometer_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_CPC_file.html">aerosoltools.loaders.Load_CPC_file</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">aerosoltools.loaders.Load_data_from_folder</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#aerosoltools.loaders.Load_data_from_folder"><code class="docutils literal notranslate"><span class="pre">Load_data_from_folder()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_DiSCmini_file.html">aerosoltools.loaders.Load_DiSCmini_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_ELPI_file.html">aerosoltools.loaders.Load_ELPI_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_FMPS_file.html">aerosoltools.loaders.Load_FMPS_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_Fourtec.html">aerosoltools.loaders.Load_Fourtec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_Grimm_file.html">aerosoltools.loaders.Load_Grimm_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_NS_file.html">aerosoltools.loaders.Load_NS_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_OPCN3_file.html">aerosoltools.loaders.Load_OPCN3_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_OPS_file.html">aerosoltools.loaders.Load_OPS_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_Partector_file.html">aerosoltools.loaders.Load_Partector_file</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aerosoltools.loaders.Load_SMPS_file.html">aerosoltools.loaders.Load_SMPS_file</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">aerosoltools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../loaders.html">Loaders</a></li>
+      <li class="breadcrumb-item active">aerosoltools.loaders.Load_data_from_folder</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/api/_autosummary/aerosoltools.loaders.Load_data_from_folder.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="aerosoltools-loaders-load-data-from-folder">
+<h1>aerosoltools.loaders.Load_data_from_folder<a class="headerlink" href="#aerosoltools-loaders-load-data-from-folder" title="Link to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="aerosoltools.loaders.Load_data_from_folder">
+<span class="sig-prename descclassname"><span class="pre">aerosoltools.loaders.</span></span><span class="sig-name descname"><span class="pre">Load_data_from_folder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">folder_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load_function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_word</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_subfolder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_checklist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['serial_number']</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.loaders.Load_data_from_folder" title="Link to this definition"></a></dt>
+<dd><p>Load and concatenate multiple aerosol datasets from a folder using a specified load function.</p>
+<p>This function searches a directory (and optionally subdirectories) for files matching
+a given pattern, applies a custom loader to each, and concatenates the results into
+a single aerosol object. It also verifies consistency in key metadata fields.</p>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>folder_path<span class="classifier">str</span></dt><dd><p>Path to the folder containing input files.</p>
+</dd>
+<dt>load_function<span class="classifier">function</span></dt><dd><p>The loader function used to parse each file (e.g., Load_CPC, Load_OPS_file).</p>
+</dd>
+<dt>search_word<span class="classifier">str, optional</span></dt><dd><p>If specified, only files containing this substring in their name will be loaded.
+Default is “” (no filter).</p>
+</dd>
+<dt>max_subfolder<span class="classifier">int, optional</span></dt><dd><p>Depth of subfolder traversal. 0 = top-level only. Default is 0.</p>
+</dd>
+<dt>meta_checklist<span class="classifier">list of str, optional</span></dt><dd><p>List of metadata keys to check for consistency across files. Default is [“serial_number”].</p>
+</dd>
+<dt><a href="#id1"><span class="problematic" id="id2">**</span></a>kwargs<span class="classifier">dict</span></dt><dd><p>Additional keyword arguments passed to the load_function.</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h2>Returns<a class="headerlink" href="#returns" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>Combined_data<span class="classifier">aerosol1d or aerosol2d or AerosolAlt</span></dt><dd><p>Concatenated and deduplicated data object with combined metadata and extra data.</p>
+</dd>
+</dl>
+</section>
+<section id="raises">
+<h2>Raises<a class="headerlink" href="#raises" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>ValueError</dt><dd><p>If inconsistent metadata is found for required fields in meta_checklist.</p>
+</dd>
+</dl>
+</section>
+<section id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Uses file_list() and duplicate_remover() utilities.</p></li>
+<li><p>Metadata like TEM samples is preserved and merged when applicable.</p></li>
+</ul>
+</section>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>folder_path</strong> (<em>str</em>)</p></li>
+<li><p><strong>search_word</strong> (<em>str</em>)</p></li>
+<li><p><strong>max_subfolder</strong> (<em>int</em>)</p></li>
+<li><p><strong>meta_checklist</strong> (<em>list</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="aerosoltools.loaders.Load_CPC_file.html" class="btn btn-neutral float-left" title="aerosoltools.loaders.Load_CPC_file" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="aerosoltools.loaders.Load_DiSCmini_file.html" class="btn btn-neutral float-right" title="aerosoltools.loaders.Load_DiSCmini_file" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

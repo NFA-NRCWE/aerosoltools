@@ -2,10 +2,12 @@
 
 import numpy as np
 import pandas as pd
-from .Common import detect_delimiter
+
 from ..aerosolalt import AerosolAlt
+from .Common import detect_delimiter
 
 ###############################################################################
+
 
 def Load_DiSCmini_file(file: str, extra_data: bool = False):
     """
@@ -41,46 +43,55 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False):
     try:
         encoding, delimiter = detect_delimiter(file, sample_lines=12)
     except Exception:
-        raise Exception("DiSCmini data has not been converted or delimiter could not be detected.")
+        raise Exception(
+            "DiSCmini data has not been converted or delimiter could not be detected."
+        )
 
     # Load selected columns: DateTime, Number, Size, LDSA, etc.
-    df = pd.read_csv(file, header=4, encoding=encoding, delimiter="\t", usecols=range(0, 7))
-    df.drop(columns=['Time'], inplace=True)
-    df.rename(columns={'TimeStamp': 'Datetime', 'Number': 'Total_conc'}, inplace=True)
+    df = pd.read_csv(
+        file, header=4, encoding=encoding, delimiter="\t", usecols=range(0, 7)
+    )
+    df.drop(columns=["Time"], inplace=True)
+    df.rename(columns={"TimeStamp": "Datetime", "Number": "Total_conc"}, inplace=True)
 
     # Attempt datetime parsing using known formats
     try:
-        df['Datetime'] = pd.to_datetime(df['Datetime'], format="%d-%b-%Y %H:%M:%S")
+        df["Datetime"] = pd.to_datetime(df["Datetime"], format="%d-%b-%Y %H:%M:%S")
     except ValueError:
         try:
-            df['Datetime'] = pd.to_datetime(df['Datetime'], format="%d-%m-%Y %H:%M:%S")
+            df["Datetime"] = pd.to_datetime(df["Datetime"], format="%d-%m-%Y %H:%M:%S")
         except Exception:
-            raise Exception("Datetime does not match expected format. Ensure file is converted correctly.")
+            raise Exception(
+                "Datetime does not match expected format. Ensure file is converted correctly."
+            )
 
     # Extract serial number from metadata (row 2, position 6)
-    meta_line = np.genfromtxt(file, delimiter=delimiter, encoding=encoding, skip_header=1, max_rows=1, dtype=str)
+    meta_line = np.genfromtxt(
+        file,
+        delimiter=delimiter,
+        encoding=encoding,
+        skip_header=1,
+        max_rows=1,
+        dtype=str,
+    )
     serial_number = str(meta_line).split(" ")[5]
 
     # Create AerosolAlt instance
     DM = AerosolAlt(df.iloc[:, 0:4])  # Datetime, Total_conc, Size, LDSA
 
     # Set metadata
-    DM._meta['instrument'] = "DiSCmini"
-    DM._meta['serial_number'] = serial_number
-    DM._meta['unit'] = {
-        'Total_conc': 'cm$^{-3}$',
-        'Size': 'nm',
-        'LDSA': 'nm$^{2}$/cm$^{3}$'
+    DM._meta["instrument"] = "DiSCmini"
+    DM._meta["serial_number"] = serial_number
+    DM._meta["unit"] = {
+        "Total_conc": "cm$^{-3}$",
+        "Size": "nm",
+        "LDSA": "nm$^{2}$/cm$^{3}$",
     }
-    DM._meta['dtype'] = {
-        'Total_conc': 'dN',
-        'Size': 'l',
-        'LDSA': 'dS'
-    }
+    DM._meta["dtype"] = {"Total_conc": "dN", "Size": "l", "LDSA": "dS"}
 
     # Attach extra data if requested
     if extra_data:
-        extra_df = df.drop(columns=list(df)[1:4]).set_index('Datetime')
+        extra_df = df.drop(columns=list(df)[1:4]).set_index("Datetime")
         DM._extra_data = extra_df
 
     return DM

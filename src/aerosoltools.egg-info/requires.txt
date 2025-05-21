@@ -1,0 +1,10 @@
+pandas>=1.0
+numpy>=1.20
+matplotlib>=3.1.0
+tabulate>=0.8.0
+openpyxl
+
+[dev]
+pytest
+ruff
+black

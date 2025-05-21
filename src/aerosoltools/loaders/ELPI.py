@@ -1,20 +1,25 @@
 # -*- coding: utf-8 -*-
 
-from typing import Union
 from pathlib import Path
-import pandas as pd
+from typing import Union
+
 import numpy as np
+import pandas as pd
+
 from ..aerosol2d import Aerosol2D
 from .Common import detect_delimiter
 
-def load_ELPI_metadata(file_path: Union[str, Path], 
-                       delimiter: str = "\t", 
-                       encoding: str = "utf-8") -> dict:
+###############################################################################
+
+
+def load_ELPI_metadata(
+    file_path: Union[str, Path], delimiter: str = "\t", encoding: str = "utf-8"
+) -> dict:
     """
     Extract metadata from an ELPI-formatted data file.
 
-    This function reads the first ~36 lines of an ELPI export file to parse metadata 
-    defined as key=value pairs. Values separated by the specified delimiter are 
+    This function reads the first ~36 lines of an ELPI export file to parse metadata
+    defined as key=value pairs. Values separated by the specified delimiter are
     interpreted as lists, and numeric values are automatically converted to float.
 
     Parameters
@@ -29,22 +34,22 @@ def load_ELPI_metadata(file_path: Union[str, Path],
     Returns
     -------
     dict
-        Dictionary containing parsed metadata. Scalar values are converted to float 
+        Dictionary containing parsed metadata. Scalar values are converted to float
         if possible. Tabular values are returned as lists (of floats or strings).
     """
     metadata = {}
-    
-    with open(file_path, 'r', encoding=encoding) as f:
+
+    with open(file_path, "r", encoding=encoding) as f:
         for row, line in enumerate(f):
             if row >= 36:
                 break
             line = line.strip()
-    
-            if '=' in line:
-                key, value = line.split('=', 1)
+
+            if "=" in line:
+                key, value = line.split("=", 1)
                 key = key.strip()
                 value = value.strip()
-    
+
                 # Split tab-separated values
                 if delimiter in value:
                     items = value.split(delimiter)
@@ -59,16 +64,20 @@ def load_ELPI_metadata(file_path: Union[str, Path],
                         value = float(value)
                     except ValueError:
                         pass  # leave as string if not a float
-    
+
                 metadata[key] = value
-    
+
     return metadata
+
+
+###############################################################################
+
 
 def Load_ELPI_file(file: str, extra_data: bool = False):
     """
     Load data from an ELPI (.txt) file and convert it into an `Aerosol2D` object.
 
-    This function reads ELPI exports (usually .txt files), extracts datetime and 
+    This function reads ELPI exports (usually .txt files), extracts datetime and
     particle size distribution information, applies unit conversions (e.g., from dW/dlogDp),
     and calculates total concentration and size-resolved particle data in cm⁻³.
 
@@ -82,7 +91,7 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
     Returns
     -------
     ELPI : Aerosol2D
-        Object containing parsed size distribution data, total concentration, 
+        Object containing parsed size distribution data, total concentration,
         and instrument metadata.
 
     Raises
@@ -96,7 +105,7 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
     - Normalization is done to convert to number concentration `dN`.
     - Supports dynamic density-aware edge recomputation when density ≠ 1.
     """
-    encoding, delimiter = detect_delimiter(file, sample_lines=100)
+    encoding, delimiter = detect_delimiter(file)
 
     # Load metadata and bin descriptors
     meta = load_ELPI_metadata(file, delimiter, encoding)
@@ -118,7 +127,9 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
         df = pd.read_csv(file, sep=delimiter, header=36, encoding=encoding)
         df = df.iloc[1:].reset_index(drop=True)
     except pd.errors.ParserError:
-        df = pd.read_csv(file, sep=delimiter, header=None, skiprows=42, encoding=encoding)
+        df = pd.read_csv(
+            file, sep=delimiter, header=None, skiprows=42, encoding=encoding
+        )
         with open(file, encoding=encoding) as f:
             header_line = f.readlines()[39].strip().split(delimiter)
         while len(header_line) < df.shape[1]:
@@ -136,32 +147,15 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
     dist_data = df.iloc[:, 34:48].copy()
     extra_df = df.drop(df.columns[33:47], axis=1)
 
-    # Normalize bin data by reported type
-    if "dW/dlogDp" in meta["CalculatedType"]:
-        dlogDp = np.log10(bin_edges[1:]) - np.log10(bin_edges[:-1])
-        dist_data *= dlogDp
-    elif "dW/dDp" in meta["CalculatedType"]:
-        dDp = bin_edges[1:] - bin_edges[:-1]
-        dist_data *= dDp / 1000  # convert nm to µm
-    elif "dW" in meta["CalculatedType"]:
-        pass
-    else:
-        raise Exception("Unrecognized CalculatedType: expected dW, dW/dDp, or dW/dlogDp")
+    # Checks unit format (dW, dW/dP, dW/dlogDp)
+    Unit_dict = {"Nu": "cm⁻³", "Su": "nm²/cm³", "Vo": "nm³/cm³", "Ma": "ug/m³"}
+    dtype_dict = {"Nu": "dN", "Su": "dS", "Vo": "dV", "Ma": "dM"}
 
-    # Apply moment-type normalization
-    if "Mass" in meta["CalculatedMoment"]:
-        density = meta["Density(g/cm^3)"]
-        norm_vector = (np.pi / 6) * (bin_mids / 1e7) ** 3 * density * 1e12
-    elif "Volume" in meta["CalculatedMoment"]:
-        norm_vector = (np.pi / 6) * (bin_mids / 1e7) ** 3
-    elif "Surface" in meta["CalculatedMoment"]:
-        norm_vector = np.pi * bin_mids ** 2 * 1e-6
-    elif "Number" in meta["CalculatedMoment"]:
-        norm_vector = 1
-    else:
-        raise Exception("Unrecognized CalculatedMoment: expected Number, Surface, Mass, or Volume")
-
-    dist_data = dist_data / norm_vector
+    try:
+        Unit = Unit_dict[meta["CalculatedMoment"][:2]]
+        dtype = dtype_dict[meta["CalculatedMoment"][:2]] + meta["CalculatedType"][2:]
+    except:
+        raise Exception("Unit and/or data type does not match the expected")
 
     # Total concentration and column formatting
     total_conc = pd.DataFrame(np.nansum(dist_data, axis=1), columns=["Total_conc"])
@@ -178,18 +172,43 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
     meta["bin_edges"] = bin_edges.round(1)
     meta["bin_mids"] = bin_mids
     meta["instrument"] = "ELPI"
-    meta["serial_number"] = str(np.genfromtxt(file, delimiter=delimiter, skip_header=0, max_rows=1,
-                                              dtype=str, encoding=encoding)).split(",")[1][1:-1]
-    meta["dtype"] = "dN"
-    meta["unit"] = "cm$^{-3}$"
+    if delimiter == ",":
+        serial_n = str(
+            np.genfromtxt(
+                file,
+                delimiter=delimiter,
+                skip_header=0,
+                max_rows=1,
+                dtype=str,
+                encoding=encoding,
+            )
+        )[1][1:-1]
+    else:
+        serial_n = str(
+            np.genfromtxt(
+                file,
+                delimiter=delimiter,
+                skip_header=0,
+                max_rows=1,
+                dtype=str,
+                encoding=encoding,
+            )
+        ).split(",")[1][1:-1]
+
+    meta["serial_number"] = serial_n
+    meta["dtype"] = dtype
+    meta["unit"] = Unit
 
     # Clean metadata
     for key in ["CalculatedDi(um)", "CalculatedType", "CalculatedMoment"]:
         meta.pop(key, None)
 
     ELPI._meta = meta
+    ELPI.convert_to_number_concentration()
+    ELPI.unnormalize_logdp()
+
     if extra_data:
-        extra_df.set_index('Datetime',inplace=True)
+        extra_df.set_index("Datetime", inplace=True)
         ELPI._extra_data = extra_df
 
     return ELPI

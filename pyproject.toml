@@ -13,7 +13,8 @@ dependencies = [
     "pandas>=1.0",
     "numpy>=1.20",
     "matplotlib>=3.1.0",
-    "tabulate>=0.8.0"
+    "tabulate>=0.8.0",
+    "openpyxl"
 ]
 
 [project.optional-dependencies]
@@ -26,6 +27,9 @@ dev = [
 [tool.setuptools]
 package-dir = {"" = "src"}
 
+[tool.setuptools.exclude-package-data]
+"*" = ["pytest.ini", "tests/*"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -37,5 +41,7 @@ include = '\.py$'
 [tool.ruff]
 line-length = 88
 target-version = "py39"
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I"]
-ignore = ["E501"]  # line too long, let black handle this
+ignore = ["E501"]

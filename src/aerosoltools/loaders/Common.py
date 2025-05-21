@@ -1,22 +1,25 @@
 # -*- coding: utf-8 -*-
 
-import pandas as pd
 import os
 from collections import Counter
+from typing import List, Union
+
+import pandas as pd
+
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
 from ..aerosolalt import AerosolAlt
-from typing import Union, List
 
 ###############################################################################
 
+
 def detect_delimiter(
     file_path: str,
-    encodings: list = ['utf-8', 'iso-8859-1', 'windows-1252'],
-    delimiters: list = [',', ';', '\t', '|'],
+    encodings: list = ["latin-1", "utf-8", "utf-16", "iso-8859-1", "windows-1252"],
+    delimiters: list = [",", ";", "\t", "|"],
     sample_lines: int = 10,
     min_count_threshold: int = 3,
-    tolerance: int = 1
+    tolerance: int = 1,
 ):
     """
     Automatically detect the encoding and delimiter of a delimited text file.
@@ -69,7 +72,7 @@ def detect_delimiter(
     # Try reading file with multiple encodings
     for encoding in encodings:
         try:
-            with open(file_path, 'r', encoding=encoding) as f:
+            with open(file_path, "r", encoding=encoding) as f:
                 lines = f.readlines()
             break
         except UnicodeDecodeError:
@@ -77,41 +80,47 @@ def detect_delimiter(
     else:
         raise UnicodeDecodeError("Could not decode file with given encodings.")
     # Filter non-empty, non-comment lines from the bottom
-    valid_lines = [line for line in reversed(lines) if line.strip() and not line.strip().startswith('#')]
+    valid_lines = [
+        line
+        for line in reversed(lines)
+        if line.strip() and not line.strip().startswith("#")
+    ]
     lines = list(reversed(valid_lines[:sample_lines]))  # Keep original order
     if not lines:
         raise ValueError("No valid lines found to analyze.")
- 
+
     best_delim = None
     best_score = 0
- 
+
     for delim in delimiters:
         counts = [line.count(delim) for line in lines]
         if not counts:
             continue
         mode = Counter(counts).most_common(1)[0][0]
- 
+
         consistent = [c for c in counts if abs(c - mode) <= tolerance and c > 0]
- 
+
         if len(consistent) >= min_count_threshold:
             score = len(consistent)
             if score > best_score:
                 best_score = score
                 best_delim = delim
- 
+
     if best_delim:
         return encoding, best_delim
     else:
         raise ValueError("Could not reliably detect a delimiter.")
 
+
 ###############################################################################
+
 
 def file_list(
     path: str,
     search_word: Union[str, None] = None,
     max_subfolder: int = 0,
-    nested_list: bool = False
-    ) -> List[Union[str, List[str]]]:
+    nested_list: bool = False,
+) -> List[Union[str, List[str]]]:
     """
     Generate a list of file paths from a directory, with optional search filtering and folder nesting.
 
@@ -172,7 +181,9 @@ def file_list(
 
     return files
 
+
 ###############################################################################
+
 
 def duplicate_remover(combined_data: pd.DataFrame) -> pd.DataFrame:
     """
@@ -201,27 +212,25 @@ def duplicate_remover(combined_data: pd.DataFrame) -> pd.DataFrame:
     >>> cleaned = duplicate_remover(raw_data)
     >>> print(cleaned.index.is_unique)  # True
     """
-    combined_data = combined_data.reset_index(names=['Datetime'])
+    combined_data = combined_data.reset_index(names=["Datetime"])
     combined_data.drop_duplicates(
-        subset='Datetime',
-        keep='first',
-        inplace=True,
-        ignore_index=True
+        subset="Datetime", keep="first", inplace=True, ignore_index=True
     )
-    combined_data.set_index('Datetime', inplace=True)
+    combined_data.set_index("Datetime", inplace=True)
     return combined_data.sort_index()
 
 
-###############################################################################    
+###############################################################################
+
 
 def Load_data_from_folder(
     folder_path: str,
     load_function,
     search_word: str = "",
     max_subfolder: int = 0,
-    meta_checklist: list = ['serial_number'],
-    **kwargs
-    ):
+    meta_checklist: list = ["serial_number"],
+    **kwargs,
+):
     """
     Load and concatenate multiple aerosol datasets from a folder using a specified load function.
 
@@ -234,16 +243,16 @@ def Load_data_from_folder(
     folder_path : str
         Path to the folder containing input files.
     load_function : function
-        The loader function used to parse each file (e.g., `Load_CPC`, `Load_OPS_file`).
+        The loader function used to parse each file (e.g., Load_CPC, Load_OPS_file).
     search_word : str, optional
         If specified, only files containing this substring in their name will be loaded.
         Default is "" (no filter).
     max_subfolder : int, optional
         Depth of subfolder traversal. 0 = top-level only. Default is 0.
     meta_checklist : list of str, optional
-        List of metadata keys to check for consistency across files. Default is ['serial_number'].
+        List of metadata keys to check for consistency across files. Default is [“serial_number”].
     **kwargs : dict
-        Additional keyword arguments passed to the `load_function`.
+        Additional keyword arguments passed to the load_function.
 
     Returns
     -------
@@ -253,11 +262,11 @@ def Load_data_from_folder(
     Raises
     ------
     ValueError
-        If inconsistent metadata is found for required fields in `meta_checklist`.
+        If inconsistent metadata is found for required fields in meta_checklist.
 
     Notes
     -----
-    - Uses `file_list()` and `duplicate_remover()` utilities.
+    - Uses file_list() and duplicate_remover() utilities.
     - Metadata like TEM samples is preserved and merged when applicable.
     """
     counter = 0
@@ -284,22 +293,24 @@ def Load_data_from_folder(
             Combined_raw_data = pd.concat([Combined_raw_data, next_data.original_data])
             Combined_extra_data = pd.concat([Combined_extra_data, next_data.extra_data])
 
-            if 'TEM_samples' in next_data.metadata:
-                if 'TEM_samples' in meta:
-                    meta['TEM_samples'] = pd.concat([meta['TEM_samples'], next_data.metadata['TEM_samples']])
+            if "TEM_samples" in next_data.metadata:
+                if "TEM_samples" in meta:
+                    meta["TEM_samples"] = pd.concat(
+                        [meta["TEM_samples"], next_data.metadata["TEM_samples"]]
+                    )
                 else:
-                    meta['TEM_samples'] = next_data.metadata['TEM_samples']
+                    meta["TEM_samples"] = next_data.metadata["TEM_samples"]
 
     # Deduplicate timestamps
     Combined_raw_data = duplicate_remover(Combined_raw_data)
     Combined_extra_data = duplicate_remover(Combined_extra_data)
 
     # Rebuild using the appropriate class
-    if type(initial_data) == Aerosol1D:
+    if type(initial_data) is Aerosol1D:
         Combined_data = Aerosol1D(Combined_raw_data)
-    elif type(initial_data) == Aerosol2D:
+    elif type(initial_data) is Aerosol2D:
         Combined_data = Aerosol2D(Combined_raw_data)
-    elif type(initial_data) == AerosolAlt:
+    elif type(initial_data) is AerosolAlt:
         Combined_data = AerosolAlt(Combined_raw_data)
     else:
         raise TypeError("Unsupported data class returned from load function.")

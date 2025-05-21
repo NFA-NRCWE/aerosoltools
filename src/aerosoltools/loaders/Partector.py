@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 
+import datetime as datetime
+
 import numpy as np
 import pandas as pd
-import datetime as datetime
-from .Common import detect_delimiter
-from ..aerosolalt import AerosolAlt
 from matplotlib.dates import date2num
 
+from ..aerosolalt import AerosolAlt
+from .Common import detect_delimiter
+
 ###############################################################################
+
 
 def Load_Partector_file(file: str, extra_data: bool = False):
     """
@@ -79,7 +82,7 @@ def Load_Partector_file(file: str, extra_data: bool = False):
     sample_meta = {
         "Start": [tem_start],
         "End": [tem_end],
-        "Sample_vol [ml]": [sample_volume_ml]
+        "Sample_vol [ml]": [sample_volume_ml],
     }
 
     # Create AerosolAlt object

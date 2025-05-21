@@ -1,0 +1,309 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aerosol2D &mdash; aerosoltools 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="aerosoltools.aerosol2d.Aerosol2D.activities" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.activities.html" />
+    <link rel="prev" title="aerosoltools.aerosol1d.Aerosol1D.timesmooth" href="_autosummary/aerosoltools.aerosol1d.Aerosol1D.timesmooth.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            aerosoltools
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Aerosol Classes</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="aerosol1d.html">Aerosol1D</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Aerosol2D</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#properties">Properties</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.activities.html">aerosoltools.aerosol2d.Aerosol2D.activities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.activity_periods.html">aerosoltools.aerosol2d.Aerosol2D.activity_periods</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.bin_edges.html">aerosoltools.aerosol2d.Aerosol2D.bin_edges</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.bin_mids.html">aerosoltools.aerosol2d.Aerosol2D.bin_mids</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.data.html">aerosoltools.aerosol2d.Aerosol2D.data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.density.html">aerosoltools.aerosol2d.Aerosol2D.density</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.dtype.html">aerosoltools.aerosol2d.Aerosol2D.dtype</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.extra_data.html">aerosoltools.aerosol2d.Aerosol2D.extra_data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.instrument.html">aerosoltools.aerosol2d.Aerosol2D.instrument</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.metadata.html">aerosoltools.aerosol2d.Aerosol2D.metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.original_data.html">aerosoltools.aerosol2d.Aerosol2D.original_data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.serial_number.html">aerosoltools.aerosol2d.Aerosol2D.serial_number</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.size_data.html">aerosoltools.aerosol2d.Aerosol2D.size_data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.time.html">aerosoltools.aerosol2d.Aerosol2D.time</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.total_concentration.html">aerosoltools.aerosol2d.Aerosol2D.total_concentration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.unit.html">aerosoltools.aerosol2d.Aerosol2D.unit</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#methods">Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.convert_to_mass_concentration.html">aerosoltools.aerosol2d.Aerosol2D.convert_to_mass_concentration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.convert_to_number_concentration.html">aerosoltools.aerosol2d.Aerosol2D.convert_to_number_concentration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.convert_to_surface_concentration.html">aerosoltools.aerosol2d.Aerosol2D.convert_to_surface_concentration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.convert_to_volume_concentration.html">aerosoltools.aerosol2d.Aerosol2D.convert_to_volume_concentration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.copy_self.html">aerosoltools.aerosol2d.Aerosol2D.copy_self</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.correct_diffusion_losses.html">aerosoltools.aerosol2d.Aerosol2D.correct_diffusion_losses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.get_activity_data.html">aerosoltools.aerosol2d.Aerosol2D.get_activity_data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.mark_activities.html">aerosoltools.aerosol2d.Aerosol2D.mark_activities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.normalize_logdp.html">aerosoltools.aerosol2d.Aerosol2D.normalize_logdp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.plot_psd.html">aerosoltools.aerosol2d.Aerosol2D.plot_psd</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.plot_timeseries.html">aerosoltools.aerosol2d.Aerosol2D.plot_timeseries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.plot_total_conc.html">aerosoltools.aerosol2d.Aerosol2D.plot_total_conc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.set_density.html">aerosoltools.aerosol2d.Aerosol2D.set_density</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.summarize.html">aerosoltools.aerosol2d.Aerosol2D.summarize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.timecrop.html">aerosoltools.aerosol2d.Aerosol2D.timecrop</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.timerebin.html">aerosoltools.aerosol2d.Aerosol2D.timerebin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.timeshift.html">aerosoltools.aerosol2d.Aerosol2D.timeshift</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.timesmooth.html">aerosoltools.aerosol2d.Aerosol2D.timesmooth</a></li>
+<li class="toctree-l3"><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.unnormalize_logdp.html">aerosoltools.aerosol2d.Aerosol2D.unnormalize_logdp</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="aerosolalt.html">AerosolAlt</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Loaders</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="loaders.html">Loaders</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">aerosoltools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Aerosol2D</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/aerosol2d.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="aerosol2d">
+<h1>Aerosol2D<a class="headerlink" href="#aerosol2d" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">aerosoltools.aerosol2d.</span></span><span class="sig-name descname"><span class="pre">Aerosol2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataframe</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>A class for managing time-resolved, size-distributed aerosol data.</p>
+<p>This class extends <cite>Aerosol1D</cite> to handle datasets that contain particle
+size distributions (e.g., number, mass, or surface area concentration
+across particle size bins). It supports transformation between physical
+representations (dN, dS, dV, dW), visualization, activity segmentation,
+and summary statistics including PM values and particle size metrics.</p>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt>dataframe<span class="classifier">pandas.DataFrame</span></dt><dd><p>A DataFrame containing the data to load. The first column should
+contain time stamps or be the DataFrame index. The second column should
+be the total concentration. All remaining columns must represent
+concentration values in size bins with bin midpoints as column headers.</p>
+</dd>
+</dl>
+</section>
+<section id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Link to this heading"></a></h2>
+<p>All data handling is done with <cite>pandas</cite>. Input DataFrames are expected to
+have particle size bin midpoints as column headers, and the class assumes
+these are numeric and represent diameters in nanometers.</p>
+</section>
+</dd></dl>
+
+<section id="properties">
+<h2>Properties<a class="headerlink" href="#properties" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.activities.html#aerosoltools.aerosol2d.Aerosol2D.activities" title="aerosoltools.aerosol2d.Aerosol2D.activities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.activities</span></code></a></p></td>
+<td><p>List of defined activity labels.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.activity_periods.html#aerosoltools.aerosol2d.Aerosol2D.activity_periods" title="aerosoltools.aerosol2d.Aerosol2D.activity_periods"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.activity_periods</span></code></a></p></td>
+<td><p>Dictionary of activity names and their associated time periods.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.bin_edges.html#aerosoltools.aerosol2d.Aerosol2D.bin_edges" title="aerosoltools.aerosol2d.Aerosol2D.bin_edges"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.bin_edges</span></code></a></p></td>
+<td><p>List of bin edges in nm</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.bin_mids.html#aerosoltools.aerosol2d.Aerosol2D.bin_mids" title="aerosoltools.aerosol2d.Aerosol2D.bin_mids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.bin_mids</span></code></a></p></td>
+<td><p>List of bin mids in nm</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.data.html#aerosoltools.aerosol2d.Aerosol2D.data" title="aerosoltools.aerosol2d.Aerosol2D.data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.data</span></code></a></p></td>
+<td><p>Dataframe with all data, times, and activity columns if marked.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.density.html#aerosoltools.aerosol2d.Aerosol2D.density" title="aerosoltools.aerosol2d.Aerosol2D.density"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.density</span></code></a></p></td>
+<td><p>Unit of the measurements.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.dtype.html#aerosoltools.aerosol2d.Aerosol2D.dtype" title="aerosoltools.aerosol2d.Aerosol2D.dtype"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.dtype</span></code></a></p></td>
+<td><p>Data type description of the measurements.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.extra_data.html#aerosoltools.aerosol2d.Aerosol2D.extra_data" title="aerosoltools.aerosol2d.Aerosol2D.extra_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.extra_data</span></code></a></p></td>
+<td><p>List of defined activity labels.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.instrument.html#aerosoltools.aerosol2d.Aerosol2D.instrument" title="aerosoltools.aerosol2d.Aerosol2D.instrument"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.instrument</span></code></a></p></td>
+<td><p>Instrument used for the measurements.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.metadata.html#aerosoltools.aerosol2d.Aerosol2D.metadata" title="aerosoltools.aerosol2d.Aerosol2D.metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.metadata</span></code></a></p></td>
+<td><p>Meta data as extracted upon loading the data</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.original_data.html#aerosoltools.aerosol2d.Aerosol2D.original_data" title="aerosoltools.aerosol2d.Aerosol2D.original_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.original_data</span></code></a></p></td>
+<td><p>Unmodified original dataset.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.serial_number.html#aerosoltools.aerosol2d.Aerosol2D.serial_number" title="aerosoltools.aerosol2d.Aerosol2D.serial_number"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.serial_number</span></code></a></p></td>
+<td><p>Serial number of instrument</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.size_data.html#aerosoltools.aerosol2d.Aerosol2D.size_data" title="aerosoltools.aerosol2d.Aerosol2D.size_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.size_data</span></code></a></p></td>
+<td><p>Sizebin data</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.time.html#aerosoltools.aerosol2d.Aerosol2D.time" title="aerosoltools.aerosol2d.Aerosol2D.time"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.time</span></code></a></p></td>
+<td><p>Timestamps of the dataset.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.total_concentration.html#aerosoltools.aerosol2d.Aerosol2D.total_concentration" title="aerosoltools.aerosol2d.Aerosol2D.total_concentration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.total_concentration</span></code></a></p></td>
+<td><p>Total concentration measurements.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.unit.html#aerosoltools.aerosol2d.Aerosol2D.unit" title="aerosoltools.aerosol2d.Aerosol2D.unit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.unit</span></code></a></p></td>
+<td><p>Unit of the measurements.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="methods">
+<h2>Methods<a class="headerlink" href="#methods" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.convert_to_mass_concentration.html#aerosoltools.aerosol2d.Aerosol2D.convert_to_mass_concentration" title="aerosoltools.aerosol2d.Aerosol2D.convert_to_mass_concentration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.convert_to_mass_concentration</span></code></a></p></td>
+<td><p>Convert particle size distribution data to mass concentration (ug/m³) based on current data type.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.convert_to_number_concentration.html#aerosoltools.aerosol2d.Aerosol2D.convert_to_number_concentration" title="aerosoltools.aerosol2d.Aerosol2D.convert_to_number_concentration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.convert_to_number_concentration</span></code></a></p></td>
+<td><p>Convert particle size distribution data to number concentration (cm⁻³) from the current data type.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.convert_to_surface_concentration.html#aerosoltools.aerosol2d.Aerosol2D.convert_to_surface_concentration" title="aerosoltools.aerosol2d.Aerosol2D.convert_to_surface_concentration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.convert_to_surface_concentration</span></code></a></p></td>
+<td><p>Convert particle size distribution data to surface area concentration (nm²/cm³) based on the current data type.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.convert_to_volume_concentration.html#aerosoltools.aerosol2d.Aerosol2D.convert_to_volume_concentration" title="aerosoltools.aerosol2d.Aerosol2D.convert_to_volume_concentration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.convert_to_volume_concentration</span></code></a></p></td>
+<td><p>Convert particle size distribution data to volume concentration (nm³/cm³) based on the current data type.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.copy_self.html#aerosoltools.aerosol2d.Aerosol2D.copy_self" title="aerosoltools.aerosol2d.Aerosol2D.copy_self"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.copy_self</span></code></a></p></td>
+<td><p>Create a deep copy of the current Aerosol1D  object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.correct_diffusion_losses.html#aerosoltools.aerosol2d.Aerosol2D.correct_diffusion_losses" title="aerosoltools.aerosol2d.Aerosol2D.correct_diffusion_losses"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.correct_diffusion_losses</span></code></a></p></td>
+<td><p>Correct for diffusion losses in a sampling tube based on tubing geometry, flow conditions, and particle sizes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.get_activity_data.html#aerosoltools.aerosol2d.Aerosol2D.get_activity_data" title="aerosoltools.aerosol2d.Aerosol2D.get_activity_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.get_activity_data</span></code></a></p></td>
+<td><p>Extract data corresponding to a specified activity.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.mark_activities.html#aerosoltools.aerosol2d.Aerosol2D.mark_activities" title="aerosoltools.aerosol2d.Aerosol2D.mark_activities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.mark_activities</span></code></a></p></td>
+<td><p>Mark activities in the data by adding one boolean column per activity.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.normalize_logdp.html#aerosoltools.aerosol2d.Aerosol2D.normalize_logdp" title="aerosoltools.aerosol2d.Aerosol2D.normalize_logdp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.normalize_logdp</span></code></a></p></td>
+<td><p>Normalize the size distribution data by dlogDp to obtain, e.g., dN/dlogDp.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.plot_psd.html#aerosoltools.aerosol2d.Aerosol2D.plot_psd" title="aerosoltools.aerosol2d.Aerosol2D.plot_psd"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.plot_psd</span></code></a></p></td>
+<td><p>Plot the average particle size distribution (PSD) for the entire dataset and optionally selected activities.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.plot_timeseries.html#aerosoltools.aerosol2d.Aerosol2D.plot_timeseries" title="aerosoltools.aerosol2d.Aerosol2D.plot_timeseries"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.plot_timeseries</span></code></a></p></td>
+<td><p>Plot total concentration (top) and a size-resolved time series (bottom).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.plot_total_conc.html#aerosoltools.aerosol2d.Aerosol2D.plot_total_conc" title="aerosoltools.aerosol2d.Aerosol2D.plot_total_conc"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.plot_total_conc</span></code></a></p></td>
+<td><p>Plot the total concentration over time.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.set_density.html#aerosoltools.aerosol2d.Aerosol2D.set_density" title="aerosoltools.aerosol2d.Aerosol2D.set_density"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.set_density</span></code></a></p></td>
+<td><p>Set density of the aerosol particles in g/cm3</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.summarize.html#aerosoltools.aerosol2d.Aerosol2D.summarize" title="aerosoltools.aerosol2d.Aerosol2D.summarize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.summarize</span></code></a></p></td>
+<td><p>Summarize aerosol characteristics for each activity period.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.timecrop.html#aerosoltools.aerosol2d.Aerosol2D.timecrop" title="aerosoltools.aerosol2d.Aerosol2D.timecrop"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.timecrop</span></code></a></p></td>
+<td><p>Crop the data to a specified time window.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.timerebin.html#aerosoltools.aerosol2d.Aerosol2D.timerebin" title="aerosoltools.aerosol2d.Aerosol2D.timerebin"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.timerebin</span></code></a></p></td>
+<td><p>Resample the data to a new time frequency using an aggregation function.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.timeshift.html#aerosoltools.aerosol2d.Aerosol2D.timeshift" title="aerosoltools.aerosol2d.Aerosol2D.timeshift"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.timeshift</span></code></a></p></td>
+<td><p>Shift the time index by a given number of seconds and/or minutes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.timesmooth.html#aerosoltools.aerosol2d.Aerosol2D.timesmooth" title="aerosoltools.aerosol2d.Aerosol2D.timesmooth"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.timesmooth</span></code></a></p></td>
+<td><p>Apply rolling window smoothing to the data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.unnormalize_logdp.html#aerosoltools.aerosol2d.Aerosol2D.unnormalize_logdp" title="aerosoltools.aerosol2d.Aerosol2D.unnormalize_logdp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Aerosol2D.unnormalize_logdp</span></code></a></p></td>
+<td><p>Reverse dlogDp normalization (e.g., convert dN/dlogDp to dN).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="_autosummary/aerosoltools.aerosol1d.Aerosol1D.timesmooth.html" class="btn btn-neutral float-left" title="aerosoltools.aerosol1d.Aerosol1D.timesmooth" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="_autosummary/aerosoltools.aerosol2d.Aerosol2D.activities.html" class="btn btn-neutral float-right" title="aerosoltools.aerosol2d.Aerosol2D.activities" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
