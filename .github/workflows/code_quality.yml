@@ -44,7 +44,7 @@ jobs:
     - name: Install lint tools
       run: |
         pip install black
-        pip install ruff==0.4.4  # or latest available version
+        pip install ruff==0.11.10  # or latest available version
 
     - name: Run ruff (linting)
       run: ruff src tests
