@@ -37,21 +37,17 @@ The package includes loaders for common instrument exports and a batch-loading u
 
 ## ✨ Features
 
-- Unified interface for:
-  - CPC, FMPS, NS, OPS, SMPS (TSI)
-  - ELPI (Dekati)
-  - Partector (Naneos)
-  - DiscMini (Tesco)
-  - Aethalometer, OPC-N3, Grimm, Fourtec
-- Automatically handles:
+- Unified interface for loaded aerosoldata, automatically handling:
   - Datetime conversion
-  - Time shifting, cropping, rebinning, and smoothing
+  - Particle data formatting
   - Bin edge/midpoint parsing
   - Dtype tracking e.g. dN, dV, dM, dS as well as normalization via dlogDp
   - Metadata extraction
 - Batch loading via `Load_data_from_folder()`
+- Functions for time shifting, cropping, rebinning, and smoothing
 - Enables segmentation to group datapoints within specifc timeframes
-- Returns structured objects for plotting, stats, or export
+- Returns structured objects for plotting, statistics, or export
+- Functions to plot timeseries, PSD, and correlation plots 
 
 ---
 
