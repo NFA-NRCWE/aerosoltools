@@ -10,30 +10,52 @@
 
 ## Overview
 
-`aerosoltools` is a Python library developed at NFA for loading, processing, and analyzing data from a variety of aerosol instruments. It provides a consistent data structure for time-resolved and size-resolved measurements using `Aerosol1D`, `Aerosol2D`, and `AerosolAlt` classes.
+`aerosoltools` is a Python library developed at NFA for loading, processing, analyzing, and plotting data from a variety of aerosol instruments. It provides a consistent data structure for time-resolved and size-resolved measurements using `Aerosol1D`, `Aerosol2D`, and `AerosolAlt` classes.
 
 The package includes loaders for common instrument exports and a batch-loading utility for processing entire folders.
 
 ---
 
+## 🧰 Provided Loaders
+
+| Instrument    | Function                   | Company                   |
+| ------------- | -------------------------- | ------------------------- |
+| Aethalometer  | `Load_Aethalometer_file()` | **Magee Scientific**      |
+| CPC           | `Load_CPC_file()`          | **TSI Inc.**              |
+| DiSCmini      | `Load_DiSCmini_file()`     | **Testo**                 |
+| ELPI          | `Load_ELPI_file()`         | **Dekati Ltd.**           |
+| FMPS          | `Load_FMPS_file()`         | **TSI Inc.**              |
+| Fourtec       | `Load_Fourtec()`           | **Fourtec Technologies**  |
+| Grimm         | `Load_Grimm_file()`        | **GRIMM Aerosol Technik** |
+| NS (NanoScan) | `Load_NS_file()`           | **TSI Inc.**              |
+| OPC-N3        | `Load_OPCN3_file()`        | **Alphasense Ltd.**       |
+| OPS           | `Load_OPS_file()`          | **TSI Inc.**              |
+| Partector     | `Load_Partector_file()`    | **naneos GmbH**           |
+| SMPS          | `Load_SMPS_file()`         | **TSI Inc.**              |
+
+---
+
 ## ✨ Features
 
-- Unified interface for:
-  - SMPS, FMPS, NS (TSI)
-  - ELPI (Dekati)
-  - OPS, CPC, Partector, DiscMini
-  - Aethalometer, OPC-N3, Grimm, Fourtec
-- Automatically handles:
+- Unified interface for loaded aerosoldata, automatically handling:
+  - Datetime conversion
+  - Particle data formatting
   - Bin edge/midpoint parsing
-  - Unit conversions (e.g., `#/cm³`, `dN/dlogDp`)
+  - Dtype tracking e.g. dN, dV, dM, dS as well as normalization via dlogDp
   - Metadata extraction
 - Batch loading via `Load_data_from_folder()`
-- Returns structured objects for plotting, stats, or export
+- Functions for time shifting, cropping, rebinning, and smoothing
+- Enables segmentation to group datapoints within specifc timeframes
+- Returns structured objects for plotting, statistics, or export
+- Functions to plot timeseries, PSD, and correlation plots 
 
 ---
 
 ## 📦 Installation
+
 Soon to be published on PyPI
+
+---
 
 ## Quickstart
 ### Load a single instrument file
@@ -54,27 +76,13 @@ folder_path = "data/cpc_campaign/"
 
 data = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file)
 
-## 🧰 Provided Loaders
-
-| Instrument      | Function                  |
-|-----------------|---------------------------|
-| Aethalometer    | `Load_Aethalometer_file()` |
-| CPC             | `Load_CPC_file()`          |
-| DiSCmini        | `Load_DiSCmini_file()`     |
-| ELPI            | `Load_ELPI_file()`         |
-| FMPS            | `Load_FMPS_file()`         |
-| Fourtec         | `Load_Fourtec()`           |
-| Grimm           | `Load_Grimm_file()`        |
-| NS (NanoScan)   | `Load_NS_file()`           |
-| OPC-N3          | `Load_OPCN3_file()`        |
-| OPS             | `Load_OPS_file()`          |
-| Partector       | `Load_Partector_file()`    |
-| SMPS            | `Load_SMPS_file()`         |
-
+---
 
 📄 License
 
 This project is licensed under the MIT License — see the LICENSE file for details.
+
+---
 
 🙌 Acknowledgments
 
