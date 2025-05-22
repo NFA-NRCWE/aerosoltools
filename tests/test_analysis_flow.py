@@ -8,7 +8,7 @@ from aerosoltools.loaders import Load_ELPI_file
 
 def test_full_elpi_pipeline_with_plotting():
 
-    test_file = os.path.join(os.path.dirname(__file__), "data", "sample_elpi.txt")
+    test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
     data = Load_ELPI_file(test_file)
 
     activity_periods = {
