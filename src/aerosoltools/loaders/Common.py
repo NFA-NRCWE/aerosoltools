@@ -224,101 +224,135 @@ def duplicate_remover(combined_data: pd.DataFrame) -> pd.DataFrame:
 
 
 def Load_data_from_folder(
-    folder_path: str,
+    folder_path,
     load_function,
-    search_word: str = "",
-    max_subfolder: int = 0,
+    search_word="",
+    max_subfolder=0,
     meta_checklist: list = ["serial_number"],
     **kwargs,
 ):
     """
-    Load and concatenate multiple aerosol datasets from a folder using a specified load function.
-
-    This function searches a directory (and optionally subdirectories) for files matching
-    a given pattern, applies a custom loader to each, and concatenates the results into
-    a single aerosol object. It also verifies consistency in key metadata fields.
+    Generic function to load data from a folder.
 
     Parameters
     ----------
     folder_path : str
-        Path to the folder containing input files.
+        Path to the folder containing the data files. The function will NOT search
+        subfolders, so make sure the relevant data is in the specified folder.
     load_function : function
-        The loader function used to parse each file (e.g., Load_CPC, Load_OPS_file).
+        speficiy which function should be used for treating the data.
+        Remember to call it with 'IL.' in front.
     search_word : str, optional
-        If specified, only files containing this substring in their name will be loaded.
-        Default is "" (no filter).
+        If the relevant files have a specific search_word in their name, a str can
+        be added here to specify that the function must only concatenate
+        data from file names containing the search_word. The default is empty.
     max_subfolder : int, optional
-        Depth of subfolder traversal. 0 = top-level only. Default is 0.
-    meta_checklist : list of str, optional
-        List of metadata keys to check for consistency across files. Default is [“serial_number”].
-    **kwargs : dict
-        Additional keyword arguments passed to the load_function.
+        Specify the number of subfolder levels that the function is supposed to
+        include. A value of 1 means that the function will go into the first
+        layer of subfolders of the specified path (if there are any). The
+        parameter can be used to make the function load datafiles from several
+        subfolders and tie then together into one data array with chronological
+        data.
+    meta_checklist : list
+        List of values to compare between the loaded files.
+    **kwargs: dict, optional
+        Arbitrary search_word arguments passed to the load_function. search_words should
+        match parameter names of the load_function, and their values specify the
+        arguments to be passed. e.g.
+
+        Load_data_from_folder(r"C:\folderpath", Load_CPC, "data_to_load")
+
+        Here, all data files in the C:\folderpath directory, which contain the
+        search_word "data_to_load" in their filename are loaded with the Load_CPC
+        function, but only including datapoint from January 1st 2025, which was
+        passed as the start parameter of the Load_CPC function.
 
     Returns
     -------
-    Combined_data : aerosol1d or aerosol2d or AerosolAlt
-        Concatenated and deduplicated data object with combined metadata and extra data.
+    sorted_data: numpy
+        The concantenated data from the folder as returned from the load_function,
+        with column [0] = datetime, column [1:] = data
+    bin_edges: list, optional
+        If the data returns size-bins for bin_edges, they are returned here
+    Header: list of str
+        Header for the sorted_data
 
-    Raises
-    ------
-    ValueError
-        If inconsistent metadata is found for required fields in meta_checklist.
-
-    Notes
-    -----
-    - Uses file_list() and duplicate_remover() utilities.
-    - Metadata like TEM samples is preserved and merged when applicable.
     """
+
     counter = 0
+    skipped_files = []
     Combined_raw_data = None
     Combined_extra_data = None
+    meta = {}
 
     for file_path in file_list(folder_path, search_word, max_subfolder):
-        file_name = file_path.split("\\")[-1]
-        print(f"Loading: {file_name}")
-        next_data = load_function(file_path, **kwargs)
+        print(f"Loading: {file_path}")
+        try:
+            data = load_function(file_path, **kwargs)
 
-        if counter == 0:
-            initial_data = next_data
-            meta = next_data.metadata
-            Combined_raw_data = next_data.original_data
-            Combined_extra_data = next_data.extra_data
-            counter += 1
-        else:
-            for key in meta_checklist:
-                if next_data.metadata.get(key) != meta.get(key):
-                    print(f"Warning: metadata mismatch on '{key}'")
-                    continue
+            if counter == 0:
+                Initial_data = data
+                meta = data.metadata
+                Combined_raw_data = data.original_data
+                Combined_extra_data = data.extra_data
+                counter = 1
+            else:
+                # Check metadata consistency
+                mismatch_found = False
+                for item in meta_checklist:
+                    if data.metadata.get(item) != meta.get(item):
+                        print(f"unequal {item}")
+                        skipped_files.append(file_path)
+                        mismatch_found = True
+                        break
 
-            Combined_raw_data = pd.concat([Combined_raw_data, next_data.original_data])
-            Combined_extra_data = pd.concat([Combined_extra_data, next_data.extra_data])
-
-            if "TEM_samples" in next_data.metadata:
-                if "TEM_samples" in meta:
-                    meta["TEM_samples"] = pd.concat(
-                        [meta["TEM_samples"], next_data.metadata["TEM_samples"]]
+                if not mismatch_found:
+                    Combined_raw_data = pd.concat(
+                        [Combined_raw_data, data.original_data]
                     )
-                else:
-                    meta["TEM_samples"] = next_data.metadata["TEM_samples"]
+                    Combined_extra_data = pd.concat(
+                        [Combined_extra_data, data.extra_data]
+                    )
 
-    # Deduplicate timestamps
-    Combined_raw_data = duplicate_remover(Combined_raw_data)
-    Combined_extra_data = duplicate_remover(Combined_extra_data)
+                    if "TEM_samples" in data.metadata:
+                        if "TEM_samples" in meta:
+                            meta["TEM_samples"] = pd.concat(
+                                [meta["TEM_samples"], data.metadata["TEM_samples"]]
+                            )
+                        else:
+                            meta["TEM_samples"] = data.metadata["TEM_samples"]
 
-    # Rebuild using the appropriate class
-    if type(initial_data) is Aerosol1D:
+        except (
+            FileNotFoundError,
+            ValueError,
+            KeyError,
+            UnicodeDecodeError,
+            TypeError,
+        ) as e:
+            print(f"Skipping {file_path} due to error: {type(e).__name__}: {e}")
+            skipped_files.append(file_path)
+
+    if Combined_raw_data is not None:
+        Combined_raw_data = duplicate_remover(Combined_raw_data)
+    if Combined_extra_data is not None:
+        Combined_extra_data = duplicate_remover(Combined_extra_data)
+
+    # Instantiate final data object based on original class
+    if isinstance(Initial_data, Aerosol1D):
         Combined_data = Aerosol1D(Combined_raw_data)
-    elif type(initial_data) is Aerosol2D:
+    elif isinstance(Initial_data, Aerosol2D):
         Combined_data = Aerosol2D(Combined_raw_data)
-    elif type(initial_data) is AerosolAlt:
+    elif isinstance(Initial_data, AerosolAlt):
         Combined_data = AerosolAlt(Combined_raw_data)
     else:
-        raise TypeError("Unsupported data class returned from load function.")
+        raise Exception("Unsupported data type returned by load_function")
 
     Combined_data._extra_data = Combined_extra_data
     Combined_data._meta = meta
 
+    if skipped_files:
+        print("Files skipped due to errors or empty datasets:")
+        for i in skipped_files:
+            print(i)
+
     return Combined_data
-
-
-###############################################################################
