@@ -55,6 +55,8 @@ The package includes loaders for common instrument exports and a batch-loading u
 
 Soon to be published on PyPI
 
+---
+
 ## Quickstart
 ### Load a single instrument file
 
