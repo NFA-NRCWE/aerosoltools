@@ -46,8 +46,8 @@ jobs:
         pip install black
         pip install ruff==0.11.10  # or latest available version
 
-    - name: Run ruff (linting)
-      run: ruff src tests
+    - name: Run Ruff
+      run: ruff check src tests
 
     - name: Run black (format check only)
       run: black --check --diff src tests
