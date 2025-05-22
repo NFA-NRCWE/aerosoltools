@@ -270,7 +270,7 @@ def Load_data_from_folder(
     Combined_data : Aerosol1D or Aerosol2D or AerosolAlt
         A combined aerosol data object. The returned object inherits from the same
         class as the first successfully loaded file. It includes:
-        
+
         - Combined original_data
         - Combined extra_data
         - Merged metadata
