@@ -716,7 +716,9 @@ class Aerosol2D(Aerosol1D):
         bin_edges = self.bin_edges
 
         # Top panel: total concentration
-        self.plot_total_conc(ax=ax1, mark_activities=mark_activities)
+        _, ax_new = self.plot_total_conc(ax=ax1, mark_activities=mark_activities)
+
+        ax1 = ax_new
 
         # Set y-limits for the total_conc plot
         if y_tot != (0, 0):

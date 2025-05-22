@@ -271,10 +271,13 @@ class Aerosol1D:
         -------
         None
         """
-        for activity, periods in activity_periods.items():
-            if activity not in self._data.columns:
-                self._data[activity] = False
+        new_cols = {}
 
+        for activity, periods in activity_periods.items():
+            # Initialize column with False
+            col = pd.Series(False, index=self.time)
+
+            # Normalize periods
             if isinstance(periods, tuple) and len(periods) == 2:
                 periods = [periods]
 
@@ -282,14 +285,17 @@ class Aerosol1D:
                 mask = (self.time >= pd.Timestamp(start)) & (
                     self.time <= pd.Timestamp(end)
                 )
-                self._data.loc[mask, activity] = True
+                col[mask] = True
 
-            # Track activities
+            new_cols[activity] = col
+
+            # Track metadata
             if activity not in self._activities:
                 self._activities.append(activity)
-
-            # Save periods
             self._activity_periods[activity] = periods
+
+        # Add all new activity columns at once
+        self._data = pd.concat([self._data, pd.DataFrame(new_cols)], axis=1)
 
     ###########################################################################
 
@@ -340,6 +346,7 @@ class Aerosol1D:
 
         # Highlight activities
         if mark_activities and hasattr(self, "_activity_periods"):
+            print("Hello")
             # Exclude "All data" unless explicitly requested
             all_activities = sorted(self._activity_periods.keys())
             color_map = plt.colormaps.get_cmap("gist_ncar")
@@ -359,22 +366,20 @@ class Aerosol1D:
 
             for activity in selected_activities:
                 color = activity_colors[activity]
+                first = True
                 for start, end in self._activity_periods[activity]:
                     ax.axvspan(
                         pd.Timestamp(start),
                         pd.Timestamp(end),
                         color=color,
                         alpha=0.3,
-                        label=activity,
+                        label=activity if first else None,
+                        zorder=3,
                     )
+                    first = False
             # Clip x-axis to actual data range
             ax.set_xlim(self.time.min(), self.time.max())
-
-            # Remove duplicate legend entries
-            handles, labels = ax.get_legend_handles_labels()
-            by_label = dict(zip(labels, handles))
-            if by_label:
-                ax.legend(by_label.values(), by_label.keys())
+            ax.legend()
 
         if new_fig_created:
             fig.tight_layout()
@@ -453,10 +458,10 @@ class Aerosol1D:
         ----------
         start : str or pd.Timestamp, optional
             Start time. If None, cropping starts from the earliest available time.
-            If a string, it should have the format “YYYY,MM,DD HH:MM:SS”, e.g., “2025,01,04 20:00:00”.
+            If a string, it should have the format “YYYY-MM-DD HH:MM:SS”, e.g., “2025-01-24 20:00:00”.
         end : str or pd.Timestamp, optional
             End time. If None, cropping ends at the latest available time.
-            If a string, it should have the format “YYYY,MM,DD HH:MM:SS”, e.g., “2025,01,04 20:00:00”.
+            If a string, it should have the format “YYYY-MM-DD HH:MM:SS”, e.g., “2025-01-25 20:00:00”.
         inplace : bool, optional
             If True, modifies the current object. If False, returns a new cropped instance.
             Defaults to True.

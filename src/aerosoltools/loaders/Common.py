@@ -232,51 +232,55 @@ def Load_data_from_folder(
     **kwargs,
 ):
     """
-    Generic function to load data from a folder.
+    Load and concatenate aerosol data from a folder using a specified loader function.
+
+    This function iterates over all files in the specified folder (and optionally its
+    subfolders) that match a given search word. Each file is processed using the
+    provided load_function. Files with incompatible metadata (based on keys in
+    meta_checklist) are skipped. The function returns a combined aerosol data
+    object with merged time-series and metadata.
 
     Parameters
     ----------
     folder_path : str
-        Path to the folder containing the data files. The function will NOT search
-        subfolders, so make sure the relevant data is in the specified folder.
+        Path to the folder containing the data files.
+
     load_function : function
-        speficiy which function should be used for treating the data.
-        Remember to call it with 'IL.' in front.
+        A function that loads a single data file and returns an instance of a class
+        like Aerosol1D, Aerosol2D, or AerosolAlt. The function must return an object
+        with original_data, extra_data, and metadata.
+
     search_word : str, optional
-        If the relevant files have a specific search_word in their name, a str can
-        be added here to specify that the function must only concatenate
-        data from file names containing the search_word. The default is empty.
+        A string that must be present in the filename for the file to be loaded.
+        Defaults to "" (match all files).
+
     max_subfolder : int, optional
-        Specify the number of subfolder levels that the function is supposed to
-        include. A value of 1 means that the function will go into the first
-        layer of subfolders of the specified path (if there are any). The
-        parameter can be used to make the function load datafiles from several
-        subfolders and tie then together into one data array with chronological
-        data.
-    meta_checklist : list
-        List of values to compare between the loaded files.
-    **kwargs: dict, optional
-        Arbitrary search_word arguments passed to the load_function. search_words should
-        match parameter names of the load_function, and their values specify the
-        arguments to be passed. e.g.
+        Depth of subfolder levels to include in the search.
+        0 means only the base folder is used; 1 includes immediate subfolders, etc.
 
-        Load_data_from_folder(r"C:\folderpath", Load_CPC, "data_to_load")
+    meta_checklist : list of str, optional
+        List of metadata keys that must be identical across all loaded files.
+        If any key differs, the file is skipped. Defaults to ["serial_number"].
 
-        Here, all data files in the C:\folderpath directory, which contain the
-        search_word "data_to_load" in their filename are loaded with the Load_CPC
-        function, but only including datapoint from January 1st 2025, which was
-        passed as the start parameter of the Load_CPC function.
+    kwargs
+        Additional keyword arguments passed to the load_function.
 
     Returns
     -------
-    sorted_data: numpy
-        The concantenated data from the folder as returned from the load_function,
-        with column [0] = datetime, column [1:] = data
-    bin_edges: list, optional
-        If the data returns size-bins for bin_edges, they are returned here
-    Header: list of str
-        Header for the sorted_data
+    Combined_data : Aerosol1D or Aerosol2D or AerosolAlt
+        A combined aerosol data object. The returned object inherits from the same
+        class as the first successfully loaded file. It includes:
+        
+        - Combined original_data
+        - Combined extra_data
+        - Merged metadata
 
+    Notes
+    -----
+    Files that raise exceptions or fail metadata consistency checks are skipped.
+    A message will be printed for each skipped file, along with the reason.
+    The function will raise an exception if no valid files are found or if the returned
+    object is not an instance of Aerosol1D, Aerosol2D, or AerosolAlt.
     """
 
     counter = 0
@@ -338,12 +342,12 @@ def Load_data_from_folder(
         Combined_extra_data = duplicate_remover(Combined_extra_data)
 
     # Instantiate final data object based on original class
-    if isinstance(Initial_data, Aerosol1D):
-        Combined_data = Aerosol1D(Combined_raw_data)
-    elif isinstance(Initial_data, Aerosol2D):
+    if isinstance(Initial_data, Aerosol2D):
         Combined_data = Aerosol2D(Combined_raw_data)
     elif isinstance(Initial_data, AerosolAlt):
         Combined_data = AerosolAlt(Combined_raw_data)
+    elif isinstance(Initial_data, Aerosol1D):
+        Combined_data = Aerosol1D(Combined_raw_data)
     else:
         raise Exception("Unsupported data type returned by load_function")
 

@@ -19,7 +19,7 @@ Functions
    Load_DiSCmini_file
    Load_ELPI_file
    Load_FMPS_file
-   Load_Fourtec
+   Load_Fourtec_file
    Load_Grimm_file
    Load_NS_file
    Load_OPCN3_file

@@ -184,91 +184,120 @@ def Load_OPS_AIM(
 
 def Load_OPS_Direct(
     file: str, extra_data: bool = False, encoding: str = None, delimiter: str = None
-) -> Aerosol2D:
+):
     """
-    Load data from OPS exported directly from the instrument (not via AIM).
+    Load OPS (Optical Particle Sizer) data exported directly from the instrument.
+
+    This function processes raw OPS data files exported directly from the device,
+    converts particle counts to concentrations, and constructs an `Aerosol2D` object
+    with appropriate metadata. The function supports optional inclusion of extra
+    metadata and raw columns.
 
     Parameters
     ----------
     file : str
-        Path to the raw OPS export file.
+        Path to the CSV file exported directly from the OPS instrument.
     extra_data : bool, optional
-        If True, includes all non-distribution columns in `.extra_data`.
+        If True, attaches all non-sizebin columns and bin 17 data to `.extra_data`.
+        Default is False.
     encoding : str, optional
-        Encoding format. If None, detected automatically.
+        Character encoding for the file (e.g., 'utf-8'). If None, will be auto-detected.
     delimiter : str, optional
-        Delimiter format. If None, detected automatically.
+        Field delimiter (e.g., ',' or '\t'). If None, will be auto-detected.
 
     Returns
     -------
     OPS : Aerosol2D
-        Object containing particle concentrations corrected from counts and metadata.
+        Time-indexed data object containing total concentration and size-resolved
+        particle data, along with instrument metadata.
+
+    Raises
+    ------
+    Exception
+        If the file cannot be parsed, or metadata lines are malformed.
+
+    Notes
+    -----
+    - Converts count data to concentration in cm⁻³ using flow rate and sample duration.
+    - Bin 17 (particles >10 µm) is excluded from the main dataset but included in `.extra_data`.
+    - Requires `Com.detect_delimiter()` for auto-formatting detection.
     """
     if encoding is None and delimiter is None:
         encoding, delimiter = detect_delimiter(file)
 
+    # Load measurement data, excluding last header-only bin
     df = pd.read_csv(file, header=37, encoding=encoding, delimiter=delimiter)
 
-    meta_raw = pd.read_csv(
-        file,
-        encoding=encoding,
-        delimiter=delimiter,
-        header=None,
-        nrows=35,
-        dtype={0: str},
+    # Extract metadata as key-value dict
+    meta = (
+        pd.read_csv(
+            file,
+            header=None,
+            nrows=35,
+            encoding=encoding,
+            delimiter=delimiter,
+            dtype={0: str},
+        )
+        .set_index(0)
+        .squeeze()
+        .to_dict()
     )
-    meta = meta_raw.set_index(0).squeeze().to_dict()
 
-    start_time = datetime.datetime.strptime(
-        meta["Test Start Date"] + " " + meta["Test Start Time"], "%Y/%m/%d %H:%M:%S"
+    # Parse starting datetime from metadata
+    start_datetime = datetime.datetime.strptime(
+        f"{meta['Test Start Date']} {meta['Test Start Time']}", "%Y/%m/%d %H:%M:%S"
     )
-    df["Datetime"] = [
-        start_time + datetime.timedelta(seconds=s) for s in df["Elapsed Time [s]"]
-    ]
+
+    # Convert elapsed time to full timestamps
+    df["Datetime"] = pd.to_timedelta(df["Elapsed Time [s]"], unit="s") + start_datetime
     df.drop(columns=["Elapsed Time [s]"], inplace=True)
 
+    # Determine sample length from metadata
     sample_interval = datetime.datetime.strptime(
         meta["Sample Interval [H:M:S]"], "%H:%M:%S"
-    ).second
-    deadtime = np.array(df["Deadtime (s)"])
-
-    dist_data = df.iloc[:, 0:16].to_numpy()
-    with np.errstate(
-        divide="ignore", invalid="ignore"
-    ):  # ignore warnings from division by zero (they are set to NaN)
-        dist_data = np.true_divide(
-            dist_data, (16.67 * (sample_interval - deadtime[:, np.newaxis]))
-        )
-
-    if extra_data:
-        ops_extra = df.drop(columns=df.columns[0:16])
-        ops_extra["Bin 17"] = ops_extra["Bin 17"] / (
-            16.67 * (sample_interval - deadtime)
-        )
-        ops_extra.set_index("Datetime", inplace=True)
-    else:
-        ops_extra = pd.DataFrame([])
-
-    bin_edges = (
-        np.array([meta[f"Bin {i} Cut Point (um)"] for i in range(1, 18)], dtype=float)
-        * 1000
     )
-    bin_mids = np.array((bin_edges[1:] + bin_edges[:-1]) / 2, dtype=float).round(1)
+    sample_length = datetime.timedelta(
+        hours=sample_interval.hour,
+        minutes=sample_interval.minute,
+        seconds=sample_interval.second,
+    ).total_seconds()
 
-    total_conc = pd.DataFrame(np.nansum(dist_data, axis=1), columns=["Total_conc"])
-    dist_data = pd.DataFrame(dist_data, columns=bin_mids.astype(str))
-    final_df = pd.concat([df["Datetime"], total_conc, dist_data], axis=1)
+    # Apply correction: counts to concentration (excluding Bin 17)
+    deadtime = df["Deadtime (s)"].to_numpy()
+    counts = df.iloc[:, 1:17].to_numpy()  # Bin 1–16
 
-    OPS = Aerosol2D(final_df)
+    # Convert counts to concentration using flow rate (16.67 cm³/s)
+    conc = np.true_divide(counts, 16.67 * (sample_length - deadtime[:, np.newaxis]))
+
+    # If requested, store Bin 17 and other columns as extra data
+    if extra_data:
+        extra = df.drop(columns=df.columns[1:17]).copy()
+        extra["Bin 17"] = extra["Bin 17"] / (16.67 * (sample_length - deadtime))
+        extra.set_index("Datetime", inplace=True)
+    else:
+        extra = pd.DataFrame([])
+
+    # Define bin edges and midpoints
+    bin_edges = (
+        np.array([float(meta[f"Bin {i} Cut Point (um)"]) for i in range(1, 18)]) * 1000
+    )  # nm
+    bin_mids = ((bin_edges[1:] + bin_edges[:-1]) / 2).round(1)  # nm
+
+    # Compute total concentration
+    total_conc = pd.DataFrame(np.nansum(conc, axis=1), columns=["Total_conc"])
+    conc_df = pd.DataFrame(conc, columns=bin_mids.astype(str))
+    df_final = pd.concat([df["Datetime"], total_conc, conc_df], axis=1)
+
+    # Package into class
+    OPS = Aerosol2D(df_final)
     OPS._meta["bin_edges"] = bin_edges
     OPS._meta["bin_mids"] = bin_mids
-    OPS._meta["density"] = float(meta.get("Density", 1.0))
+    OPS._meta["density"] = meta["Density"]
     OPS._meta["instrument"] = "OPS"
-    OPS._meta["serial_number"] = meta.get("Serial Number", "Unknown")
-    OPS._meta["unit"] = "cm⁻³"
+    OPS._meta["serial_number"] = meta["Serial Number"]
+    OPS._meta["unit"] = "cm$^{-3}$"
     OPS._meta["dtype"] = "dN"
-
     if extra_data:
-        OPS._extra_data = ops_extra
+        OPS._extra_data = extra
 
     return OPS

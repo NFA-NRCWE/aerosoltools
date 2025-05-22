@@ -6,4 +6,6 @@ This section contains worked examples using aerosoltools on real or simulated da
 .. toctree::
    :maxdepth: 1
 
-   examples/plot_elpi
+   examples/Quick load and plot data
+   examples/Load multiple files and time adjustments
+   examples/Defining time segments, getting statistics, and plotting PSD
