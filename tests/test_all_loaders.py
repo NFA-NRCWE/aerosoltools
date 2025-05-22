@@ -17,7 +17,6 @@ from aerosoltools.loaders import (
     Load_SMPS_file,
 )
 
-
 @pytest.mark.parametrize(
     "loader_func, filename",
     [
