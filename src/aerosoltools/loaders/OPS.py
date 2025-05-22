@@ -233,8 +233,12 @@ def Load_OPS_Direct(
     deadtime = np.array(df["Deadtime (s)"])
 
     dist_data = df.iloc[:, 0:16].to_numpy()
-    with np.errstate(divide='ignore', invalid='ignore'): #ignore warnings from division by zero (they are set to NaN)
-        dist_data = np.true_divide(dist_data, (16.67 * (sample_interval - deadtime[:, np.newaxis])))
+    with np.errstate(
+        divide="ignore", invalid="ignore"
+    ):  # ignore warnings from division by zero (they are set to NaN)
+        dist_data = np.true_divide(
+            dist_data, (16.67 * (sample_interval - deadtime[:, np.newaxis]))
+        )
 
     if extra_data:
         ops_extra = df.drop(columns=df.columns[0:16])
