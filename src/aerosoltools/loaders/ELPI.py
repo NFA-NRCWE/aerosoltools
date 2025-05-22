@@ -154,8 +154,8 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
     try:
         Unit = Unit_dict[meta["CalculatedMoment"][:2]]
         dtype = dtype_dict[meta["CalculatedMoment"][:2]] + meta["CalculatedType"][2:]
-    except:
-        raise Exception("Unit and/or data type does not match the expected")
+    except (KeyError, TypeError) as e:
+        raise Exception("Unit and/or data type does not match the expected") from e
 
     # Total concentration and column formatting
     total_conc = pd.DataFrame(np.nansum(dist_data, axis=1), columns=["Total_conc"])

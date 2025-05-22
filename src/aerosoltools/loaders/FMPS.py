@@ -98,7 +98,7 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
     )
     try:
         datetime_df = _parse_danish_datetime(file, delimiter, encoding, time_format)
-    except:
+    except (IndexError, ValueError, KeyError):
         datetime_df = _parse_standard_datetime(file, delimiter, encoding)
 
     # Extract metadata

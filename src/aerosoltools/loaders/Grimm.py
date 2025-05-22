@@ -39,7 +39,7 @@ def Load_Grimm_file(file: str) -> Aerosol2D:
     try:
         if "File name" in header_line[0]:
             return Load_Grimm_inst(file, encoding, delimiter)
-    except:
+    except (IndexError, TypeError):
         if header_line == "<Header>":
             return Load_Grimm_soft(file, encoding, delimiter)
         else:
