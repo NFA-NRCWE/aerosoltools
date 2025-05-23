@@ -60,29 +60,29 @@ For the full documenation, and examples of use, visit:
 
 The package is available via PyPI and can therefore be installed as:
 
-<pre><code>``` pip install aerosoltools ```</code></pre>
+<pre><code> pip install aerosoltools </code></pre>
 
 ---
 
 ## Quickstart
 ### Load a single instrument file
 
-<pre><code>```
+<pre><code>
 import aerosoltools as at
 elpi = at.Load_ELPI_file("data/elpi_sample.txt")
 elpi.plot_total()
-<pre><code>```
+</code></pre>
   
 ### Access metadata
-<pre><code>```
+<pre><code>
 elpi.metadata
-<pre><code>```
+</code></pre>
   
 ### Batch-load a folder of files
-<pre><code>```
+<pre><code>
 folder_path = "data/cpc_campaign/"
 data = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file)
-<pre><code>```
+</code></pre>
   
 ---
 
