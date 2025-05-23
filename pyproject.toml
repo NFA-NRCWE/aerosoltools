@@ -45,3 +45,6 @@ target-version = "py39"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
 ignore = ["E501"]
+
+[project.urls]
+Documentation = "https://nfa-nrcwe.github.io/aerosoltools/"
