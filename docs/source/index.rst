@@ -55,9 +55,6 @@ the examples.
 
    api/loaders
 
-Examples
---------
-
 .. toctree::
    :maxdepth: 1
    :caption: Examples
