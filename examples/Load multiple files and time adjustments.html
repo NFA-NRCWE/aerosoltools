@@ -1,0 +1,249 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Load multiple files and time adjustments &mdash; aerosoltools 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Defining time segments, getting statistics, and plotting PSD" href="Defining%20time%20segments%2C%20getting%20statistics%2C%20and%20plotting%20PSD.html" />
+    <link rel="prev" title="Plot ELPI data" href="Quick%20load%20and%20plot%20data.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            aerosoltools
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Aerosol Classes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/aerosol1d.html">Aerosol1D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/aerosol2d.html">Aerosol2D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/aerosolalt.html">AerosolAlt</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Loaders</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/loaders.html">Loaders</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Quick%20load%20and%20plot%20data.html">Plot ELPI data</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Load multiple files and time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Defining%20time%20segments%2C%20getting%20statistics%2C%20and%20plotting%20PSD.html">Defining time segments, getting statistics, and plotting PSD</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">aerosoltools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../examples.html">Examples</a></li>
+      <li class="breadcrumb-item active">Load multiple files and time adjustments</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/examples/Load multiple files and time adjustments.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Load-multiple-files-and-time-adjustments">
+<h1>Load multiple files and time adjustments<a class="headerlink" href="#Load-multiple-files-and-time-adjustments" title="Link to this heading"></a></h1>
+<p>First the aerosoltools package is loaded</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="p">;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span><span class="p">;</span>
+
+<span class="c1"># Adjust this to the relative path from your notebook to the source directory</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="s1">&#39;../../../src&#39;</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">aerosoltools</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">at</span>
+</pre></div>
+</div>
+</div>
+<p>The path to the folder containing relevant files is specified and passed to the load_data_from_folder function along with the load function to use when reading the data files. Here a keyword (search_word) can also be passed to only load e.g. .txt files or only load files containg the word “OPS”.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[49]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">folderpath</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;..\..\..\tests\data\OPS_data&quot;</span><span class="p">;</span>
+<span class="n">OPS_data</span> <span class="o">=</span> <span class="n">at</span><span class="o">.</span><span class="n">Load_data_from_folder</span><span class="p">(</span><span class="n">folderpath</span><span class="p">,</span><span class="n">at</span><span class="o">.</span><span class="n">Load_OPS_file</span><span class="p">,</span><span class="n">search_word</span> <span class="o">=</span> <span class="s2">&quot;OPS&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Loading: ..\..\..\tests\data\OPS_data\OPS_data1.csv
+Loading: ..\..\..\tests\data\OPS_data\OPS_data2.csv
+Loading: ..\..\..\tests\data\OPS_data\OPS_data3.csv
+Loading: ..\..\..\tests\data\OPS_data\OPS_data4.csv
+</pre></div></div>
+</div>
+<p>It is seen that the Load_data_from_folder function loaded 4 different files all from an OPS instrument. These are combined to a single data variable and sorted based on their time and dates. The files therefore do not have to be ordered when loading. However, the function will only combine files that come from the same instrument (it checks the instrument serial number - if given in the metadata).</p>
+<p>We can now get an overview of the data by plotting a timeseries plot:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[41]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">OPS_data</span><span class="o">.</span><span class="n">plot_timeseries</span><span class="p">(</span><span class="n">y_3d</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[41]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&lt;Figure size 1000x600 with 3 Axes&gt;,
+ array([&lt;Axes: ylabel=&#39;dN, cm$^{-3}$&#39;&gt;,
+        &lt;Axes: xlabel=&#39;Time&#39;, ylabel=&#39;Dp, nm&#39;&gt;,
+        &lt;matplotlib.colorbar.Colorbar object at 0x000002A786B41D60&gt;],
+       dtype=object))
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_Load_multiple_files_and_time_adjustments_7_1.png" src="../_images/examples_Load_multiple_files_and_time_adjustments_7_1.png" />
+</div>
+</div>
+<p>We see that the data stretches over several days and generally has quite low levels.</p>
+<p>Let’s try to crop the data to only include data from the 25th and 26th, then shift the data by 120 minutes, smooth the data with a rolling window of 60 minutes width before rebinning the data into 2.5 hr timebins. Finally, we plot the mean particle size distribution from all time points of the treated dataset.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[50]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generate a plot</span>
+<span class="n">fig</span><span class="p">,</span><span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">nrows</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">ncols</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="c1"># Crop the data to only include datapoint after the 1st of April at 8:00:00</span>
+
+<span class="c1"># Plot the original data and mark the activities</span>
+<span class="n">OPS_data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Original data&quot;</span><span class="p">)</span>
+
+<span class="c1"># Smooth the data by taking the mean of every 3 datapoints. This does not rebin the data, it is just smoothing</span>
+<span class="n">OPS_data</span><span class="o">.</span><span class="n">timecrop</span><span class="p">(</span><span class="n">start</span> <span class="o">=</span> <span class="s2">&quot;2023-10-25 08:00:00&quot;</span><span class="p">,</span><span class="n">end</span> <span class="o">=</span> <span class="s2">&quot;2023-10-26 22:00:00&quot;</span><span class="p">)</span>
+<span class="n">OPS_data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Cropped data&quot;</span><span class="p">)</span>
+
+<span class="c1"># Shift the time 30 minutes</span>
+<span class="n">OPS_data</span><span class="o">.</span><span class="n">timeshift</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">120</span><span class="p">)</span>
+<span class="n">OPS_data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Shifted data&quot;</span><span class="p">)</span>
+
+<span class="c1"># Crop the data to only include datapoint after the 1st of April at 8:00:00</span>
+<span class="n">OPS_data</span><span class="o">.</span><span class="n">timesmooth</span><span class="p">(</span><span class="mi">60</span><span class="p">,</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;mean&quot;</span><span class="p">)</span>
+<span class="n">OPS_data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Smoothed data&quot;</span><span class="p">)</span>
+
+<span class="c1"># Rebin the data to 2.5h bins. There are also options to specify minutes or seconds instead of hours</span>
+<span class="n">OPS_data</span><span class="o">.</span><span class="n">timerebin</span><span class="p">(</span><span class="s2">&quot;2.5h&quot;</span><span class="p">)</span>
+<span class="n">OPS_data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Rebinned data&quot;</span><span class="p">)</span>
+
+<span class="n">OPS_data</span><span class="o">.</span><span class="n">plot_psd</span><span class="p">(</span><span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span>
+<span class="n">axs</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;PSD&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_Load_multiple_files_and_time_adjustments_9_0.png" src="../_images/examples_Load_multiple_files_and_time_adjustments_9_0.png" />
+</div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Quick%20load%20and%20plot%20data.html" class="btn btn-neutral float-left" title="Plot ELPI data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Defining%20time%20segments%2C%20getting%20statistics%2C%20and%20plotting%20PSD.html" class="btn btn-neutral float-right" title="Defining time segments, getting statistics, and plotting PSD" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

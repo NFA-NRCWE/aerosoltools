@@ -1,0 +1,301 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Defining time segments, getting statistics, and plotting PSD &mdash; aerosoltools 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Load multiple files and time adjustments" href="Load%20multiple%20files%20and%20time%20adjustments.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            aerosoltools
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Aerosol Classes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/aerosol1d.html">Aerosol1D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/aerosol2d.html">Aerosol2D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/aerosolalt.html">AerosolAlt</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Loaders</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/loaders.html">Loaders</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Quick%20load%20and%20plot%20data.html">Plot ELPI data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Load%20multiple%20files%20and%20time%20adjustments.html">Load multiple files and time adjustments</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Defining time segments, getting statistics, and plotting PSD</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">aerosoltools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../examples.html">Examples</a></li>
+      <li class="breadcrumb-item active">Defining time segments, getting statistics, and plotting PSD</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/examples/Defining time segments, getting statistics, and plotting PSD.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Defining-time-segments,-getting-statistics,-and-plotting-PSD">
+<h1>Defining time segments, getting statistics, and plotting PSD<a class="headerlink" href="#Defining-time-segments,-getting-statistics,-and-plotting-PSD" title="Link to this heading"></a></h1>
+<p>First we import the package</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="p">;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span><span class="p">;</span>
+
+
+<span class="c1"># Adjust this to the relative path from your notebook to the source directory</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="s1">&#39;../../../src&#39;</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">aerosoltools</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">at</span>
+</pre></div>
+</div>
+</div>
+<p>Then we load the SMPS data</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">filename</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;..\..\..\tests\data\Sample_SMPS.txt&quot;</span><span class="p">;</span>
+<span class="n">SMPS_data</span> <span class="o">=</span> <span class="n">at</span><span class="o">.</span><span class="n">Load_SMPS_file</span><span class="p">(</span><span class="n">filename</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Data is already in number concentration (cm⁻³).
+Warning: dtype does not contain &#39;/dlogDp&#39;; nothing was changed.
+</pre></div></div>
+</div>
+<p>We then visualiza the dataset via timeseries plot</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">SMPS_data</span><span class="o">.</span><span class="n">plot_timeseries</span><span class="p">(</span><span class="n">y_3d</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">));</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_Defining_time_segments%2C_getting_statistics%2C_and_plotting_PSD_7_0.png" src="../_images/examples_Defining_time_segments%2C_getting_statistics%2C_and_plotting_PSD_7_0.png" />
+</div>
+</div>
+<p>We see that there are specific time intervals where the particle number concentration rises. Now we want to pool the data points within some of these times, and categorize them as specific activities e.g. cutting, sanding, or just emission.</p>
+<p>In order to do so, we first need to make a dictionary with start and end times of the relevant time periods:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">activity_periods</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Emission&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;2018-02-27 10:18:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2018-02-27 10:31:00&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;2018-02-27 10:35:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2018-02-27 10:48:00&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;2018-02-27 10:52:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2018-02-27 11:30:00&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;2018-02-27 12:39:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2018-02-27 12:48:00&quot;</span><span class="p">)</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;Constant phase 1&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;2018-02-27 11:43:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2018-02-27 12:35:00&quot;</span><span class="p">)</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;Constant phase 2&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;2018-02-27 12:55:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2018-02-27 13:45:00&quot;</span><span class="p">)</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;Background&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;2018-02-27 13:48:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2018-02-27 14:39:00&quot;</span><span class="p">)</span>
+   <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>We then mark this activities within the dataset, making a boolean column in the main DataFrame used for indexing the defined activity periods.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">SMPS_data</span><span class="o">.</span><span class="n">mark_activities</span><span class="p">(</span><span class="n">activity_periods</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We can then replot the time_series but now while marking activities:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">SMPS_data</span><span class="o">.</span><span class="n">plot_timeseries</span><span class="p">(</span><span class="n">y_3d</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span><span class="n">y_tot</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mf">1e6</span><span class="p">),</span> <span class="n">mark_activities</span><span class="o">=</span><span class="kc">True</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Hello
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_Defining_time_segments%2C_getting_statistics%2C_and_plotting_PSD_13_1.png" src="../_images/examples_Defining_time_segments%2C_getting_statistics%2C_and_plotting_PSD_13_1.png" />
+</div>
+</div>
+<p>Finally we can use the summarize function to get statistics of the PNC, PMx levels, total mass, and particle sizes during each time segment.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">SMPS_data</span><span class="o">.</span><span class="n">summarize</span><span class="p">();</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Data is already in number concentration (cm⁻³).
+
+Summary of aerosol properties (transposed):
+
++------------------------+----------+----------+------------------+------------------+------------+
+|                        | All data | Emission | Constant phase 1 | Constant phase 2 | Background |
++------------------------+----------+----------+------------------+------------------+------------+
+|       PNC (cm⁻³)       | 4505.07  | 9414.08  |     5124.14      |     1460.11      |   201.58   |
+|     PNC std (cm⁻³)     |  3804.2  | 1936.08  |      242.51      |      375.53      |   29.92    |
+|      PM1 (µg/m³)       |  13.54   |  33.45   |      10.68       |       3.04       |    0.43    |
+|    PM1 std (µg/m³)     |  14.57   |   10.5   |       0.69       |       0.8        |    0.06    |
+|     PM2.5 (µg/m³)      |  13.54   |  33.45   |      10.68       |       3.04       |    0.43    |
+|   PM2.5 std (µg/m³)    |  14.57   |   10.5   |       0.69       |       0.8        |    0.06    |
+|      PM4 (µg/m³)       |  13.54   |  33.45   |      10.68       |       3.04       |    0.43    |
+|    PM4 std (µg/m³)     |  14.57   |   10.5   |       0.69       |       0.8        |    0.06    |
+|      PM10 (µg/m³)      |  13.54   |  33.45   |      10.68       |       3.04       |    0.43    |
+|    PM10 std (µg/m³)    |  14.57   |   10.5   |       0.69       |       0.8        |    0.06    |
+|   Total Mass (µg/m³)   |  13.54   |  33.45   |      10.68       |       3.04       |    0.43    |
+| Total Mass std (µg/m³) |  14.57   |   10.5   |       0.69       |       0.8        |    0.06    |
+|      Mode Dp (nm)      |  107.2   |  131.6   |       95.9       |       99.2       |    88.6    |
+|    Mode Dp std (nm)    |   29.8   |   18.7   |       7.4        |       20.6       |    20.8    |
+|     Median Dp (nm)     |   99.7   |  116.1   |       92.9       |       92.8       |    88.0    |
+|   Median Dp std (nm)   |   18.2   |   9.7    |       2.3        |       5.4        |    6.3     |
+|        GMD (nm)        |   96.8   |  107.6   |       92.4       |       91.7       |    88.8    |
+|      GMD std (nm)      |   14.1   |   6.9    |       1.3        |       4.5        |    5.1     |
++------------------------+----------+----------+------------------+------------------+------------+
+</pre></div></div>
+</div>
+<p>We can also plot the PSD of each time segment:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">SMPS_data</span><span class="o">.</span><span class="n">plot_psd</span><span class="p">();</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_Defining_time_segments%2C_getting_statistics%2C_and_plotting_PSD_17_0.png" src="../_images/examples_Defining_time_segments%2C_getting_statistics%2C_and_plotting_PSD_17_0.png" />
+</div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Load%20multiple%20files%20and%20time%20adjustments.html" class="btn btn-neutral float-left" title="Load multiple files and time adjustments" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
