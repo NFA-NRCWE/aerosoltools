@@ -14,6 +14,10 @@
 
 The package includes loaders for common instrument exports and a batch-loading utility for processing entire folders.
 
+For the full documenation, and examples of use, visit:
+
+[View the documentation](https://nfa-nrcwe.github.io/aerosoltools/)
+
 ---
 
 ## 🧰 Provided Loaders
