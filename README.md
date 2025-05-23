@@ -67,22 +67,18 @@ The package is available via PyPI and can therefore be installed as:
 ## Quickstart
 ### Load a single instrument file
 
-<pre><code>
-import aerosoltools as at
+
+<pre><code> import aerosoltools as at
 elpi = at.Load_ELPI_file("data/elpi_sample.txt")
-elpi.plot_total()
-</code></pre>
+elpi.plot_timeseries() </code></pre>
+
   
 ### Access metadata
-<pre><code>
-elpi.metadata
-</code></pre>
+<pre><code> elpi.metadata </code></pre>
   
 ### Batch-load a folder of files
-<pre><code>
-folder_path = "data/cpc_campaign/"
-data = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file)
-</code></pre>
+<pre><code> folder_path = "data/cpc_campaign/"
+data = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file) </code></pre>
   
 ---
 
