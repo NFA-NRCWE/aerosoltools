@@ -6,6 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](./tests)
 ![Docs](https://github.com/NFA-NRCWE/aerosoltools/actions/workflows/deploy-docs.yml/badge.svg)
+[![PyPI version](https://badge.fury.io/py/aerosoltools.svg)](https://pypi.org/project/aerosoltools/)
 ---
 
 ## Overview
@@ -57,7 +58,9 @@ For the full documenation, and examples of use, visit:
 
 ## 📦 Installation
 
-Soon to be published on PyPI
+The package is available via PyPI and can therefore be installed as:
+
+pip install aerosoltools
 
 ---
 
