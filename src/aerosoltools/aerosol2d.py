@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from typing import Optional, Union
+from __future__ import annotations
+from typing import Optional, Union, Tuple, Sequence, cast
+from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.colors import LogNorm, Normalize
+from matplotlib.colorbar import Colorbar
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from tabulate import tabulate
 
 from .aerosol1d import Aerosol1D
@@ -60,7 +65,10 @@ class Aerosol2D(Aerosol1D):
         float
             bin edges ( "nm" ).
         """
-        return self._meta.get("bin_edges")
+        value = self._meta.get("bin_edges")
+        if value is None:
+            raise ValueError("bin_edges are not set.")
+        return value
 
     @property
     def bin_mids(self):
@@ -72,10 +80,13 @@ class Aerosol2D(Aerosol1D):
         float
             bin mids ( "nm" ).
         """
-        return self._meta.get("bin_mids")
+        bin_mids = self._meta.get("bin_mids")
+        if bin_mids is None:
+            raise ValueError("bin_mids are not set. Please set bin_mids.")
+        return bin_mids
 
     @property
-    def density(self):
+    def density(self) -> float:
         """
         Unit of the measurements.
 
@@ -84,7 +95,11 @@ class Aerosol2D(Aerosol1D):
         float
             Particle density in "g/cm³".
         """
-        return self._meta.get("density")
+        density = self._meta.get("density")
+        if not isinstance(density, (int, float)):
+            # covers None or any other wrong type
+            raise ValueError("Density is not set. Please set density.")
+        return float(density)
 
     @property
     def metadata(self):
@@ -121,14 +136,23 @@ class Aerosol2D(Aerosol1D):
         -------
         list
             Headers to access sizebin columns.
+
+        Raises
+        ------
+        ValueError
+            If bin mids are not present.
         """
+        if self.bin_mids is None:
+            raise ValueError("bin_mids are not set. Please set bin_mids.")
         return [str(x) for x in self.bin_mids]
 
     ###########################################################################
     """############################# Functions #############################"""
     ###########################################################################
 
-    def convert_to_mass_concentration(self, inplace: bool = True):
+    def convert_to_mass_concentration(
+            self, *, inplace: bool = True
+        ) -> "Aerosol2D":
         """
         Convert particle size distribution data to mass concentration (ug/m³) based on current data type.
 
@@ -147,6 +171,8 @@ class Aerosol2D(Aerosol1D):
             print("Data is already in mass concentration (ug/m³).")
             return self if inplace else self.copy_self()
 
+        if self.bin_mids is None:
+            raise ValueError("bin_mids are not set. Please set bin_mids before converting to mass concentration.")
         bin_radii = self.bin_mids / 2.0  # convert diameter to radius in nm
 
         if "dS" in self.dtype:
@@ -170,8 +196,7 @@ class Aerosol2D(Aerosol1D):
             mass_distribution = volume_distribution * self.density * 1e-9
 
         else:
-            print("Unknown data type for conversion.")
-            return None
+            raise ValueError("Unknown data type for conversion.")
 
         # Apply the results
         target_instance = self if inplace else self.copy_self()
@@ -193,7 +218,9 @@ class Aerosol2D(Aerosol1D):
 
     ###########################################################################
 
-    def convert_to_number_concentration(self, inplace: bool = True):
+    def convert_to_number_concentration(
+            self, *, inplace: bool = True
+        ) -> "Aerosol2D":
         """
         Convert particle size distribution data to number concentration (cm⁻³)
         from the current data type.
@@ -232,8 +259,7 @@ class Aerosol2D(Aerosol1D):
             number_distribution = self.size_data.copy() / surface_area_per_particle
 
         else:
-            print("Unknown data type for conversion.")
-            return None
+            raise ValueError("Unknown data type for conversion.")
 
         # Apply the results
         target_instance = self if inplace else self.copy_self()
@@ -350,7 +376,7 @@ class Aerosol2D(Aerosol1D):
 
         elif "dW" in self.dtype:
             # Mass -> Volume
-            volume_distribution = self.size_data.copy() / self.density * 1e9  # nm³/cm³
+            volume_distribution = self.size_data.copy() / self.density * 1e9 # nm³/cm³
 
         elif "dN" in self.dtype:
             # Number -> Volume
@@ -505,10 +531,6 @@ class Aerosol2D(Aerosol1D):
         else:
             fig = ax.figure
 
-        ax.set_xscale("log")
-        ax.set_xlabel("Particle diameter (nm)")
-        ax.grid(True, which="both", linestyle="--", linewidth=0.5)
-
         # Determine normalization state
         is_already_normalized = "/dlogDp" in self.dtype
         bin_columns = self._sizebin_headers
@@ -569,7 +591,9 @@ class Aerosol2D(Aerosol1D):
                 color=color or "black",
                 alpha=0.3,
             )
-
+        ax.set_xscale("log")
+        ax.set_xlabel("Particle diameter (nm)")
+        ax.grid(True, which="both", linestyle="--", linewidth=0.5)
         ax.legend()
         if new_fig_created:
             fig.tight_layout()
@@ -668,13 +692,13 @@ class Aerosol2D(Aerosol1D):
 
     def plot_timeseries(
         self,
-        y_tot=(0, 0),
-        y_3d=(0, 0),
-        log=True,
-        ax1=None,
-        ax2=None,
-        mark_activities=False,
-    ):
+        y_tot: Tuple[float, float] = (0.0, 0.0),
+        y_3d: Tuple[float, float] = (1.0, 0.0),
+        log: bool = True,
+        ax1: Optional[Axes] = None,
+        ax2: Optional[Axes] = None,
+        mark_activities: bool | Sequence[str] = False,
+    ) -> tuple[Figure, Axes, Axes, Colorbar]:
         """
         Plot total concentration (top) and a size-resolved time series (bottom).
 
@@ -692,6 +716,9 @@ class Aerosol2D(Aerosol1D):
             Axis for the mesh plot. If provided, ax1 must also be provided.
         mark_activities : bool or list of str, optional
             Passed to `plot_total_conc()` to highlight activity periods.
+            *False* .......... no highlighting  
+            *True* ........... highlight all known activities  
+            list[str] ........ highlight only the given names
 
         Returns
         -------
@@ -703,11 +730,15 @@ class Aerosol2D(Aerosol1D):
         if (ax1 is None) != (ax2 is None):
             raise ValueError("You must provide both ax1 and ax2, or neither.")
 
+        # ---- Create new axes if needed ----
         if ax1 is None and ax2 is None:
             newplot = True
-            fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(10, 6))
+            fig, (ax1, ax2) = plt.subplots(
+                nrows=2, sharex=True, figsize=(10, 6)
+            )
         else:
-            fig = ax1.figure
+            assert ax1 is not None and ax2 is not None   # ← tells the type checker
+            fig = cast(Figure, ax1.figure)        # ax1 is guaranteed not-None here
             newplot = False
 
         time = self.time
@@ -736,9 +767,9 @@ class Aerosol2D(Aerosol1D):
 
         # Handle color scale limits
         z_data = data
-        if y_3d != (0, 0):
+        if y_3d != (1, 0):
             zmin, zmax = y_3d
-            if zmin != 0:
+            if zmin != 1:
                 z_data = z_data.clip(lower=zmin)
             if zmax == 0:
                 zmax = z_data.max().max()
@@ -747,16 +778,10 @@ class Aerosol2D(Aerosol1D):
             zmax = z_data.max().max()
 
         # Define color scale
-        if log:
-            if (z_data <= 0).any().any():
-                raise ValueError(
-                    "Data contains zeros or negatives; cannot use log color scale."
-                )
-            norm = LogNorm(vmin=zmin, vmax=zmax)
-        else:
-            norm = Normalize(vmin=zmin, vmax=zmax)
+        norm = LogNorm(vmin=zmin, vmax=zmax) if log else Normalize(vmin=zmin, vmax=zmax)
 
         # Mesh plot
+        assert ax2 is not None
         mesh = ax2.pcolormesh(
             x_grid, y_grid, z_data, cmap="jet", norm=norm, shading="flat"
         )
@@ -773,18 +798,18 @@ class Aerosol2D(Aerosol1D):
         )
 
         # # Add colorbar
-        col = fig.colorbar(mesh, ax=[ax1, ax2])
-        col.set_label(f"{self.dtype}, {self.unit}")
+        cbar: Colorbar = fig.colorbar(mesh, ax=[ax1, ax2])
+        cbar.set_label(f"{self.dtype}, {self.unit}")
 
         # Styling
         ax1.tick_params(axis="y", which="both", direction="out", length=6, width=2)
         ax2.tick_params(axis="y", which="both", direction="out", length=6, width=2)
 
-        return fig, np.append([ax1, ax2], col)
+        return fig, ax1, ax2, cbar
 
     ###########################################################################
 
-    def summarize(self, filename=None):
+    def summarize(self, filename: Optional[str | Path] = None) -> pd.DataFrame:
         """
         Summarize aerosol characteristics for each activity period.
 
@@ -946,7 +971,15 @@ class Aerosol2D(Aerosol1D):
             print(f"Summary saved to: {filename}")
 
         summary_t = summary.set_index("Segment").T
+        idx_reset = summary_t.reset_index()
         print("\nSummary of aerosol properties (transposed):\n")
-        print(tabulate(summary_t, headers="keys", tablefmt="pretty", floatfmt=".3f"))
+        print(
+            tabulate(
+                idx_reset.values,                    # rows → ndarray of iterables
+                headers=idx_reset.columns.tolist(),  # ← convert Index → list[str]
+                tablefmt="pretty",
+                floatfmt=".3f",
+            )
+        )
 
         return summary

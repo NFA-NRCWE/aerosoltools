@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import copy
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from collections.abc import Sequence
 import pandas as pd
 from tabulate import tabulate
 
@@ -45,6 +48,7 @@ class Aerosol1D:
 
     def __init__(self, dataframe):
         self._meta = {}
+        self._meta["density"] = 1.0 #g/cm3
         self._extra_data = pd.DataFrame([])
         self._activities = []
         self._activity_periods = {}
@@ -299,7 +303,11 @@ class Aerosol1D:
 
     ###########################################################################
 
-    def plot_total_conc(self, ax=None, mark_activities=False):
+    def plot_total_conc(
+        self,
+        ax: Optional[Axes] = None,
+        mark_activities: bool | Sequence[str] = False,
+    ) -> tuple[Figure, Axes]:
         """
         Plot the total concentration over time.
 
@@ -325,8 +333,9 @@ class Aerosol1D:
             fig, ax = plt.subplots(figsize=(10, 5))
             new_fig_created = True
         else:
-            fig = ax.figure
-
+            fig = cast(Figure, cast(Axes, ax).figure)   # now typed as Figure
+            new_fig_created = False
+        
         # Plot main data
         ax.plot(self.time, self.total_concentration, linestyle="-")
 
@@ -346,7 +355,6 @@ class Aerosol1D:
 
         # Highlight activities
         if mark_activities and hasattr(self, "_activity_periods"):
-            print("Hello")
             # Exclude "All data" unless explicitly requested
             all_activities = sorted(self._activity_periods.keys())
             color_map = plt.colormaps.get_cmap("gist_ncar")
@@ -359,7 +367,7 @@ class Aerosol1D:
                 selected_activities = [a for a in all_activities if a != "All data"]
             elif isinstance(mark_activities, list):
                 selected_activities = [
-                    a for a in mark_activities if a in self._activity_periods
+                    a for a in mark_activities if a in self._activity_periods # type: ignore
                 ]
             else:
                 selected_activities = []
@@ -368,9 +376,10 @@ class Aerosol1D:
                 color = activity_colors[activity]
                 first = True
                 for start, end in self._activity_periods[activity]:
+                    print(start, end)
                     ax.axvspan(
-                        pd.Timestamp(start),
-                        pd.Timestamp(end),
+                        pd.Timestamp(start),# type: ignore
+                        pd.Timestamp(end),# type: ignore
                         color=color,
                         alpha=0.3,
                         label=activity if first else None,
@@ -433,7 +442,7 @@ class Aerosol1D:
         # Console output
         print("\nSummary of total concentration:\n")
         print(
-            tabulate(summary_rounded, headers="keys", tablefmt="pretty", floatfmt=".3f")
+            tabulate(summary_rounded, headers="keys", tablefmt="pretty", floatfmt=".3f") # type: ignore
         )
 
         # Optionally save
