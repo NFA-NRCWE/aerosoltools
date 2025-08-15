@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
-from typing import Optional, Union, Tuple, Sequence, cast
+
 from pathlib import Path
+from typing import Optional, Sequence, Tuple, Union, cast
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.colors import LogNorm, Normalize
-from matplotlib.colorbar import Colorbar
 from matplotlib.axes import Axes
+from matplotlib.colorbar import Colorbar
+from matplotlib.colors import LogNorm, Normalize
 from matplotlib.figure import Figure
 from tabulate import tabulate
 
@@ -150,9 +151,7 @@ class Aerosol2D(Aerosol1D):
     """############################# Functions #############################"""
     ###########################################################################
 
-    def convert_to_mass_concentration(
-            self, *, inplace: bool = True
-        ) -> "Aerosol2D":
+    def convert_to_mass_concentration(self, *, inplace: bool = True) -> "Aerosol2D":
         """
         Convert particle size distribution data to mass concentration (ug/m³) based on current data type.
 
@@ -172,7 +171,9 @@ class Aerosol2D(Aerosol1D):
             return self if inplace else self.copy_self()
 
         if self.bin_mids is None:
-            raise ValueError("bin_mids are not set. Please set bin_mids before converting to mass concentration.")
+            raise ValueError(
+                "bin_mids are not set. Please set bin_mids before converting to mass concentration."
+            )
         bin_radii = self.bin_mids / 2.0  # convert diameter to radius in nm
 
         if "dS" in self.dtype:
@@ -218,9 +219,7 @@ class Aerosol2D(Aerosol1D):
 
     ###########################################################################
 
-    def convert_to_number_concentration(
-            self, *, inplace: bool = True
-        ) -> "Aerosol2D":
+    def convert_to_number_concentration(self, *, inplace: bool = True) -> "Aerosol2D":
         """
         Convert particle size distribution data to number concentration (cm⁻³)
         from the current data type.
@@ -376,7 +375,7 @@ class Aerosol2D(Aerosol1D):
 
         elif "dW" in self.dtype:
             # Mass -> Volume
-            volume_distribution = self.size_data.copy() / self.density * 1e9 # nm³/cm³
+            volume_distribution = self.size_data.copy() / self.density * 1e9  # nm³/cm³
 
         elif "dN" in self.dtype:
             # Number -> Volume
@@ -716,8 +715,8 @@ class Aerosol2D(Aerosol1D):
             Axis for the mesh plot. If provided, ax1 must also be provided.
         mark_activities : bool or list of str, optional
             Passed to `plot_total_conc()` to highlight activity periods.
-            *False* .......... no highlighting  
-            *True* ........... highlight all known activities  
+            *False* .......... no highlighting
+            *True* ........... highlight all known activities
             list[str] ........ highlight only the given names
 
         Returns
@@ -733,12 +732,10 @@ class Aerosol2D(Aerosol1D):
         # ---- Create new axes if needed ----
         if ax1 is None and ax2 is None:
             newplot = True
-            fig, (ax1, ax2) = plt.subplots(
-                nrows=2, sharex=True, figsize=(10, 6)
-            )
+            fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(10, 6))
         else:
-            assert ax1 is not None and ax2 is not None   # ← tells the type checker
-            fig = cast(Figure, ax1.figure)        # ax1 is guaranteed not-None here
+            assert ax1 is not None and ax2 is not None  # ← tells the type checker
+            fig = cast(Figure, ax1.figure)  # ax1 is guaranteed not-None here
             newplot = False
 
         time = self.time
@@ -778,6 +775,7 @@ class Aerosol2D(Aerosol1D):
             zmax = z_data.max().max()
 
         # Define color scale
+        print(zmin, zmax)
         norm = LogNorm(vmin=zmin, vmax=zmax) if log else Normalize(vmin=zmin, vmax=zmax)
 
         # Mesh plot
@@ -975,7 +973,7 @@ class Aerosol2D(Aerosol1D):
         print("\nSummary of aerosol properties (transposed):\n")
         print(
             tabulate(
-                idx_reset.values,                    # rows → ndarray of iterables
+                idx_reset.values,  # rows → ndarray of iterables
                 headers=idx_reset.columns.tolist(),  # ← convert Index → list[str]
                 tablefmt="pretty",
                 floatfmt=".3f",

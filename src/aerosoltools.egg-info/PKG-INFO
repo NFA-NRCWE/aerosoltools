@@ -3,7 +3,8 @@ Name: aerosoltools
 Version: 0.1.0
 Summary: Tools for loading and analyzing aerosol instrument data
 Author: NRCWE community
-Requires-Python: >=3.8
+Project-URL: Documentation, https://nfa-nrcwe.github.io/aerosoltools/
+Requires-Python: >=3.10
 Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: pandas>=1.0
@@ -25,6 +26,7 @@ Dynamic: license-file
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](./tests)
 ![Docs](https://github.com/NFA-NRCWE/aerosoltools/actions/workflows/deploy-docs.yml/badge.svg)
+[![PyPI version](https://badge.fury.io/py/aerosoltools.svg)](https://pypi.org/project/aerosoltools/)
 ---
 
 ## Overview
@@ -76,29 +78,26 @@ For the full documenation, and examples of use, visit:
 
 ## 📦 Installation
 
-Soon to be published on PyPI
+The package is available via PyPI and can therefore be installed as:
+
+<pre><code> pip install aerosoltools </code></pre>
 
 ---
 
 ## Quickstart
 ### Load a single instrument file
 
-import aerosoltools as at
-
+<pre><code>import aerosoltools as at
 elpi = at.Load_ELPI_file("data/elpi_sample.txt")
-
-elpi.plot_total()
+elpi.plot_timeseries() </code></pre>
 
 ### Access metadata
-
-elpi.metadata
-
+<pre><code>elpi.metadata </code></pre>
+  
 ### Batch-load a folder of files
-
-folder_path = "data/cpc_campaign/"
-
-data = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file)
-
+<pre><code>folder_path = "data/cpc_campaign/"
+data = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file) </code></pre>
+  
 ---
 
 📄 License

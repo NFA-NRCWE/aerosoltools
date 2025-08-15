@@ -105,12 +105,19 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
     - Normalization is done to convert to number concentration `dN`.
     - Supports dynamic density-aware edge recomputation when density ≠ 1.
     """
+
     encoding, delimiter = detect_delimiter(file)
 
     # Load metadata and bin descriptors
     meta = load_ELPI_metadata(file, delimiter, encoding)
-    bin_edges = np.array(meta["D50values(um)"], dtype=float) * 1000
-    bin_mids = np.array(meta["CalculatedDi(um)"], dtype=float) * 1000
+    try:
+        bin_edges = np.array(meta["D50values(um)"], dtype=float) * 1000
+    except ValueError:
+        bin_edges = np.array(meta["D50values(um)"].split("\t"), dtype=float) * 1000
+    try:
+        bin_mids = np.array(meta["CalculatedDi(um)"], dtype=float) * 1000
+    except ValueError:
+        bin_mids = np.array(meta["CalculatedDi(um)"].split("\t"), dtype=float) * 1000
 
     # Recalculate bin edges if non-unit density (mass data, not geometric cutpoints)
     if meta["Density(g/cm^3)"] != 1.0:
@@ -122,37 +129,78 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
         print("  Bin edges estimated via geometric means ")
         print("###########################################")
 
-    # Load main data table, handling possible variations
+    # --- Load main data table robustly + parse datetime (no column drops) ---
+    with open(file, encoding=encoding, errors="replace") as f:
+        lines = f.readlines()
+
+    # Find the [Data] marker
     try:
-        df = pd.read_csv(file, sep=delimiter, header=36, encoding=encoding)
-        df = df.iloc[1:].reset_index(drop=True)
-    except pd.errors.ParserError:
-        df = pd.read_csv(
-            file, sep=delimiter, header=None, skiprows=42, encoding=encoding
+        data_idx = next(i for i, line in enumerate(lines) if line.strip() == "[Data]")
+    except StopIteration:
+        raise ValueError("Couldn't find the [Data] marker in the file.")
+
+    # Find the header row right before [Data]
+    # Prefer the last non-section line that contains the delimiter
+    j = data_idx - 1
+    while j >= 0 and (not lines[j].strip() or lines[j].lstrip().startswith("[")):
+        j -= 1
+    if j < 0 or delimiter not in lines[j]:
+        # search a bit further up as a fallback
+        found = False
+        for k in range(data_idx - 1, max(-1, data_idx - 25), -1):
+            if delimiter in lines[k] and not lines[k].lstrip().startswith("["):
+                j = k
+                found = True
+                break
+        if not found:
+            raise ValueError("Couldn't find the header line before [Data].")
+
+    header = [
+        h.strip() for h in lines[j].lstrip("\ufeff").rstrip("\r\n").split(delimiter)
+    ]
+
+    # Read the data rows AFTER the [Data] line
+    df = pd.read_csv(
+        file,
+        sep=delimiter,
+        header=None,
+        skiprows=data_idx + 1,
+        encoding=encoding,
+        engine="python",
+        on_bad_lines="skip",
+    )
+
+    # Align header length with actual number of columns (no reordering)
+    if len(header) < df.shape[1]:
+        header += [f"Unnamed_{i}" for i in range(len(header), df.shape[1])]
+    elif len(header) > df.shape[1]:
+        header = header[: df.shape[1]]
+    df.columns = header
+
+    # Force the first column to be called "Datetime" (keep order intact)
+    cols = list(df.columns)
+    cols[0] = "Datetime"
+    df.columns = cols
+
+    # Parse datetimes: strict formats first, then permissive fallback
+    formats = ["%Y/%m/%d %H:%M:%S.%f", "%Y/%m/%d %H:%M:%S", "%Y/%m/%d %H:%M"]
+    parsed = None
+    for fmt in formats:
+        s = pd.to_datetime(df["Datetime"], format=fmt, errors="coerce")
+        if s.notna().mean() > 0.98:  # accept if ~all rows parse
+            parsed = s
+            break
+    if parsed is None:
+        s = pd.to_datetime(df["Datetime"], errors="coerce")
+        parsed = s
+    if parsed.isna().mean() > 0.2:
+        raise ValueError(
+            "Datetime parsing failed for many rows — check the first column."
         )
-        with open(file, encoding=encoding) as f:
-            header_line = f.readlines()[39].strip().split(delimiter)
-        while len(header_line) < df.shape[1]:
-            header_line.append(f"Unnamed_{len(header_line)}")
-        df.columns = header_line
+    df["Datetime"] = parsed
+    # --- end robust load + parse ---
 
-    # Parse datetime
-    try:
-        df = df.rename(columns={"Date Time (yyyy/mm/dd hh:mm)": "Datetime"})
-    except KeyError:
-        try:
-            df = df.rename(columns={"DateTime(yyyy/mm/dd hh:mm)[ELPI+Time]": "Datetime"})
-        except KeyError:
-            try:
-                df = df.rename(columns={"DateTime(yyyy/mm/dd hh:mm)": "Datetime"})
-            except KeyError as e:
-                raise Exception("Uknown Datetime header format. Rename header to 'Date Time (yyyy/mm/dd hh:mm)'") from e
-    try:
-        df["Datetime"] = pd.to_datetime(df["Datetime"], format="%Y/%m/%d %H:%M:%S.%f")
-    except ValueError:
-        df["Datetime"] = pd.to_datetime(df["Datetime"], format="%Y/%m/%d %H:%M:%S")
-
-    # Extract size distribution data and extra metadata
+    # Extract size distribution data and extra metadata (indices preserved)
     dist_data = df.iloc[:, 34:48].copy()
     extra_df = df.drop(df.columns[33:47], axis=1)
 
@@ -164,7 +212,9 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
         Unit = Unit_dict[meta["CalculatedMoment"][:2]]
         dtype = dtype_dict[meta["CalculatedMoment"][:2]] + meta["CalculatedType"][2:]
     except (KeyError, TypeError) as e:
-        raise Exception("Unit and/or data type does not match the expected") from e
+        raise Exception(
+            "Unit and/or data type does not match the expected - ensure that the data has been converted from Current (fA) via the ELPI software"
+        ) from e
 
     # Total concentration and column formatting
     total_conc = pd.DataFrame(np.nansum(dist_data, axis=1), columns=["Total_conc"])
@@ -181,6 +231,8 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
     meta["bin_edges"] = bin_edges.round(1)
     meta["bin_mids"] = bin_mids
     meta["instrument"] = "ELPI"
+
+    # Serial number (kept from your original approach)
     if delimiter == ",":
         serial_n = str(
             np.genfromtxt(
@@ -221,5 +273,3 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
         ELPI._extra_data = extra_df
 
     return ELPI
-
-
