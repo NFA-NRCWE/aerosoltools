@@ -140,11 +140,13 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
     try:
         df = df.rename(columns={"Date Time (yyyy/mm/dd hh:mm)": "Datetime"})
     except KeyError:
-        df = df.rename(columns={"DateTime(yyyy/mm/dd hh:mm)[ELPI+Time]": "Datetime"})
-    except KeyError:
-        df = df.rename(columns={"DateTime(yyyy/mm/dd hh:mm)": "Datetime"})
-    except KeyError as e:
-        raise Exception("Uknown Datetime header format. Rename header to 'Date Time (yyyy/mm/dd hh:mm)'") from e
+        try:
+            df = df.rename(columns={"DateTime(yyyy/mm/dd hh:mm)[ELPI+Time]": "Datetime"})
+        except KeyError:
+            try:
+                df = df.rename(columns={"DateTime(yyyy/mm/dd hh:mm)": "Datetime"})
+            except KeyError as e:
+                raise Exception("Uknown Datetime header format. Rename header to 'Date Time (yyyy/mm/dd hh:mm)'") from e
     try:
         df["Datetime"] = pd.to_datetime(df["Datetime"], format="%Y/%m/%d %H:%M:%S.%f")
     except ValueError:
@@ -219,4 +221,5 @@ def Load_ELPI_file(file: str, extra_data: bool = False):
         ELPI._extra_data = extra_df
 
     return ELPI
+
 
