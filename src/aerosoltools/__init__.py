@@ -35,11 +35,6 @@ Author: NRCWE community / NFA
 """
 from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
-try:
-    __version__ = _pkg_version("aerosoltools")
-except PackageNotFoundError:
-    __version__ = "0+unknown"
-
 from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
 from .aerosolalt import AerosolAlt
@@ -77,3 +72,8 @@ __all__ = [
     "Load_SMPS_file",
     "Load_data_from_folder",
 ]
+
+try:
+    __version__ = _pkg_version("aerosoltools")
+except PackageNotFoundError:
+    __version__ = "0+unknown"
