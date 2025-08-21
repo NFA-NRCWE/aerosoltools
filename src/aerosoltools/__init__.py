@@ -53,7 +53,6 @@ from .loaders import (
     Load_Partector_file,
     Load_SMPS_file,
 )
-
 __all__ = [
     "Aerosol1D",
     "Aerosol2D",
@@ -72,7 +71,6 @@ __all__ = [
     "Load_SMPS_file",
     "Load_data_from_folder",
 ]
-
 try:
     __version__ = _pkg_version("aerosoltools")
 except PackageNotFoundError:
