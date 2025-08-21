@@ -6,12 +6,16 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
-      repository:
+      index:
         description: "Where to upload"
         required: true
         type: choice
         default: "pypi"
         options: ["pypi", "testpypi"]
+      ref:
+        description: "Git ref to build (e.g. v1.0.5). Leave empty when triggered by a tag."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -19,17 +23,15 @@ permissions:
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
+    env:
+      INDEX: ${{ github.event.inputs.index || 'pypi' }}
     steps:
-      - name: Check out (fetch full history & tags)
+      - name: Check out (exact ref, with full history & tags)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Show ref & latest tag (debug)
-        run: |
-          echo "GITHUB_REF=$GITHUB_REF"
-          git describe --tags --always || true
-          git tag --list --points-at HEAD || true
+          # Use the provided ref when run manually, otherwise the event ref (the tag).
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -44,10 +46,10 @@ jobs:
       - name: Clean old artifacts
         run: rm -rf dist build *.egg-info
 
-      - name: Build (sdist + wheel) using setuptools-scm version
+      - name: Build (sdist + wheel)
         run: python -m build
 
-      - name: Show artifacts (and inferred version)
+      - name: Show artifacts
         run: ls -l dist
 
       - name: Upload to chosen index
@@ -55,7 +57,7 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          if [ "${{ github.event.inputs.repository }}" = "testpypi" ]; then
+          if [ "${INDEX}" = "testpypi" ]; then
             twine upload --repository-url https://test.pypi.org/legacy/ dist/*
           else
             twine upload dist/*
