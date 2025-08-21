@@ -39,7 +39,7 @@ jobs:
       - name: Install build tooling
         run: |
           python -m pip install -U pip
-          python -m pip install build twine
+          python -m pip install build twine setuptools-scm
 
       - name: Clean old artifacts
         run: rm -rf dist build *.egg-info
