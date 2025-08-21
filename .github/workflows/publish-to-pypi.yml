@@ -4,18 +4,6 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
-    inputs:
-      index:
-        description: "Where to upload"
-        required: true
-        type: choice
-        default: "pypi"
-        options: ["pypi", "testpypi"]
-      ref:
-        description: "Git ref to build (e.g. v1.0.5). Leave empty when triggered by a tag."
-        required: false
-        default: ""
 
 permissions:
   contents: read
@@ -23,15 +11,12 @@ permissions:
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
-    env:
-      INDEX: ${{ github.event.inputs.index || 'pypi' }}
     steps:
-      - name: Check out (exact ref, with full history & tags)
+      - name: Check out exact tag
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Use the provided ref when run manually, otherwise the event ref (the tag).
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ github.ref }}   # build from the tag that triggered the run
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -43,22 +28,21 @@ jobs:
           python -m pip install -U pip
           python -m pip install build twine setuptools-scm
 
+      - name: Derive version from tag for setuptools-scm
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"     # e.g. v1.0.6
+          VER="${TAG#v}"                      # -> 1.0.6
+          echo "Using version $VER from tag $TAG"
+          echo "SETUPTOOLS_SCM_PRETEND_VERSION=$VER" >> "$GITHUB_ENV"
+
       - name: Clean old artifacts
         run: rm -rf dist build *.egg-info
 
       - name: Build (sdist + wheel)
         run: python -m build
 
-      - name: Show artifacts
-        run: ls -l dist
-
-      - name: Upload to chosen index
+      - name: Upload to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          if [ "${INDEX}" = "testpypi" ]; then
-            twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-          else
-            twine upload dist/*
-          fi
+        run: twine upload dist/*
