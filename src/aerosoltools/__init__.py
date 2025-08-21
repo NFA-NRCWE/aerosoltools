@@ -33,6 +33,7 @@ Typical usage:
 
 Author: NRCWE community / NFA
 """
+
 from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
 from .aerosol1d import Aerosol1D
@@ -41,7 +42,6 @@ from .aerosolalt import AerosolAlt
 from .loaders import (
     Load_Aethalometer_file,
     Load_CPC_file,
-    Load_data_from_folder,
     Load_DiSCmini_file,
     Load_ELPI_file,
     Load_FMPS_file,
@@ -52,7 +52,9 @@ from .loaders import (
     Load_OPS_file,
     Load_Partector_file,
     Load_SMPS_file,
+    Load_data_from_folder,
 )
+
 __all__ = [
     "Aerosol1D",
     "Aerosol2D",
@@ -71,6 +73,7 @@ __all__ = [
     "Load_SMPS_file",
     "Load_data_from_folder",
 ]
+
 try:
     __version__ = _pkg_version("aerosoltools")
 except PackageNotFoundError:
