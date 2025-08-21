@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import Optional, Sequence, Tuple, Union, cast
 
@@ -703,28 +704,23 @@ class Aerosol2D(Aerosol1D):
 
         Parameters
         ----------
-        y_tot : tuple, optional
-            Y-axis limits for total concentration (min, max). Default auto.
-        y_3d : tuple, optional
-            Colorbar scale limits for 2D mesh (min, max). Default auto.
-        log : bool, optional
-            Whether to apply logarithmic color scaling. Default True.
-        ax1 : matplotlib.axes.Axes, optional
-            Axis for the top plot. If provided, ax2 must also be provided.
-        ax2 : matplotlib.axes.Axes, optional
-            Axis for the mesh plot. If provided, ax1 must also be provided.
-        mark_activities : bool or list of str, optional
-            Passed to `plot_total_conc()` to highlight activity periods.
-            *False* .......... no highlighting
-            *True* ........... highlight all known activities
-            list[str] ........ highlight only the given names
+        y_tot : (ymin, ymax)
+            Y-limits for total concentration. (0, 0) => auto.
+        y_3d : (zmin, zmax)
+            Color scale limits for the mesh. (1, 0) => auto (special sentinel).
+            If zmin != 1, values are clamped to >= zmin.
+            If zmax == 0, zmax is taken from the data maximum after clamping.
+        log : bool
+            If True, try logarithmic color scaling. Falls back to linear when
+            no positive finite values exist in the plotted data.
+        ax1, ax2 : Axes
+            Provide both or neither. If neither, new figure/axes are created.
+        mark_activities : bool | list[str]
+            Passed to `plot_total_conc()`.
 
         Returns
         -------
-        fig : matplotlib.figure.Figure
-            The figure object.
-        axs : np.ndarray
-            Array of axes and colorbar handle: [ax1, ax2, colorbar].
+        fig, ax1, ax2, cbar
         """
         if (ax1 is None) != (ax2 is None):
             raise ValueError("You must provide both ax1 and ax2, or neither.")
@@ -734,68 +730,139 @@ class Aerosol2D(Aerosol1D):
             newplot = True
             fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(10, 6))
         else:
-            assert ax1 is not None and ax2 is not None  # ← tells the type checker
-            fig = cast(Figure, ax1.figure)  # ax1 is guaranteed not-None here
+            assert ax1 is not None and ax2 is not None
+            fig = cast(Figure, ax1.figure)
             newplot = False
 
-        time = self.time
-        total = self.total_concentration
-        data = self.size_data
-        bin_edges = self.bin_edges
+        # ----- Data shortcuts -----
+        time = self.time  # 1D DatetimeIndex/array
+        total = self.total_concentration  # 1D array-like
+        data = self.size_data  # 2D array-like (time x size)
+        bin_edges = self.bin_edges  # 1D array-like (size edges)
 
-        # Top panel: total concentration
-        _, ax_new = self.plot_total_conc(ax=ax1, mark_activities=mark_activities)
+        # ---- Top panel: total concentration ----
+        _, ax1_new = self.plot_total_conc(ax=ax1, mark_activities=mark_activities)
+        ax1 = ax1_new
 
-        ax1 = ax_new
+        # Y-limits for the total concentration plot
+        if y_tot != (0.0, 0.0):
+            ymin = y_tot[0] if y_tot[0] != 0 else float(np.nanmin(total) * 0.98)
+            ymax = y_tot[1] if y_tot[1] != 0 else float(np.nanmax(total) * 1.02)
+            if np.isfinite([ymin, ymax]).all() and ymax > ymin:
+                ax1.set_ylim(ymin, ymax)
 
-        # Set y-limits for the total_conc plot
-        if y_tot != (0, 0):
-            ymin = y_tot[0] if y_tot[0] != 0 else total.min() * 0.98
-            ymax = y_tot[1] if y_tot[1] != 0 else total.max() * 1.02
-            ax1.set_ylim(ymin, ymax)
+        # ---- Mesh grid in time/size ----
+        if len(time) > 1:
+            dt = (time[1] - time[0]) / 2
+        else:
+            # Fallback delta (1 minute) if only a single timestamp exists
+            dt = pd.Timedelta(minutes=1)
 
-        dt = (time[1] - time[0]) / 2
-
-        # Generate edges: center ± half step
-        dt = (time[1] - time[0]) / 2
         time_edges = pd.DatetimeIndex(np.append(time - dt, [time[-1] + dt]))
-
         x_grid, y_grid = np.meshgrid(time_edges, bin_edges, indexing="ij")
 
-        # Handle color scale limits
-        z_data = data
-        if y_3d != (1, 0):
-            zmin, zmax = y_3d
-            if zmin != 1:
-                z_data = z_data.clip(lower=zmin)
-            if zmax == 0:
-                zmax = z_data.max().max()
+        # ---- Prepare Z and handle bounds ----
+        Z = np.asarray(
+            data, dtype=float
+        )  # shape (len(time), len(size_bins)-1) typically
+        finite = np.isfinite(Z)
+
+        # Interpret y_3d semantics
+        auto_scale = y_3d == (1.0, 0.0)
+        if not auto_scale:
+            zmin_in, zmax_in = y_3d
+            # Clamp lower bound if explicitly set (zmin != 1 sentinel)
+            if zmin_in != 1.0:
+                Z = np.maximum(Z, zmin_in)
+            # If zmax is 0, pick from data after clamping
+            if zmax_in == 0.0:
+                zmax_in = float(np.nanmax(Z)) if np.any(np.isfinite(Z)) else 1.0
+            zmin_auto = float(np.nanmin(Z)) if np.any(np.isfinite(Z)) else 0.0
+            zmax_auto = float(np.nanmax(Z)) if np.any(np.isfinite(Z)) else 1.0
+            zmin = float(zmin_in if zmin_in != 1.0 else zmin_auto)
+            zmax = float(zmax_in if zmax_in != 0.0 else zmax_auto)
         else:
-            zmin = z_data.min().min()
-            zmax = z_data.max().max()
+            # Pure auto limits from the data (we’ll refine for log below)
+            if np.any(finite):
+                zmin = float(np.nanmin(Z))
+                zmax = float(np.nanmax(Z))
+            else:
+                zmin, zmax = 0.0, 1.0
 
-        # Define color scale
-        print(zmin, zmax)
-        norm = LogNorm(vmin=zmin, vmax=zmax) if log else Normalize(vmin=zmin, vmax=zmax)
+        # ---- Choose scaling (log with graceful fallback) ----
+        use_log = bool(log)
 
-        # Mesh plot
+        if use_log:
+            # LogNorm demands strictly positive finite bounds
+            positive = np.isfinite(Z) & (Z > 0)
+            if not np.any(positive):
+                warnings.warn(
+                    "plot_timeseries: no positive finite values for log scale; "
+                    "falling back to linear.",
+                    RuntimeWarning,
+                )
+                use_log = False
+            else:
+                # For log autoscale or if user gave non-positive zmin, pick smallest positive
+                vmin_pos = float(np.nanmin(Z[positive]))
+                vmax_pos = float(np.nanmax(Z[positive]))
+                # Ensure vmin/vmax are valid and ordered
+                vmin = (
+                    vmin_pos
+                    if (auto_scale or zmin <= 0 or not np.isfinite(zmin))
+                    else max(zmin, np.nextafter(0.0, 1.0))
+                )
+                vmax = vmax_pos if (auto_scale or not np.isfinite(zmax)) else zmax
+                # Guard against degeneracy
+                if (
+                    not np.isfinite(vmin)
+                    or not np.isfinite(vmax)
+                    or vmin <= 0
+                    or vmax <= vmin
+                ):
+                    # Last-resort sane defaults
+                    vmin = max(np.nextafter(0.0, 1.0), 1e-12)
+                    vmax = vmin * 10.0
+                norm = LogNorm(vmin=vmin, vmax=vmax)
+        if not use_log:
+            # Linear Normalize; allow zeros/negatives
+            vmin = zmin
+            vmax = zmax
+            # If bounds are invalid/degenerate, choose safe defaults
+            if (not np.isfinite(vmin)) or (not np.isfinite(vmax)) or (vmax <= vmin):
+                if np.any(finite):
+                    vmin = float(np.nanmin(Z[finite]))
+                    vmax = float(np.nanmax(Z[finite]))
+                else:
+                    vmin, vmax = 0.0, 1.0
+                if not np.isfinite(vmin) or not np.isfinite(vmax) or vmax <= vmin:
+                    vmin, vmax = 0.0, 1.0
+            norm = Normalize(vmin=vmin, vmax=vmax)
+
+        # ---- Mesh plot ----
         assert ax2 is not None
         mesh = ax2.pcolormesh(
-            x_grid, y_grid, z_data, cmap="jet", norm=norm, shading="flat"
+            x_grid,
+            y_grid,
+            Z,
+            cmap="jet",  # keep your existing colormap
+            norm=norm,
+            shading="flat",  # keep your choice; 'auto' also OK
         )
 
-        # Set axis labels and scale
+        # Y axis (size) log-scaling and labels
         ax2.set_yscale("log")
         ax2.set_ylabel("Dp, nm")
         ax2.set_xlabel("Time")
         if newplot:
             ax1.set_xlabel("")
-        # Use matplotlib's default date handling
+
+        # Date formatting
         ax2.xaxis.set_major_formatter(
             mdates.ConciseDateFormatter(mdates.AutoDateLocator())
         )
 
-        # # Add colorbar
+        # Colorbar
         cbar: Colorbar = fig.colorbar(mesh, ax=[ax1, ax2])
         cbar.set_label(f"{self.dtype}, {self.unit}")
 
