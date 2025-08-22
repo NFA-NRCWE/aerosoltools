@@ -27,6 +27,8 @@ params = {
     "figure.figsize": (19, 10),
 }
 plt.rcParams.update(params)
+warnings.simplefilter("default")  # or "always" if you want all warnings
+warnings.formatwarning = lambda msg, *args, **kwargs: f"{msg}\n"
 
 
 class Aerosol2D(Aerosol1D):
@@ -693,7 +695,10 @@ class Aerosol2D(Aerosol1D):
     def plot_timeseries(
         self,
         y_tot: Tuple[float, float] = (0.0, 0.0),
-        y_3d: Tuple[float, float] = (1.0, 0.0),
+        y_3d: Tuple[float, float] = (
+            0.0,
+            0.0,
+        ),  # (0,0) => unspecified -> use data min/max
         log: bool = True,
         ax1: Optional[Axes] = None,
         ax2: Optional[Axes] = None,
@@ -707,12 +712,12 @@ class Aerosol2D(Aerosol1D):
         y_tot : (ymin, ymax)
             Y-limits for total concentration. (0, 0) => auto.
         y_3d : (zmin, zmax)
-            Color scale limits for the mesh. (1, 0) => auto (special sentinel).
-            If zmin != 1, values are clamped to >= zmin.
-            If zmax == 0, zmax is taken from the data maximum after clamping.
+            Color scale limits for the mesh. (0, 0) => unspecified -> use data-driven.
+            For log scale: limits are based on positive finite data only.
+            For linear scale: limits are based on all finite data.
         log : bool
-            If True, try logarithmic color scaling. Falls back to linear when
-            no positive finite values exist in the plotted data.
+            If True, uses log scale only when *all* finite values are strictly > 0.
+            If any zeros/negatives exist, uses linear scale.
         ax1, ax2 : Axes
             Provide both or neither. If neither, new figure/axes are created.
         mark_activities : bool | list[str]
@@ -761,82 +766,74 @@ class Aerosol2D(Aerosol1D):
         time_edges = pd.DatetimeIndex(np.append(time - dt, [time[-1] + dt]))
         x_grid, y_grid = np.meshgrid(time_edges, bin_edges, indexing="ij")
 
-        # ---- Prepare Z and handle bounds ----
-        Z = np.asarray(
-            data, dtype=float
-        )  # shape (len(time), len(size_bins)-1) typically
+        # ---- Data array ----
+        Z = np.asarray(data, dtype=float)
+
+        # Decide scale: log only if all finite values are strictly > 0
         finite = np.isfinite(Z)
+        any_finite = np.any(finite)
+        all_positive = np.all(Z[finite] > 0) if any_finite else False
 
-        # Interpret y_3d semantics
-        auto_scale = y_3d == (1.0, 0.0)
-        if not auto_scale:
-            zmin_in, zmax_in = y_3d
-            # Clamp lower bound if explicitly set (zmin != 1 sentinel)
-            if zmin_in != 1.0:
-                Z = np.maximum(Z, zmin_in)
-            # If zmax is 0, pick from data after clamping
-            if zmax_in == 0.0:
-                zmax_in = float(np.nanmax(Z)) if np.any(np.isfinite(Z)) else 1.0
-            zmin_auto = float(np.nanmin(Z)) if np.any(np.isfinite(Z)) else 0.0
-            zmax_auto = float(np.nanmax(Z)) if np.any(np.isfinite(Z)) else 1.0
-            zmin = float(zmin_in if zmin_in != 1.0 else zmin_auto)
-            zmax = float(zmax_in if zmax_in != 0.0 else zmax_auto)
-        else:
-            # Pure auto limits from the data (we’ll refine for log below)
-            if np.any(finite):
-                zmin = float(np.nanmin(Z))
-                zmax = float(np.nanmax(Z))
-            else:
-                zmin, zmax = 0.0, 1.0
+        # NEW: user override if they explicitly set a positive lower bound
+        user_forces_log = bool(log) and (y_3d[0] > 0)
 
-        # ---- Choose scaling (log with graceful fallback) ----
-        use_log = bool(log)
+        # Warn only when user asked for log and we cannot honor it (no override)
+        if bool(log) and (not all_positive) and (not user_forces_log):
+            reason = (
+                "the data contain no finite values"
+                if not any_finite
+                else "the data contain zeros or negatives"
+            )
+            warnings.warn(
+                f"\nRuntimeWarning: plot_timeseries: requested log scaling but {reason}; "
+                "falling back to linear scale. Try specifying y_3d with positive limits or cleaning the data.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
+        # Allow log if (a) data are all positive OR (b) the user forces it via y_3d[0] > 0
+        use_log = bool(log) and (all_positive or user_forces_log)
+
+        # ---- Pick vmin/vmax ----
         if use_log:
-            # LogNorm demands strictly positive finite bounds
-            positive = np.isfinite(Z) & (Z > 0)
-            if not np.any(positive):
+            pos = finite & (Z > 0)
+            vmin = float(y_3d[0]) if y_3d[0] > 0 else float(np.nanmin(Z[pos]))
+            vmax = float(y_3d[1]) if y_3d[1] > 0 else float(np.nanmax(Z[pos]))
+
+            if (
+                (not np.isfinite(vmin))
+                or (not np.isfinite(vmax))
+                or (vmin <= 0)
+                or (vmax <= vmin)
+            ):
+                raise ValueError(
+                    f"Invalid color scale limits for log: vmin={vmin}, vmax={vmax}. "
+                    "Check your data or specify y_3d explicitly."
+                )
+            if user_forces_log and np.any(~pos & finite):
+                Z_plot = np.where(
+                    pos, Z, vmin
+                )  # visualization-only; original Z unchanged
+            else:
+                Z_plot = Z
+            norm = LogNorm(vmin=vmin, vmax=vmax)
+        if not use_log:
+            # Linear: use all finite values for auto limits
+            if any_finite:
+                data_min = float(np.nanmin(Z[finite]))
+                data_max = float(np.nanmax(Z[finite]))
+            else:
+                data_min, data_max = 0.0, 1.0
+            vmin = float(y_3d[0]) if y_3d[0] != 0 else data_min
+            vmax = float(y_3d[1]) if y_3d[1] != 0 else data_max
+            if (not np.isfinite(vmin)) or (not np.isfinite(vmax)) or (vmax <= vmin):
                 warnings.warn(
-                    "plot_timeseries: no positive finite values for log scale; "
-                    "falling back to linear.",
+                    f"Invalid color scale limits for linear (vmin={vmin}, vmax={vmax}). "
+                    "Falling back to (0, 1). Try specifying y_3d explicitly.",
                     RuntimeWarning,
                 )
-                use_log = False
-            else:
-                # For log autoscale or if user gave non-positive zmin, pick smallest positive
-                vmin_pos = float(np.nanmin(Z[positive]))
-                vmax_pos = float(np.nanmax(Z[positive]))
-                # Ensure vmin/vmax are valid and ordered
-                vmin = (
-                    vmin_pos
-                    if (auto_scale or zmin <= 0 or not np.isfinite(zmin))
-                    else max(zmin, np.nextafter(0.0, 1.0))
-                )
-                vmax = vmax_pos if (auto_scale or not np.isfinite(zmax)) else zmax
-                # Guard against degeneracy
-                if (
-                    not np.isfinite(vmin)
-                    or not np.isfinite(vmax)
-                    or vmin <= 0
-                    or vmax <= vmin
-                ):
-                    # Last-resort sane defaults
-                    vmin = max(np.nextafter(0.0, 1.0), 1e-12)
-                    vmax = vmin * 10.0
-                norm = LogNorm(vmin=vmin, vmax=vmax)
-        if not use_log:
-            # Linear Normalize; allow zeros/negatives
-            vmin = zmin
-            vmax = zmax
-            # If bounds are invalid/degenerate, choose safe defaults
-            if (not np.isfinite(vmin)) or (not np.isfinite(vmax)) or (vmax <= vmin):
-                if np.any(finite):
-                    vmin = float(np.nanmin(Z[finite]))
-                    vmax = float(np.nanmax(Z[finite]))
-                else:
-                    vmin, vmax = 0.0, 1.0
-                if not np.isfinite(vmin) or not np.isfinite(vmax) or vmax <= vmin:
-                    vmin, vmax = 0.0, 1.0
+                vmin, vmax = 0.0, 1.0
+            Z_plot = Z
             norm = Normalize(vmin=vmin, vmax=vmax)
 
         # ---- Mesh plot ----
@@ -844,10 +841,10 @@ class Aerosol2D(Aerosol1D):
         mesh = ax2.pcolormesh(
             x_grid,
             y_grid,
-            Z,
-            cmap="jet",  # keep your existing colormap
+            Z_plot,  # data passed as-is (not modified)
+            cmap="jet",
             norm=norm,
-            shading="flat",  # keep your choice; 'auto' also OK
+            shading="flat",
         )
 
         # Y axis (size) log-scaling and labels
