@@ -5,12 +5,13 @@ import pandas as pd
 
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
+from ..aerosolalt import AerosolAlt
 from .Common import detect_delimiter
 
 
 def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False):
     """
-    Load data from an OPS (Optical Particle Sizer) file and route to the appropriate parser.
+    Load data from an OPC-N3 particle sensor file and route to the appropriate parser.
 
     This function inspects the file header and determines whether the file was exported
     via the AIM software or directly from the instrument. Based on this, it dispatches
@@ -23,11 +24,16 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
     extra_data : bool, optional
         If True, attaches unused columns to the returned object as `._extra_data`.
         Passed directly to the underlying loader. Default is False.
+    PM_focus : bool, optional
+        If True the data focuses only on the PM data and ignoring the size-resolved information.
+        Instead returns a AerosolAlt with 'Total_conc', 'PM1', 'PM2.5', 'PM10'.
+        Default is False.
 
     Returns
     -------
-    OPS : Aerosol2D
+    OPC : Aerosol2D/AerosolAlt
         A class containing size-resolved particle data and instrument metadata.
+        Or a class containing 
 
     Raises
     ------
@@ -258,232 +264,10 @@ def Load_OPCN3_file_new(file: str, extra_data: bool = False,
         OPCN._raw_extra_data = extra_df.copy()
     return OPCN
 
-#%%%
-from io import StringIO
-from datetime import datetime, timedelta
-
-import pathlib
-import pandas as pd
-import requests
-import functools
-
-PATH_ROOT = pathlib.Path(__file__).parent
-
-COLUMNS_OPCN3 = [
-    "bin0",
-    "bin1",
-    "bin2",
-    "bin3",
-    "bin4",
-    "bin5",
-    "bin6",
-    "bin7",
-    "bin8",
-    "bin9",
-    "bin10",
-    "bin11",
-    "bin12",
-    "bin13",
-    "bin14",
-    "bin15",
-    "bin16",
-    "bin17",
-    "bin18",
-    "bin19",
-    "bin20",
-    "bin21",
-    "bin22",
-    "bin23",
-    "MTof_bin1",
-    "MTof_bin3",
-    "MTof_bin5",
-    "MTof_bin7",
-    "period",
-    "flowrate",
-    "temperature",
-    "relative_humidity",
-    "pm1",
-    "pm2.5",
-    "pm10",
-    "checksum",
-]
-
-
-def get_api_sensor_data_column(
-    guid: str,
-    from_date: str,
-    to_date: str,
-    column: str,
-    segment: int,
-    print_progress: bool = True,
-) -> pd.DataFrame:
-    """
-    Get sensor data from a device given its GUID and other parameters.
-
-    Parameters:
-    guid (str): The GUID of the device.
-    from_date (str): Start date for data retrieval. Format: YYYY-MM-DDT00:00:00.000Z.
-    to_date (str): End date for data retrieval. Format: YYYY-MM-DDT00:00:00.000Z.
-    column (str): Column to read.
-    segment (int): Number of hours to segment the time period.
-    print_progress (bool): If True, progress messages will be printed.
-
-    Returns:
-    pd.DataFrame: Dataframe containing the sensor data.
-    """
-    # API URL
-    yoda_url = "https://yoda.localdom.net:8443/organization/c085/dataopsamling/device-manager-data-get/"
-
-    # Convert the date strings to datetime objects
-    start = datetime.strptime(from_date, "%Y-%m-%dT%H:%M:%S.%fZ")
-    end = datetime.strptime(to_date, "%Y-%m-%dT%H:%M:%S.%fZ")
-
-    # Calculate the total duration in hours
-    total_hours = int((end - start).total_seconds() // 3600)
-
-    # Create a list of timestamps at segment hour intervals
-    if total_hours < segment:
-        date_list = [date.strftime("%Y-%m-%dT%H:%M:%S.%fZ") for date in [start, end]]
-    else:
-        date_list = [
-            (start + timedelta(hours=segment * x)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-            for x in range(total_hours // segment + 1)
-        ]
-
-    data_frame = pd.DataFrame()  # Data frame to fill
-
-    for n in range(len(date_list) - 1):
-        parameters = {
-            "guid": guid,
-            "columns": column,
-            "fromdate": date_list[n],
-            "todate": date_list[n + 1],
-        }
-
-        r = requests.get(yoda_url, params=parameters, verify=False)
-        print(r.url)
-        response = r.content
-        response_string = response.decode("utf-8")
-
-        if "Something went wrong" in response_string:
-            if print_progress:
-                print(
-                    f"Request: {n + 1}/{len(date_list) - 1} | {response_string} | for period starting at: {date_list[n]}"
-                )
-            continue
-        else:
-            sensor_csv = StringIO(response_string)
-            sensor_data = pd.read_csv(sensor_csv)
-
-            if sensor_data.empty:
-                if print_progress:
-                    print(
-                        f"Request: {n + 1}/{len(date_list) - 1} | No data in period starting at: {date_list[n]}"
-                    )
-            else:
-                data_frame = pd.concat([data_frame, sensor_data], ignore_index=True)
-                if print_progress:
-                    print(f"Request: {n + 1}/{len(date_list) - 1} | Success!")
-
-    return data_frame
-
-
-def get_api_sensor_data(
-    guid: str,
-    from_date: str,
-    to_date: str,
-    columns: list[str],
-    segment: int,
-    print_progress: bool = True,
-) -> pd.DataFrame:
-    """
-    Get sensor data from a device given its GUID and other parameters.
-
-    Parameters:
-    guid (str): The GUID of the device.
-    from_date (str): Start date for data retrieval. Format: YYYY-MM-DDT00:00:00.000Z.
-    to_date (str): End date for data retrieval. Format: YYYY-MM-DDT00:00:00.000Z.
-    columns (list[str]): Columns to read; each column is read one at a time.
-    segment (int): Number of hours to segment the time period.
-    print_progress (bool): If True, progress messages will be printed.
-
-    Returns:
-    pd.DataFrame: Dataframe containing the sensor data.
-    """
-    frames = map(
-        lambda c: get_api_sensor_data_column(
-            guid, from_date, to_date, c, segment, print_progress
-        ),
-        columns,
-    )
-    init_frame = next(frames)
-    return functools.reduce(lambda acc, el: acc.merge(el), frames, init_frame)
-
-
-def get_opcn3_data(guid, date) -> pd.DataFrame:
-    return get_api_sensor_data(
-        guid, date + "T00:08:00.000Z", date + "T15:59:59.999Z", COLUMNS_OPCN3, 25, True
-    )
-
-
-def save_isover_data_to_disk():
-    get_opcn3_data("4e68390b73df4bc88bf877336e9e8a3b", "2024-06-24").to_csv(
-        PATH_ROOT / "05 Isover" / "Kalibrering" / "am-sensor_1.csv"
-    )
-    get_opcn3_data("65e10218df1249c1a4e07e565d3ccec2", "2024-06-24").to_csv(
-        PATH_ROOT / "05 Isover" / "Kalibrering" / "am-sensor_2.csv"
-    )
-
-
-def save_skylight_data_to_disk():
-    get_opcn3_data("bf750d3873e1413cb868d1dea3f608ed", "2024-06-24").to_csv(
-        PATH_ROOT / "06 SkyLight" / "Kalibrering" / "am-sensor_3.csv"
-    )
-    get_opcn3_data("4cb49e550d5c45989d23f3ebbb553010", "2024-06-24").to_csv(
-        PATH_ROOT / "06 SkyLight" / "Kalibrering" / "am-sensor_4.csv"
-    )
-
-
-def save_grundfos_data_to_disk():
-    get_opcn3_data("a944c08aff6c4fa68f0a6fb5fe8e7789", "2024-06-17").to_csv(
-        PATH_ROOT / "04 Grundfos" / "Kalibrering" / "am-sensor_5.csv"
-    )
-    get_opcn3_data("c6f98249001540f1a6a594d10784ce23", "2024-06-17").to_csv(
-        PATH_ROOT / "04 Grundfos" / "Kalibrering" / "am-sensor_6.csv"
-    )
-
-
-def save_kingo_data_to_disk():
-    get_opcn3_data("993820730cf4497781038f50badb2391", "2024-05-27").to_csv(
-        PATH_ROOT / "03 Kingo" / "Kalibrering" / "am-sensor_7.csv"
-    )
-    get_opcn3_data("b43adfacc63345c69fe067c465d897ac", "2024-05-27").to_csv(
-        PATH_ROOT / "03 Kingo" / "Kalibrering" / "am-sensor_8.csv"
-    )
-
-
-def save_kingo_data_to_disk_20241111():
-    get_opcn3_data("993820730cf4497781038f50badb2391", "2024-11-11").to_csv(
-        PATH_ROOT / "03 Kingo" / "Kalibrering" / "20241111" / "am-sensor_7.csv"
-    )
-    get_opcn3_data("b43adfacc63345c69fe067c465d897ac", "2024-11-11").to_csv(
-        PATH_ROOT / "03 Kingo" / "Kalibrering" / "20241111" / "am-sensor_8.csv"
-    )
-
-
-if __name__ == "__main__":
-    # save_isover_data_to_disk()
-    # save_skylight_data_to_disk()
-    # save_grundfos_data_to_disk()
-    # save_kingo_data_to_disk()
-    save_kingo_data_to_disk_20241111()
-
-
 #%%
 
-
 def Load_OPCN3_file_PM_old(file: str, extra_data: bool = False,
-                        encoding: str = None, delimiter: str = None) -> Aerosol1D:
+                        encoding: str = None, delimiter: str = None) -> AerosolAlt:
 
 
     """
@@ -501,7 +285,7 @@ def Load_OPCN3_file_PM_old(file: str, extra_data: bool = False,
     OPCN : Aerosol1D
         Object containing:
         - Time-resolved particle number concentrations per bin (in cm⁻³)
-        - Metadata including bin edges, serial number, instrument type, etc.
+        - Metadata including serial number, instrument type, etc.
     """
     if encoding is None and delimiter is None:
         encoding, delimiter = detect_delimiter(file)
@@ -553,7 +337,7 @@ def Load_OPCN3_file_PM_old(file: str, extra_data: bool = False,
 
     final_df = pd.concat([df["Datetime"], total_df, PM_df], axis=1)
 
-    OPCN = Aerosol1D(final_df)
+    OPCN = AerosolAlt(final_df)
     OPCN._meta = {
         "instrument": "OPCN",
         "density": 1.65,
@@ -571,7 +355,7 @@ def Load_OPCN3_file_PM_old(file: str, extra_data: bool = False,
 
 
 def Load_OPCN3_file_PM_new(file: str, extra_data: bool = False,
-                        encoding: str = None, delimiter: str = None) -> Aerosol1D:
+                        encoding: str = None, delimiter: str = None) -> AerosolAlt:
     """
     Load and format data from a CSV file generated by the OPC-N3 particle sensor.
     Simpler version, that only returns total concentration and PM1, 2.5 and 10.
@@ -584,10 +368,10 @@ def Load_OPCN3_file_PM_new(file: str, extra_data: bool = False,
 
     Returns
     -------
-    OPCN : Aerosol1D
+    OPCN : AerosolAlt
         Object containing:
         - Time-resolved particle number concentrations per bin (in cm⁻³)
-        - Metadata including bin edges, serial number, instrument type, etc.
+        - Metadata including serial number, instrument type, etc.
     """
     if encoding is None and delimiter is None:
         encoding, delimiter = detect_delimiter(file)
@@ -637,7 +421,7 @@ def Load_OPCN3_file_PM_new(file: str, extra_data: bool = False,
                         
     final_df = pd.concat([df["Datetime"], total_df, PM_df], axis=1)
 
-    OPCN = Aerosol1D(final_df)
+    OPCN = AerosolAlt(final_df)
     OPCN._meta = {
         "instrument": "OPCN",
         "density": 1.65,

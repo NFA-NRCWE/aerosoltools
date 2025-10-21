@@ -14,57 +14,50 @@ from scipy.stats import  theilslopes
 from scipy.optimize import curve_fit
 
 
-from ..aerosol1d import Aerosol1D
-from ..aerosol2d import Aerosol2D
-from ..aerosolalt import AerosolAlt
+from .aerosol1d import Aerosol1D
+from .aerosol2d import Aerosol2D
+from .aerosolalt import AerosolAlt
 
 ###############################################################################
 
 
-def Combine_NS_OPS(NS_raw,OPS_raw,start=None,end=None):
+def Combine_NS_OPS(NS_data: Aerosol2D, OPS_data: Aerosol2D, start: datetime = None,end: datetime = None):
     """
     Function to combine Nanoscan and OPS data. If no start or end time are specified
     then the function will use the first and last datapoints that exist for both
     instruments. 
-    It is assumed that the NS and OPS use their standard sizebins, meaning that
-    the size bin edges are:
-        
-    NS: [ 10.  ,  13.45,  17.95,  23.95,  31.95,  42.6 ,  56.8 ,  75.75,
-           101.05, 134.75, 179.7 , 239.6 , 319.5 , 420.  ]
-    
-    OPS: [  300.,   374.,   465.,   579.,   721.,   897.,  1117.,  1391.,
-            1732.,  2156.,  2685.,  3343.,  4162.,  5182.,  6451.,  8031.,
-           10000.]
+
     
     Parameters
     ----------
-    NS : Aerosol2D
+    NS_data : Aerosol2D
         An Aerosol2D data set of a Nanoscan.
-    OPS : Aerosol2D
+
+    OPS_data : Aerosol2D
         An Aerosol2D data set of an OPS.
+
     start : datetime, optional
         The starting time for combining the two datasets. If not speicifed, a 
         starting point is found as earliest data point of the two datasets. The default is None.
+
     end : datetime, optional
         The end time for combining the two datasets. If not speicifed, an end
         point is found as earliest data point of the two datasets. The default is None.
 
     Returns
     -------
-    Combined_NS_OPS : numpy.array
-        An array of the combined NS and OPS datasets, with newly calculated total
-        concentrations. The last bin of the NS has been ignored and the second
+    Combined_NS_OPS : Aerosol2D
+        A class containing size-resolved particle data and instrument metadata from the combination
+        NS and OPS datasets, with newly calculated total concentrations.
+        The last bin of the NS has been ignored and the second
         to last has been shortened and its number reduced accordingly.
-    New_bin_edges : numpy.array
-        Array of new size bin edges in nm.
-    Header : list
-        Header of all data columns
+
 
     """
     
     # Initialize combination by confirming the data type of the two data sets.
-    NS=NS_raw.copy_self()
-    OPS=OPS_raw.copy_self()
+    NS=NS_data.copy_self()
+    OPS=OPS_data.copy_self()
     NS.convert_to_number_concentration()
     NS.unnormalize_logdp()
     OPS.convert_to_number_concentration()
@@ -99,7 +92,7 @@ def Combine_NS_OPS(NS_raw,OPS_raw,start=None,end=None):
     NS_bins    = NS.bin_edges
     OPS_bins   = OPS.bin_edges
     
-    # the penultimate NS sizebin has its upper limit reduced from 319.5 to 300, 
+    # the penultimate NS sizebin has its upper limit reduced to lower limit of the OPS, 
     # so the particle number of the relevent bin is reduced by a fraction equal to 
     # the fraction the difference between the previous bin to 300 divided by the 
     # original difference between the bin-edges.
@@ -294,7 +287,7 @@ def Plot_correlation(X, Y, ax_in=False, intercept=True, uniform_scaling=True, ou
     return ax.figure,ax
 
 ###############################################################################
-def Plot_correlation_df(df, fig_text="", *Plotsettings):
+def Plot_correlation_df(df: dataframe, fig_text: str = "", *Plotsettings):
     """
     Function to plot multiple correlation plots together in a n*n grid, where n is the number of instruments minus 1.
     X and Y must have the same length. This can be accomplished by using the
@@ -303,11 +296,11 @@ def Plot_correlation_df(df, fig_text="", *Plotsettings):
     Parameters
     ----------
     df: dataframe
-        dataframe of the instruments structured with an instrument per column,
-        with instrument handle equal to 
+        A dataframe of the instruments structured with an instrument per column,
+        with instrument handle equal to name or location. 
         
     fig_text: str, optional
-        Second set of values.  
+        If chosen a string is added as a figure text in the unused region of the plot.  
         
     *Plotsettings: list of input to 
         Input to the Plot_calibration function:
@@ -322,6 +315,11 @@ def Plot_correlation_df(df, fig_text="", *Plotsettings):
         Handle for the returned figure for saving.
     gs : matplotlib.gridspace._subplots.AxesSubplot
         Handles for the gridspace of the plot.
+    or 
+    fig : matplotlib.figure.Figure
+        Handle for the returned figure for saving.
+    ax : matplotlib.axes._subplots.AxesSubplot
+        Handles for the axis of the plot.
         """
         
     instruments = list(df.columns)

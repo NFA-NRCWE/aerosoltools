@@ -379,12 +379,17 @@ class Aerosol2D(Aerosol1D):
         return target_instance
 
     ###########################################################################
-    def dtype_converter(self, dtype='dN', inplace: bool = True):
+    def dtype_converter(self, dtype: str = 'dN', inplace: bool = True):
         """
-        Convert particle size distribution data to mass concentration (ug/m³) based on current data type.
+        Convert particle size distribution data the chosen datatype based on current data type.
 
         Parameters
         ----------
+
+        dtype : str, optional
+            Designate the desired datatype for the data to be converted into.
+            Defaults to 'dN'
+
         inplace : bool, optional
             If True (default), modifies the current instance in-place.
             If False, returns a new instance with converted mass concentration data.
@@ -429,30 +434,30 @@ class Aerosol2D(Aerosol1D):
         return self
 
     ###########################################################################
-    def PM_calc(self,dtype='dM',PM=4,Lower_lim=0):
+    def PM_calc(self,dtype: str = 'dM',PM: float = 4.2,Lower_lim: float = 0):
         """
-        Function to calculate PM from size bins from an array similar to those
-        returned from Load_xxx functions. 
-        
-        Note that the data should already be converted to mass e.g. ug/m3 as the
-        output of this function will maintain the same units as the input.
+        Function to calculate Px values. from size bins from an array similar to those
+        returned from 
 
         Parameters
         ----------
-        data_in : numpy.array
-            An array of data as returned by the Load_xxx functions with columns
-            of datetime, total conc, and size bin data. The size bin data should
-            be converted to mass based units e.g. ug/m3.
-        bin_edges : numpy.array
-            Array containing the limits of all sizebins. The array should have one
-            additional value when compared to the sizebin data in the "data_in" 
-            parameter
-        *PM : integer or float
-            PM limit or limits to use, given in um. Typical values are 0.1, 1, or
-            10 to yield PM0.1, PM1, and PM10 respectively. Note that multiple PM
-            limits can be specified at the same time e.g. 
-            PM_calc(data,bins,0.1,1,10)
-            In which case the returned data array will have a column for each PM mass
+        dtype : str, optional
+            A key to designate what datatype the PM_calc should return.
+            It adds the selected datetype to the dtype_converter function. 
+            Options are: 'dN', 'dS', 'dV', 'dM'.Defaults to 'dM'.
+            This change will not affect the original data.
+
+        PM : integer or float
+            PM indicates the D50% for calculating the PM value according to ISO 7708:1995(E)
+            Typical values would be; 1, 2.5, 4.2 or 10. (all in µm)
+            Default is 4.2 µm.
+
+        Lower_lim: integer or float
+            Lower_lim calculates D50% according to ISO 7708:1995(E), for a diameter value
+            smaller than the chosen PM. This value is then sustracted from the value caluclated from the PM.
+            Example:  PM_calc('dN',PM=10,Lower_lim=4.2) would return the number of particles between 4.2 and 10 µm.
+            Default is 0, which returns the unaltered PM. 
+		
         Returns
         -------
         Data_return : numpy.array
@@ -488,18 +493,20 @@ class Aerosol2D(Aerosol1D):
         # Apply the fraction to the mass concentration of the bin. 
         mass_frac = np.nansum(data_copy*Frac,axis=1)
         
-        if Lower_lim>0 and Lower_lim<PM:
-            # convert the current PM limit frim um to nm
-            lower_lim = Lower_lim * 1000
-            #EN 481 calculation
-            Y=np.log(bin_mids/lower_lim)/(2**0.5*np.log(1.5))
+        if Lower_lim>0:
+		if Lower_lim<PM:
+            	# convert the current PM limit from um to nm
+            	lower_lim = Lower_lim * 1000
+            	#EN 481 calculation
+            	Y=np.log(bin_mids/lower_lim)/(2**0.5*np.log(1.5))
         
-            Frac=0.5*(1+np.vectorize(erf)(-Y))
-            # Apply the fraction to the mass concentration of the bin. 
-            lower_mass_frac = np.nansum(data_copy*Frac,axis=1)
+           	 	Frac=0.5*(1+np.vectorize(erf)(-Y))
+            	# Apply the fraction to the mass concentration of the bin. 
+            	lower_mass_frac = np.nansum(data_copy*Frac,axis=1)
             
-            mass_frac=mass_frac-lower_mass_frac
-            
+            	mass_frac=mass_frac-lower_mass_frac
+            else:  raise ValueError("Lower_lim is larger than the chosen PM")
+
         mass_frac[mass_frac==0] = np.nan #where(mass_frac==0,mass_frac,np.nan)
          
         # Add the two values for a final mass concentration
@@ -510,97 +517,7 @@ class Aerosol2D(Aerosol1D):
         
         return self
     
-    ###########################################################################
-    def PM_calc_old(self,dtype='dM',*PM):
-        """
-        Function to calculate PM from size bins from an array similar to those
-        returned from Load_xxx functions. 
-        
-        Note that the data should already be converted to mass e.g. ug/m3 as the
-        output of this function will maintain the same units as the input.
-
-        Parameters
-        ----------
-        data_in : numpy.array
-            An array of data as returned by the Load_xxx functions with columns
-            of datetime, total conc, and size bin data. The size bin data should
-            be converted to mass based units e.g. ug/m3.
-        bin_edges : numpy.array
-            Array containing the limits of all sizebins. The array should have one
-            additional value when compared to the sizebin data in the "data_in" 
-            parameter
-        *PM : integer or float
-            PM limit or limits to use, given in um. Typical values are 0.1, 1, or
-            10 to yield PM0.1, PM1, and PM10 respectively. Note that multiple PM
-            limits can be specified at the same time e.g. 
-            PM_calc(data,bins,0.1,1,10)
-            In which case the returned data array will have a column for each PM mass
-        Returns
-        -------
-        Data_return : numpy.array
-            An array of mass concentration data. The first column is datetime. 
-            The other column or columns are PM values corresponding to each time for
-            the specified PM limit.
-
-        """
-        #Prepare the data for 
-        data_copy = self.copy_self()
-        #Maintaines total concentration mask 
-        mask=   data_copy.data['Total_conc'].notna()
-        #Unnormalize and ensure correct dtype
-        data_copy.unnormalize_logdp()
-        data_copy.dtype_converter(dtype)
-
-        # Convert to 
-        # Remove the datetime and total conc columns as these are not needed for PM
-        # calculations
-        data_copy = data_copy.size_data
-
-        # Run through the or all of the PM limits specified
-        for i in PM:
-            # convert the current PM limit frim um to nm
-            PM_lim = i * 1000
-            
-            # Determine the number of bins smaller than the specified PM limit
-            bins_within_range = np.array(self.bin_edges<PM_lim).sum()
-            bin_sizes= self._sizebin_headers[:bins_within_range]
-            if bins_within_range == 0:
-                # If none of the size bins are above the PM limit, continue to the
-                # next specified PM limit 
-                print(f"P{dtype[-1]}{i} is smaller than all size bins, so it will not be included in the output array".format(i))
-                continue
-            
-            elif bins_within_range == 1:
-                # If only the first bin is partially within the PM limit, calculate
-                # the fraction within the limit and multiply with the mass concentration
-                bin_frac = (PM_lim - self.bin_edges[0]) / (self.bin_edges[1]-self.bin_edges[0])
-                
-                self._extra_data[f"P{dtype[-1]}{i}"]= np.array(data_copy[bin_sizes[0]]*bin_frac)
-                
-            elif bins_within_range < self.bin_edges.shape[0]:
-                # If several bins are within the PM limit, sum the relevant ones
-                Initial_PM = np.array(data_copy[bin_sizes[:-1]].sum(axis=1))
-                
-                # Determine the fraction of the highest relevant bin within the specified
-                # PM limit
-                bin_frac = (PM_lim - self.bin_edges[bins_within_range-1]) / (
-                    self.bin_edges[bins_within_range] - self.bin_edges[bins_within_range-1])
-                
-                # Apply the fraction to the mass concentration of the bin. Here it
-                # is assumed that the mass concentration is evenly distributed within
-                # the size bin
-                last_bin_frac = np.array(data_copy[bin_sizes[-1]]*bin_frac)
-        
-                # Add the two valuyes for a final mass concentration
-                self._extra_data[f"P{dtype[-1]}{i}"]= Initial_PM + last_bin_frac
-                
-            else:
-                # If all bins are smaller than the specified PM limit, simply sum them
-                self._extra_data[f"P{dtype[-1]}{i}"]= np.nansum(data_copy,axis=1)
-       
-        self._extra_data.set_index(self.time,inplace=True)
-        self._extra_data[f"P{dtype[-1]}{i}"]=self._extra_data[f"P{dtype[-1]}{i}"].where(mask,np.nan)
-        return self
+   
     ###########################################################################
 
     def normalize_logdp(self, inplace: bool = True):

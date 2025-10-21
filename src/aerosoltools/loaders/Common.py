@@ -265,6 +265,13 @@ def Load_data_from_folder(
         List of metadata keys that must be identical across all loaded files.
         If any key differs, the file is skipped. Defaults to ["serial_number"].
 
+    time_rebin: : str, optional
+        Key to turn on time_rebin for each file loaded, using the Aerosol1D timerebin function.
+        Inputs can be of the type: "30s", "1min", "2.5h" or "1D"
+        This can be helpful when loading large number of data files, to reduce memory use. 
+        Should only be used if the data is inteded to be rebined after being loaded.
+        Defaults to None, which returns the full raw dataset.
+
     kwargs
         Additional keyword arguments passed to the load_function.
 

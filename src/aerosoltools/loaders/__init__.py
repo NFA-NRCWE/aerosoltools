@@ -7,6 +7,7 @@ including:
 - Aethalometer (Magee Scientific)
 - CPC – Condensation Particle Counter (TSI)
 - DiSCmini – Electrostatic classifier (Testo)
+- DustTrak - Optical Particle Counter (TSI)
 - ELPI – Electric Low Pressure Impactor (Dekati)
 - FMPS – Fast Mobility Particle Sizer (TSI)
 - Fourtec – Bluefish temperature/RH loggers
@@ -18,7 +19,7 @@ including:
 - SMPS – Scanning Mobility Particle Sizer (TSI)
 
 Each function is tailored to a specific instrument format and returns data structured for use
-with `aerosoltools` classes such as `Aerosol1D` or `Aerosol2D`.
+with `aerosoltools` classes such as `Aerosol1D`, `Aerosol2D` or 'AerosolAlt'.
 
 Additionally, the utility function `Load_data_from_folder()` provides a convenient interface
 for batch-loading multiple compatible files from a directory.
