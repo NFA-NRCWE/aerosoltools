@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
-
 import datetime as datetime
+from typing import Optional
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from ..aerosol2d import Aerosol2D
 from .Common import detect_delimiter
@@ -71,7 +71,10 @@ def Load_OPS_file(file: str, extra_data: bool = False):
 
 
 def Load_OPS_AIM(
-    file: str, extra_data: bool = False, encoding: str = None, delimiter: str = None
+    file: str,
+    extra_data: bool = False,
+    encoding: Optional[str] = None,
+    delimiter: Optional[str] = None,
 ) -> Aerosol2D:
     """
     Load data from OPS instrument as exported by AIM software.
@@ -94,53 +97,93 @@ def Load_OPS_AIM(
 
     Raises
     ------
-    Exception
+    ValueError
         If only one of encoding or delimiter is provided.
     """
+
+    # Detect when both are omitted
     if encoding is None and delimiter is None:
-        encoding, delimiter = detect_delimiter(file)
-    elif encoding is None or delimiter is None:
-        raise Exception("Either provide both encoding and delimiter, or neither.")
+        encoding, delimiter = detect_delimiter(file)  # -> Tuple[str, str]
 
-    df = pd.read_csv(file, header=13, encoding=encoding, delimiter=delimiter)
+    # If only one was provided, that’s ambiguous
+    if (encoding is None) != (delimiter is None):
+        raise ValueError("Either provide both encoding and delimiter, or neither.")
 
-    bin_mids = np.round(np.array(df.columns[17:33], dtype=float) * 1000, 1)
+    # Normalize to concrete strings for type checker
+    enc: str = encoding  # type: ignore[assignment]
+    delim: str = delimiter  # type: ignore[assignment]
 
-    bin_lb = np.genfromtxt(
-        file, delimiter=delimiter, encoding=encoding, skip_header=10, max_rows=1
-    )[17:-1]
-    bin_ub = np.genfromtxt(
-        file,
-        delimiter=delimiter,
-        encoding=encoding,
-        skip_header=11,
-        max_rows=1,
-        usecols=-2,
+    # --- main table via pandas ------------------------------------------------
+    df = pd.read_csv(file, header=13, encoding=enc, delimiter=delim)
+
+    # OPS: mid diameters are in columns 17..32 (inclusive) in µm -> convert to nm
+    bin_mids: NDArray[np.float64] = np.round(
+        np.array(df.columns[17:33], dtype=float) * 1000.0, 1
     )
-    bin_edges = np.append(bin_lb, [bin_ub]) * 1000
 
+    # --- edges via genfromtxt, using file handles to avoid 'encoding' kw warning ----
+    # lower edges row
+    with open(file, "r", encoding=enc) as fh1:
+        bin_lb = np.genfromtxt(
+            fh1,
+            delimiter=delim,
+            skip_header=10,
+            max_rows=1,
+        )[
+            17:-1
+        ]  # all but the last column on that row
+
+    # upper edge is the penultimate column on the next row
+    with open(file, "r", encoding=enc) as fh2:
+        # read a single value from the (-2) column on that row
+        bin_ub_arr = np.genfromtxt(
+            fh2,
+            delimiter=delim,
+            skip_header=11,
+            max_rows=1,
+            usecols=[-2],  # list to satisfy numpy's type stubs
+        )
+    # Ensure scalar float
+    bin_ub = (
+        float(bin_ub_arr)
+        if isinstance(bin_ub_arr, (np.floating, float))
+        else float(np.asarray(bin_ub_arr).item())
+    )
+
+    # Build edges in nm
+    bin_edges: NDArray[np.float64] = np.append(bin_lb, [bin_ub]) * 1000.0
+
+    # --- timestamp and columns ----------------------------------------------
+    # The AIM export has "Date", "Start Time" -> build a single datetime column
     df.rename(columns={"Sample #": "Datetime"}, inplace=True)
     df["Datetime"] = pd.to_datetime(
         df["Date"] + " " + df["Start Time"], format="%m/%d/%Y %H:%M:%S"
     )
     df.drop(columns=["Date", "Start Time"], inplace=True)
 
-    dist_data = df.iloc[:, 15:31].to_numpy()
+    # Distribution block (positions may vary in different exports; adjust if needed)
+    dist_block = df.iloc[:, 15:31]
+    dist_data = dist_block.to_numpy()
+    total_conc = pd.DataFrame(np.nansum(dist_data, axis=1), columns=["Total_conc"])
+    dist_df = pd.DataFrame(dist_data, columns=bin_mids.astype(str))
+    final_df = pd.concat([df["Datetime"], total_conc, dist_df], axis=1)
 
+    # Optional extra-data (everything beyond column 13 kept, indexed by time)
     if extra_data:
         ops_extra = df.drop(columns=df.columns[13:])
         ops_extra.set_index("Datetime", inplace=True)
 
-    meta = np.genfromtxt(
-        file,
-        delimiter=delimiter,
-        encoding=encoding,
-        skip_header=1,
-        max_rows=7,
-        dtype=str,
-    )
-    weight = meta[6, 1]
-    dtype_desc = meta[5, 1]
+    # --- metadata block ------------------------------------------------------
+    with open(file, "r", encoding=enc) as fh3:
+        meta = np.genfromtxt(
+            fh3,
+            delimiter=delim,
+            skip_header=1,
+            max_rows=7,
+            dtype=str,
+        )
+    weight = str(meta[6, 1])  # e.g., "Nu" prefix present
+    dtype_desc = str(meta[5, 1])
     density = 1.0
 
     unit_dict = {"Nu": "cm⁻³", "Su": "nm²/cm³", "Vo": "nm³/cm³", "Ma": "ug/m³"}
@@ -154,19 +197,18 @@ def Load_OPS_AIM(
             dtype = dtype_dict[weight[:2]] + "/dDp"
         else:
             dtype = dtype_dict[weight[:2]]
-    except KeyError:
-        raise Exception("Unit and/or data type does not match the expected format.")
+    except KeyError as e:
+        raise ValueError(
+            "Unit and/or data type does not match the expected format."
+        ) from e
 
-    total_conc = pd.DataFrame(np.nansum(dist_data, axis=1), columns=["Total_conc"])
-    dist_data = pd.DataFrame(dist_data, columns=bin_mids.astype(str))
-    final_df = pd.concat([df["Datetime"], total_conc, dist_data], axis=1)
-
+    # --- assemble object -----------------------------------------------------
     OPS = Aerosol2D(final_df)
     OPS._meta["bin_edges"] = bin_edges
     OPS._meta["bin_mids"] = bin_mids
     OPS._meta["density"] = density
     OPS._meta["instrument"] = "OPS"
-    OPS._meta["serial_number"] = meta[1, 1]
+    OPS._meta["serial_number"] = str(meta[1, 1])
     OPS._meta["unit"] = unit
     OPS._meta["dtype"] = dtype
 
@@ -174,7 +216,7 @@ def Load_OPS_AIM(
     OPS.unnormalize_logdp()
 
     if extra_data:
-        OPS._extra_data = ops_extra
+        OPS._extra_data = ops_extra  # type: ignore[assignment]
 
     return OPS
 
@@ -183,8 +225,11 @@ def Load_OPS_AIM(
 
 
 def Load_OPS_Direct(
-    file: str, extra_data: bool = False, encoding: str = None, delimiter: str = None
-):
+    file: str,
+    extra_data: bool = False,
+    encoding: Optional[str] = None,
+    delimiter: Optional[str] = None,
+) -> Aerosol2D:
     """
     Load OPS (Optical Particle Sizer) data exported directly from the instrument.
 
@@ -222,11 +267,20 @@ def Load_OPS_Direct(
     - Bin 17 (particles >10 µm) is excluded from the main dataset but included in `.extra_data`.
     - Requires `Com.detect_delimiter()` for auto-formatting detection.
     """
-    if encoding is None and delimiter is None:
-        encoding, delimiter = detect_delimiter(file)
+    # Detect when both are omitted
+    both_missing = encoding is None and delimiter is None
+    if both_missing:
+        encoding, delimiter = detect_delimiter(file)  # -> Tuple[str, str]
+
+    # If only one was provided, that’s ambiguous
+    if (encoding is None) != (delimiter is None):
+        raise ValueError("Either provide both encoding and delimiter, or neither.")
+
+    enc: str = encoding  # type: ignore[assignment]
+    delim: str = delimiter  # type: ignore[assignment]
 
     # Load measurement data, excluding last header-only bin
-    df = pd.read_csv(file, header=37, encoding=encoding, delimiter=delimiter)
+    df = pd.read_csv(file, header=37, encoding=enc, delimiter=delim)
 
     # Extract metadata as key-value dict
     meta = (
@@ -234,13 +288,13 @@ def Load_OPS_Direct(
             file,
             header=None,
             nrows=35,
-            encoding=encoding,
-            delimiter=delimiter,
+            encoding=enc,
+            delimiter=delim,
             dtype={0: str},
         )
         .set_index(0)
         .squeeze()
-        .to_dict()
+        .to_dict()  # type: ignore
     )
 
     # Parse starting datetime from metadata

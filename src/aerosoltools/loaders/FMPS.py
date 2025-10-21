@@ -102,17 +102,13 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
         datetime_df = _parse_standard_datetime(file, delimiter, encoding)
 
     # Extract metadata
-    datatype = str(
-        np.genfromtxt(
-            file,
-            delimiter=delimiter,
-            encoding=encoding,
-            skip_header=12,
-            max_rows=1,
-            dtype=str,
-            usecols=0,
-        )
-    ).split(" ")[0]
+    with open(file, "r", encoding=encoding, newline="") as fh:
+        for _ in range(12):
+            fh.readline()
+        line = fh.readline()
+
+    first_field = line.split(delimiter)[0].strip()
+    datatype = first_field.split(" ")[0]
     serial_number = str(
         np.genfromtxt(
             file,

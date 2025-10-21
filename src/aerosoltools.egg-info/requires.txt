@@ -3,6 +3,7 @@ numpy>=1.20
 matplotlib>=3.1.0
 tabulate>=0.8.0
 openpyxl
+scipy>=1.10
 
 [dev]
 pytest

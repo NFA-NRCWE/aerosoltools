@@ -1,33 +1,34 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
-import os
-from collections import Counter
-from typing import List, Union
+import datetime as dt
+from typing import Tuple
 
-import pandas as pd
-import numpy as np
-import datetime as datetime
-
-from matplotlib import pyplot as plt
 import matplotlib.dates as mdates
-from scipy.stats import  theilslopes
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from numpy.typing import ArrayLike, NDArray
 from scipy.optimize import curve_fit
+from scipy.stats import theilslopes
 
-
-from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
-from .aerosolalt import AerosolAlt
 
 ###############################################################################
 
 
-def Combine_NS_OPS(NS_data: Aerosol2D, OPS_data: Aerosol2D, start: datetime = None,end: datetime = None):
+def Combine_NS_OPS(
+    NS_data: Aerosol2D,
+    OPS_data: Aerosol2D,
+    start: dt.datetime | None = None,
+    end: dt.datetime | None = None,
+) -> Aerosol2D:
     """
     Function to combine Nanoscan and OPS data. If no start or end time are specified
     then the function will use the first and last datapoints that exist for both
-    instruments. 
+    instruments.
 
-    
     Parameters
     ----------
     NS_data : Aerosol2D
@@ -37,7 +38,7 @@ def Combine_NS_OPS(NS_data: Aerosol2D, OPS_data: Aerosol2D, start: datetime = No
         An Aerosol2D data set of an OPS.
 
     start : datetime, optional
-        The starting time for combining the two datasets. If not speicifed, a 
+        The starting time for combining the two datasets. If not speicifed, a
         starting point is found as earliest data point of the two datasets. The default is None.
 
     end : datetime, optional
@@ -51,329 +52,374 @@ def Combine_NS_OPS(NS_data: Aerosol2D, OPS_data: Aerosol2D, start: datetime = No
         NS and OPS datasets, with newly calculated total concentrations.
         The last bin of the NS has been ignored and the second
         to last has been shortened and its number reduced accordingly.
-
-
     """
-    
+
     # Initialize combination by confirming the data type of the two data sets.
-    NS=NS_data.copy_self()
-    OPS=OPS_data.copy_self()
+    NS = NS_data.copy_self()
+    OPS = OPS_data.copy_self()
     NS.convert_to_number_concentration()
     NS.unnormalize_logdp()
     OPS.convert_to_number_concentration()
     OPS.unnormalize_logdp()
-    
+
     # Round all the datetime values, so they do not have seconds, in order to ease the alignment process
 
-    NS_time_delta   = NS.time[1]-NS.time[0]
-    OPS_time_delta  = OPS.time[1]-OPS.time[0]
+    NS_time_delta = NS.time[1] - NS.time[0]
+    OPS_time_delta = OPS.time[1] - OPS.time[0]
     # Determine the slowest frequency for the purpose of aligning the data.
-    freq=max(NS_time_delta,OPS_time_delta)
-    freq=f"{freq.seconds}s"
-    
+    freq = max(NS_time_delta, OPS_time_delta)
+    freq = f"{freq.seconds}s"
+
     # Determine the start time for combining the data either from the specified time
     # or from the first datapoint which exist for both instruments
     if start:
         start = start.replace(second=0)
     else:
-        start = min(OPS.time[0],NS.time[0])
-    
+        start = min(OPS.time[0], NS.time[0])
+
     # Determine the end time for combining the data either from the specified time
     # or from the last datapoint which exist for both instruments
     if end:
         end = end.replace(second=0)
     else:
-        end = max(OPS.time[-1],NS.time[-1])
-    
+        end = max(OPS.time[-1], NS.time[-1])
+
+    assert isinstance(start, dt.datetime)
+    assert isinstance(end, dt.datetime)
     # Grab the NS data within the specifed start and end times
-    NS_time_matched = NS.timerebin(freq,start,end,inplace=False)
-    OPS_time_matched = OPS.timerebin(freq,start,end,inplace=False)
+    NS_time_matched = NS.timerebin(freq, start, end, inplace=False)
+    OPS_time_matched = OPS.timerebin(freq, start, end, inplace=False)
 
-    NS_bins    = NS.bin_edges
-    OPS_bins   = OPS.bin_edges
-    
-    # the penultimate NS sizebin has its upper limit reduced to lower limit of the OPS, 
-    # so the particle number of the relevent bin is reduced by a fraction equal to 
-    # the fraction the difference between the previous bin to 300 divided by the 
-    # original difference between the bin-edges.
-    for i in range(0,len(NS_bins)-1):
-        if NS_bins[i+1]>OPS_bins[0]:
-            Factor_reduction = (OPS_bins[0]-NS_bins[i])/(NS_bins[i+1]-NS_bins[i]) 
-            break
-    #Create the combined list of NS_OPS
-    NS_OPS_bins =np.append(NS_bins[:i+1],OPS_bins)
-    bin_mids    =  np.round(np.array((NS_OPS_bins[:-1] + NS_OPS_bins[1:])/2,dtype=float),1)
-    bin_mids[:i]= NS.bin_mids[:i]
-    
+    NS_bins = NS.bin_edges.astype(float)
+    OPS_bins = OPS.bin_edges.astype(float)
+    OPS0 = float(OPS_bins[0])
+
+    # index j such that NS_bins[j] < OPS0 <= NS_bins[j+1]
+    j = int(np.searchsorted(NS_bins, OPS0, side="right") - 1)
+    if j < 0 or j >= len(NS_bins) - 1:
+        raise ValueError("OPS lower edge is outside the NS bin range.")
+
+    # fraction of the NS bin to keep
+    factor_reduction = (OPS0 - NS_bins[j]) / (NS_bins[j + 1] - NS_bins[j])
+
+    # combined edges and mids
+    ns_ops_edges = np.concatenate([NS_bins[: j + 1], OPS_bins])
+    bin_mids = np.round(0.5 * (ns_ops_edges[:-1] + ns_ops_edges[1:]), 1)
+    bin_mids[:j] = NS.bin_mids[:j]
+
     # Select the relevant columns
-    NS_data     = NS_time_matched.data.drop(columns=NS_time_matched.data.columns[i+2:])
-    OPS_data    = OPS_time_matched.data.drop(columns=['Total_conc'])
-    NS_columns  = NS_data.columns
-    
-    NS_data[NS_columns[-1]] = NS_data[NS_columns[-1]].astype("float")*Factor_reduction
-   
-    # Merge on 'datetime' column, using an outer join to keep all datetime values
-    Combined_NS_OPS = pd.concat([NS_data, OPS_data],axis=1)
-    NS_OPS_columns = Combined_NS_OPS.columns
-    #Define a mask based on where either OPS or NS is off for the purpose of total conc.
-    mask=(NS_data[NS_columns[1:]].notna().any(axis=1) ) & (OPS_data[OPS._sizebin_headers].notna().any(axis=1) )
-    # Combined_NS_OPS.rename(columns={NS_OPS_columns[1:len(bin_mids)+2]: bin_mids}, inplace=True)
-    for s in range(0,len(bin_mids)):
-        Combined_NS_OPS.rename( columns={NS_OPS_columns[1:][s]:bin_mids[s].astype(str)},inplace=True)
-        
-    # Combined_NS_OPS.rename(columns={NS_columns[-1]: bin_mids[i]}, inplace=True)
-    NS_OPS_columns = Combined_NS_OPS.columns
+    ns_df = NS_time_matched.data.drop(columns=NS_time_matched.data.columns[j + 2 :])
+    ops_df = OPS_time_matched.data.drop(columns=["Total_conc"])
 
-    # A new total concentration is calculated based on the combined size bin data
-    Combined_NS_OPS['Total_conc']=Combined_NS_OPS[NS_OPS_columns[1:len(NS_OPS_bins)]].sum(axis=1).where(mask, np.nan)
-    # Combined_NS_OPS[:,1] = np.round(Combined_NS_OPS[NS_OPS_columns[1:len(NS_OPS)].sum(axis=1).astype("float"),0)
-    
-    NS_OPS = Aerosol2D(Combined_NS_OPS)
-    NS_OPS._activities= NS.activities
-    NS_OPS._activity_periods= NS.activity_periods
-    NS_OPS._meta["bin_edges"] = NS_OPS_bins
-    NS_OPS._meta["bin_mids"] = bin_mids
-    NS_OPS._meta["density"] = NS._meta["density"]
-    NS_OPS._meta["instrument"] = "NS_OPS"
-    NS_OPS._meta["serial_number"] = f"NS: {NS.serial_number},'OPS': {OPS.serial_number}"
-    NS_OPS._meta["unit"] = 'cm⁻³'
-    NS_OPS._meta["dtype"] = 'dN'
-    NS_OPS._raw_extra_data =  pd.concat([NS._raw_extra_data, OPS._raw_extra_data],axis=1)
-    return NS_OPS
+    # scale the last kept NS bin by the reduction factor
+    last_ns_col = ns_df.columns[-1]
+    ns_df[last_ns_col] = ns_df[last_ns_col].astype(float) * factor_reduction
+
+    # --- merge by index (datetimes) ---
+    combined = pd.concat([ns_df, ops_df], axis=1)
+
+    # --- rename size-bin columns to string mids in one shot ---
+    old_size_cols = list(combined.columns[1 : 1 + len(bin_mids)])
+    rename_map = dict(zip(old_size_cols, [str(x) for x in bin_mids], strict=False))
+    combined.rename(columns=rename_map, inplace=True)
+
+    # --- total concentration where both instruments have any data at a timestamp ---
+    mask = ns_df[ns_df.columns[1:]].notna().any(axis=1) & ops_df[
+        OPS._sizebin_headers
+    ].notna().any(axis=1)
+    # sum only over the size-bin columns (first column is datetime/index)
+    sizebin_span = combined.columns[1 : 1 + (len(ns_ops_edges) - 1)]
+    combined["Total_conc"] = combined[sizebin_span].sum(axis=1).where(mask, np.nan)
+
+    # --- build the result object and propagate metadata/activities ---
+    res = Aerosol2D(combined)
+    res._activities = NS.activities
+    res._activity_periods = NS.activity_periods
+    res._meta["bin_edges"] = ns_ops_edges
+    res._meta["bin_mids"] = bin_mids
+    res._meta["density"] = NS._meta["density"]
+    res._meta["instrument"] = "NS_OPS"
+    res._meta["serial_number"] = f"NS: {NS.serial_number}, OPS: {OPS.serial_number}"
+    res._meta["unit"] = "cm⁻³"
+    res._meta["dtype"] = "dN"
+    res._raw_extra_data = pd.concat([NS._raw_extra_data, OPS._raw_extra_data], axis=1)
+
+    return res
+
 
 ###############################################################################
 
-def Plot_correlation(X, Y, ax_in=False, intercept=True, uniform_scaling=True, outlier_influence=True):
+
+def Plot_correlation(
+    X: ArrayLike,
+    Y: ArrayLike,
+    ax_in: Axes | None = None,
+    *,
+    intercept: bool = True,
+    uniform_scaling: bool = True,
+    outlier_influence: bool = True,
+) -> Tuple[Figure, Axes]:
     """
     Function to plot the correlation between two sets of values, which have been
-    aligned so as to have sensible comparison points. 
+    aligned so as to have sensible comparison points.
     X and Y must have the same length. This can be accomplished by using the
-    averaging function to generate time associated data of same dimensions. 
-       
+    averaging function to generate time associated data of same dimensions.
+
     Parameters
     ----------
     X: Numpy.array
-        First set of values. 
+        First set of values.
     Y: Numpy.array
-        Second set of values.  
-    ax_in : matplotlib.axes._subplots.AxesSubplot
-        Handles for the axis of the plot.
-        Usefull for plotting multiple correlations in the same figure.
-        
-        Example:
-        '''
-        df: dataframe of values from different instruments with associated label
-        instruments: list of instruments used for comparison
-        
-        fig, axes = plt.subplots(len(instruments)-1, len(instruments)-1)
+        Second set of values.
+    ax_in : matplotlib.axes.Axes, optional
+        Axes to draw on; if None, a new Figure/Axes is created.
+    intercept : bool, optional
+        If True, fit y = A*x + B; if False, fit y = A*x with B fixed at 0.
+    uniform_scaling : bool, optional
+        If True, both axes are scaled by a common factor to share limits.
+    outlier_influence : bool, optional
+        If True, use least-squares (curve_fit). If False, use Theil–Sen slope.
 
-        # Fill the grid with custom scatter plots, or leave empty for unwanted pairs
-        for i in range(len(instruments)-1):  # Loop over instruments 0:-1 for the horizontal axis
-            for j in range(i,len(instruments)-1):  # Loop over instruments 1: for the vertical axis
-                if i == j+1:  # Skip diagonal (Instrument 2 vs Instrument 2, etc.)
-                    axes[j, i].axis('off')
-                else:  # Use custom scatter plot function
-                    _, _ = UL.cor_plot(df[instruments[i]], df[instruments[j+1]], axes[j, i],intercept=False)
-                    if i==0:
-                        axes[j, i].set_ylabel(instruments[j+1])
-                    if j==len(instruments)-2:
-                        axes[j, i].set_xlabel(instruments[i])
-         '''                 
-    uniform_scaling: boolean, optional
-        Boolean that can be turned off so as to not scale axis the max value.
-        
     Returns
     -------
     fig : matplotlib.figure.Figure
         Handle for the returned figure for saving.
     ax : matplotlib.axes._subplots.AxesSubplot
         Handles for the axis of the plot.
-        """
-        
-    #Defining relevant sub-functions for the function to work
-    def linear_func(x,A,B=0):
-        #Calculates a first order equation.
-        return A*x + B
-    
-    def R2(data,fit):
-        # residual sum of squares
-        ss_res = np.sum((data - fit) ** 2)
-        # total sum of squares
-        ss_tot = np.sum((data - np.mean(data)) ** 2)
-        # r-squared
-        return round((1 - (ss_res / ss_tot)),3)
-    
-    #Cleaning up the data and removing rows where either value is nan
-    z=np.column_stack((X.copy(),Y.copy())).astype('float64')
-    z=z[~np.isnan(z).any(axis=1)]
-    z=z[~np.isinf(z).any(axis=1)]
-    x=z[:,0]
-    y=z[:,1]
-    
-    if type(x[0])==datetime.datetime:
-        x=np.array(mdates.date2num(x[:]))
-    
-    # This method works well but it's sensitive towards outliers
-    if outlier_influence:
-        #Apply the fit using curve_fit for a function with or without an intercept.
-        if intercept==True:
-            parameters, covariance =curve_fit(linear_func,x,y,p0=[1, 1])
-            A, B = parameters
-            SE = np.sqrt(np.diag(covariance))
-            SE_A , SE_B = SE
-        
-        else:
-            parameters, covarience =curve_fit(linear_func,x,y,p0=[1])
-            A=parameters[0]
-            SE_A=covarience[0][0]
-            B=0
-            SE_B=0
-    else:
-        # This method is less sensitive towards 
-        A, B, _, _ = theilslopes(y,x)
-        
-    #Generate the fit and calculate the R^2 value
-    fit=linear_func(x,A,B)
-    r2=R2(y,fit)
+    """
 
-    if uniform_scaling==True:
-        factor=max(max(abs(x)),max(abs(y)))
-    else: 
-        factor=1
-    if min(x)<=0:
-        x_min=min(x)/factor
+    # --- helpers -------------------------------------------------------------
+    def linear_func(
+        x: NDArray[np.float64], A: float, B: float = 0.0
+    ) -> NDArray[np.float64]:
+        return A * x + B
+
+    def r2_score(y_true: NDArray[np.float64], y_fit: NDArray[np.float64]) -> float:
+        ss_res = float(np.sum((y_true - y_fit) ** 2))
+        ss_tot = float(np.sum((y_true - float(np.mean(y_true))) ** 2))
+        return round(1.0 - (ss_res / ss_tot if ss_tot != 0 else 0.0), 3)
+
+    # --- coerce inputs, drop NaN/inf rows -----------------------------------
+    x_arr = np.asarray(X)
+    y_arr = np.asarray(Y)
+
+    # Handle datetime-like X → float date numbers (Matplotlib expects float)
+    if np.issubdtype(x_arr.dtype, np.datetime64):
+        x_num = mdates.date2num(pd.to_datetime(x_arr).to_pydatetime())
+        x = np.asarray(x_num, dtype=np.float64)
     else:
-        x_min=0
-    if max(x)<=0:
-        x_max=0
-    else: 
-        x_max= z.max()/factor
-    
-    fit_x=np.linspace(x_min,x_max,20)
-    fit_y=fit_x*A+B/factor
-    if B==0:
-        label=f"y={round(A,2)}$\cdot$x"#"y={:.2f}$\cdot$x+{:.2f}, R$^2$={:.2f}"
-    elif B>0:
-        label=f"y={round(A,2)}$\cdot$x \n + {round(B,2)}"#"y={:.2f}$\cdot$x+{:.2f}, R$^2$={:.2f}"
-        
+        # If X is a sequence of Python datetimes
+        if x_arr.size > 0 and isinstance(
+            x_arr.flat[0], (dt.datetime, np.datetime64, pd.Timestamp)
+        ):
+            x_num = mdates.date2num(pd.to_datetime(x_arr).to_pydatetime())
+            x = np.asarray(x_num, dtype=np.float64)
+        else:
+            x = np.asarray(x_arr, dtype=np.float64)
+
+    y = np.asarray(y_arr, dtype=np.float64)
+
+    # Stack, filter invalid rows
+    z = np.column_stack((x, y)).astype(np.float64, copy=False)
+    mask = ~(np.isnan(z).any(axis=1) | np.isinf(z).any(axis=1))
+    z = z[mask]
+    if z.size == 0:
+        # create an empty plot to keep signature behavior predictable
+        fig, ax = plt.subplots()
+        return fig, ax
+    x = z[:, 0]
+    y = z[:, 1]
+
+    # --- fit -----------------------------------------------------------------
+    # Initialize SEs to avoid "possibly unbound" warnings
+    SE_A: float = 0.0
+    SE_B: float = 0.0
+    A: float
+    B: float
+
+    if outlier_influence:
+        if intercept:
+            params, cov = curve_fit(linear_func, x, y, p0=[1.0, 0.0])
+            A, B = float(params[0]), float(params[1])
+            # cov can be None if fit fails; guard
+            if cov is not None and cov.size >= 2:
+                diag = np.sqrt(np.diag(cov))
+                SE_A = float(diag[0])
+                SE_B = float(diag[1])
+        else:
+            # fit y = A*x  (B = 0)
+            def linear_through_origin(
+                xv: NDArray[np.float64], a: float
+            ) -> NDArray[np.float64]:
+                return a * xv
+
+            params, cov = curve_fit(linear_through_origin, x, y, p0=[1.0])
+            A = float(params[0])
+            B = 0.0
+            if cov is not None and cov.size >= 1:
+                SE_A = float(np.sqrt(cov[0, 0]))
     else:
-        label=f"y={round(A,2)}$\cdot$x \n {round(B,2)}"#"y={:.2f}$\cdot$x+{:.2f}, R$^2$={
-    #If no ax is provided, figure and ax is generated here
-    if ax_in==False:
-        figure, ax = plt.subplots()
-        plt.xticks(fontsize=25)  
-        plt.yticks(fontsize=25) 
+        # Theil–Sen robust fit (returns slope, intercept, lo_slope, hi_slope)
+        slope, intercept_ts, _, _ = theilslopes(y, x)
+        A = float(slope)  # type: ignore
+        B = float(intercept_ts)  # type: ignore
+        # keep SE_A/SE_B at 0.0; we don't draw bands for this branch
+
+    y_fit = linear_func(x, A, B)
+    r2 = r2_score(y, y_fit)
+
+    # --- scaling and limits --------------------------------------------------
+    if uniform_scaling:
+        factor = float(max(np.max(np.abs(x)), np.max(np.abs(y)), 1.0))
+    else:
+        factor = 1.0
+
+    x_min = float(np.min(x) / factor) if np.min(x) <= 0 else 0.0
+    x_max = 0.0 if np.max(x) <= 0 else float(np.max(z) / factor)
+    fit_x = np.linspace(x_min, x_max, 200, dtype=np.float64)
+    fit_y = A * fit_x + (B / factor)
+
+    # Label string
+    if B == 0.0:
+        label = f"y={round(A, 2)}$\\cdot$x"
+    elif B > 0.0:
+        label = f"y={round(A, 2)}$\\cdot$x \n + {round(B, 2)}"
+    else:
+        label = f"y={round(A, 2)}$\\cdot$x \n {round(B, 2)}"
+
+    # --- axes creation -------------------------------------------------------
+    if ax_in is None:
+        fig, ax = plt.subplots()
+        plt.xticks(fontsize=25)
+        plt.yticks(fontsize=25)
         ax.legend(fontsize=25)
         ax.grid(True)
     else:
         ax = ax_in
-    #Plot the 1:1 line
-    ax.plot([x_min,x_max],[x_min,x_max],ls="--",c="k",lw=3)
-    #Plot the data with scatter plot
-    ax.plot(x/factor,y/factor,'bo')
-    #Plot the fit with associated uncertainty
-    ax.plot(fit_x, fit_y, 'r-',lw=3)#, label=label.format(A, B, r2))
-    ax.text(0.05, 0.95, label, transform=ax.transAxes, fontsize=25,
-        verticalalignment='top')
-    if B==0:
-        ax.text(0.05, 0.80, f"r$^2$: {round(r2,2)}", transform=ax.transAxes, fontsize=25,
-        verticalalignment='top')
-    else:
-        ax.text(0.05, 0.65, f"r$^2$: {round(r2,2)}", transform=ax.transAxes, fontsize=25,
-        verticalalignment='top')
-        
+        fig = ax.figure
+
+    # --- drawing -------------------------------------------------------------
+    ax.plot([x_min, x_max], [x_min, x_max], ls="--", c="k", lw=3)  # 1:1 line
+    ax.plot(x / factor, y / factor, "bo")  # points
+    ax.plot(fit_x, fit_y, "r-", lw=3)  # fit
+    ax.text(0.05, 0.95, label, transform=ax.transAxes, fontsize=25, va="top")
+    r2_y = 0.80 if B == 0.0 else 0.65
+    ax.text(
+        0.05,
+        r2_y,
+        f"r$^2$: {round(r2, 2)}",
+        transform=ax.transAxes,
+        fontsize=25,
+        va="top",
+    )
+
+    # Uncertainty band only for the least-squares branch
     if outlier_influence:
-        ax.fill_between(fit_x, fit_y - ((SE_A*fit_x)**2+(SE_B/factor)**2)**0.5, fit_y + ((SE_A*fit_x)**2+(SE_B/factor)**2)**0.5, alpha=0.33)
-    return ax.figure,ax
+        band = np.sqrt((SE_A * fit_x) ** 2 + (SE_B / factor) ** 2)
+        ax.fill_between(fit_x, fit_y - band, fit_y + band, alpha=0.33)
+
+    return fig, ax  # type: ignore
+
 
 ###############################################################################
-def Plot_correlation_df(df: dataframe, fig_text: str = "", *Plotsettings):
+def Plot_correlation_df(df: pd.DataFrame, fig_text: str = "", *Plotsettings):
     """
     Function to plot multiple correlation plots together in a n*n grid, where n is the number of instruments minus 1.
     X and Y must have the same length. This can be accomplished by using the
-    averaging function to generate time associated data of same dimensions. 
-       
+    averaging function to generate time associated data of same dimensions.
+
     Parameters
     ----------
     df: dataframe
         A dataframe of the instruments structured with an instrument per column,
-        with instrument handle equal to name or location. 
-        
+        with instrument handle equal to name or location.
+
     fig_text: str, optional
-        If chosen a string is added as a figure text in the unused region of the plot.  
-        
-    *Plotsettings: list of input to 
+        If chosen a string is added as a figure text in the unused region of the plot.
+
+    *Plotsettings: list of input to
         Input to the Plot_calibration function:
             intercept=True, uniform_scaling=True, outlier_influence=True
         Call on this
     unifomr_scaling: boolean, optional
         Boolean that can be turned off so as to not scale axis the max value.
-        
+
     Returns
     -------
     fig : matplotlib.figure.Figure
         Handle for the returned figure for saving.
     gs : matplotlib.gridspace._subplots.AxesSubplot
         Handles for the gridspace of the plot.
-    or 
+    or
     fig : matplotlib.figure.Figure
         Handle for the returned figure for saving.
     ax : matplotlib.axes._subplots.AxesSubplot
         Handles for the axis of the plot.
-        """
-        
+    """
+
     instruments = list(df.columns)
-    n=0
-    
-    if len(instruments)==2:
-        fig, ax= Plot_correlation(df[instruments[0]], df[instruments[1]], *Plotsettings)#
-        fig.figsize=(18, 18)
+    n = 0
+
+    if len(instruments) == 2:
+        fig, ax = Plot_correlation(
+            df[instruments[0]], df[instruments[1]], *Plotsettings
+        )
+        fig.figsize = (18, 18)  # type: ignore
         ax.set_ylabel(instruments[1])
         ax.set_xlabel(instruments[0])
     else:
         n = len(instruments) - 1
-        
+
         fig = plt.figure(figsize=(18, 18), constrained_layout=True)
         gs = fig.add_gridspec(n, n)
-        
+
         axes = {}
         # Create only the subplots you need (upper triangle incl. diagonal)
         for i in range(n):
             for j in range(i, n):
-                ax = fig.add_subplot(gs[j, i])    # row=j, col=i
+                ax = fig.add_subplot(gs[j, i])
                 axes[(j, i)] = ax
-        
-                # Your custom correlation plot
+
                 try:
-                    _, _ = Plot_correlation(df[instruments[i]], df[instruments[j+1]], ax, *Plotsettings)#intercept=intercept)
+                    _, _ = Plot_correlation(
+                        df[instruments[i]], df[instruments[j + 1]], ax, *Plotsettings
+                    )
                 except Exception:
                     pass
-        
+
                 if i == 0:
-                    ax.set_ylabel(instruments[j+1])
+                    ax.set_ylabel(instruments[j + 1])
                 if j == n - 1:
                     ax.set_xlabel(instruments[i])
-    if len(fig_text)>0:
+    if len(fig_text) > 0:
         # One description box spanning top row, columns 2..n (i.e., gs[0, 1:])
         if n > 1:
-            desc_ax = fig.add_subplot(gs[0, 1:])  # uses only empty cells
-            desc_ax.axis('off')
+            desc_ax = fig.add_subplot(gs[0, 1:])  # type: ignore # uses only empty cells
+            desc_ax.axis("off")
             desc_ax.text(
-                0.0, 0.5,
+                0.0,
+                0.5,
                 fig_text,
-                ha='left', va='center', fontsize=40, wrap=True,
+                ha="left",
+                va="center",
+                fontsize=40,
+                wrap=True,
                 bbox=dict(boxstyle="round,pad=0.6", fc="whitesmoke", ec="0.5", lw=1),
-                transform=desc_ax.transAxes
+                transform=desc_ax.transAxes,
             )
         else:
             # Fallback if there's only one column in the grid
-            ax.text(
-                0.5, 0.90,
+            ax.text(  # type: ignore
+                0.5,
+                0.90,
                 fig_text,
-                ha='center', va='top',transform=ax.transAxes, fontsize=40
+                ha="center",
+                va="top",
+                transform=ax.transAxes, # type: ignore
+                fontsize=40,  # type: ignore
             )
     plt.tight_layout()
-    if n==0:
-        return fig, ax
+    if n == 0:
+        return fig, ax  # type: ignore
     else:
-        return fig, gs
+        return fig, gs  # type: ignore
