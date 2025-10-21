@@ -5,6 +5,8 @@ from collections import Counter
 from typing import List, Union
 
 import pandas as pd
+import numpy as np
+import datetime as datetime
 
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
@@ -229,6 +231,7 @@ def Load_data_from_folder(
     search_word="",
     max_subfolder=0,
     meta_checklist: list = ["serial_number"],
+    time_rebin: str = None,
     **kwargs,
 ):
     """
@@ -287,18 +290,25 @@ def Load_data_from_folder(
     skipped_files = []
     Combined_raw_data = None
     Combined_extra_data = None
+    Combined_raw_extra_data = None
     meta = {}
 
     for file_path in file_list(folder_path, search_word, max_subfolder):
         print(f"Loading: {file_path}")
         try:
             data = load_function(file_path, **kwargs)
-
+            #New addition?
+            if time_rebin:
+                data.timerebin(time_rebin)
+                data._raw_data=data._data
+                data._raw_extra_data=data._extra_data
+            #HMMM
             if counter == 0:
                 Initial_data = data
                 meta = data.metadata
                 Combined_raw_data = data.original_data
                 Combined_extra_data = data.extra_data
+                Combined_raw_extra_data = data._raw_extra_data
                 counter = 1
             else:
                 # Check metadata consistency
@@ -317,7 +327,9 @@ def Load_data_from_folder(
                     Combined_extra_data = pd.concat(
                         [Combined_extra_data, data.extra_data]
                     )
-
+                    Combined_raw_extra_data = pd.concat(
+                        [Combined_raw_extra_data, data._raw_extra_data]
+                    )
                     if "TEM_samples" in data.metadata:
                         if "TEM_samples" in meta:
                             meta["TEM_samples"] = pd.concat(
@@ -340,7 +352,7 @@ def Load_data_from_folder(
         Combined_raw_data = duplicate_remover(Combined_raw_data)
     if Combined_extra_data is not None:
         Combined_extra_data = duplicate_remover(Combined_extra_data)
-
+        Combined_raw_extra_data = duplicate_remover(Combined_raw_extra_data)
     # Instantiate final data object based on original class
     if isinstance(Initial_data, Aerosol2D):
         Combined_data = Aerosol2D(Combined_raw_data)
@@ -352,6 +364,7 @@ def Load_data_from_folder(
         raise Exception("Unsupported data type returned by load_function")
 
     Combined_data._extra_data = Combined_extra_data
+    Combined_data._raw_extra_data = Combined_raw_extra_data
     Combined_data._meta = meta
 
     if skipped_files:
@@ -360,3 +373,5 @@ def Load_data_from_folder(
             print(i)
 
     return Combined_data
+
+###############################################################################

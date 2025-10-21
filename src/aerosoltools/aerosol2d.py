@@ -1,21 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import annotations
-
-import warnings
-from pathlib import Path
-from typing import Optional, Sequence, Tuple, Union, cast
+from typing import Optional, Union
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.axes import Axes
-from matplotlib.colorbar import Colorbar
 from matplotlib.colors import LogNorm, Normalize
-from matplotlib.figure import Figure
 from tabulate import tabulate
-
+from math import erf
 from .aerosol1d import Aerosol1D
 
 params = {
@@ -27,8 +20,6 @@ params = {
     "figure.figsize": (19, 10),
 }
 plt.rcParams.update(params)
-warnings.simplefilter("default")  # or "always" if you want all warnings
-warnings.formatwarning = lambda msg, *args, **kwargs: f"{msg}\n"
 
 
 class Aerosol2D(Aerosol1D):
@@ -59,6 +50,7 @@ class Aerosol2D(Aerosol1D):
     def __init__(self, dataframe):
         super().__init__(dataframe)
 
+        
     @property
     def bin_edges(self):
         """
@@ -69,10 +61,7 @@ class Aerosol2D(Aerosol1D):
         float
             bin edges ( "nm" ).
         """
-        value = self._meta.get("bin_edges")
-        if value is None:
-            raise ValueError("bin_edges are not set.")
-        return value
+        return self._meta.get("bin_edges")
 
     @property
     def bin_mids(self):
@@ -84,13 +73,10 @@ class Aerosol2D(Aerosol1D):
         float
             bin mids ( "nm" ).
         """
-        bin_mids = self._meta.get("bin_mids")
-        if bin_mids is None:
-            raise ValueError("bin_mids are not set. Please set bin_mids.")
-        return bin_mids
+        return self._meta.get("bin_mids")
 
     @property
-    def density(self) -> float:
+    def density(self):
         """
         Unit of the measurements.
 
@@ -99,11 +85,7 @@ class Aerosol2D(Aerosol1D):
         float
             Particle density in "g/cm³".
         """
-        density = self._meta.get("density")
-        if not isinstance(density, (int, float)):
-            # covers None or any other wrong type
-            raise ValueError("Density is not set. Please set density.")
-        return float(density)
+        return self._meta.get("density")
 
     @property
     def metadata(self):
@@ -140,21 +122,14 @@ class Aerosol2D(Aerosol1D):
         -------
         list
             Headers to access sizebin columns.
-
-        Raises
-        ------
-        ValueError
-            If bin mids are not present.
         """
-        if self.bin_mids is None:
-            raise ValueError("bin_mids are not set. Please set bin_mids.")
         return [str(x) for x in self.bin_mids]
 
     ###########################################################################
     """############################# Functions #############################"""
     ###########################################################################
 
-    def convert_to_mass_concentration(self, *, inplace: bool = True) -> "Aerosol2D":
+    def convert_to_mass_concentration(self, inplace: bool = True):
         """
         Convert particle size distribution data to mass concentration (ug/m³) based on current data type.
 
@@ -169,14 +144,10 @@ class Aerosol2D(Aerosol1D):
         self or aerosolxd
             Updated instance with mass concentration data, either in-place or as a copy.
         """
-        if "dW" in self.dtype:
+        if "dM" in self.dtype:
             print("Data is already in mass concentration (ug/m³).")
             return self if inplace else self.copy_self()
 
-        if self.bin_mids is None:
-            raise ValueError(
-                "bin_mids are not set. Please set bin_mids before converting to mass concentration."
-            )
         bin_radii = self.bin_mids / 2.0  # convert diameter to radius in nm
 
         if "dS" in self.dtype:
@@ -200,13 +171,14 @@ class Aerosol2D(Aerosol1D):
             mass_distribution = volume_distribution * self.density * 1e-9
 
         else:
-            raise ValueError("Unknown data type for conversion.")
+            print("Unknown data type for conversion.")
+            return None
 
         # Apply the results
         target_instance = self if inplace else self.copy_self()
         target_instance._data[self._sizebin_headers] = mass_distribution
         target_instance._meta["unit"] = "ug/m³"
-        target_instance._meta["dtype"] = "dW"
+        target_instance._meta["dtype"] = "dM"
 
         # Update total concentration
         # Ensure unnormalized data before summing
@@ -216,13 +188,13 @@ class Aerosol2D(Aerosol1D):
         else:
             sum_data = mass_distribution.sum(axis=1)
 
-        target_instance._data["Total Concentration"] = sum_data
+        target_instance._data["Total_conc"] = sum_data
 
         return target_instance
 
     ###########################################################################
 
-    def convert_to_number_concentration(self, *, inplace: bool = True) -> "Aerosol2D":
+    def convert_to_number_concentration(self, inplace: bool = True):
         """
         Convert particle size distribution data to number concentration (cm⁻³)
         from the current data type.
@@ -249,7 +221,7 @@ class Aerosol2D(Aerosol1D):
             volume_per_particle = (4 / 3) * np.pi * bin_radii**3  # nm³
             number_distribution = self.size_data.copy() / volume_per_particle
 
-        elif "dW" in self.dtype:
+        elif "dM" in self.dtype:
             # Convert from mass to volume, then to number
             volume_distribution = self.size_data.copy() / self.density * 1e9  # nm³
             volume_per_particle = (4 / 3) * np.pi * bin_radii**3
@@ -261,7 +233,8 @@ class Aerosol2D(Aerosol1D):
             number_distribution = self.size_data.copy() / surface_area_per_particle
 
         else:
-            raise ValueError("Unknown data type for conversion.")
+            print("Unknown data type for conversion.")
+            return None
 
         # Apply the results
         target_instance = self if inplace else self.copy_self()
@@ -277,7 +250,7 @@ class Aerosol2D(Aerosol1D):
         else:
             sum_data = number_distribution.sum(axis=1)
 
-        target_instance._data["Total Concentration"] = sum_data
+        target_instance._data["Total_conc"] = sum_data
 
         return target_instance
 
@@ -312,7 +285,7 @@ class Aerosol2D(Aerosol1D):
             number_distribution = self.size_data.copy() / volume_per_particle
             surface_area_distribution = number_distribution * surface_area_per_particle
 
-        elif "dW" in self.dtype:
+        elif "dM" in self.dtype:
             # Mass -> Volume -> Number -> Surface Area
             volume_distribution = self.size_data.copy() / self.density * 1e9  # nm³/cm³
             number_distribution = volume_distribution / volume_per_particle
@@ -341,7 +314,7 @@ class Aerosol2D(Aerosol1D):
             sum_data = unnormalized.size_data.sum(axis=1)
         else:
             sum_data = surface_area_distribution.sum(axis=1)
-        target_instance._data["Total Concentration"] = sum_data
+        target_instance._data["Total_conc"] = sum_data
 
         return target_instance
 
@@ -376,7 +349,7 @@ class Aerosol2D(Aerosol1D):
             number_distribution = self.size_data.copy() / surface_area_per_particle
             volume_distribution = number_distribution * volume_per_particle
 
-        elif "dW" in self.dtype:
+        elif "dM" in self.dtype:
             # Mass -> Volume
             volume_distribution = self.size_data.copy() / self.density * 1e9  # nm³/cm³
 
@@ -401,12 +374,37 @@ class Aerosol2D(Aerosol1D):
             sum_data = unnormalized.size_data.sum(axis=1)
         else:
             sum_data = volume_distribution.sum(axis=1)
-        target_instance._data["Total Concentration"] = sum_data
+        target_instance._data["Total_conc"] = sum_data
 
         return target_instance
 
     ###########################################################################
+    def dtype_converter(self, dtype='dN', inplace: bool = True):
+        """
+        Convert particle size distribution data to mass concentration (ug/m³) based on current data type.
 
+        Parameters
+        ----------
+        inplace : bool, optional
+            If True (default), modifies the current instance in-place.
+            If False, returns a new instance with converted mass concentration data.
+
+        Returns
+        -------
+        self or aerosolxd
+            Updated instance with mass concentration data, either in-place or as a copy.
+        """
+        if   dtype=="dN":
+            return self.convert_to_number_concentration(inplace)
+        elif dtype=="dS":
+            return self.convert_to_surface_concentration(inplace)
+        elif dtype=="dV":
+            return self.convert_to_volume_concentration(inplace)
+        elif dtype=="dM":
+            return self.convert_to_mass_concentration(inplace)
+
+        
+    ###########################################################################
     def set_density(self, density: Union[float, int] = 1.0):
         """
         Set density of the aerosol particles in g/cm3
@@ -422,7 +420,7 @@ class Aerosol2D(Aerosol1D):
             The updated density data. If the data was already mass-based then the
             updated density is applied immidiatly.
         """
-        if "dW" in self.dtype:
+        if "dM" in self.dtype:
             unit_density_data = self.size_data.copy() / self.density
             new_density_data = unit_density_data * density
             self._data[self._sizebin_headers] = new_density_data
@@ -430,6 +428,179 @@ class Aerosol2D(Aerosol1D):
         self._meta["density"] = density
         return self
 
+    ###########################################################################
+    def PM_calc(self,dtype='dM',PM=4,Lower_lim=0):
+        """
+        Function to calculate PM from size bins from an array similar to those
+        returned from Load_xxx functions. 
+        
+        Note that the data should already be converted to mass e.g. ug/m3 as the
+        output of this function will maintain the same units as the input.
+
+        Parameters
+        ----------
+        data_in : numpy.array
+            An array of data as returned by the Load_xxx functions with columns
+            of datetime, total conc, and size bin data. The size bin data should
+            be converted to mass based units e.g. ug/m3.
+        bin_edges : numpy.array
+            Array containing the limits of all sizebins. The array should have one
+            additional value when compared to the sizebin data in the "data_in" 
+            parameter
+        *PM : integer or float
+            PM limit or limits to use, given in um. Typical values are 0.1, 1, or
+            10 to yield PM0.1, PM1, and PM10 respectively. Note that multiple PM
+            limits can be specified at the same time e.g. 
+            PM_calc(data,bins,0.1,1,10)
+            In which case the returned data array will have a column for each PM mass
+        Returns
+        -------
+        Data_return : numpy.array
+            An array of mass concentration data. The first column is datetime. 
+            The other column or columns are PM values corresponding to each time for
+            the specified PM limit.
+
+        """
+        #Prepare the data for 
+        data_copy = self.copy_self()
+        #Maintaines total concentration mask 
+        mask=   data_copy.data['Total_conc'].notna()
+        #Unnormalize and ensure correct dtype
+        data_copy.unnormalize_logdp()
+        data_copy.dtype_converter(dtype)
+
+        # Convert to 
+        # Remove the datetime and total conc columns as these are not needed for PM
+        # calculations
+        data_copy = data_copy.size_data
+
+        # Run through the or all of the PM limits specified
+
+        # convert the current PM limit frim um to nm
+        PM_lim = PM * 1000
+        
+        #Sizebins
+        bin_mids=np.array(self._sizebin_headers).astype(float)
+        #EN 481 calculation
+        Y=np.log(bin_mids/PM_lim)/(2**0.5*np.log(1.5))
+    
+        Frac=0.5*(1+np.vectorize(erf)(-Y))
+        # Apply the fraction to the mass concentration of the bin. 
+        mass_frac = np.nansum(data_copy*Frac,axis=1)
+        
+        if Lower_lim>0 and Lower_lim<PM:
+            # convert the current PM limit frim um to nm
+            lower_lim = Lower_lim * 1000
+            #EN 481 calculation
+            Y=np.log(bin_mids/lower_lim)/(2**0.5*np.log(1.5))
+        
+            Frac=0.5*(1+np.vectorize(erf)(-Y))
+            # Apply the fraction to the mass concentration of the bin. 
+            lower_mass_frac = np.nansum(data_copy*Frac,axis=1)
+            
+            mass_frac=mass_frac-lower_mass_frac
+            
+        mass_frac[mass_frac==0] = np.nan #where(mass_frac==0,mass_frac,np.nan)
+         
+        # Add the two values for a final mass concentration
+        self._extra_data[f"P{dtype[-1]}{PM}"] = mass_frac#.where(mask,np.nan)
+
+        self._extra_data.set_index(self.time,inplace=True)
+        self._extra_data[f"P{dtype[-1]}{PM}"]=self._extra_data[f"P{dtype[-1]}{PM}"].where(mask,np.nan)
+        
+        return self
+    
+    ###########################################################################
+    def PM_calc_old(self,dtype='dM',*PM):
+        """
+        Function to calculate PM from size bins from an array similar to those
+        returned from Load_xxx functions. 
+        
+        Note that the data should already be converted to mass e.g. ug/m3 as the
+        output of this function will maintain the same units as the input.
+
+        Parameters
+        ----------
+        data_in : numpy.array
+            An array of data as returned by the Load_xxx functions with columns
+            of datetime, total conc, and size bin data. The size bin data should
+            be converted to mass based units e.g. ug/m3.
+        bin_edges : numpy.array
+            Array containing the limits of all sizebins. The array should have one
+            additional value when compared to the sizebin data in the "data_in" 
+            parameter
+        *PM : integer or float
+            PM limit or limits to use, given in um. Typical values are 0.1, 1, or
+            10 to yield PM0.1, PM1, and PM10 respectively. Note that multiple PM
+            limits can be specified at the same time e.g. 
+            PM_calc(data,bins,0.1,1,10)
+            In which case the returned data array will have a column for each PM mass
+        Returns
+        -------
+        Data_return : numpy.array
+            An array of mass concentration data. The first column is datetime. 
+            The other column or columns are PM values corresponding to each time for
+            the specified PM limit.
+
+        """
+        #Prepare the data for 
+        data_copy = self.copy_self()
+        #Maintaines total concentration mask 
+        mask=   data_copy.data['Total_conc'].notna()
+        #Unnormalize and ensure correct dtype
+        data_copy.unnormalize_logdp()
+        data_copy.dtype_converter(dtype)
+
+        # Convert to 
+        # Remove the datetime and total conc columns as these are not needed for PM
+        # calculations
+        data_copy = data_copy.size_data
+
+        # Run through the or all of the PM limits specified
+        for i in PM:
+            # convert the current PM limit frim um to nm
+            PM_lim = i * 1000
+            
+            # Determine the number of bins smaller than the specified PM limit
+            bins_within_range = np.array(self.bin_edges<PM_lim).sum()
+            bin_sizes= self._sizebin_headers[:bins_within_range]
+            if bins_within_range == 0:
+                # If none of the size bins are above the PM limit, continue to the
+                # next specified PM limit 
+                print(f"P{dtype[-1]}{i} is smaller than all size bins, so it will not be included in the output array".format(i))
+                continue
+            
+            elif bins_within_range == 1:
+                # If only the first bin is partially within the PM limit, calculate
+                # the fraction within the limit and multiply with the mass concentration
+                bin_frac = (PM_lim - self.bin_edges[0]) / (self.bin_edges[1]-self.bin_edges[0])
+                
+                self._extra_data[f"P{dtype[-1]}{i}"]= np.array(data_copy[bin_sizes[0]]*bin_frac)
+                
+            elif bins_within_range < self.bin_edges.shape[0]:
+                # If several bins are within the PM limit, sum the relevant ones
+                Initial_PM = np.array(data_copy[bin_sizes[:-1]].sum(axis=1))
+                
+                # Determine the fraction of the highest relevant bin within the specified
+                # PM limit
+                bin_frac = (PM_lim - self.bin_edges[bins_within_range-1]) / (
+                    self.bin_edges[bins_within_range] - self.bin_edges[bins_within_range-1])
+                
+                # Apply the fraction to the mass concentration of the bin. Here it
+                # is assumed that the mass concentration is evenly distributed within
+                # the size bin
+                last_bin_frac = np.array(data_copy[bin_sizes[-1]]*bin_frac)
+        
+                # Add the two valuyes for a final mass concentration
+                self._extra_data[f"P{dtype[-1]}{i}"]= Initial_PM + last_bin_frac
+                
+            else:
+                # If all bins are smaller than the specified PM limit, simply sum them
+                self._extra_data[f"P{dtype[-1]}{i}"]= np.nansum(data_copy,axis=1)
+       
+        self._extra_data.set_index(self.time,inplace=True)
+        self._extra_data[f"P{dtype[-1]}{i}"]=self._extra_data[f"P{dtype[-1]}{i}"].where(mask,np.nan)
+        return self
     ###########################################################################
 
     def normalize_logdp(self, inplace: bool = True):
@@ -447,24 +618,27 @@ class Aerosol2D(Aerosol1D):
         self or aerosolxd
             Instance with normalized size distribution data.
         """
-        log_bin_edges = np.log10(self.bin_edges)
-        dlog_dp = np.diff(log_bin_edges)
-
-        bin_columns = self._sizebin_headers
-
-        if len(dlog_dp) != len(bin_columns):
-            raise ValueError("Mismatch between number of bins and dlogDp array.")
-
-        normalized_data = self._data[bin_columns].copy().div(dlog_dp, axis=1)
-
-        target = self if inplace else self.copy_self()
-        target._data[bin_columns] = normalized_data
-
         if "/dlogDp" not in self.dtype:
+            
+            log_bin_edges = np.log10(self.bin_edges)
+            dlog_dp = np.diff(log_bin_edges)
+    
+            bin_columns = self._sizebin_headers
+    
+            if len(dlog_dp) != len(bin_columns):
+                raise ValueError("Mismatch between number of bins and dlogDp array.")
+    
+            normalized_data = self._data[bin_columns].copy().div(dlog_dp, axis=1)
+    
+            target = self if inplace else self.copy_self()
+            target._data[bin_columns] = normalized_data
+
             target._meta["dtype"] = f"{self.dtype}/dlogDp"
-
-        return target
-
+    
+            return target
+        elif "/dlogDp" in self.dtype:
+            return print("Warning: data already normalized; nothing was changed.")
+        
     ###########################################################################
 
     def unnormalize_logdp(self, inplace: bool = True):
@@ -482,26 +656,28 @@ class Aerosol2D(Aerosol1D):
         self or aerosolxd
             Instance with unnormalized size distribution data.
         """
-        log_bin_edges = np.log10(self.bin_edges)
-        dlog_dp = np.diff(log_bin_edges)
-
-        bin_columns = self._sizebin_headers
-
-        if len(dlog_dp) != len(bin_columns):
-            raise ValueError("Mismatch between number of bins and dlogDp array.")
-
-        unnormalized_data = self._data[bin_columns].copy().mul(dlog_dp, axis=1)
-
-        target = self if inplace else self.copy_self()
-        target._data[bin_columns] = unnormalized_data
-
+        
         if "/dlogDp" in self.dtype:
+
+            log_bin_edges = np.log10(self.bin_edges)
+            dlog_dp = np.diff(log_bin_edges)
+
+            bin_columns = self._sizebin_headers
+
+            if len(dlog_dp) != len(bin_columns):
+                raise ValueError("Mismatch between number of bins and dlogDp array.")
+
+            unnormalized_data = self._data[bin_columns].copy().mul(dlog_dp, axis=1)
+
+            target = self if inplace else self.copy_self()
+            target._data[bin_columns] = unnormalized_data
             target._meta["dtype"] = self.dtype.replace("/dlogDp", "")
+
+
+            return target
         else:
-            print("Warning: dtype does not contain '/dlogDp'; nothing was changed.")
-
-        return target
-
+            return print("Warning: dtype does not contain '/dlogDp'; nothing was changed.")
+            
     ###########################################################################
 
     def plot_psd(
@@ -532,6 +708,10 @@ class Aerosol2D(Aerosol1D):
             new_fig_created = True
         else:
             fig = ax.figure
+
+        ax.set_xscale("log")
+        ax.set_xlabel("Particle diameter (nm)")
+        ax.grid(True, which="both", linestyle="--", linewidth=0.5)
 
         # Determine normalization state
         is_already_normalized = "/dlogDp" in self.dtype
@@ -593,9 +773,7 @@ class Aerosol2D(Aerosol1D):
                 color=color or "black",
                 alpha=0.3,
             )
-        ax.set_xscale("log")
-        ax.set_xlabel("Particle diameter (nm)")
-        ax.grid(True, which="both", linestyle="--", linewidth=0.5)
+
         ax.legend()
         if new_fig_created:
             fig.tight_layout()
@@ -694,184 +872,123 @@ class Aerosol2D(Aerosol1D):
 
     def plot_timeseries(
         self,
-        y_tot: Tuple[float, float] = (0.0, 0.0),
-        y_3d: Tuple[float, float] = (
-            0.0,
-            0.0,
-        ),  # (0,0) => unspecified -> use data min/max
-        log: bool = True,
-        ax1: Optional[Axes] = None,
-        ax2: Optional[Axes] = None,
-        mark_activities: bool | Sequence[str] = False,
-    ) -> tuple[Figure, Axes, Axes, Colorbar]:
+        y_tot=(0, 0),
+        y_3d=(0, 0),
+        log=True,
+        ax1=None,
+        ax2=None,
+        mark_activities=False,
+    ):
         """
         Plot total concentration (top) and a size-resolved time series (bottom).
 
         Parameters
         ----------
-        y_tot : (ymin, ymax)
-            Y-limits for total concentration. (0, 0) => auto.
-        y_3d : (zmin, zmax)
-            Color scale limits for the mesh. (0, 0) => unspecified -> use data-driven.
-            For log scale: limits are based on positive finite data only.
-            For linear scale: limits are based on all finite data.
-        log : bool
-            If True, uses log scale only when *all* finite values are strictly > 0.
-            If any zeros/negatives exist, uses linear scale.
-        ax1, ax2 : Axes
-            Provide both or neither. If neither, new figure/axes are created.
-        mark_activities : bool | list[str]
-            Passed to `plot_total_conc()`.
+        y_tot : tuple, optional
+            Y-axis limits for total concentration (min, max). Default auto.
+        y_3d : tuple, optional
+            Colorbar scale limits for 2D mesh (min, max). Default auto.
+        log : bool, optional
+            Whether to apply logarithmic color scaling. Default True.
+        ax1 : matplotlib.axes.Axes, optional
+            Axis for the top plot. If provided, ax2 must also be provided.
+        ax2 : matplotlib.axes.Axes, optional
+            Axis for the mesh plot. If provided, ax1 must also be provided.
+        mark_activities : bool or list of str, optional
+            Passed to `plot_total_conc()` to highlight activity periods.
 
         Returns
         -------
-        fig, ax1, ax2, cbar
+        fig : matplotlib.figure.Figure
+            The figure object.
+        axs : np.ndarray
+            Array of axes and colorbar handle: [ax1, ax2, colorbar].
         """
         if (ax1 is None) != (ax2 is None):
             raise ValueError("You must provide both ax1 and ax2, or neither.")
 
-        # ---- Create new axes if needed ----
         if ax1 is None and ax2 is None:
             newplot = True
             fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(10, 6))
         else:
-            assert ax1 is not None and ax2 is not None
-            fig = cast(Figure, ax1.figure)
+            fig = ax1.figure
             newplot = False
 
-        # ----- Data shortcuts -----
-        time = self.time  # 1D DatetimeIndex/array
-        total = self.total_concentration  # 1D array-like
-        data = self.size_data  # 2D array-like (time x size)
-        bin_edges = self.bin_edges  # 1D array-like (size edges)
+        time = self.time
+        total = self.total_concentration
+        data = self.size_data
+        bin_edges = self.bin_edges
 
-        # ---- Top panel: total concentration ----
-        _, ax1_new = self.plot_total_conc(ax=ax1, mark_activities=mark_activities)
-        ax1 = ax1_new
+        # Top panel: total concentration
+        _, ax_new = self.plot_total_conc(ax=ax1, mark_activities=mark_activities)
 
-        # Y-limits for the total concentration plot
-        if y_tot != (0.0, 0.0):
-            ymin = y_tot[0] if y_tot[0] != 0 else float(np.nanmin(total) * 0.98)
-            ymax = y_tot[1] if y_tot[1] != 0 else float(np.nanmax(total) * 1.02)
-            if np.isfinite([ymin, ymax]).all() and ymax > ymin:
-                ax1.set_ylim(ymin, ymax)
+        ax1 = ax_new
 
-        # ---- Mesh grid in time/size ----
-        if len(time) > 1:
-            dt = (time[1] - time[0]) / 2
-        else:
-            # Fallback delta (1 minute) if only a single timestamp exists
-            dt = pd.Timedelta(minutes=1)
+        # Set y-limits for the total_conc plot
+        if y_tot != (0, 0):
+            ymin = y_tot[0] if y_tot[0] != 0 else total.min() * 0.98
+            ymax = y_tot[1] if y_tot[1] != 0 else total.max() * 1.02
+            ax1.set_ylim(ymin, ymax)
 
+        dt = (time[1] - time[0]) / 2
+
+        # Generate edges: center ± half step
+        dt = (time[1] - time[0]) / 2
         time_edges = pd.DatetimeIndex(np.append(time - dt, [time[-1] + dt]))
+
         x_grid, y_grid = np.meshgrid(time_edges, bin_edges, indexing="ij")
 
-        # ---- Data array ----
-        Z = np.asarray(data, dtype=float)
+        # Handle color scale limits
+        z_data = data
+        if y_3d != (0, 0):
+            zmin, zmax = y_3d
+            if zmin != 0:
+                z_data = z_data.clip(lower=zmin)
+            if zmax == 0:
+                zmax = z_data.max().max()
+        else:
+            zmin = z_data.min().min()
+            zmax = z_data.max().max()
 
-        # Decide scale: log only if all finite values are strictly > 0
-        finite = np.isfinite(Z)
-        any_finite = np.any(finite)
-        all_positive = np.all(Z[finite] > 0) if any_finite else False
-
-        # NEW: user override if they explicitly set a positive lower bound
-        user_forces_log = bool(log) and (y_3d[0] > 0)
-
-        # Warn only when user asked for log and we cannot honor it (no override)
-        if bool(log) and (not all_positive) and (not user_forces_log):
-            reason = (
-                "the data contain no finite values"
-                if not any_finite
-                else "the data contain zeros or negatives"
-            )
-            warnings.warn(
-                f"\nRuntimeWarning: plot_timeseries: requested log scaling but {reason}; "
-                "falling back to linear scale. Try specifying y_3d with positive limits or cleaning the data.",
-                RuntimeWarning,
-                stacklevel=2,
-            )
-
-        # Allow log if (a) data are all positive OR (b) the user forces it via y_3d[0] > 0
-        use_log = bool(log) and (all_positive or user_forces_log)
-
-        # ---- Pick vmin/vmax ----
-        if use_log:
-            pos = finite & (Z > 0)
-            vmin = float(y_3d[0]) if y_3d[0] > 0 else float(np.nanmin(Z[pos]))
-            vmax = float(y_3d[1]) if y_3d[1] > 0 else float(np.nanmax(Z[pos]))
-
-            if (
-                (not np.isfinite(vmin))
-                or (not np.isfinite(vmax))
-                or (vmin <= 0)
-                or (vmax <= vmin)
-            ):
+        # Define color scale
+        if log:
+            if (z_data <= 0).any().any():
                 raise ValueError(
-                    f"Invalid color scale limits for log: vmin={vmin}, vmax={vmax}. "
-                    "Check your data or specify y_3d explicitly."
+                    "Data contains zeros or negatives; cannot use log color scale."
                 )
-            if user_forces_log and np.any(~pos & finite):
-                Z_plot = np.where(
-                    pos, Z, vmin
-                )  # visualization-only; original Z unchanged
-            else:
-                Z_plot = Z
-            norm = LogNorm(vmin=vmin, vmax=vmax)
-        if not use_log:
-            # Linear: use all finite values for auto limits
-            if any_finite:
-                data_min = float(np.nanmin(Z[finite]))
-                data_max = float(np.nanmax(Z[finite]))
-            else:
-                data_min, data_max = 0.0, 1.0
-            vmin = float(y_3d[0]) if y_3d[0] != 0 else data_min
-            vmax = float(y_3d[1]) if y_3d[1] != 0 else data_max
-            if (not np.isfinite(vmin)) or (not np.isfinite(vmax)) or (vmax <= vmin):
-                warnings.warn(
-                    f"Invalid color scale limits for linear (vmin={vmin}, vmax={vmax}). "
-                    "Falling back to (0, 1). Try specifying y_3d explicitly.",
-                    RuntimeWarning,
-                )
-                vmin, vmax = 0.0, 1.0
-            Z_plot = Z
-            norm = Normalize(vmin=vmin, vmax=vmax)
+            norm = LogNorm(vmin=zmin, vmax=zmax)
+        else:
+            norm = Normalize(vmin=zmin, vmax=zmax)
 
-        # ---- Mesh plot ----
-        assert ax2 is not None
+        # Mesh plot
         mesh = ax2.pcolormesh(
-            x_grid,
-            y_grid,
-            Z_plot,  # data passed as-is (not modified)
-            cmap="jet",
-            norm=norm,
-            shading="flat",
+            x_grid, y_grid, z_data, cmap="jet", norm=norm, shading="flat"
         )
 
-        # Y axis (size) log-scaling and labels
+        # Set axis labels and scale
         ax2.set_yscale("log")
         ax2.set_ylabel("Dp, nm")
         ax2.set_xlabel("Time")
         if newplot:
             ax1.set_xlabel("")
-
-        # Date formatting
+        # Use matplotlib's default date handling
         ax2.xaxis.set_major_formatter(
             mdates.ConciseDateFormatter(mdates.AutoDateLocator())
         )
 
-        # Colorbar
-        cbar: Colorbar = fig.colorbar(mesh, ax=[ax1, ax2])
-        cbar.set_label(f"{self.dtype}, {self.unit}")
+        # # Add colorbar
+        col = fig.colorbar(mesh, ax=[ax1, ax2])
+        col.set_label(f"{self.dtype}, {self.unit}")
 
         # Styling
         ax1.tick_params(axis="y", which="both", direction="out", length=6, width=2)
         ax2.tick_params(axis="y", which="both", direction="out", length=6, width=2)
 
-        return fig, ax1, ax2, cbar
+        return fig, np.append([ax1, ax2], col)
 
     ###########################################################################
 
-    def summarize(self, filename: Optional[str | Path] = None) -> pd.DataFrame:
+    def summarize(self, filename=None):
         """
         Summarize aerosol characteristics for each activity period.
 
@@ -1033,15 +1150,7 @@ class Aerosol2D(Aerosol1D):
             print(f"Summary saved to: {filename}")
 
         summary_t = summary.set_index("Segment").T
-        idx_reset = summary_t.reset_index()
         print("\nSummary of aerosol properties (transposed):\n")
-        print(
-            tabulate(
-                idx_reset.values,  # rows → ndarray of iterables
-                headers=idx_reset.columns.tolist(),  # ← convert Index → list[str]
-                tablefmt="pretty",
-                floatfmt=".3f",
-            )
-        )
+        print(tabulate(summary_t, headers="keys", tablefmt="pretty", floatfmt=".3f"))
 
         return summary
