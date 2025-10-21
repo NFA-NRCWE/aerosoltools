@@ -37,11 +37,15 @@ Author: NRCWE community / NFA
 from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
 from .aerosolalt import AerosolAlt
+from .utility   import (Combine_NS_OPS,
+				 Plot_correlation,
+				Plot_correlation_df)
 from .loaders import (
     Load_Aethalometer_file,
     Load_CPC_file,
     Load_data_from_folder,
     Load_DiSCmini_file,
+    Load_DustTrak_file,
     Load_ELPI_file,
     Load_FMPS_file,
     Load_Fourtec_file,
@@ -51,15 +55,20 @@ from .loaders import (
     Load_OPS_file,
     Load_Partector_file,
     Load_SMPS_file,
+    Combine_NS_OPS
 )
 
 __all__ = [
     "Aerosol1D",
     "Aerosol2D",
     "AerosolAlt",
+    "Combine_NS_OPS",
+    "Plot_correlation",
+    "Plot_correlation_df",
     "Load_Aethalometer_file",
     "Load_CPC_file",
     "Load_DiSCmini_file",
+    "Load_DustTrak_file",
     "Load_ELPI_file",
     "Load_FMPS_file",
     "Load_Fourtec_file",

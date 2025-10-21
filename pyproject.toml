@@ -1,14 +1,19 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=69", "setuptools-scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "aerosoltools"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Tools for loading and analyzing aerosol instrument data"
 authors = [{ name = "NRCWE community" }]
 readme = "README.md"
 requires-python = ">=3.10"
+classifiers = [
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "pandas>=1.0",
     "numpy>=1.20",
@@ -33,14 +38,17 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools_scm]
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
+
 [tool.black]
 line-length = 88
-target-version = ["py39"]
-include = '\.py$'
+target-version = ["py310"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]

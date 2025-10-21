@@ -7,6 +7,7 @@ including:
 - Aethalometer (Magee Scientific)
 - CPC – Condensation Particle Counter (TSI)
 - DiSCmini – Electrostatic classifier (Testo)
+- DustTrak - Optical Particle Counter (TSI)
 - ELPI – Electric Low Pressure Impactor (Dekati)
 - FMPS – Fast Mobility Particle Sizer (TSI)
 - Fourtec – Bluefish temperature/RH loggers
@@ -18,7 +19,7 @@ including:
 - SMPS – Scanning Mobility Particle Sizer (TSI)
 
 Each function is tailored to a specific instrument format and returns data structured for use
-with `aerosoltools` classes such as `Aerosol1D` or `Aerosol2D`.
+with `aerosoltools` classes such as `Aerosol1D`, `Aerosol2D` or 'AerosolAlt'.
 
 Additionally, the utility function `Load_data_from_folder()` provides a convenient interface
 for batch-loading multiple compatible files from a directory.
@@ -28,6 +29,7 @@ from .Aethalometer import Load_Aethalometer_file
 from .Common import Load_data_from_folder
 from .CPC import Load_CPC_file
 from .Discmini import Load_DiSCmini_file
+from .DustTrak import Load_DustTrak_file
 from .ELPI import Load_ELPI_file
 from .FMPS import Load_FMPS_file
 from .Fourtec import Load_Fourtec_file
@@ -42,6 +44,7 @@ __all__ = [
     "Load_Aethalometer_file",
     "Load_CPC_file",
     "Load_DiSCmini_file",
+    "Load_DustTrak_file",
     "Load_ELPI_file",
     "Load_FMPS_file",
     "Load_Fourtec_file",

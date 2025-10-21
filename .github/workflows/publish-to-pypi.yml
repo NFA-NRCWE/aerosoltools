@@ -1,32 +1,47 @@
 name: Publish to PyPI
 
 on:
-  workflow_dispatch:  # This makes it manually triggerable
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: read
 
 jobs:
-  build-and-publish:
+  build-and-upload:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out code
-        uses: actions/checkout@v3
+      - name: Check out exact tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}   # build from the tag that triggered the run
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.11"
 
-      - name: Install build tools
+      - name: Install build tooling
         run: |
-          pip install build twine
+          python -m pip install -U pip
+          python -m pip install build twine setuptools-scm
 
-      - name: Build package
+      - name: Derive version from tag for setuptools-scm
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"     # e.g. v1.0.6
+          VER="${TAG#v}"                      # -> 1.0.6
+          echo "Using version $VER from tag $TAG"
+          echo "SETUPTOOLS_SCM_PRETEND_VERSION=$VER" >> "$GITHUB_ENV"
+
+      - name: Clean old artifacts
+        run: rm -rf dist build *.egg-info
+
+      - name: Build (sdist + wheel)
         run: python -m build
 
-      - name: Publish to PyPI
+      - name: Upload to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}

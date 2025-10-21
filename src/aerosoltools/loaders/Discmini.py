@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-
+import datetime as datetime
 from ..aerosolalt import AerosolAlt
 from .Common import detect_delimiter
 
@@ -51,19 +51,43 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False):
     df = pd.read_csv(
         file, header=4, encoding=encoding, delimiter="\t", usecols=range(0, 7)
     )
-    df.drop(columns=["Time"], inplace=True)
-    df.rename(columns={"TimeStamp": "Datetime", "Number": "Total_conc"}, inplace=True)
-
+    if 'TimeStamp' in df.columns:
+        
+        df.drop(columns=["Time"], inplace=True)
+        df.rename(columns={"TimeStamp": "Datetime", "Number": "Total_conc"}, inplace=True)
+    else:
+        df.rename(columns={"Time": "Datetime", "Number": "Total_conc"}, inplace=True)
     # Attempt datetime parsing using known formats
     try:
         df["Datetime"] = pd.to_datetime(df["Datetime"], format="%d-%b-%Y %H:%M:%S")
-    except ValueError:
+    except ValueError: 
         try:
             df["Datetime"] = pd.to_datetime(df["Datetime"], format="%d-%m-%Y %H:%M:%S")
-        except Exception:
-            raise Exception(
-                "Datetime does not match expected format. Ensure file is converted correctly."
-            )
+        except:
+            try:
+                Discmini_data = np.genfromtxt(file,delimiter=delimiter,encoding=encoding,skip_header=6,usecols=[1,2,3],dtype=str)
+                Discmini_data = np.char.replace(Discmini_data, ',', '.').astype(float)
+                
+                # Read the starting time from the partector file
+                tst=np.genfromtxt(file,delimiter=delimiter,encoding=encoding,usecols=[0],dtype=str)
+                #Locate and strip the starting date from string
+                Date = datetime.datetime.strptime(tst[2].split("start date: ")[1].split("]")[0],"%Y.%m.%d")
+                #Locate and strip the starting time from string
+                Time = datetime.datetime.strptime(tst[3].split("start time: ")[1].split("]")[0],"%H:%M:%S")
+                Time=Time.hour*3600 + Time.minute*60 + Time.second
+                Start_time = Date+datetime.timedelta(0,Time)
+                
+                #Generate time array based on one second per measurement
+                Discmini_datetimes=[]   
+                for idx in df["Datetime"]:#range(0,len(Discmini_data)):
+                    Discmini_datetimes.append(Start_time+datetime.timedelta(0,idx))
+                df["Datetime"]=Discmini_datetimes
+            except Exception:
+                raise Exception(
+                    "Datetime does not match expected format. Ensure file is converted correctly."
+                )
+                
+
 
     # Extract serial number from metadata (row 2, position 6)
     meta_line = np.genfromtxt(
@@ -93,5 +117,7 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False):
     if extra_data:
         extra_df = df.drop(columns=list(df)[1:4]).set_index("Datetime")
         DM._extra_data = extra_df
-
+        DM._raw_extra_data = extra_df.copy()
     return DM
+
+
