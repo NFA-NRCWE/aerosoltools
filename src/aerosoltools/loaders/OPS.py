@@ -346,7 +346,7 @@ def Load_OPS_Direct(
     OPS = Aerosol2D(df_final)
     OPS._meta["bin_edges"] = bin_edges
     OPS._meta["bin_mids"] = bin_mids
-    OPS._meta["density"] = meta["Density"]
+    OPS._meta["density"] = float(meta["Density"])
     OPS._meta["instrument"] = "OPS"
     OPS._meta["serial_number"] = meta["Serial Number"]
     OPS._meta["unit"] = "cm$^{-3}$"
