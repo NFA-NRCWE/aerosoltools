@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
 
 from ..aerosolalt import AerosolAlt
 from .Common import detect_delimiter
+
 
 def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
     """
@@ -66,14 +66,20 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
         # keep "TimeStamp" as datetime-like text; "Time" is redundant in these exports
         if "Time" in df.columns:
             df.drop(columns=["Time"], inplace=True)
-        df.rename(columns={"TimeStamp": "Datetime", "Number": "Total_conc"}, inplace=True)
+        df.rename(
+            columns={"TimeStamp": "Datetime", "Number": "Total_conc"}, inplace=True
+        )
     else:
         df.rename(columns={"Time": "Datetime", "Number": "Total_conc"}, inplace=True)
 
     # Parse datetime with two known formats; if both fail, attempt reconstruction from header
-    dt_parsed = pd.to_datetime(df["Datetime"], format="%d-%b-%Y %H:%M:%S", errors="coerce")
+    dt_parsed = pd.to_datetime(
+        df["Datetime"], format="%d-%b-%Y %H:%M:%S", errors="coerce"
+    )
     if dt_parsed.isna().all():
-        dt_parsed = pd.to_datetime(df["Datetime"], format="%d-%m-%Y %H:%M:%S", errors="coerce")
+        dt_parsed = pd.to_datetime(
+            df["Datetime"], format="%d-%m-%Y %H:%M:%S", errors="coerce"
+        )
 
     if dt_parsed.isna().any():
         # Fallback: reconstruct absolute time from a start date/time in the file header
@@ -84,8 +90,12 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
             # common patterns:
             #   "[...] start date: YYYY.MM.DD]"
             #   "[...] start time: HH:MM:SS]"
-            start_date_line = next((ln for ln in header_lines if "start date:" in ln), None)
-            start_time_line = next((ln for ln in header_lines if "start time:" in ln), None)
+            start_date_line = next(
+                (ln for ln in header_lines if "start date:" in ln), None
+            )
+            start_time_line = next(
+                (ln for ln in header_lines if "start time:" in ln), None
+            )
             if start_date_line is None or start_time_line is None:
                 raise ValueError("Start date/time not found in header.")
 
@@ -96,7 +106,9 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
                 start_time_line.split("start time: ")[1].split("]")[0], "%H:%M:%S"
             )
             start_dt = start_date + dt.timedelta(
-                seconds=start_time.hour * 3600 + start_time.minute * 60 + start_time.second
+                seconds=start_time.hour * 3600
+                + start_time.minute * 60
+                + start_time.second
             )
 
             # When this path is used, the "Datetime" column typically holds elapsed seconds
@@ -120,7 +132,11 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
 
     # Coerce key numeric columns; accept both commas and dots as decimal separators
     def _to_num(s: pd.Series) -> pd.Series:
-        s = s.fillna("").str.replace(",", ".", regex=False).str.replace(r"\s+", "", regex=True)
+        s = (
+            s.fillna("")
+            .str.replace(",", ".", regex=False)
+            .str.replace(r"\s+", "", regex=True)
+        )
         return pd.to_numeric(s, errors="coerce")
 
     # Some exports use "Size" / "LDSA" names consistently
@@ -149,7 +165,9 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
     if serial_number is None:
         # fallback to numpy reader if needed (use file handle to avoid encoding kw warnings)
         with open(file, "r", encoding=enc) as fh2:
-            arr = np.genfromtxt(fh2, delimiter=delim, skip_header=1, max_rows=1, dtype=str)
+            arr = np.genfromtxt(
+                fh2, delimiter=delim, skip_header=1, max_rows=1, dtype=str
+            )
         serial_number = str(arr).split(" ")[-1]
 
     # Build AerosolAlt on the core four columns (order: Datetime, Total_conc, Size, LDSA)

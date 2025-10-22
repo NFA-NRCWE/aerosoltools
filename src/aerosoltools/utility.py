@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import Tuple, Optional, Callable, Union
+from typing import Callable, Optional, Tuple, Union
 
-import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure, SubFigure
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import NDArray
 from scipy.optimize import curve_fit
 from scipy.stats import theilslopes
 
@@ -153,6 +152,7 @@ def Combine_NS_OPS(
 # Small utilities
 # =========================
 
+
 def _ts(x) -> pd.Timestamp:
     """Coerce strings/datetime/np.datetime64 to pandas Timestamp."""
     if isinstance(x, pd.Timestamp):
@@ -160,6 +160,7 @@ def _ts(x) -> pd.Timestamp:
     if isinstance(x, (dt.datetime, dt.date, np.datetime64, str)):
         return pd.to_datetime(x)
     return pd.to_datetime(x)
+
 
 def _infer_freq(idx: pd.DatetimeIndex) -> Optional[str]:
     """Infer 'S', '1T', '1H' from a DatetimeIndex; fallback via median delta."""
@@ -178,15 +179,19 @@ def _infer_freq(idx: pd.DatetimeIndex) -> Optional[str]:
         return f"{max(1, sec // 60)}T"
     return f"{max(1, sec // 3600)}H"
 
+
 def _coarser(rule_a: str, rule_b: str) -> str:
     """Return the coarser (larger) cadence among two rules (S/T/H/D-ish)."""
+
     def to_s(rule: str) -> float:
         r = rule.upper()
         num = "".join(ch for ch in r if ch.isdigit())
         n = int(num) if num else 1
         unit = "".join(ch for ch in r if ch.isalpha()) or "S"
-        return n * {"S":1, "T":60, "MIN":60, "H":3600, "D":86400}.get(unit, 1)
+        return n * {"S": 1, "T": 60, "MIN": 60, "H": 3600, "D": 86400}.get(unit, 1)
+
     return rule_a if to_s(rule_a) >= to_s(rule_b) else rule_b
+
 
 def _select_column_from_obj(obj, column: str) -> pd.Series:
     """
@@ -201,6 +206,7 @@ def _select_column_from_obj(obj, column: str) -> pd.Series:
     if extra is not None and column in extra.columns:
         return extra[column]
     raise KeyError(f"Column '{column}' not found in obj.data or obj.extra_data.")
+
 
 def _extract_series(
     obj,
@@ -221,6 +227,7 @@ def _extract_series(
     s = pd.to_numeric(s, errors="coerce")
     return s
 
+
 def _align_series(
     X,
     Y,
@@ -228,9 +235,9 @@ def _align_series(
     start_time: Optional[pd.Timestamp | str],
     end_time: Optional[pd.Timestamp | str],
     *,
-    match: str = "exact",                         # "exact" | "nearest" | "rebin"
+    match: str = "exact",  # "exact" | "nearest" | "rebin"
     tolerance: Union[str, pd.Timedelta] = "30s",
-    rebin_freq: Optional[str] = None,             # when match="rebin"
+    rebin_freq: Optional[str] = None,  # when match="rebin"
     rebin_method: Union[str, Callable] = "mean",  # when match="rebin"
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -251,8 +258,12 @@ def _align_series(
         dy = dy.sort_values("time")
         tol = pd.to_timedelta(tolerance)
 
-        left = pd.merge_asof(dx, dy, on="time", direction="nearest", tolerance=tol).dropna(subset=["y"])
-        right = pd.merge_asof(dy, dx, on="time", direction="nearest", tolerance=tol).dropna(subset=["x"])
+        left = pd.merge_asof(
+            dx, dy, on="time", direction="nearest", tolerance=tol
+        ).dropna(subset=["y"])
+        right = pd.merge_asof(
+            dy, dx, on="time", direction="nearest", tolerance=tol
+        ).dropna(subset=["x"])
 
         left["key"] = list(zip(left["time"], left["y"]))
         right["key"] = list(zip(right["time"], right["x"]))
@@ -264,8 +275,8 @@ def _align_series(
     elif match == "rebin":
         # target cadence: explicit or coarser of the two inferred
         if rebin_freq is None:
-            fx = _infer_freq(sx.index) or "S" # type: ignore
-            fy = _infer_freq(sy.index) or "S" # type: ignore
+            fx = _infer_freq(sx.index) or "S"  # type: ignore
+            fy = _infer_freq(sy.index) or "S"  # type: ignore
             target = _coarser(fx, fy)
         else:
             target = rebin_freq
@@ -275,7 +286,9 @@ def _align_series(
 
         def _rb(obj):
             # .timerebin also resamples extra_data in your implementation
-            tmp = obj.timerebin(freq=target, start=st, end=et, method=rebin_method, inplace=False)
+            tmp = obj.timerebin(
+                freq=target, start=st, end=et, method=rebin_method, inplace=False
+            )
             s = _select_column_from_obj(tmp, column)  # check data then extra_data
             return pd.to_numeric(s, errors="coerce").sort_index()
 
@@ -294,8 +307,10 @@ def _align_series(
     xy = xy.loc[m]
     return xy["x"].to_numpy(float), xy["y"].to_numpy(float)
 
+
 def _linear(x: NDArray[np.float64], A: float, B: float = 0.0) -> NDArray[np.float64]:
     return A * x + B
+
 
 def _r2(y_true: NDArray[np.float64], y_fit: NDArray[np.float64]) -> float:
     ss_res = float(np.sum((y_true - y_fit) ** 2))
@@ -307,6 +322,7 @@ def _r2(y_true: NDArray[np.float64], y_fit: NDArray[np.float64]) -> float:
 # Main plotting function
 # =========================
 
+
 def Plot_correlation(
     X,
     Y,
@@ -315,7 +331,7 @@ def Plot_correlation(
     start_time: pd.Timestamp | str | None = None,
     end_time: pd.Timestamp | str | None = None,
     column: str = "Total_conc",
-    match: str = "exact",                      # "exact" | "nearest" | "rebin"
+    match: str = "exact",  # "exact" | "nearest" | "rebin"
     tolerance: Union[str, pd.Timedelta] = "30s",
     rebin_freq: Optional[str] = None,
     rebin_method: Union[str, Callable] = "mean",
@@ -385,9 +401,15 @@ def Plot_correlation(
     """
     # --- align + clean -------------------------------------------------------
     x_vals, y_vals = _align_series(
-        X, Y, column, start_time, end_time,
-        match=match, tolerance=tolerance,
-        rebin_freq=rebin_freq, rebin_method=rebin_method
+        X,
+        Y,
+        column,
+        start_time,
+        end_time,
+        match=match,
+        tolerance=tolerance,
+        rebin_freq=rebin_freq,
+        rebin_method=rebin_method,
     )
 
     # Always return a top-level Figure to keep type hints simple
@@ -415,21 +437,27 @@ def Plot_correlation(
                 d = np.sqrt(np.diag(cov))
                 SE_A, SE_B = float(d[0]), float(d[1])
         else:
+
             def _lin0(xv: NDArray[np.float64], a: float) -> NDArray[np.float64]:
                 return a * xv
+
             params, cov = curve_fit(_lin0, x, y, p0=[1.0])
             A, B = float(params[0]), 0.0
             if cov is not None and cov.size >= 1:
                 SE_A = float(np.sqrt(cov[0, 0]))
     else:
         slope, intercept_ts, _, _ = theilslopes(y, x)
-        A, B = float(slope), float(intercept_ts) # type: ignore
+        A, B = float(slope), float(intercept_ts)  # type: ignore
 
     y_fit = _linear(x, A, B)
     r2 = _r2(y, y_fit)
 
     # --- scaling and limits --------------------------------------------------
-    factor = float(max(np.max(np.abs(x)), np.max(np.abs(y)), 1.0)) if uniform_scaling else 1.0
+    factor = (
+        float(max(np.max(np.abs(x)), np.max(np.abs(y)), 1.0))
+        if uniform_scaling
+        else 1.0
+    )
     x_min = float(np.min(x) / factor) if np.min(x) <= 0 else 0.0
     x_max = 0.0 if np.max(x) <= 0 else float(max(np.max(x), np.max(y)) / factor)
     fit_x = np.linspace(x_min, x_max, 200, dtype=np.float64)
@@ -437,11 +465,26 @@ def Plot_correlation(
 
     # --- draw ----------------------------------------------------------------
     ax.plot([x_min, x_max], [x_min, x_max], ls="--", c="k", lw=3)  # 1:1 line
-    ax.plot(x / factor, y / factor, "bo")                           # scatter
-    ax.plot(fit_x, fit_y, "r-", lw=3)                               # fit
-    label = f"y={round(A,2)}·x" if B == 0.0 else (f"y={round(A,2)}·x + {round(B,2)}" if B > 0 else f"y={round(A,2)}·x {round(B,2)}")
+    ax.plot(x / factor, y / factor, "bo")  # scatter
+    ax.plot(fit_x, fit_y, "r-", lw=3)  # fit
+    label = (
+        f"y={round(A,2)}·x"
+        if B == 0.0
+        else (
+            f"y={round(A,2)}·x + {round(B,2)}"
+            if B > 0
+            else f"y={round(A,2)}·x {round(B,2)}"
+        )
+    )
     ax.text(0.05, 0.95, label, transform=ax.transAxes, fontsize=15, va="top")
-    ax.text(0.05, 0.80 if B == 0.0 else 0.65, f"r$^2$: {round(r2,2)}", transform=ax.transAxes, fontsize=15, va="top")
+    ax.text(
+        0.05,
+        0.80 if B == 0.0 else 0.65,
+        f"r$^2$: {round(r2,2)}",
+        transform=ax.transAxes,
+        fontsize=15,
+        va="top",
+    )
 
     if outlier_influence:
         band = np.sqrt((SE_A * fit_x) ** 2 + (SE_B / factor) ** 2)

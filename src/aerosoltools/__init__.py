@@ -53,7 +53,7 @@ from .loaders import (
     Load_Partector_file,
     Load_SMPS_file,
 )
-from .utility import Combine_NS_OPS, Plot_correlation, Plot_correlation_df
+from .utility import Combine_NS_OPS, Plot_correlation
 
 __all__ = [
     "Aerosol1D",
@@ -61,7 +61,6 @@ __all__ = [
     "AerosolAlt",
     "Combine_NS_OPS",
     "Plot_correlation",
-    "Plot_correlation_df",
     "Load_Aethalometer_file",
     "Load_CPC_file",
     "Load_DiSCmini_file",
