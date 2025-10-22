@@ -11,7 +11,7 @@ from .Common import detect_delimiter
 ###############################################################################
 
 
-def Load_Grimm_file(file: str) -> Aerosol2D:
+def Load_Grimm_file(file: str):
     """
     Load data from a Grimm spectrometer file, either software-exported or instrument-direct.
     The file type is detected automatically and passed to the correct loader.

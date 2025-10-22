@@ -1,0 +1,27 @@
+{
+  "folders": [
+    { "path": "." }            // open/save this .code-workspace at the repo root
+  ],
+  "settings": {
+    // Make Pylance see your src/ layout
+    "python.analysis.extraPaths": ["${workspaceFolder}/src"],
+    "python.analysis.typeCheckingMode": "basic",
+
+    // Use Black as the formatter for Python files
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "editor.formatOnSave": true,
+
+    // Ruff: lint + quick-fix + import sorting on save
+    "editor.codeActionsOnSave": {
+		"source.fixAll.ruff": "explicit",
+		"source.organizeImports.ruff": "explicit"
+	},
+    "ruff.lint.run": "onSave",
+
+    // (Optional) enable pytest discover/run from the Test Explorer
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false
+  }
+}

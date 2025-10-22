@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
+import datetime as datetime
 import os
 from collections import Counter
-from typing import List, Union
+from typing import Any, Callable, List, Sequence, Union
 
 import pandas as pd
-import numpy as np
-import datetime as datetime
 
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
@@ -77,10 +76,10 @@ def detect_delimiter(
             with open(file_path, "r", encoding=encoding) as f:
                 lines = f.readlines()
             break
-        except UnicodeDecodeError:
+        except UnicodeError:
             continue
     else:
-        raise UnicodeDecodeError("Could not decode file with given encodings.")
+        raise UnicodeError("Could not decode file with given encodings.")
     # Filter non-empty, non-comment lines from the bottom
     valid_lines = [
         line
@@ -226,13 +225,13 @@ def duplicate_remover(combined_data: pd.DataFrame) -> pd.DataFrame:
 
 
 def Load_data_from_folder(
-    folder_path,
-    load_function,
-    search_word="",
-    max_subfolder=0,
-    meta_checklist: list = ["serial_number"],
-    time_rebin: str = None,
-    **kwargs,
+    folder_path: str,
+    load_function: Callable[..., "Aerosol1D"],
+    search_word: str = "",
+    max_subfolder: int = 0,
+    meta_checklist: Sequence[str] | None = None,
+    time_rebin: str | None = None,
+    **kwargs: Any,
 ):
     """
     Load and concatenate aerosol data from a folder using a specified loader function.
@@ -268,7 +267,7 @@ def Load_data_from_folder(
     time_rebin: : str, optional
         Key to turn on time_rebin for each file loaded, using the Aerosol1D timerebin function.
         Inputs can be of the type: "30s", "1min", "2.5h" or "1D"
-        This can be helpful when loading large number of data files, to reduce memory use. 
+        This can be helpful when loading large number of data files, to reduce memory use.
         Should only be used if the data is inteded to be rebined after being loaded.
         Defaults to None, which returns the full raw dataset.
 
@@ -293,26 +292,31 @@ def Load_data_from_folder(
     object is not an instance of Aerosol1D, Aerosol2D, or AerosolAlt.
     """
 
+    meta_checklist = tuple(meta_checklist or ("serial_number",))
+
     counter = 0
-    skipped_files = []
-    Combined_raw_data = None
-    Combined_extra_data = None
-    Combined_raw_extra_data = None
-    meta = {}
+    skipped_files: list[str] = []
+    Combined_raw_data: pd.DataFrame | None = None
+    Combined_extra_data: pd.DataFrame | None = None
+    Combined_raw_extra_data: pd.DataFrame | None = None
+    meta: dict[str, Any] = {}
+
+    Initial_data: Aerosol1D | None = None  # ← prevents "possibly unbound"
 
     for file_path in file_list(folder_path, search_word, max_subfolder):
         print(f"Loading: {file_path}")
         try:
             data = load_function(file_path, **kwargs)
-            #New addition?
+
             if time_rebin:
                 data.timerebin(time_rebin)
-                data._raw_data=data._data
-                data._raw_extra_data=data._extra_data
-            #HMMM
+                # keep raw copies in case caller expects them
+                data._raw_data = data._data
+                data._raw_extra_data = data._extra_data
+
             if counter == 0:
                 Initial_data = data
-                meta = data.metadata
+                meta = dict(data.metadata)
                 Combined_raw_data = data.original_data
                 Combined_extra_data = data.extra_data
                 Combined_raw_extra_data = data._raw_extra_data
@@ -323,20 +327,15 @@ def Load_data_from_folder(
                 for item in meta_checklist:
                     if data.metadata.get(item) != meta.get(item):
                         print(f"unequal {item}")
-                        skipped_files.append(file_path)
+                        skipped_files.append(file_path)  # type: ignore
                         mismatch_found = True
                         break
 
                 if not mismatch_found:
-                    Combined_raw_data = pd.concat(
-                        [Combined_raw_data, data.original_data]
-                    )
-                    Combined_extra_data = pd.concat(
-                        [Combined_extra_data, data.extra_data]
-                    )
-                    Combined_raw_extra_data = pd.concat(
-                        [Combined_raw_extra_data, data._raw_extra_data]
-                    )
+                    Combined_raw_data = pd.concat([Combined_raw_data, data.original_data])  # type: ignore[arg-type]
+                    Combined_extra_data = pd.concat([Combined_extra_data, data.extra_data])  # type: ignore[arg-type]
+                    Combined_raw_extra_data = pd.concat([Combined_raw_extra_data, data._raw_extra_data])  # type: ignore[arg-type]
+
                     if "TEM_samples" in data.metadata:
                         if "TEM_samples" in meta:
                             meta["TEM_samples"] = pd.concat(
@@ -353,22 +352,38 @@ def Load_data_from_folder(
             TypeError,
         ) as e:
             print(f"Skipping {file_path} due to error: {type(e).__name__}: {e}")
-            skipped_files.append(file_path)
+            skipped_files.append(file_path)  # type: ignore
 
-    if Combined_raw_data is not None:
-        Combined_raw_data = duplicate_remover(Combined_raw_data)
+    # ---- Post-loop guards / narrowing -------------------------------------
+
+    if Initial_data is None:
+        raise FileNotFoundError(
+            "No valid files found in folder (or all failed to load)."
+        )
+
+    if Combined_raw_data is None:
+        raise RuntimeError("Internal error: Combined_raw_data is None after loading.")
+
+    Combined_raw_data = duplicate_remover(Combined_raw_data)
+
     if Combined_extra_data is not None:
         Combined_extra_data = duplicate_remover(Combined_extra_data)
+    else:
+        Combined_extra_data = pd.DataFrame(index=Combined_raw_data.index)
+
+    if Combined_raw_extra_data is not None:
         Combined_raw_extra_data = duplicate_remover(Combined_raw_extra_data)
-    # Instantiate final data object based on original class
+    else:
+        Combined_raw_extra_data = pd.DataFrame(index=Combined_raw_data.index)
+
     if isinstance(Initial_data, Aerosol2D):
-        Combined_data = Aerosol2D(Combined_raw_data)
+        Combined_data: Aerosol1D = Aerosol2D(Combined_raw_data)
     elif isinstance(Initial_data, AerosolAlt):
         Combined_data = AerosolAlt(Combined_raw_data)
     elif isinstance(Initial_data, Aerosol1D):
         Combined_data = Aerosol1D(Combined_raw_data)
     else:
-        raise Exception("Unsupported data type returned by load_function")
+        raise TypeError("Unsupported data type returned by load_function")
 
     Combined_data._extra_data = Combined_extra_data
     Combined_data._raw_extra_data = Combined_raw_extra_data
@@ -380,5 +395,3 @@ def Load_data_from_folder(
             print(i)
 
     return Combined_data
-
-###############################################################################
