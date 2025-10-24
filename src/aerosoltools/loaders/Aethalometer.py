@@ -32,10 +32,10 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> AerosolAlt:
     Exception
         If the data file is empty.
     """
-    encoding, delimiter = detect_delimiter(file)
+    enc, delim = detect_delimiter(file)
 
     df = pd.read_csv(
-        file, delimiter=delimiter, encoding=encoding, header=0, decimal="."
+        file, delimiter=delim, encoding=enc, header=0, decimal="."
     ).dropna()
     if df.empty:
         raise Exception("Empty data set")
