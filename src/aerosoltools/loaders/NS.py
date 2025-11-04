@@ -69,17 +69,14 @@ def Load_NS_file(file: str, extra_data: bool = False) -> Aerosol2D:
         ns_extra = pd.DataFrame([])
 
     # Extract metadata
-    serial_number = str(
-        np.genfromtxt(
-            file,
-            delimiter=delimiter,
-            skip_header=2,
-            max_rows=1,
-            usecols=1,
-            dtype=str,
-            encoding=encoding,
-        )
-    )
+
+    with open(file, "r", encoding=encoding, newline="") as fh:
+        for _ in range(2):
+            fh.readline()
+        line = fh.readline()
+
+    fields = line.rstrip("\n").split(delimiter)
+    serial_number = fields[1].strip()
 
     dtype_line = str(
         np.genfromtxt(

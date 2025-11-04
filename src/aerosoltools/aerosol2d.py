@@ -1,16 +1,18 @@
-# -*- coding: utf-8 -*-
-
-from typing import Optional, Union
+from math import erf
+from typing import Any, Optional, Sequence, Union, cast
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
 from matplotlib.colors import LogNorm, Normalize
 from matplotlib.ticker import PercentFormatter
+from matplotlib.figure import Figure
+from numpy.typing import NDArray
 from tabulate import tabulate
-from math import erf
+
 from .aerosol1d import Aerosol1D
 
 params = {
@@ -52,33 +54,33 @@ class Aerosol2D(Aerosol1D):
     def __init__(self, dataframe):
         super().__init__(dataframe)
 
-        
     @property
-    def bin_edges(self):
+    def bin_edges(self) -> NDArray[np.float64]:
         """
-        List of bin edges in nm
+        1D array of bin edges in nanometers.
 
         Returns
         -------
-        float
-            bin edges ( "nm" ).
+        numpy.ndarray
+            Shape (n,), dtype float64.
         """
-        return self._meta.get("bin_edges")
+        # ensure an array of floats; .copy() so callers can't mutate your internal state
+        return np.asarray(self._meta["bin_edges"], dtype=np.float64).copy()
 
     @property
-    def bin_mids(self):
+    def bin_mids(self) -> NDArray[np.float64]:
         """
-        List of bin mids in nm
+        1D array of bin mids in nanometers.
 
         Returns
         -------
-        float
-            bin mids ( "nm" ).
+        numpy.ndarray
+            Shape (n,), dtype float64.
         """
-        return self._meta.get("bin_mids")
+        return np.asarray(self._meta["bin_mids"], dtype=np.float64).copy()
 
     @property
-    def density(self):
+    def density(self) -> float:
         """
         Unit of the measurements.
 
@@ -87,7 +89,7 @@ class Aerosol2D(Aerosol1D):
         float
             Particle density in "g/cm³".
         """
-        return self._meta.get("density")
+        return self._meta.get("density")  # type: ignore
 
     @property
     def metadata(self):
@@ -103,20 +105,19 @@ class Aerosol2D(Aerosol1D):
         return self._meta
 
     @property
-    def size_data(self):
+    def size_data(self) -> pd.DataFrame:
         """
-        Sizebin data
+        Size-bin concentration data.
 
         Returns
         -------
         pandas.DataFrame
-            Concentration data from all sizebins in the dataset.
-
+            Columns for all size bins in the dataset, in the order of `_sizebin_headers`.
         """
-        return self.data[self._sizebin_headers]
+        return self.data.loc[:, self._sizebin_headers]
 
     @property
-    def _sizebin_headers(self):
+    def _sizebin_headers(self) -> list:
         """
         Headers of the sizebin concentration columns within main DataFrame
 
@@ -171,10 +172,8 @@ class Aerosol2D(Aerosol1D):
             volume_per_particle = (4 / 3) * np.pi * bin_radii**3
             volume_distribution = self.size_data.copy() * volume_per_particle
             mass_distribution = volume_distribution * self.density * 1e-9
-
         else:
-            print("Unknown data type for conversion.")
-            return None
+            raise ValueError("Unknown data type for conversion to mass.")
 
         # Apply the results
         target_instance = self if inplace else self.copy_self()
@@ -186,7 +185,7 @@ class Aerosol2D(Aerosol1D):
         # Ensure unnormalized data before summing
         if "/dlogDp" in target_instance.dtype:
             unnormalized = target_instance.unnormalize_logdp(inplace=False)
-            sum_data = unnormalized.size_data.sum(axis=1)
+            sum_data = unnormalized.size_data.sum(axis=1)  # type: ignore
         else:
             sum_data = mass_distribution.sum(axis=1)
 
@@ -235,8 +234,7 @@ class Aerosol2D(Aerosol1D):
             number_distribution = self.size_data.copy() / surface_area_per_particle
 
         else:
-            print("Unknown data type for conversion.")
-            return None
+            raise ValueError("Unknown data type for conversion to number.")
 
         # Apply the results
         target_instance = self if inplace else self.copy_self()
@@ -248,7 +246,7 @@ class Aerosol2D(Aerosol1D):
         # Ensure unnormalized data before summing
         if "/dlogDp" in target_instance.dtype:
             unnormalized = target_instance.unnormalize_logdp(inplace=False)
-            sum_data = unnormalized.size_data.sum(axis=1)
+            sum_data = unnormalized.size_data.sum(axis=1)  # type: ignore
         else:
             sum_data = number_distribution.sum(axis=1)
 
@@ -300,8 +298,7 @@ class Aerosol2D(Aerosol1D):
             )
 
         else:
-            print("Unknown data type for conversion.")
-            return None
+            raise ValueError("Unknown data type for conversion to surface area.")
 
         # Apply the results
         target_instance = self if inplace else self.copy_self()
@@ -313,7 +310,7 @@ class Aerosol2D(Aerosol1D):
         # Ensure unnormalized data before summing
         if "/dlogDp" in target_instance.dtype:
             unnormalized = target_instance.unnormalize_logdp(inplace=False)
-            sum_data = unnormalized.size_data.sum(axis=1)
+            sum_data = unnormalized.size_data.sum(axis=1)  # type: ignore
         else:
             sum_data = surface_area_distribution.sum(axis=1)
         target_instance._data["Total_conc"] = sum_data
@@ -360,8 +357,7 @@ class Aerosol2D(Aerosol1D):
             volume_distribution = self.size_data.copy() * volume_per_particle
 
         else:
-            print("Unknown data type for conversion.")
-            return None
+            raise ValueError("Unknown data type for conversion to volume.")
 
         # Apply the results
         target_instance = self if inplace else self.copy_self()
@@ -373,7 +369,7 @@ class Aerosol2D(Aerosol1D):
         # Ensure unnormalized data before summing
         if "/dlogDp" in target_instance.dtype:
             unnormalized = target_instance.unnormalize_logdp(inplace=False)
-            sum_data = unnormalized.size_data.sum(axis=1)
+            sum_data = unnormalized.size_data.sum(axis=1)  # type: ignore
         else:
             sum_data = volume_distribution.sum(axis=1)
         target_instance._data["Total_conc"] = sum_data
@@ -381,7 +377,7 @@ class Aerosol2D(Aerosol1D):
         return target_instance
 
     ###########################################################################
-    def dtype_converter(self, dtype: str = 'dN', inplace: bool = True):
+    def dtype_converter(self, dtype: str = "dN", inplace: bool = True):
         """
         Convert particle size distribution data the chosen datatype based on current data type.
 
@@ -401,16 +397,15 @@ class Aerosol2D(Aerosol1D):
         self or aerosolxd
             Updated instance with mass concentration data, either in-place or as a copy.
         """
-        if   dtype=="dN":
+        if dtype == "dN":
             return self.convert_to_number_concentration(inplace)
-        elif dtype=="dS":
+        elif dtype == "dS":
             return self.convert_to_surface_concentration(inplace)
-        elif dtype=="dV":
+        elif dtype == "dV":
             return self.convert_to_volume_concentration(inplace)
-        elif dtype=="dM":
+        elif dtype == "dM":
             return self.convert_to_mass_concentration(inplace)
 
-        
     ###########################################################################
     def set_density(self, density: Union[float, int] = 1.0):
         """
@@ -436,16 +431,15 @@ class Aerosol2D(Aerosol1D):
         return self
 
     ###########################################################################
-    def PM_calc(self,dtype: str = 'dM',PM: float = 4.2,Lower_lim: float = 0):
+    def PM_calc(self, dtype: str = "dM", PM: float = 4.2, Lower_lim: float = 0):
         """
-        Function to calculate Px values. from size bins from an array similar to those
-        returned from 
+        Function to calculate Px values from size bins from an array.
 
         Parameters
         ----------
         dtype : str, optional
             A key to designate what datatype the PM_calc should return.
-            It adds the selected datetype to the dtype_converter function. 
+            It adds the selected datetype to the dtype_converter function.
             Options are: 'dN', 'dS', 'dV', 'dM'.Defaults to 'dM'.
             This change will not affect the original data.
 
@@ -458,25 +452,24 @@ class Aerosol2D(Aerosol1D):
             Lower_lim calculates D50% according to ISO 7708:1995(E), for a diameter value
             smaller than the chosen PM. This value is then sustracted from the value caluclated from the PM.
             Example:  PM_calc('dN',PM=10,Lower_lim=4.2) would return the number of particles between 4.2 and 10 µm.
-            Default is 0, which returns the unaltered PM. 
-		
+            Default is 0, which returns the unaltered PM.
+
         Returns
         -------
         Data_return : numpy.array
-            An array of mass concentration data. The first column is datetime. 
+            An array of mass concentration data. The first column is datetime.
             The other column or columns are PM values corresponding to each time for
             the specified PM limit.
-
         """
-        #Prepare the data for 
+        # Prepare the data for
         data_copy = self.copy_self()
-        #Maintaines total concentration mask 
-        mask=   data_copy.data['Total_conc'].notna()
-        #Unnormalize and ensure correct dtype
+        # Maintaines total concentration mask
+        mask = data_copy.data["Total_conc"].notna()
+        # Unnormalize and ensure correct dtype
         data_copy.unnormalize_logdp()
         data_copy.dtype_converter(dtype)
 
-        # Convert to 
+        # Convert to
         # Remove the datetime and total conc columns as these are not needed for PM
         # calculations
         data_copy = data_copy.size_data
@@ -512,14 +505,15 @@ class Aerosol2D(Aerosol1D):
         mass_frac[mass_frac==0] = np.nan #where(mass_frac==0,mass_frac,np.nan)
          
         # Add the two values for a final mass concentration
-        self._extra_data[f"P{dtype[-1]}{PM}"] = mass_frac#.where(mask,np.nan)
+        self._extra_data[f"P{dtype[-1]}{PM}"] = mass_frac  # .where(mask,np.nan)
 
-        self._extra_data.set_index(self.time,inplace=True)
-        self._extra_data[f"P{dtype[-1]}{PM}"]=self._extra_data[f"P{dtype[-1]}{PM}"].where(mask,np.nan)
-        
+        self._extra_data.set_index(self.time, inplace=True)
+        self._extra_data[f"P{dtype[-1]}{PM}"] = self._extra_data[
+            f"P{dtype[-1]}{PM}"
+        ].where(mask, np.nan)
+
         return self
-    
-   
+
     ###########################################################################
 
     def normalize_logdp(self, inplace: bool = True):
@@ -538,26 +532,26 @@ class Aerosol2D(Aerosol1D):
             Instance with normalized size distribution data.
         """
         if "/dlogDp" not in self.dtype:
-            
+
             log_bin_edges = np.log10(self.bin_edges)
             dlog_dp = np.diff(log_bin_edges)
-    
+
             bin_columns = self._sizebin_headers
-    
+
             if len(dlog_dp) != len(bin_columns):
                 raise ValueError("Mismatch between number of bins and dlogDp array.")
-    
+
             normalized_data = self._data[bin_columns].copy().div(dlog_dp, axis=1)
-    
+
             target = self if inplace else self.copy_self()
             target._data[bin_columns] = normalized_data
 
             target._meta["dtype"] = f"{self.dtype}/dlogDp"
-    
+
             return target
         elif "/dlogDp" in self.dtype:
             return print("Warning: data already normalized; nothing was changed.")
-        
+
     ###########################################################################
 
     def unnormalize_logdp(self, inplace: bool = True):
@@ -575,7 +569,7 @@ class Aerosol2D(Aerosol1D):
         self or aerosolxd
             Instance with unnormalized size distribution data.
         """
-        
+
         if "/dlogDp" in self.dtype:
 
             log_bin_edges = np.log10(self.bin_edges)
@@ -592,11 +586,12 @@ class Aerosol2D(Aerosol1D):
             target._data[bin_columns] = unnormalized_data
             target._meta["dtype"] = self.dtype.replace("/dlogDp", "")
 
-
             return target
         else:
-            return print("Warning: dtype does not contain '/dlogDp'; nothing was changed.")
-            
+            return print(
+                "Warning: dtype does not contain '/dlogDp'; nothing was changed."
+            )
+
     ###########################################################################
 
     def plot_psd(
@@ -930,13 +925,13 @@ class Aerosol2D(Aerosol1D):
 
     def plot_timeseries(
         self,
-        y_tot=(0, 0),
-        y_3d=(0, 0),
-        log=True,
-        ax1=None,
-        ax2=None,
-        mark_activities=False,
-    ):
+        y_tot: tuple[float, float] = (0, 0),
+        y_3d: tuple[float, float] = (0, 0),
+        log: bool = True,
+        ax1: Axes | None = None,
+        ax2: Axes | None = None,
+        mark_activities: bool | Sequence[str] = False,
+    ) -> tuple[Figure, NDArray[Any]]:
         """
         Plot total concentration (top) and a size-resolved time series (bottom).
 
@@ -969,8 +964,11 @@ class Aerosol2D(Aerosol1D):
             newplot = True
             fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(10, 6))
         else:
-            fig = ax1.figure
+            assert ax1 is not None and ax2 is not None
+            fig: Figure = ax1.get_figure()  # type: ignore
             newplot = False
+        ax1 = cast(Axes, ax1)
+        ax2 = cast(Axes, ax2)
 
         time = self.time
         total = self.total_concentration
@@ -992,7 +990,7 @@ class Aerosol2D(Aerosol1D):
 
         # Generate edges: center ± half step
         dt = (time[1] - time[0]) / 2
-        time_edges = pd.DatetimeIndex(np.append(time - dt, [time[-1] + dt]))
+        time_edges = pd.DatetimeIndex(np.append(time - dt, [time[-1] + dt]))  # type: ignore
 
         x_grid, y_grid = np.meshgrid(time_edges, bin_edges, indexing="ij")
 
@@ -1042,7 +1040,7 @@ class Aerosol2D(Aerosol1D):
         ax1.tick_params(axis="y", which="both", direction="out", length=6, width=2)
         ax2.tick_params(axis="y", which="both", direction="out", length=6, width=2)
 
-        return fig, np.append([ax1, ax2], col)
+        return fig, np.array([ax1, ax2, col], dtype=object)
 
     ###########################################################################
     
@@ -1199,6 +1197,5 @@ class Aerosol2D(Aerosol1D):
 
         summary_t = summary.set_index("Segment").T
         print("\nSummary of aerosol properties (transposed):\n")
-        print(tabulate(summary_t, headers="keys", tablefmt="pretty", floatfmt=".3f"))
-
+        print(tabulate(summary_t, headers="keys", tablefmt="pretty", floatfmt=".3f"))  # type: ignore
         return summary

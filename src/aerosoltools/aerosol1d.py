@@ -1,13 +1,14 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
 import copy
-from typing import Optional, Union
+import datetime as dt
+from typing import Callable, Dict, List, Optional, Sequence, Union, cast
 
 import matplotlib.dates as mdates
-
-from datetime import datetime, date, time, timedelta
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from tabulate import tabulate
 
 params = {
@@ -19,6 +20,7 @@ params = {
     "figure.figsize": (19, 10),
 }
 plt.rcParams.update(params)
+DateLike = Union[dt.datetime, pd.Timestamp]
 
 
 # aerosol1d class definition
@@ -73,7 +75,7 @@ class Aerosol1D:
     ###########################################################################
 
     @property
-    def activities(self):
+    def activities(self) -> List:
         """
         List of defined activity labels.
 
@@ -85,7 +87,7 @@ class Aerosol1D:
         return self._activities
 
     @property
-    def activity_periods(self):
+    def activity_periods(self) -> Dict:
         """
         Dictionary of activity names and their associated time periods.
 
@@ -97,7 +99,7 @@ class Aerosol1D:
         return self._activity_periods
 
     @property
-    def data(self):
+    def data(self) -> pd.DataFrame:
         """
         Dataframe with all data, times, and activity columns if marked.
 
@@ -121,19 +123,19 @@ class Aerosol1D:
         return self._meta.get("dtype", "Uknown dtype")
 
     @property
-    def extra_data(self):
+    def extra_data(self) -> pd.DataFrame:
         """
-        List of defined activity labels.
+        Extra data columns which were extracted from the raw data file
 
         Returns
         -------
-        list of str
-            List of activity names that have been marked in the dataset.
+        pd.DataFrame
+            Dataframe of extra data columns which are not native to the Aerosol class object.
         """
         return self._extra_data
 
     @property
-    def instrument(self):
+    def instrument(self) -> str:
         """
         Instrument used for the measurements.
 
@@ -145,7 +147,7 @@ class Aerosol1D:
         return self._meta.get("instrument", "Uknown instrument")
 
     @property
-    def metadata(self):
+    def metadata(self) -> Dict:
         """
         Return overiew of meta data
 
@@ -157,7 +159,7 @@ class Aerosol1D:
         return self._meta
 
     @property
-    def original_data(self):
+    def original_data(self) -> pd.DataFrame:
         """
         Unmodified original dataset.
 
@@ -167,9 +169,9 @@ class Aerosol1D:
             Copy of the raw, original data before any processing.
         """
         return self._raw_data
-    
+
     @property
-    def original_extra_data(self):
+    def original_extra_data(self) -> pd.DataFrame:
         """
         Unmodified original dataset.
 
@@ -179,9 +181,9 @@ class Aerosol1D:
             Copy of the raw, original data before any processing.
         """
         return self._raw_extra_data
-    
+
     @property
-    def serial_number(self):
+    def serial_number(self) -> str:
         """
         Serial number of instrument
 
@@ -193,7 +195,7 @@ class Aerosol1D:
         return self._meta.get("serial_number", "Uknown serial number")
 
     @property
-    def time(self):
+    def time(self) -> pd.DatetimeIndex:
         """
         Timestamps of the dataset.
 
@@ -202,10 +204,10 @@ class Aerosol1D:
         pandas.DatetimeIndex
             Time index of the measurements.
         """
-        return self._data.index
+        return cast(pd.DatetimeIndex, self._data.index)
 
     @property
-    def total_concentration(self):
+    def total_concentration(self) -> pd.Series:
         """
         Total concentration measurements.
 
@@ -217,11 +219,10 @@ class Aerosol1D:
         if "Total Concentration" in self._data.columns:
             return self._data["Total Concentration"]
         else:
-            # Fall back in case something weird happens
             return self._data.iloc[:, 0]
 
     @property
-    def unit(self):
+    def unit(self) -> str:
         """
         Unit of the measurements.
 
@@ -269,6 +270,7 @@ class Aerosol1D:
             )
 
         return self._data[self._data[activity_name]].drop(columns=self.activities)
+
     ###########################################################################
 
     def get_activity_extra_data(self, activity_name):
@@ -291,6 +293,7 @@ class Aerosol1D:
             )
 
         return self.extra_data[self._data[activity_name]]
+
     ###########################################################################
     def mark_activities(self, activity_periods, mode="union"):
         """
@@ -396,7 +399,13 @@ class Aerosol1D:
 
     ###########################################################################
 
-    def Peak_finder(self,window: int=15,ratio: float =2.5,method: str='median',specific_data: str =None):
+    def Peak_finder(
+        self,
+        window: int = 15,
+        ratio: float = 2.5,
+        method: str = "median",
+        specific_data: str = "",
+    ):
         """
         Function for locating peaks based on diviance from standard deviation
         over a chosen period.
@@ -409,7 +418,6 @@ class Aerosol1D:
         ratio : float
             Value over which the the difference from median should be larger than
             the standard deviation to be counted as a peak
-            
 
         Returns
         -------
@@ -417,64 +425,68 @@ class Aerosol1D:
             array of boolean values indicating found peaks.
 
         """
-        
+
         if method not in ["mean", "median", "sum", "min", "max"]:
             raise ValueError(
                 "Invalid method. Choose from 'mean', 'median', 'sum', 'min', 'max'."
             )
-            
-        window          = int(window)
 
-        Data_return     = self.copy_self()
-        
-        if specific_data==None:
-            Data_return = Data_return._data['Total_conc']
+        window = int(window)
+        Data_return = self.copy_self()
+
+        if specific_data == "":
+            Data_return = Data_return._data["Total_conc"]
         else:
             if specific_data in self._data.select_dtypes(exclude="bool").columns:
                 Data_return = Data_return._data[specific_data]
-                
-            elif  specific_data in self._extra_data.select_dtypes(exclude="bool").columns: 
+
+            elif (
+                specific_data in self._extra_data.select_dtypes(exclude="bool").columns
+            ):
                 Data_return = Data_return._extra_data[specific_data]
             else:
                 raise ValueError(
                     f"Invalid data title. No column named {specific_data} can be found."
-                    )
-        
-        Test             = getattr( Data_return.rolling(
-            window=window, center=True, min_periods=2), method)()
-        Std             = getattr( Data_return.rolling(
-            window=window, center=True, min_periods=2), 'std')()
-        
-        #Change Med array from median value to the difference between median and actual value.
-        Test   = Data_return - Test
-        #Med=Rolling_window(data,window_width=window)
-        
-        #Multiply the average flow rate with the sampling time in min to get vol in cm3
+                )
 
-        mask = Test > Std*ratio
-        #mask = mask[numeric_cols[0]]
-        
-        peak_col = {'Peak':mask}
+        Test = getattr(
+            Data_return.rolling(window=window, center=True, min_periods=2), method
+        )()
+        Std = getattr(
+            Data_return.rolling(window=window, center=True, min_periods=2), "std"
+        )()
+
+        # Change Med array from median value to the difference between median and actual value.
+        mask = Data_return - Test > Std * ratio
+
+        peak_col = {"Peak": mask}
         # Track metadata
-        if 'Peak' not in self._activities:
-            self._activities.append('Peak')
+        if "Peak" not in self._activities:
+            self._activities.append("Peak")
             self._data = pd.concat([self._data, pd.DataFrame(peak_col)], axis=1)
         else:
-            self._data['Peak'] = mask
-            
-        periods = list(zip( 
-            mask.index[mask & ~mask.shift(fill_value=False)],      # starts: True preceded by False/NaN
-            mask.index[mask & ~mask.shift(-1, fill_value=False)]   # ends: True followed by False/NaN
-            ))
-        
-        self._activity_periods['Peak'] = periods
-        
-        # Add all new activity columns at once
-       
-        
+            self._data["Peak"] = mask
+
+        periods = list(
+            zip(
+                mask.index[
+                    mask & ~mask.shift(fill_value=False)
+                ],  # starts: True preceded by False/NaN
+                mask.index[
+                    mask & ~mask.shift(-1, fill_value=False)
+                ],  # ends: True followed by False/NaN
+            )
+        )
+
+        self._activity_periods["Peak"] = periods
+
     ###########################################################################
 
-    def plot_total_conc(self, ax=None, mark_activities=False):
+    def plot_total_conc(
+        self,
+        ax: Axes | None = None,
+        mark_activities: bool | Sequence[str] = False,
+    ) -> tuple[Figure, Axes]:
         """
         Plot the total concentration over time.
 
@@ -521,7 +533,6 @@ class Aerosol1D:
 
         # Highlight activities
         if mark_activities and hasattr(self, "_activity_periods"):
-            print("Hello")
             # Exclude "All data" unless explicitly requested
             all_activities = sorted(self._activity_periods.keys())
             color_map = plt.colormaps.get_cmap("gist_ncar")
@@ -544,8 +555,8 @@ class Aerosol1D:
                 first = True
                 for start, end in self._activity_periods[activity]:
                     ax.axvspan(
-                        pd.Timestamp(start),
-                        pd.Timestamp(end),
+                        cast(float, mdates.date2num(pd.Timestamp(start))),
+                        cast(float, mdates.date2num(pd.Timestamp(end))),
                         color=color,
                         alpha=0.3,
                         label=activity if first else None,
@@ -553,17 +564,19 @@ class Aerosol1D:
                     )
                     first = False
             # Clip x-axis to actual data range
-            ax.set_xlim(self.time.min(), self.time.max())
+            left = float(mdates.date2num(self.time.min()))
+            right = float(mdates.date2num(self.time.max()))
+            ax.set_xlim(left, right)
             ax.legend()
 
         if new_fig_created:
-            fig.tight_layout()
+            fig.tight_layout()  # type: ignore
 
-        return fig, ax
+        return fig, ax  # type: ignore
 
     ###########################################################################
 
-    def summarize(self, filename=None):
+    def summarize(self, filename: Optional[str] = None) -> pd.DataFrame:
         """
         Summarize total concentration statistics for each defined activity,
         including 'All data'.
@@ -608,7 +621,12 @@ class Aerosol1D:
         # Console output
         print("\nSummary of total concentration:\n")
         print(
-            tabulate(summary_rounded, headers="keys", tablefmt="pretty", floatfmt=".3f")
+            tabulate(
+                summary_rounded.values.tolist(),
+                headers=summary_rounded.columns.tolist(),
+                tablefmt="pretty",
+                floatfmt=".3f",
+            )
         )
 
         # Optionally save
@@ -625,7 +643,7 @@ class Aerosol1D:
         start: Optional[Union[str, pd.Timestamp]] = None,
         end: Optional[Union[str, pd.Timestamp]] = None,
         inplace: bool = True,
-        focus: bool = True
+        focus: bool = True,
     ) -> "Aerosol1D":
         """
         Crop the data to a specified time window.
@@ -661,7 +679,7 @@ class Aerosol1D:
         # Invert if we're *removing* the selected window
         if not focus:
             mask = ~mask
-            
+
         if inplace:
             self._data = self._data.loc[mask]
             self._extra_data = self._extra_data.loc[mask]
@@ -672,114 +690,132 @@ class Aerosol1D:
             return cropped
 
     ##########################################################################
-    def timerebin(self, freq: str = "s", start=0, end=0, method: str = "mean", inplace: bool = True):
+
+    def timerebin(
+        self,
+        freq: str = "s",
+        start: Optional[DateLike] = None,
+        end: Optional[DateLike] = None,
+        method: Union[str, Callable] = "mean",
+        inplace: bool = True,
+    ) -> "Aerosol1D":
         """
         Resample the data to a new time frequency using an aggregation function.
+
+        This method resamples numeric columns with the chosen aggregation and boolean
+        columns with a logical max, aligns the time index to the frequency grid, and
+        optionally applies the same operation to any extra-data frame.
 
         Parameters
         ----------
         freq : str, optional
-            Resampling frequency. Naming convention is 's', 'min', or 'h' for seconds, minutes and hours
-            but these can be combined with integers e.g., '30S', '5min', or '1H'. Default is 's'.
-        method : str or function, optional
-            Aggregation method to apply e.g., 'mean', 'median', 'sum', 'min', 'max', or a custom function. Default is 'mean'.
+            Resampling frequency. Naming convention is 's', 'min', 'h', 'D' for
+            seconds, minutes, hours, and days, optionally with an integer (e.g.,
+            '30s', '5min', '1H', '1D'). Default is 's'.
+        start : datetime | pandas.Timestamp | None, optional
+            Start of the resampling window. If None, the first timestamp in the data
+            is used. The start is snapped down to the nearest frequency grid using
+            ``Timestamp.floor(freq)``.
+        end : datetime | pandas.Timestamp | None, optional
+            End of the resampling window. If None, the last timestamp in the data
+            is used. The end is snapped down to the nearest frequency grid using
+            ``Timestamp.floor(freq)``.
+        method : str or callable, optional
+            Aggregation method applied to numeric columns (e.g., 'mean', 'median',
+            'sum', 'min', 'max', or a custom function). Default is 'mean'.
         inplace : bool, optional
-            If True, modifies the object in place. If False, returns a new rebinned object. Default is True.
+            If True, modifies the object in place. If False, returns a new rebinned
+            object. Default is True.
 
         Returns
         -------
         Aerosol1D
-            Instance of Aerosol1D with rebinned time index.
+            Instance of ``Aerosol1D`` (or subclass) with rebinned time index. Returns
+            ``self`` if ``inplace=True``, otherwise a new instance.
+
+        Notes
+        -----
+        - Boolean columns are aggregated with logical max and missing booleans after
+        reindexing are filled with ``False``.
+        - Extra data (``_extra_data``) is resampled and aligned if present.
         """
-                
-        numeric_cols = self._data.select_dtypes(exclude="bool").columns
-        bool_cols = self._data.select_dtypes(include="bool").columns
 
-        rebinned_numeric = self._data[numeric_cols].resample(freq).agg(method)
-        rebinned_bool = self._data[bool_cols].resample(freq).max().astype(bool)
+        # Select numeric and boolean columns
+        numeric_cols = list(self._data.select_dtypes(exclude="bool").columns)
+        bool_cols = list(self._data.select_dtypes(include="bool").columns)
 
+        # Resample main data
+        rebinned_numeric = (
+            self._data[numeric_cols].resample(freq).agg(method)
+            if numeric_cols
+            else pd.DataFrame()
+        )
+        rebinned_bool = (
+            self._data[bool_cols].resample(freq).max().astype(bool)
+            if bool_cols
+            else pd.DataFrame()
+        )
         rebinned = pd.concat([rebinned_numeric, rebinned_bool], axis=1)
-        
 
-        # if 's' in freq:
-        #     Freq=freq[:-1][0]
-        #     multiplier=1
-        # elif 'min' in freq:
-        #     Freq=freq[:-3][0]
-        #     multiplier=60
-        # else:
-        #     Freq=freq[:-1][0]
-        #     multiplier=60*60
-        
-        if 's' in freq:
-            Freq=freq[:-1][0]
-            multiplier=1
-        elif 'min' in freq:
-            Freq=freq[:-3][0]
-            multiplier=60
-        elif 'h' in freq:
-            Freq=freq[:-1][0]
-            multiplier=60*60
-        elif 'D' in freq:
-            Freq=freq[:-1][0]
-            multiplier=3600*24
-        else:
-            raise ValueError('Use a different frequency, s, min, h or D')
+        # Determine window and align to grid
+        start_ts = (
+            pd.Timestamp(start) if start is not None else pd.Timestamp(self.time[0])
+        )
+        end_ts = pd.Timestamp(end) if end is not None else pd.Timestamp(self.time[-1])
+        start_time = start_ts.floor(freq)
+        end_time = end_ts.floor(freq)
 
-        if len(Freq)==0:
-            Freq=1*multiplier
-        else:
-            Freq=int(Freq)*multiplier
-            
-        if start!=0:
-            #Removes the offset from a frequency divisable step, as the data otherwise spits out nan
-            offset = mdates.date2num(start)*24*60*60/Freq
-            start_time = pd.Timestamp(mdates.num2date(int(offset)/24/60/60*Freq)).tz_localize(None)
-        else:
-            #Removes the offset from a frequency divisable step, as the data otherwise spits out nan
-            offset = mdates.date2num(self.time[0])*24*60*60/Freq
-            start_time = pd.Timestamp(mdates.num2date(int(offset)/24/60/60*Freq)).tz_localize(None)
-        
-        if end!=0:
-            end_time = end
-        else:
-            end_time = self.time[-1]
-            
+        # Reindex to aligned range
         time_index = pd.date_range(start=start_time, end=end_time, freq=freq)
         rebinned = rebinned.reindex(time_index)
-        
-        # Reset the index to make the 'datetime' index a column
-        # rebinned['All data'].fillna(value=False,inplace=True)
-        # rebinned[bool_cols].fillna(value=False,inplace=True)
-        
-        if len(self._extra_data)>0:
-            # Extra data
-            numeric_cols_extra = self._extra_data.select_dtypes(exclude="bool").columns
-            bool_cols_extra = self._extra_data.select_dtypes(include="bool").columns
-    
-            rebinned_numeric_extra = self._extra_data[numeric_cols_extra].resample(freq).agg(method)
-            rebinned_bool_extra = self._extra_data[bool_cols_extra].resample(freq).max().astype(bool)
-    
-            rebinned_extra = pd.concat([rebinned_numeric_extra, rebinned_bool_extra], axis=1)
-            
-            rebinned_extra = rebinned_extra.reindex(time_index)
 
-            rebinned_extra[bool_cols_extra].fillna(value=False,inplace=True)
+        # Resample extra data (if any)
+        rebinned_extra = pd.DataFrame(index=time_index)
+        if len(self._extra_data) > 0:
+            num_extra = list(self._extra_data.select_dtypes(exclude="bool").columns)
+            bool_extra = list(self._extra_data.select_dtypes(include="bool").columns)
 
-        
+            r_num = (
+                self._extra_data[num_extra].resample(freq).agg(method)
+                if num_extra
+                else pd.DataFrame(index=time_index)
+            )
+            r_bool = (
+                self._extra_data[bool_extra].resample(freq).max().astype(bool)
+                if bool_extra
+                else pd.DataFrame(index=time_index)
+            )
+
+            rebinned_extra = pd.concat([r_num, r_bool], axis=1).reindex(time_index)
+
+            # Fill missing booleans
+            if bool_extra:
+                existing = [c for c in bool_extra if c in rebinned_extra.columns]
+                if existing:
+                    rebinned_extra[existing] = rebinned_extra[existing].fillna(False)
+
+        # Assign results
         if inplace:
             self._data = rebinned
-            self._data['All data'].fillna(value=False,inplace=True)
-            self._data[bool_cols].fillna(value=False,inplace=True) ###
-            if len(self._extra_data)>0: 
+
+            # Fill missing booleans
+            if "All data" in self._data:
+                self._data["All data"] = self._data["All data"].fillna(False)
+            if bool_cols:
+                existing = [c for c in bool_cols if c in self._data.columns]
+                if existing:
+                    self._data[existing] = self._data[existing].fillna(False)
+
+            if len(self._extra_data) > 0:
                 self._extra_data = rebinned_extra
             return self
         else:
-            rebinned_obj = self.copy_self()
-            rebinned_obj._data = rebinned
-            if len(self._extra_data)>0: 
-                rebinned_obj._extra_data = rebinned_extra
-            return rebinned_obj
+            obj = self.copy_self()
+            obj._data = rebinned
+            if len(self._extra_data) > 0:
+                obj._extra_data = rebinned_extra
+            return obj
+
     ###########################################################################
 
     def timeshift(
@@ -849,7 +885,7 @@ class Aerosol1D:
             self._data[numeric_cols].rolling(window=window, center=True, min_periods=1),
             method,
         )()
-        preserved_bool = self._data[bool_cols]  # unchanged
+        preserved_bool = self._data[bool_cols]
 
         smoothed = pd.concat([smoothed_numeric, preserved_bool], axis=1)
 

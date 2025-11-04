@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import datetime as datetime
 
 import numpy as np
@@ -46,13 +44,17 @@ def Load_DustTrak_file(file: str, extra_data: bool = False):
 
     # Read main data
     df = pd.read_csv(file, delimiter=delimiter, header=35)
-    df.rename(columns={"Elapsed Time [s]":  "Datetime",
-                       "PM1 [mg/m3]":       "PM1",
-                       "PM2.5 [mg/m3]":     "PM2.5",
-                       "PM4 [mg/m3]":       "PM4",
-                       "PM10 [mg/m3]":      "PM10",
-                       "TOTAL [mg/m3]":     "Total"
-                       }, inplace=True)
+    df.rename(
+        columns={
+            "Elapsed Time [s]": "Datetime",
+            "PM1 [mg/m3]": "PM1",
+            "PM2.5 [mg/m3]": "PM2.5",
+            "PM4 [mg/m3]": "PM4",
+            "PM10 [mg/m3]": "PM10",
+            "TOTAL [mg/m3]": "Total",
+        },
+        inplace=True,
+    )
 
     # Read header metadata
     meta_lines = np.genfromtxt(file, delimiter=delimiter, max_rows=8, dtype="str")
@@ -64,20 +66,20 @@ def Load_DustTrak_file(file: str, extra_data: bool = False):
 
     # Convert time column to absolute datetime
     df["Datetime"] = pd.to_timedelta(df["Datetime"], unit="s") + start_time
-    data_columns=df.columns[1:6]
+    data_columns = df.columns[1:6]
 
-    df[data_columns]=df[data_columns]*1000
+    df[data_columns] = df[data_columns] * 1000
     # Create AerosolAlt object
     Dust = AerosolAlt(df[df.columns[:6]])
-    Dust._meta["instrument"] = meta_lines[0,1]
-    Dust._meta["model_number"] = meta_lines[1,1]
-    Dust._meta["serial_number"] = meta_lines[2,1]
+    Dust._meta["instrument"] = meta_lines[0, 1]
+    Dust._meta["model_number"] = meta_lines[1, 1]
+    Dust._meta["serial_number"] = meta_lines[2, 1]
     Dust._meta["unit"] = {"ug/m³"}
     Dust._meta["dtype"] = {"dM"}
 
     # Attach extra data
     if extra_data:
-        extra_df = df["Datetime","Alarms","Errors"].set_index("Datetime")
+        extra_df = df["Datetime", "Alarms", "Errors"].set_index("Datetime")
         Dust._extra_data = extra_df
         Dust._raw_extra_data = extra_df.copy()
     return Dust
