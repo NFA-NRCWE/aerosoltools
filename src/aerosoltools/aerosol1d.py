@@ -314,24 +314,24 @@ class Aerosol1D:
            None
 
         """
-        
+
         for activity, periods in activity_periods.items():
             # Initialize column with False on the timeline
             col = pd.Series(False, index=self.time, dtype=bool)
-    
+
             # Normalize periods to a list of (start, end)
             if isinstance(periods, tuple) and len(periods) == 2:
                 periods = [periods]
             elif periods is None:
                 periods = []
-    
+
             # Mark True within each period
             for start, end in periods:
                 start_ts = pd.Timestamp(start)
                 end_ts = pd.Timestamp(end)
                 mask = (self.time >= start_ts) & (self.time <= end_ts)
                 col[mask] = True
-    
+
             # Update or create column
             if activity in self._data.columns:
                 existing = (
@@ -351,7 +351,7 @@ class Aerosol1D:
             else:
                 # new column
                 self._data[activity] = col
-    
+
             # Track metadata
             if activity not in self._activities:
                 self._activities.append(activity)
