@@ -287,7 +287,7 @@ def Plot_correlation(X, Y, ax_in=False, intercept=True, uniform_scaling=True, ou
     return ax.figure,ax
 
 ###############################################################################
-def Plot_correlation_df(df: dataframe, fig_text: str = "", *Plotsettings):
+def Plot_correlation_df(df, fig_text: str = "", *Plotsettings):
     """
     Function to plot multiple correlation plots together in a n*n grid, where n is the number of instruments minus 1.
     X and Y must have the same length. This can be accomplished by using the

@@ -292,46 +292,107 @@ class Aerosol1D:
 
         return self.extra_data[self._data[activity_name]]
     ###########################################################################
-
-    def mark_activities(self, activity_periods):
+    def mark_activities(self, activity_periods, mode="union"):
         """
         Mark activities in the data by adding one boolean column per activity.
 
-        Parameters
-        ----------
-        activity_periods : dict
-            Dictionary where keys are activity names (str) and values are
-            (start, end) tuples or list of (start, end) tuples.
+           Parameters
+           ----------
+           activity_periods : dict
+               Dictionary where keys are activity names (str) and values are
+               (start, end) tuples or list of (start, end) tuples.
+            mode:
+              - "union": existing OR new (accumulate periods) [default]
+              - "replace": overwrite existing with new
+              - "intersection": existing AND new
 
-        Returns
-        -------
-        None
+           Returns
+           -------
+           None
+
         """
-        new_cols = {}
-
+        
         for activity, periods in activity_periods.items():
-            # Initialize column with False
-            col = pd.Series(False, index=self.time)
-
-            # Normalize periods
+            # Initialize column with False on the timeline
+            col = pd.Series(False, index=self.time, dtype=bool)
+    
+            # Normalize periods to a list of (start, end)
             if isinstance(periods, tuple) and len(periods) == 2:
                 periods = [periods]
-
+            elif periods is None:
+                periods = []
+    
+            # Mark True within each period
             for start, end in periods:
-                mask = (self.time >= pd.Timestamp(start)) & (
-                    self.time <= pd.Timestamp(end)
-                )
+                start_ts = pd.Timestamp(start)
+                end_ts = pd.Timestamp(end)
+                mask = (self.time >= start_ts) & (self.time <= end_ts)
                 col[mask] = True
-
-            new_cols[activity] = col
-
+    
+            # Update or create column
+            if activity in self._data.columns:
+                existing = (
+                    self._data[activity]
+                    .reindex(self.time)  # align to current index
+                    .fillna(False)
+                    .astype(bool)
+                )
+                if mode == "replace":
+                    updated = col
+                elif mode == "intersection":
+                    updated = existing & col
+                else:  # "union"
+                    updated = existing | col
+                # assign back (preserves position if column already exists)
+                self._data.loc[:, activity] = updated.values
+            else:
+                # new column
+                self._data[activity] = col
+    
             # Track metadata
             if activity not in self._activities:
                 self._activities.append(activity)
             self._activity_periods[activity] = periods
 
-        # Add all new activity columns at once
-        self._data = pd.concat([self._data, pd.DataFrame(new_cols)], axis=1)
+    # def mark_activities(self, activity_periods):
+    #     """
+    #     Mark activities in the data by adding one boolean column per activity.
+
+    #     Parameters
+    #     ----------
+    #     activity_periods : dict
+    #         Dictionary where keys are activity names (str) and values are
+    #         (start, end) tuples or list of (start, end) tuples.
+
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     new_cols = {}
+
+    #     for activity, periods in activity_periods.items():
+    #         # Initialize column with False
+    #         col = pd.Series(False, index=self.time)
+
+    #         # Normalize periods
+    #         if isinstance(periods, tuple) and len(periods) == 2:
+    #             periods = [periods]
+
+    #         for start, end in periods:
+    #             mask = (self.time >= pd.Timestamp(start)) & (
+    #                 self.time <= pd.Timestamp(end)
+    #             )
+    #             col[mask] = True
+
+    #         new_cols[activity] = col
+
+    #         # Track metadata
+    #         if activity not in self._activities:
+    #             self._activities.append(activity)
+    #         self._activity_periods[activity] = periods
+
+    #     # Add all new activity columns at once
+    #     self._data = pd.concat([self._data, pd.DataFrame(new_cols)], axis=1)
 
     ###########################################################################
 

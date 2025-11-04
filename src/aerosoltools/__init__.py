@@ -55,7 +55,6 @@ from .loaders import (
     Load_OPS_file,
     Load_Partector_file,
     Load_SMPS_file,
-    Combine_NS_OPS
 )
 
 __all__ = [

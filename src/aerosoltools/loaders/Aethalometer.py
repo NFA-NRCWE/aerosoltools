@@ -39,20 +39,17 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> AerosolAlt:
 
     df = pd.read_csv(
         file, delimiter=delimiter, encoding=encoding, header=0, decimal="."
-    ).dropna()
+    ). drop(columns=["Readable status"]).dropna()
     if df.empty:
         raise Exception("Empty data set")
-
+    
     df = df.reset_index(drop=True)
-    df.rename(
-        columns={
+    df.rename(   columns={
             "Date / time local": "Datetime",
-            "Biomass BCc  (ng/m^3)": "Biomass BCc",
-            "Fossil fuel BCc  (ng/m^3)": "Fossil fuel BCc",
         },
         inplace=True,
     )
-
+    
     df["Datetime"] = pd.to_datetime(df["Datetime"], format="%Y-%m-%dT%H:%M:%S")
 
     # Extract and store metadata
@@ -63,20 +60,33 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> AerosolAlt:
         "unit": "ng/m³",
         "dtype": "dm",
     }
-
+        
     # Drop non-measurement columns
     df.drop(columns=list(df.columns[:6]) + ["Optical config"], inplace=True)
+    
+  
+    if len(df.columns)>=70:
+        df.rename(
+            columns={
+                "Biomass BCc  (ng/m^3)": "Biomass BCc",
+                "Fossil fuel BCc  (ng/m^3)": "Fossil fuel BCc",
+            },
+            inplace=True,
+        )
 
-    # Extract relevant data
-    core_cols = ["Datetime", "IR BCc", "Biomass BCc", "Fossil fuel BCc", "AAE"]
-    data = df[core_cols]
+        # Extract relevant data
+        core_cols = ["Datetime", 'IR BCc', 'UV BCc', 'Blue BCc', 'Green BCc', 'Red BCc', "Biomass BCc", "Fossil fuel BCc", "AAE"]
 
+    else:
+        core_cols = ["Datetime", 'IR BCc', 'UV BCc', 'Blue BCc', 'Green BCc', 'Red BCc']
+        
     # Load into Aerosolalt class
+    data = df[core_cols]
     aeth = AerosolAlt(data.copy())
     aeth._meta = meta
-
+    
     if extra_data:
-        extra_df = df.drop(columns=["IR BCc", "Biomass BCc", "Fossil fuel BCc", "AAE"])
+        extra_df = df.drop(columns=core_cols[1:])
         extra_df.set_index("Datetime", inplace=True)
         aeth._extra_data = extra_df
 

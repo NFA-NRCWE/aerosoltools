@@ -4,9 +4,11 @@ from typing import Optional, Union
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
 from matplotlib.colors import LogNorm, Normalize
+from matplotlib.ticker import PercentFormatter
 from tabulate import tabulate
 from math import erf
 from .aerosol1d import Aerosol1D
@@ -494,17 +496,17 @@ class Aerosol2D(Aerosol1D):
         mass_frac = np.nansum(data_copy*Frac,axis=1)
         
         if Lower_lim>0:
-		if Lower_lim<PM:
-            	# convert the current PM limit from um to nm
-            	lower_lim = Lower_lim * 1000
-            	#EN 481 calculation
-            	Y=np.log(bin_mids/lower_lim)/(2**0.5*np.log(1.5))
-        
-           	 	Frac=0.5*(1+np.vectorize(erf)(-Y))
-            	# Apply the fraction to the mass concentration of the bin. 
-            	lower_mass_frac = np.nansum(data_copy*Frac,axis=1)
-            
-            	mass_frac=mass_frac-lower_mass_frac
+            if Lower_lim<PM:
+                
+               	# convert the current PM limit from um to nm
+               	lower_lim = Lower_lim * 1000
+               	#EN 481 calculation
+               	Y=np.log(bin_mids/lower_lim)/(2**0.5*np.log(1.5) )
+                                      
+                Frac=0.5*(1+np.vectorize(erf)(-Y))
+               	# Apply the fraction to the mass concentration of the bin. 
+               	lower_mass_frac = np.nansum(data_copy*Frac,axis=1) 
+                mass_frac=mass_frac-lower_mass_frac
             else:  raise ValueError("Lower_lim is larger than the chosen PM")
 
         mass_frac[mass_frac==0] = np.nan #where(mass_frac==0,mass_frac,np.nan)
@@ -784,7 +786,146 @@ class Aerosol2D(Aerosol1D):
         corrected._meta["diffusion_loss_corrected"] = True
 
         return corrected
+    ###########################################################################
+    def plot_PM_timeseries(self, PM_values=[0.5,2.5,10],dtype="dM", activity='All data',
+                           fraction=False, cummulative=False):
+        """
+        Plot the total concentration 
+        
+        Parameters
+        ----------
 
+        PM_values : list, optional
+            A list of Dp values for which PM should be plotted.
+            The default is [0.5,2.5,10].
+
+        dtype : string, optional
+            Keyword to specify the datatype. The available options are "number",
+            "surface" and "mass". Default is "number"
+        activity : str
+            Designates which activity should be plotted. Default is "All data"
+        fraction : boolean
+            Decides whether the PM should be plotted as values, or as fraction of the biggest PM value.
+            By default the fraction is off. If True, the total value will be plotted as a line.
+        cummulative : boolean
+            Determines whether the PM value reported in the legend should be PM values or the difference
+            between two PM values. Default is False, which PM_values[0.5,2.5,10] returns the values:
+            P0.5= PM0.5,
+            P2.5=PM2.5-PM0.5
+            P10=PM10-PM2.5
+            Chose True if regular PM values should be used.
+    
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            Handle for the returned figure for saving.
+        ax : matplotlib.axes._subplots.AxesSubplot
+            Handles for the axis of the plot.
+    
+        """
+        #Set up standardized values for later use
+
+        colors = ["brown","chocolate","darkorange","gold","olive","darkgreen","teal","deepskyblue","darkblue"]
+        if len(PM_values)>len(colors):
+            raise Exception("Number of PM values are above the limit. Reduce the number of PM-values")
+        # y_label={"Number"   :   "N$_{Total}$, cm$^{-3}$",
+        #          "Surface"  :   "S$_{Total}$, nm$^{2}$ cm$^{-3}$",
+        #          "Mass"     :   "m$_{Total}$, $\mu$g/m$^{3}$"}
+        # Legend_label={'Number': 'PN',
+        #               'Surface':'PS',
+        #               'Mass':   'PM'}
+        
+        #Corrects for the first letter not being capital in the datatype
+
+     
+        data_copy=self.copy_self()        
+        data_copy.dtype_converter(dtype=dtype)
+        
+        #Generate a dictionary of the lists of PM values
+        # PM={}
+        for i in PM_values:
+            data_copy.PM_calc(dtype=dtype,PM=i)
+            
+        mask = self.data[activity]
+
+        PM_data=data_copy.extra_data.loc[mask]
+        #If no ax is provided, figure and ax is generated here
+
+        figure, ax = plt.subplots()
+        plt.xticks(fontsize=25)  
+        plt.yticks(fontsize=25)         
+            
+        """  
+        Determines the type of plot. The default is a plot with total concentration
+        and the total concentration each pn/pm values reases.
+        If the Fraction has been turned on, the fractional values will be calculated instead
+        """
+        if fraction==True:
+            ax.plot(PM_data[f"P{dtype[-1]}{PM_values[-1]}"],color='k',label='Total',lw=3)
+            ax2 = ax.twinx()
+            PM_fr=PM_data.copy()
+            for i in range(0,len(PM_values)):
+                pm=f"P{dtype[-1]}{PM_values[i]}"
+                
+                PM_fr[pm]=PM_data[pm]/PM_data[f"P{dtype[-1]}{PM_values[-1]}"]
+                if i == 0:
+                    avg_PM = round(PM_data[pm].mean(),2)
+                    sem_PM = round(PM_data[pm].std(),2)
+                    Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    ax2.fill_between(self.time[mask],PM_fr[pm],alpha=0.75,color=colors[i],label=Label)
+                    
+                else:
+                    pm_1=f"P{dtype[-1]}{PM_values[i-1]}"
+                    if cummulative==True:
+                        avg_PM = round(PM_data[pm].mean(),2)
+                        sem_PM = round(PM_data[pm].std(),2)
+                        Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    else:
+                        avg_PM = round(np.nanmean(PM_data[pm]-PM_data[pm_1], axis=0),2)
+                        sem_PM = round(np.nanstd(PM_data[pm]-PM_data[pm_1], axis=0),2)
+                        Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    ax2.fill_between(self.time[mask],PM_fr[pm_1], PM_fr[pm],alpha=0.75,color=colors[i],label=Label)
+            
+            ax2.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+            ax2.set_ylim(0,1)
+            ax2.set_ylabel(f"P{dtype[-1]} fraction")
+            ax2.legend(loc='best',title=f"Average values ({data_copy.unit})",fontsize=25,title_fontsize=25)
+    
+        else:
+            for i in range(0,len(PM_values)):
+                pm=f"P{dtype[-1]}{PM_values[i]}"
+
+                # Label=f"{pm} $\mu$m: {rounder(np.nanmean(PM[pm]),sem_PM)}"
+                if i == 0:
+                    avg_PM = round(PM_data[pm].mean(),2)
+                    sem_PM = round(PM_data[pm].std(),2)
+                    Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    ax.fill_between(self.time[mask],PM_data[pm],alpha=1,color=colors[i],label=Label)
+                else:
+                    pm_1=f"P{dtype[-1]}{PM_values[i-1]}"
+                    if cummulative==True:
+                        avg_PM = round(PM_data[pm].mean(),2)
+                        sem_PM = round(PM_data[pm].std(),2)
+                        Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    else:
+                        avg_PM =  round(np.nanmean(PM_data[pm]-PM_data[pm_1], axis=0),2)
+                        sem_PM = round(np.nanstd(PM_data[pm]-PM_data[pm_1], axis=0),2)
+                        Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    ax.fill_between(self.time[mask],PM_data[pm_1], PM_data[pm],color=colors[i],label=Label)
+            ax.legend(loc='best',title=f"Average values ({data_copy.unit})",fontsize=25,title_fontsize=25)
+    
+        #Set the axis settings    
+        
+        ax.set_ylim(0)
+        ax.set_ylabel(f"P{dtype[-1]}, {data_copy.unit}")
+        
+        locator = mdates.AutoDateLocator()
+        formatter = mdates.ConciseDateFormatter(locator)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(formatter)
+
+        
+        return ax.figure,ax
     ###########################################################################
 
     def plot_timeseries(
@@ -904,7 +1045,7 @@ class Aerosol2D(Aerosol1D):
         return fig, np.append([ax1, ax2], col)
 
     ###########################################################################
-
+    
     def summarize(self, filename=None):
         """
         Summarize aerosol characteristics for each activity period.
@@ -930,23 +1071,15 @@ class Aerosol2D(Aerosol1D):
             Summary statistics for all defined activities.
         """
 
-        def partial_mass_sum(mass_df, bin_edges, bin_mids, cutoff):
-            result = pd.Series(0.0, index=mass_df.index)
-            for i, mid in enumerate(bin_mids):
-                d_lo, d_hi = bin_edges[i], bin_edges[i + 1]
-                col = str(mid)
-                if d_hi <= cutoff:
-                    result += mass_df[col]
-                elif d_lo < cutoff < d_hi:
-                    frac = (cutoff - d_lo) / (d_hi - d_lo)
-                    result += mass_df[col] * frac
-            return result
 
         number_data = self.convert_to_number_concentration(inplace=False)
         mass_data = self.convert_to_mass_concentration(inplace=False)
-        bin_edges = np.array(self.bin_edges)
-        bin_mids = np.array(self.bin_mids)
-
+        
+        #Make a copy and populate it with PM values
+        data_copy = self.copy_self()
+        for PM in [1,2.5,4,10]:
+            data_copy.PM_calc(PM=PM)
+            
         rows = []
 
         for activity in self.activities:
@@ -963,15 +1096,13 @@ class Aerosol2D(Aerosol1D):
             pnc_std = pnc_series.std()
 
             # PM fractions (with partial bins)
-            pm1_series = partial_mass_sum(mass_df, bin_edges, bin_mids, 1000)
-            pm2_5_series = partial_mass_sum(mass_df, bin_edges, bin_mids, 2500)
-            pm4_series = partial_mass_sum(mass_df, bin_edges, bin_mids, 4000)
-            pm10_series = partial_mass_sum(mass_df, bin_edges, bin_mids, 10000)
 
-            pm1, pm1_std = pm1_series.mean(), pm1_series.std()
-            pm2_5, pm2_5_std = pm2_5_series.mean(), pm2_5_series.std()
-            pm4, pm4_std = pm4_series.mean(), pm4_series.std()
-            pm10, pm10_std = pm10_series.mean(), pm10_series.std()
+            PM_copy = data_copy.extra_data.loc[mask]
+
+            pm1, pm1_std = PM_copy['PM1'].mean(), PM_copy['PM1'].std()
+            pm2_5, pm2_5_std = PM_copy['PM2.5'].mean(), PM_copy['PM2.5'].std()
+            pm4, pm4_std = PM_copy['PM4'].mean(), PM_copy['PM4'].std()
+            pm10, pm10_std = PM_copy['PM10'].mean(), PM_copy['PM10'].std()
 
             # Total mass
             total_mass_series = mass_df.sum(axis=1)
@@ -990,18 +1121,18 @@ class Aerosol2D(Aerosol1D):
                     continue
 
                 # Mode diameter
-                mode_d = bin_mids[np.argmax(dist)]
+                mode_d = np.array(self.bin_mids)[np.argmax(dist)]
                 mode_d_list.append(mode_d)
 
                 # Median diameter
                 cum = np.cumsum(dist)
                 cum /= cum[-1]
                 median_idx = np.searchsorted(cum, 0.5)
-                median_d = bin_mids[median_idx]
+                median_d = np.array(self.bin_mids)[median_idx]
                 median_d_list.append(median_d)
 
                 # GMD
-                gmd = np.exp(np.sum(np.log(bin_mids) * dist) / total)
+                gmd = np.exp(np.sum(np.log(np.array(self.bin_mids)) * dist) / total)
                 gmd_list.append(gmd)
 
             # Final size stats
