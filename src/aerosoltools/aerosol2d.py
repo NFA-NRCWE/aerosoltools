@@ -783,6 +783,7 @@ class Aerosol2D(Aerosol1D):
         return corrected
     ###########################################################################
     def plot_PM_timeseries(self, PM_values=[0.5,2.5,10],dtype="dM", activity='All data',
+                           mark_activities: bool | Sequence[str] = False,
                            fraction=False, cummulative=False):
         """
         Plot the total concentration 
@@ -918,7 +919,44 @@ class Aerosol2D(Aerosol1D):
         formatter = mdates.ConciseDateFormatter(locator)
         ax.xaxis.set_major_locator(locator)
         ax.xaxis.set_major_formatter(formatter)
+        
+        # Highlight activities
+        if mark_activities and hasattr(self, "_activity_periods"):
+            # Exclude "All data" unless explicitly requested
+            all_activities = sorted(self._activity_periods.keys())
+            color_map = plt.colormaps.get_cmap("gist_ncar")
+            activity_colors = {
+                activity: color_map(i / max(1, len(all_activities)))
+                for i, activity in enumerate(all_activities)
+            }
 
+            if mark_activities is True:
+                selected_activities = [a for a in all_activities if a != "All data"]
+            elif isinstance(mark_activities, list):
+                selected_activities = [
+                    a for a in mark_activities if a in self._activity_periods
+                ]
+            else:
+                selected_activities = []
+
+            for activity in selected_activities:
+                color = activity_colors[activity]
+                first = True
+                for start, end in self._activity_periods[activity]:
+                    ax.axvspan(
+                        cast(float, mdates.date2num(pd.Timestamp(start))),
+                        cast(float, mdates.date2num(pd.Timestamp(end))),
+                        color=color,
+                        alpha=0.3,
+                        label=activity if first else None,
+                        zorder=3,
+                    )
+                    first = False
+            # Clip x-axis to actual data range
+            # left = float(mdates.date2num(self.time.min()))
+            # right = float(mdates.date2num(self.time.max()))
+            # ax.set_xlim(left, right)
+            ax.legend()
         
         return ax.figure,ax
     ###########################################################################

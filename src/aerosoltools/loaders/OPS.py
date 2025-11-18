@@ -152,7 +152,8 @@ def Load_OPS_AIM(
 
     # Build edges in nm
     bin_edges: NDArray[np.float64] = np.append(bin_lb, [bin_ub]) * 1000.0
-
+    # Updates the Bin_mids to correctly be the average between upper and lower bin edge
+    bin_mids = ((bin_edges[1:] + bin_edges[:-1]) / 2).round(1)  # nm
     # --- timestamp and columns ----------------------------------------------
     # The AIM export has "Date", "Start Time" -> build a single datetime column
     df.rename(columns={"Sample #": "Datetime"}, inplace=True)
