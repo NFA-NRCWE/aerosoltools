@@ -2,7 +2,7 @@
 -e .
 
 # Sphinx + docs ecosystem
-sphinx>=8.2,<9
+sphinx>=8.1,<9
 furo>=2024.8.6
 myst-parser>=2,<3
 sphinx-autoapi>=3.2,<4
@@ -15,4 +15,5 @@ ipykernel
 
 # Optional: keep if your conf.py can switch themes, otherwise you can drop it
 sphinx-rtd-theme
+
 
