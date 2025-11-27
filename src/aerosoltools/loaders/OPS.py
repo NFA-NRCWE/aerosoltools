@@ -6,44 +6,156 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from ..aerosol2d import Aerosol2D
-from .Common import detect_delimiter
+from .Common import _detect_delimiter
 
 ###############################################################################
 
 
 def Load_OPS_file(file: str, extra_data: bool = False):
+    """Description:
+        Load a TSI OPS spectrometer export and return it as an
+        :class:`Aerosol2D` number-size distribution with metadata.
+
+    Args:
+        file (str):
+            Path to the OPS data file exported either via the AIM software or
+            directly from the OPS instrument.
+        extra_data (bool, optional):
+            If ``True``, auxiliary channels (e.g. status, environmental
+            variables, Bin 17 for direct exports) are stored in ``extra_data``
+            when supported by the underlying loader. Defaults to ``False``.
+
+    Returns:
+        Aerosol2D:
+            OPS size distributions with a datetime index, total concentration,
+            size-resolved bins, and associated metadata.
+
+    Raises:
+        FileNotFoundError:
+            If ``file`` does not exist or cannot be opened.
+        UnicodeDecodeError:
+            If the file cannot be decoded using the encodings tried by
+            :func:`_detect_delimiter`.
+        Exception:
+            If the first header line cannot be recognised as either an AIM
+            export (``"Sample File"``) or a direct OPS export
+            (``"Instrument Name"``), and the file therefore cannot be routed
+            to a supported loader.
+
+    Notes:
+        Detailed description:
+            This loader supports two main OPS export flavours:
+
+            - AIM software exports (AIM-generated CSV),
+            - direct instrument exports written by the OPS itself.
+
+            Internally, the function:
+
+            - Uses :func:`_detect_delimiter` to infer file encoding and field
+              delimiter.
+            - Reads the first line of the file using :func:`numpy.genfromtxt`
+              and inspects the first token:
+
+              - If the line starts with ``"Sample File"``, the file is treated
+                as an AIM export and passed to :func:`_Load_OPS_AIM`, which:
+
+                - reads the main data table starting at the AIM header,
+                - reconstructs a single ``Datetime`` column from ``"Date"`` and
+                  ``"Start Time"``,
+                - extracts OPS mid diameters (in µm) from specific columns,
+                  converts them to nm, and builds bin edges from lower/upper
+                  cutpoints in the header,
+                - sums over the size bins to compute ``"Total_conc"`` for each
+                  time step,
+                - interprets the metadata block to infer the underlying moment
+                  (Nu, Su, Vo, Ma) and normalisation (e.g. ``/dlogDp``),
+                - constructs an :class:`Aerosol2D` with ``Datetime``,
+                  ``Total_conc`` and one column per size bin (named by bin
+                  midpoint in nm), and attaches metadata such as bin edges,
+                  bin mids, density, serial number, unit and dtype,
+                - converts the distribution to number concentration and removes
+                  any ``/dlogDp`` normalisation.
+
+              - If the line starts with ``"Instrument Name"``, the file is
+                treated as a direct OPS export and passed to
+                :func:`_Load_OPS_Direct`, which:
+
+                - reads a metadata block from the top of the file (including
+                  test start date/time, sample interval, bin cutpoints, flow
+                  and density),
+                - reconstructs absolute timestamps from the test start time and
+                  the ``"Elapsed Time [s]"`` column,
+                - converts counts in each size bin (Bin 1–16) to number
+                  concentration in ``cm⁻³`` using the nominal flow rate and
+                  sample interval adjusted for dead time,
+                - computes ``"Total_conc"`` as the sum over bins,
+                - defines bin edges from the reported bin cut points and
+                  derives bin mid diameters in nm,
+                - builds an :class:`Aerosol2D` with ``Datetime``, ``Total_conc``
+                  and size-bin columns, and attaches metadata including bin
+                  edges/mids, density, serial number, unit and dtype.
+
+            - If ``extra_data=True``:
+
+              - AIM exports preserve non-distribution columns (e.g. flags,
+                additional channels) in ``extra_data``.
+              - Direct exports store Bin 17 (converted to concentration when
+                available) and other non-size-bin columns in ``extra_data``
+                indexed by ``Datetime``.
+
+            The returned :class:`Aerosol2D` is therefore a number-size
+            distribution (dN, cm⁻³) with OPS-specific binning and metadata,
+            ready for further analysis or plotting.
+
+        Theory:
+            OPS exports provide binned particle counts and, depending on the
+            export type, may encode different moments or normalisations:
+
+            - AIM exports may report number, surface, volume or mass based
+              moments (Nu, Su, Vo, Ma) and can be normalised by ``dlogDp`` or
+              ``dDp``. The internal AIM loader interprets this from the
+              metadata and uses internal helpers to convert the distribution to
+              number concentration (dN, cm⁻³) and remove any ``/dlogDp`` or
+              ``/dDp`` normalisation.
+            - Direct OPS exports report counts per bin over a known sample
+              interval and flow. These are converted to number concentrations
+              by
+
+              .. math::
+
+                  C = \\frac{N}{Q \\cdot (\\Delta t - t_\\mathrm{dead})},
+
+              where :math:`N` is the count in the bin, :math:`Q` is the
+              volumetric flow (cm³/s), :math:`\\Delta t` is the sample
+              interval, and :math:`t_\\mathrm{dead}` is the recorded dead time.
+
+            Bin edges (in µm) are taken from the OPS metadata and converted to
+            nm; mid diameters are defined as geometric means of neighbouring
+            edges and used to label the size-bin columns.
+
+    Examples:
+        Typical usage is to load OPS data from either AIM or direct
+        instrument exports and work directly with the resulting
+        number-size distribution:
+
+        .. code-block:: python
+
+            import aerosoltools as at
+
+            # Load OPS data (AIM or direct export)
+            ops = at.Load_OPS_file("data/OPS_export.csv", extra_data=True)
+
+            # Inspect the first few rows
+            print(ops.data.head())
+
+            # Inspect bin edges and metadata
+            print(ops.bin_edges)
+            print(ops.metadata)
+
+            # Plot a time-integrated or mean size distribution
+            fig, ax = ops.plot_psd()
     """
-    Load data from an OPS (Optical Particle Sizer) file and route to the appropriate parser.
-
-    This function inspects the file header and determines whether the file was exported
-    via the AIM software or directly from the instrument. Based on this, it dispatches
-    to the correct loader: `Load_OPS_AIM` or `Load_OPS_Direct`.
-
-    Parameters
-    ----------
-    file : str
-        Path to the OPS data file.
-    extra_data : bool, optional
-        If True, attaches unused columns to the returned object as `._extra_data`.
-        Passed directly to the underlying loader. Default is False.
-
-    Returns
-    -------
-    OPS : Aerosol2D
-        A class containing size-resolved particle data and instrument metadata.
-
-    Raises
-    ------
-    Exception
-        If the file type cannot be identified from the header.
-
-    Notes
-    -----
-    - This function depends on `Com.detect_delimiter()` and assumes either AIM-exported
-      or direct instrument export file formats.
-    - If new formats are introduced, this function should be updated accordingly.
-    """
-    encoding, delimiter = detect_delimiter(file)
+    encoding, delimiter = _detect_delimiter(file)
 
     # Peek at the first line to determine file type
     first_line = np.genfromtxt(
@@ -56,11 +168,11 @@ def Load_OPS_file(file: str, extra_data: bool = False):
     )[0]
 
     if first_line == "Sample File":
-        return Load_OPS_AIM(
+        return _Load_OPS_AIM(
             file, extra_data=extra_data, encoding=encoding, delimiter=delimiter
         )
     elif first_line == "Instrument Name":
-        return Load_OPS_Direct(
+        return _Load_OPS_Direct(
             file, extra_data=extra_data, encoding=encoding, delimiter=delimiter
         )
     else:
@@ -70,40 +182,53 @@ def Load_OPS_file(file: str, extra_data: bool = False):
 ###############################################################################
 
 
-def Load_OPS_AIM(
+def _Load_OPS_AIM(
     file: str,
     extra_data: bool = False,
     encoding: Optional[str] = None,
     delimiter: Optional[str] = None,
 ) -> Aerosol2D:
-    """
-    Load data from OPS instrument as exported by AIM software.
+    """Load OPS data exported via AIM software into an :class:`Aerosol2D`.
 
-    Parameters
-    ----------
-    file : str
-        Path to the OPS AIM-exported data file.
-    extra_data : bool, optional
-        If True, includes all non-distribution columns in `.extra_data`.
-    encoding : str, optional
-        Encoding format. If None, detected automatically.
-    delimiter : str, optional
-        Delimiter format. If None, detected automatically.
+    This loader handles OPS files exported through the AIM software. It
+    reads the size-bin mid diameters and distribution block, reconstructs
+    a single time axis from separate date and time columns, and interprets
+    the metadata block to infer units and data type (e.g. ``dN/dlogDp``).
 
-    Returns
-    -------
-    OPS : Aerosol2D
-        Object containing time-resolved particle number distributions and metadata.
+    Args:
+        file: Path to the OPS AIM-exported data file.
+        extra_data: If ``True``, non-distribution columns (e.g. status
+            flags, environmental data) are stored in ``.extra_data``
+            indexed by ``Datetime``. If ``False`` (default), only the
+            time series of binned concentrations and ``Total_conc`` are
+            kept.
+        encoding: Optional text encoding to use. If ``None`` (default),
+            both encoding and delimiter are auto-detected together.
+        delimiter: Optional field delimiter to use (e.g. ``","`` or
+            ``"\\t"``). If ``None`` (default), both encoding and delimiter
+            are auto-detected together.
 
-    Raises
-    ------
-    ValueError
-        If only one of encoding or delimiter is provided.
+    Returns:
+        Aerosol2D: Object with columns:
+
+        * ``Datetime``
+        * ``Total_conc`` (number concentration)
+        * one column per size bin, named by bin mid diameter in nm,
+
+        along with metadata entries such as ``"bin_edges"``, ``"bin_mids"``,
+        ``"density"``, ``"instrument"``, ``"serial_number"``, ``"unit"`` and
+        ``"dtype"``.
+
+    Raises:
+        ValueError: If exactly one of ``encoding`` or ``delimiter`` is
+            provided (both must be given or neither).
+        ValueError: If the unit / data-type combination in the metadata
+            cannot be mapped to an expected format.
     """
 
     # Detect when both are omitted
     if encoding is None and delimiter is None:
-        encoding, delimiter = detect_delimiter(file)  # -> Tuple[str, str]
+        encoding, delimiter = _detect_delimiter(file)  # -> Tuple[str, str]
 
     # If only one was provided, that’s ambiguous
     if (encoding is None) != (delimiter is None):
@@ -157,7 +282,7 @@ def Load_OPS_AIM(
     # The AIM export has "Date", "Start Time" -> build a single datetime column
     df.rename(columns={"Sample #": "Datetime"}, inplace=True)
     df["Datetime"] = pd.to_datetime(
-        df["Date"] + " " + df["Start Time"], format="%m/%d/%Y %H:%M:%S"
+        df["Date"] + " " + df["Start Time"], format="%m/%d/%Y %H:%M:%S"  # type: ignore
     )
     df.drop(columns=["Date", "Start Time"], inplace=True)
 
@@ -212,7 +337,7 @@ def Load_OPS_AIM(
     OPS._meta["unit"] = unit
     OPS._meta["dtype"] = dtype
 
-    OPS.convert_to_number_concentration()
+    OPS._convert_to_number_concentration()
     OPS.unnormalize_logdp()
 
     if extra_data:
@@ -224,53 +349,57 @@ def Load_OPS_AIM(
 ###############################################################################
 
 
-def Load_OPS_Direct(
+def _Load_OPS_Direct(
     file: str,
     extra_data: bool = False,
     encoding: Optional[str] = None,
     delimiter: Optional[str] = None,
 ) -> Aerosol2D:
-    """
-    Load OPS (Optical Particle Sizer) data exported directly from the instrument.
+    """Load OPS data exported directly from the instrument into :class:`Aerosol2D`.
 
-    This function processes raw OPS data files exported directly from the device,
-    converts particle counts to concentrations, and constructs an `Aerosol2D` object
-    with appropriate metadata. The function supports optional inclusion of extra
-    metadata and raw columns.
+    This loader handles raw OPS CSV exports written directly by the
+    instrument (not via AIM). It parses the metadata header, reconstructs
+    absolute timestamps from a test start time and elapsed seconds,
+    converts counts to concentrations in cm⁻³ using the sample interval
+    and flow, and builds an :class:`Aerosol2D` object.
 
-    Parameters
-    ----------
-    file : str
-        Path to the CSV file exported directly from the OPS instrument.
-    extra_data : bool, optional
-        If True, attaches all non-sizebin columns and bin 17 data to `.extra_data`.
-        Default is False.
-    encoding : str, optional
-        Character encoding for the file (e.g., 'utf-8'). If None, will be auto-detected.
-    delimiter : str, optional
-        Field delimiter (e.g., ',' or '\t'). If None, will be auto-detected.
+    Bin 17 (particles above the last cut point) is excluded from the main
+    distribution but can be preserved in ``.extra_data`` when
+    ``extra_data=True``.
 
-    Returns
-    -------
-    OPS : Aerosol2D
-        Time-indexed data object containing total concentration and size-resolved
-        particle data, along with instrument metadata.
+    Args:
+        file: Path to the CSV file exported directly from the OPS
+            instrument.
+        extra_data: If ``True``, non-size-bin columns plus Bin 17 (as a
+            concentration) are stored in ``.extra_data`` indexed by
+            ``Datetime``. If ``False`` (default), only the main bins and
+            ``Total_conc`` are kept.
+        encoding: Optional text encoding to use. If ``None`` (default),
+            both encoding and delimiter are auto-detected together.
+        delimiter: Optional field delimiter to use (e.g. ``","`` or
+            ``"\\t"``). If ``None`` (default), both encoding and delimiter
+            are auto-detected together.
 
-    Raises
-    ------
-    Exception
-        If the file cannot be parsed, or metadata lines are malformed.
+    Returns:
+        Aerosol2D: Object with columns:
 
-    Notes
-    -----
-    - Converts count data to concentration in cm⁻³ using flow rate and sample duration.
-    - Bin 17 (particles >10 µm) is excluded from the main dataset but included in `.extra_data`.
-    - Requires `Com.detect_delimiter()` for auto-formatting detection.
+        * ``Datetime``
+        * ``Total_conc`` (cm⁻³)
+        * one column per size bin (cm⁻³), named by bin mid diameter in nm,
+
+        along with metadata such as ``"bin_edges"``, ``"bin_mids"``,
+        ``"density"``, ``"instrument"``, ``"serial_number"``, ``"unit"``,
+        and ``"dtype"``.
+
+    Raises:
+        ValueError: If exactly one of ``encoding`` or ``delimiter`` is
+            provided (both must be given or neither).
+        Exception: If the header metadata is malformed or cannot be parsed.
     """
     # Detect when both are omitted
     both_missing = encoding is None and delimiter is None
     if both_missing:
-        encoding, delimiter = detect_delimiter(file)  # -> Tuple[str, str]
+        encoding, delimiter = _detect_delimiter(file)  # -> Tuple[str, str]
 
     # If only one was provided, that’s ambiguous
     if (encoding is None) != (delimiter is None):
@@ -326,7 +455,10 @@ def Load_OPS_Direct(
     # If requested, store Bin 17 and other columns as extra data
     if extra_data:
         extra = df.drop(columns=df.columns[1:17]).copy()
-        extra["Bin 17"] = extra["Bin 17"] / (16.67 * (sample_length - deadtime))
+        try:
+            extra["Bin 17"] = extra["Bin 17"] / (16.67 * (sample_length - deadtime))
+        except KeyError:
+            pass
         extra.set_index("Datetime", inplace=True)
     else:
         extra = pd.DataFrame([])

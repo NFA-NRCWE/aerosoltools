@@ -1,0 +1,105 @@
+aerosoltools.loaders.Fourtec
+============================
+
+.. py:module:: aerosoltools.loaders.Fourtec
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: Load_Fourtec_file(file)
+
+   Description:
+       Load a Fourtec Bluefish CSV or Excel export and return temperature and
+       relative humidity as an :class:`AerosolAlt` time series.
+
+   :param file: Path to the Fourtec export file (``.csv`` or ``.xlsx``).
+   :type file: str
+
+   :returns:     Fourtec measurements with a datetime index and columns for
+                 temperature (°C) and relative humidity (%), plus basic metadata.
+   :rtype: AerosolAlt
+
+   :raises FileNotFoundError: If ``file`` does not exist or cannot be opened.
+   :raises UnicodeDecodeError: If a ``.csv`` file cannot be decoded using the encodings tried by
+       :func:`_detect_delimiter`.
+   :raises ValueError: If the date/time fields in the export cannot be parsed into valid
+       timestamps. Check that the file uses the expected Fourtec formats.
+
+   .. rubric:: Notes
+
+   Detailed description:
+       This loader is tailored to Fourtec Bluefish logger exports produced
+       by the vendor software in either text (CSV) or Excel (XLSX) format.
+       The files typically contain a short header block followed by a
+       tabular data section with separate ``Date`` and ``Time`` columns
+       and channels for internal temperature and relative humidity.
+
+       Internally, the function:
+
+       - Branches on the file extension:
+
+         - For ``.csv`` files:
+
+           - Uses :func:`_detect_delimiter` to infer text encoding and
+             field delimiter.
+           - Reads the main data block with :func:`pandas.read_csv`,
+             skipping the header rows and selecting the expected columns
+             (date, time, temperature, RH).
+           - Renames ``"Internal Digital Temperature"`` to
+             ``"Temperature"`` and ``"Internal RH"`` to ``"RH"``.
+           - Combines the ``"Date"`` and ``"Time"`` columns into a single
+             ``"Datetime"`` column using the format
+             ``"%d-%m-%Y %H:%M:%S"`` and drops the original date/time
+             columns.
+           - Extracts the instrument serial number from the header using
+             :func:`numpy.genfromtxt`.
+
+         - For ``.xlsx`` files:
+
+           - Reads the main data block with :func:`pandas.read_excel`,
+             again skipping header rows and selecting the same logical
+             columns.
+           - Renames temperature and RH columns in the same way as for
+             CSV.
+           - Builds ``"Datetime"`` by combining the separate date and time
+             columns via :func:`datetime.datetime.combine`, then drops
+             the original date/time columns.
+           - Extracts the serial number from the second row in the header
+             area with a small :func:`pandas.read_excel` call.
+
+       - Constructs an :class:`AerosolAlt` object using the core columns
+         ``"Datetime"``, ``"Temperature"``, and ``"RH"``.
+       - Populates metadata with:
+
+         - ``instrument`` set to ``"Fourtec"``,
+         - ``serial_number`` taken from the header,
+         - ``unit`` mapping: ``{"Temperature": "°C", "RH": "%"}``.
+
+       No additional channels are currently stored in ``extra_data``; only
+       the core environmental measurements are kept.
+
+     Examples:
+         Typical usage is to load a Fourtec logger file and use the
+         resulting temperature and RH time series alongside aerosol
+         measurements:
+
+         .. code-block:: python
+
+             import aerosoltools as at
+
+             # Load Fourtec data from CSV or Excel
+             fourtec = at.Load_Fourtec_file("data/Fourtec_export.csv")
+
+             # Inspect the data
+             print(fourtec.data.head())
+
+             # Check metadata (instrument, serial number, units)
+             print(fourtec.metadata)
+
+             # Plot temperature and RH over time
+             fig, ax = fourtec.plot_timeseries()
+
+

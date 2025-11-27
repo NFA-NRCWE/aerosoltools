@@ -1,9 +1,17 @@
-sphinx>=7.0
-sphinx-rtd-theme
+# Core package (installs runtime deps from pyproject.toml)
+-e .
+
+# Sphinx + docs ecosystem
+sphinx>=7.3
+furo>=2024.8.6
+myst-parser>=2.0.0
+sphinx-autoapi>=3.2.1
+sphinx-autodoc-typehints>=2.2.3
+
+# Notebook support in docs (if you use nbsphinx)
 nbsphinx
 ipython
 ipykernel
-matplotlib
-numpy
-pandas
--e .
+
+# Optional: keep if your conf.py can switch themes, otherwise you can drop it
+sphinx-rtd-theme
