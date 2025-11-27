@@ -13,8 +13,10 @@ nbsphinx
 ipython
 ipykernel
 
-# Optional: keep if your conf.py can switch themes, otherwise you can drop it
+# Optional
 sphinx-rtd-theme
+linkify-it-py>=2.0.0
+
 
 
 
