@@ -1,0 +1,142 @@
+aerosoltools.loaders.Grimm
+==========================
+
+.. py:module:: aerosoltools.loaders.Grimm
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: Load_Grimm_file(file)
+
+   Description:
+       Load a Grimm spectrometer export and return it as an
+       :class:`Aerosol2D` number-size distribution with metadata.
+
+   :param file: Path to the Grimm data file exported either directly from the
+                instrument or via the Grimm software.
+   :type file: str
+
+   :returns:     Grimm size distributions with a datetime index, total concentration,
+                 size-resolved bins, and associated metadata.
+   :rtype: Aerosol2D
+
+   :raises FileNotFoundError: If ``file`` does not exist or cannot be opened.
+   :raises UnicodeDecodeError: If the file cannot be decoded using the encodings tried by
+       :func:`_detect_delimiter`.
+   :raises ValueError: If the file header cannot be recognised as either an
+       instrument-direct export or a software export, or if subsequent
+       parsing fails due to an unsupported data type.
+
+   .. rubric:: Notes
+
+   Detailed description:
+       This loader is designed for Grimm optical particle counter /
+       spectrometer exports in the text formats used by the instrument
+       and the Grimm software.
+
+       Internally, the function:
+
+       - Uses :func:`_detect_delimiter` to infer file encoding and field
+         delimiter.
+       - Reads the first header line with :func:`numpy.genfromtxt` and
+         inspects its first cell to decide which parser to use:
+
+         - Instrument-direct export:
+
+           - Identified when the first header cell contains
+             ``"File name"``.
+           - The file is passed to :func:`_Load_Grimm_inst`, which:
+
+             - reads the main data table (header near the top of the file),
+             - parses timestamps from US-style date/time strings,
+             - converts bin labels like ``"0.25-0.3"`` µm into bin edges
+               and mid-diameters in nm,
+             - reads top-of-file metadata to determine whether the data
+               are given as mass or counts,
+             - normalises the size-resolved data to number concentration
+               in ``cm⁻³`` based on this type,
+             - builds an :class:`Aerosol2D` object with datetime, total
+               concentration, size-bin columns, and basic Grimm metadata
+               (bin_edges, bin_mids, unit, dtype).
+
+         - Software export:
+
+           - Identified when the first header cell is ``"<Header>"``.
+           - The file is passed to :func:`_Load_Grimm_soft`, which:
+
+             - reads the software-exported table with date/time in the
+               first column and one column per size bin,
+             - parses timestamps from combined date/time strings,
+             - derives bin edges and mid-diameters from column labels
+               like ``"0.25µm"`` (in µm) and converts them to nm,
+             - reads metadata to determine the underlying data type
+               (mass per volume vs counts per litre),
+             - normalises the distribution to number concentration in
+               ``cm⁻³`` using the appropriate conversion,
+             - builds an :class:`Aerosol2D` object with datetime, total
+               concentration, size-bin columns, and Grimm metadata
+               (bin_edges, bin_mids, unit, dtype, location, serial_number).
+
+       - If neither pattern is detected in the first header cell, a
+         ``ValueError`` is raised indicating an unrecognised Grimm
+         format.
+
+       The resulting :class:`Aerosol2D` instance always contains a
+       ``"Datetime"`` column, a ``"Total_conc"`` column with total number
+       concentration, and one column per size bin named by its midpoint
+       (nm), together with basic instrument metadata.
+
+   Theory:
+       Grimm exports may present data either as:
+
+       - mass concentration per size bin, or
+       - counts per litre per size bin.
+
+       The internal loaders convert these to number concentration per
+       bin in ``cm⁻³`` as follows:
+
+       - For mass-based exports, a unit density and spherical
+         particles are assumed. The particle volume for a bin with
+         midpoint diameter :math:`D` is approximated as:
+
+         .. math::
+
+             V = \frac{\pi}{6} \cdot D^3
+
+         Using this volume and density, mass is converted to number
+         concentration.
+
+       - For count-per-litre exports, number concentration in
+         ``cm⁻³`` is obtained by dividing by 1000 (1 L = 1000 cm³).
+
+       These assumptions yield a consistent number-size distribution
+       (dN, cm⁻³) that is comparable to other instruments handled by
+       aerosoltools.
+
+   .. rubric:: Examples
+
+   Typical usage is to load a Grimm file (instrument or software
+   export) and work directly with the resulting number-size
+   distribution:
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       # Load Grimm data as a 2D number-size distribution
+       grimm = at.Load_Grimm_file("data/Grimm_export.txt")
+
+       # Inspect the data
+       print(grimm.data.head())
+
+       # Inspect bin edges and metadata
+       print(grimm.bin_edges)
+       print(grimm.metadata)
+
+       # Plot the time series
+       fig, ax = grimm.plot_timeseries()
+
+

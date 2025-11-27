@@ -6,71 +6,74 @@ from collections import Counter
 from typing import Any, Callable, List, Sequence, Union
 
 import pandas as pd
+from tabulate import tabulate
+from tqdm.auto import tqdm
 
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
 from ..aerosolalt import AerosolAlt
 
+__all__ = ["file_list", "Load_data_from_folder"]
+
 ###############################################################################
 
 
-def detect_delimiter(
+def _detect_delimiter(
     file_path: str,
-    encodings: list = ["latin-1", "utf-8", "utf-16", "iso-8859-1", "windows-1252"],
-    delimiters: list = [",", ";", "\t", "|"],
+    encodings: list[str] | None = None,
+    delimiters: list[str] | None = None,
     sample_lines: int = 10,
     min_count_threshold: int = 3,
     tolerance: int = 1,
-):
+) -> tuple[str, str]:
+    """Infer file encoding and field delimiter from a text file.
+
+    This helper is used internally by instrument loader functions to robustly
+    determine the character encoding and delimiter (comma, semicolon, tab, etc.)
+    for CSV-like files.
+
+    The function tries multiple encodings until one succeeds, then inspects a
+    sample of non-empty, non-comment lines to find the most consistent delimiter
+    based on column counts.
+
+    Args:
+        file_path:
+            Path to the input text or CSV-like file.
+        encodings:
+            List of encodings to try in order. If ``None``, a default set of
+            common encodings is used (e.g. ``["latin-1", "utf-8", ...]``).
+        delimiters:
+            Candidate delimiters to test. If ``None``, defaults to
+            ``[",", ";", "\\t", "|"]``.
+        sample_lines:
+            Number of non-empty lines (from the bottom up) to consider when
+            counting delimiter occurrences. Defaults to ``10``.
+        min_count_threshold:
+            Minimum number of lines that must show consistent delimiter usage
+            (within ``tolerance`` of the modal count). Defaults to ``3``.
+        tolerance:
+            Allowed deviation from the modal delimiter count across sampled
+            lines. Defaults to ``1``.
+
+    Returns:
+        tuple[str, str]: A pair ``(encoding, delimiter)`` giving the chosen
+        encoding and delimiter.
+
+    Raises:
+        UnicodeDecodeError: If none of the candidate encodings can decode the file.
+        ValueError: If no reliable delimiter can be inferred from the sampled lines.
     """
-    Automatically detect the encoding and delimiter of a delimited text file.
+    # Use default sets if not provided
+    encodings = encodings or [
+        "latin-1",
+        "utf-8",
+        "utf-16",
+        "iso-8859-1",
+        "windows-1252",
+    ]
+    delimiters = delimiters or [",", ";", "\t", "|"]
 
-    This function attempts to read the file using multiple encodings, and then
-    tests a range of delimiters to determine the one with the most consistent
-    occurrence across sampled lines. It ignores empty lines and comment lines
-    starting with '#'.
-
-    Parameters
-    ----------
-    file_path : str
-        Path to the input text or CSV-like file.
-    encodings : list of str, optional
-        List of character encodings to try. Default includes common options.
-    delimiters : list of str, optional
-        List of possible field delimiters. Default is [',', ';', '\\t', '|'].
-    sample_lines : int, optional
-        Number of non-empty lines to analyze from the top of the file. Default is 10.
-    min_count_threshold : int, optional
-        Minimum number of lines that must show consistent delimiter usage.
-        Default is 3.
-    tolerance : int, optional
-        Allowed deviation from modal delimiter count across lines. Default is 1.
-
-    Returns
-    -------
-    encoding : str
-        Detected encoding that successfully opened the file.
-    delimiter : str
-        Most consistent delimiter found based on column counts.
-
-    Raises
-    ------
-    UnicodeDecodeError
-        If no encoding in the list allows the file to be read.
-    ValueError
-        If no reliable delimiter could be detected from sampled lines.
-
-    Examples
-    --------
-    >>> detect_delimiter("data.csv")
-    ('utf-8', ',')
-
-    Notes
-    -----
-    - This function is helpful for preprocessing arbitrary files without header info.
-    - You can tune the sensitivity by adjusting `sample_lines`, `min_count_threshold`, and `tolerance`.
-    """
-    # Try reading file with multiple encodings
+    # Try reading the file with each encoding until one works
     for encoding in encodings:
         try:
             with open(file_path, "r", encoding=encoding) as f:
@@ -79,26 +82,30 @@ def detect_delimiter(
         except UnicodeError:
             continue
     else:
-        raise UnicodeError("Could not decode file with given encodings.")
-    # Filter non-empty, non-comment lines from the bottom
+        raise UnicodeDecodeError(
+            "utf-8", b"", 0, 1, "Could not decode file with given encodings."
+        )
+
+    # Keep only non-empty, non-comment lines (from the bottom up)
     valid_lines = [
         line
         for line in reversed(lines)
         if line.strip() and not line.strip().startswith("#")
     ]
-    lines = list(reversed(valid_lines[:sample_lines]))  # Keep original order
+    lines = list(reversed(valid_lines[:sample_lines]))
     if not lines:
-        raise ValueError("No valid lines found to analyze.")
+        raise ValueError("No valid lines found to analyze for delimiter detection.")
 
-    best_delim = None
+    best_delim: str | None = None
     best_score = 0
 
+    # Count occurrences of each candidate delimiter per line and score consistency
     for delim in delimiters:
         counts = [line.count(delim) for line in lines]
         if not counts:
             continue
-        mode = Counter(counts).most_common(1)[0][0]
 
+        mode = Counter(counts).most_common(1)[0][0]
         consistent = [c for c in counts if abs(c - mode) <= tolerance and c > 0]
 
         if len(consistent) >= min_count_threshold:
@@ -107,10 +114,10 @@ def detect_delimiter(
                 best_score = score
                 best_delim = delim
 
-    if best_delim:
-        return encoding, best_delim
-    else:
-        raise ValueError("Could not reliably detect a delimiter.")
+    if best_delim is None:
+        raise ValueError("Could not reliably detect a delimiter from sampled lines.")
+
+    return encoding, best_delim  # type: ignore[name-defined]
 
 
 ###############################################################################
@@ -118,46 +125,88 @@ def detect_delimiter(
 
 def file_list(
     path: str,
-    search_word: Union[str, None] = None,
+    search_word: str | None = None,
     max_subfolder: int = 0,
     nested_list: bool = False,
 ) -> List[Union[str, List[str]]]:
-    """
-    Generate a list of file paths from a directory, with optional search filtering and folder nesting.
+    """Description:
+        List files in a folder tree with optional depth and name filtering.
 
-    Parameters
-    ----------
-    path : str
-        Root directory to search for files.
-    search_word : str or None, optional
-        If provided, only include files containing this substring in their filenames.
-        Default is None (includes all files).
-    max_subfolder : int, optional
-        Maximum depth of subfolders to include (0 = current folder only).
-        Default is 0.
-    nested_list : bool, optional
-        If True, returns a list of lists (one list per subdirectory).
-        If False, returns a flat list of all matching file paths. Default is False.
+    Args:
+        path (str):
+            Root directory to search for files.
+        search_word (str | None, optional):
+            Substring that must be present in the **basename** of a file for it
+            to be included in the result. If ``None`` (default), all files are
+            considered.
+        max_subfolder (int, optional):
+            Maximum depth of subfolders to traverse relative to ``path``:
 
-    Returns
-    -------
-    List[str] or List[List[str]]
-        Flat list of file paths, or nested list of file paths if `nested_list=True`.
+            - ``0`` (default): only the root folder.
+            - ``1``: root + its immediate subfolders.
+            - ``2``: root + two levels down, etc.
 
-    Examples
-    --------
-    >>> file_list("/data/logs", search_word="2024", max_subfolder=1)
-    ['/data/logs/log_2024.txt', '/data/logs/archive/log_2024_summary.csv']
+        nested_list (bool, optional):
+            If ``False`` (default), return a flat list of file paths.
+            If ``True``, return a list of lists, where each inner list contains
+            the files found in one directory level.
 
-    >>> file_list("/data", nested_list=True)
-    [['/data/a.txt', '/data/b.txt'], ['/data/subdir/c.txt']]
+    Returns:
+        list[str] | list[list[str]]:
+            If ``nested_list=False``, a flat list of matching file paths.
+            If ``nested_list=True``, a nested list of file paths grouped by
+            directory.
+
+    Raises:
+        FileNotFoundError:
+            If ``path`` does not exist. Check that the directory path is
+            correct and accessible.
+
+    Notes:
+        Detailed description:
+            ``file_list`` wraps :func:`os.walk` to provide a simple way to
+            collect file paths from a directory tree. It:
+
+            - Computes the depth of each directory relative to the root and
+              skips directories deeper than ``max_subfolder``.
+            - Builds full paths to each file using :func:`os.path.join`.
+            - Filters files by ``search_word`` applied to the basename
+              (filename only, without directory).
+            - Returns either a flat list of paths or a nested list grouped
+              by directory, depending on ``nested_list``.
+
+            This is mainly a convenience helper used by higher-level loading
+            utilities.
+
+    Examples:
+        Typical usage is to quickly collect data files to be processed
+        further, e.g. before batch loading:
+
+        .. code-block:: python
+
+            import aerosoltools as at
+
+            # Flat list of all CSV files in the root folder only
+            csv_files = file_list(
+                path="C:/data/measurements",
+                search_word=".csv",
+                max_subfolder=0,
+            )
+
+            # Nested list of all files up to one subfolder deep
+            all_files_nested = file_list(
+                path="C:/data/measurements",
+                max_subfolder=1,
+                nested_list=True,
+            )
     """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Path does not exist: {path}")
 
-    files = []
+    files: list[Union[str, list[str]]] = []
     root_depth = path.rstrip(os.sep).count(os.sep)
 
+    # Walk the directory tree and respect the max_subfolder depth
     for root, _, filenames in os.walk(path):
         current_depth = root.count(os.sep)
         if current_depth - root_depth > max_subfolder:
@@ -171,7 +220,8 @@ def file_list(
                 if filtered:
                     files.append(filtered)
             else:
-                files.append(file_paths)
+                if file_paths:
+                    files.append(file_paths)
         else:
             for f in file_paths:
                 if search_word:
@@ -186,33 +236,58 @@ def file_list(
 ###############################################################################
 
 
-def duplicate_remover(combined_data: pd.DataFrame) -> pd.DataFrame:
+def _print_load_summary(summary_log: list[dict[str, str]]) -> None:
+    """Print a compact table summarizing which files were loaded or skipped."""
+    if not summary_log:
+        return
+
+    # Sort: loaded first, then skipped grouped by reason
+    def sort_key(entry: dict[str, str]) -> tuple[int, str, str]:
+        status = entry.get("status", "Skipped")
+        reason = entry.get("reason", "")
+        file = entry.get("file", "")
+        return (0 if status == "Loaded" else 1, reason, file)
+
+    sorted_entries = sorted(summary_log, key=sort_key)
+
+    rows = [[e["file"], e["status"], e["reason"]] for e in sorted_entries]
+
+    print("\nFile load summary:\n")
+    print(
+        tabulate(
+            rows,
+            headers=["File", "Status", "Reason"],
+            tablefmt="pretty",
+        )
+    )
+
+
+###############################################################################
+
+
+def _duplicate_remover(combined_data: pd.DataFrame) -> pd.DataFrame:
+    """Remove duplicate timestamps from a time-indexed DataFrame.
+
+    This helper treats the index as a time axis, removes duplicate
+    timestamps (keeping the first occurrence), and returns the result
+    sorted chronologically.
+
+    Args:
+        combined_data:
+            DataFrame whose index represents timestamps (or can be interpreted
+            as such). The index is temporarily moved to a ``"Datetime"`` column
+            while duplicates are removed.
+
+    Returns:
+        pandas.DataFrame:
+            A cleaned DataFrame with a unique, sorted datetime index and no
+            duplicate timestamps.
+
+    Notes:
+        - Only the first row for each duplicated timestamp is preserved.
+        - The index name is set to ``"Datetime"`` in the result.
     """
-    Remove duplicate entries based on the datetime index in a time series DataFrame.
-
-    This function resets the index to expose 'Datetime' as a column, removes duplicate
-    timestamps (keeping the first occurrence), then restores the datetime index and sorts it.
-
-    Parameters
-    ----------
-    combined_data : pd.DataFrame
-        A DataFrame with a DatetimeIndex or an index to be treated as timestamps.
-
-    Returns
-    -------
-    pd.DataFrame
-        A cleaned and chronologically sorted DataFrame with duplicates removed.
-
-    Notes
-    -----
-    - Only the first occurrence of a duplicated datetime is retained.
-    - Index is expected to represent datetime values.
-
-    Examples
-    --------
-    >>> cleaned = duplicate_remover(raw_data)
-    >>> print(cleaned.index.is_unique)  # True
-    """
+    # Expose index as a column, de-duplicate, then restore as index
     combined_data = combined_data.reset_index(names=["Datetime"])
     combined_data.drop_duplicates(
         subset="Datetime", keep="first", inplace=True, ignore_index=True
@@ -233,116 +308,199 @@ def Load_data_from_folder(
     time_rebin: str | None = None,
     **kwargs: Any,
 ):
+    """Description:
+        Batch-load aerosol data from multiple files in a folder, check
+        metadata consistency, and combine compatible datasets into a single
+        aerosol object, while skipping files that do not match.
+
+    Args:
+        folder_path (str):
+            Path to the folder containing the data files to be loaded.
+        load_function (Callable[..., Aerosol1D]):
+            Function that loads a single file and returns an aerosol object,
+            typically an instance of :class:`Aerosol1D`,
+            :class:`Aerosol2D`, or :class:`AerosolAlt`.
+        search_word (str, optional):
+            Substring that must appear in the filename for a file to be
+            considered. If an empty string (default), all files in the
+            directory tree (subject to ``max_subfolder``) are considered.
+        max_subfolder (int, optional):
+            Maximum depth of subfolders to traverse relative to ``folder_path``:
+
+            - ``0`` (default): only the base folder.
+            - ``1``: base + its immediate subfolders.
+            - ``2``: base + two levels down, etc.
+        meta_checklist (Sequence[str] | None, optional):
+            Iterable of metadata keys that must match across all loaded files
+            (e.g. ``(\"serial_number\",)``). Files with values that differ from
+            the first successfully loaded file for any of these keys are
+            skipped. If ``None`` (default), this is treated as
+            ``(\"serial_number\",)``.
+        time_rebin (str | None, optional):
+            Optional resampling rule (e.g. ``"30s"``, ``"1min"``, ``"2H"``,
+            ``"1D"``). If provided, each loaded object is time-rebinned via
+            :meth:`Aerosol1D.timerebin` before concatenation. This can reduce
+            memory load when combining many files. If ``None`` (default),
+            the native time resolution of each file is preserved.
+        **kwargs:
+            Additional keyword arguments forwarded directly to
+            ``load_function`` for each file (for example
+            ``extra_data=True`` or loader-specific options).
+
+    Returns:
+        Aerosol1D | Aerosol2D | AerosolAlt:
+            A combined aerosol object of the same concrete class as the first
+            successfully loaded file. The returned object has:
+
+    Raises:
+        FileNotFoundError:
+            If no files matching the given criteria are found in
+            ``folder_path``, or if all candidate files fail to load.
+            Check the folder path, search pattern, and file permissions.
+        TypeError:
+            If ``load_function`` returns an object that is not an instance of
+            :class:`Aerosol1D`, :class:`Aerosol2D`, or :class:`AerosolAlt`.
+        RuntimeError:
+            If an internal inconsistency occurs during concatenation (e.g.
+            ``Combined_raw_data`` unexpectedly remains ``None``). This should
+            not happen under normal use; if it does, please report the issue
+            with a minimal reproducible example.
+
+    Notes:
+        Detailed description:
+            ``Load_data_from_folder`` automates the otherwise repetitive task
+            of loading many similarly formatted files, checking that they
+            belong together, and combining them into one continuous time
+            series. Internally, it:
+
+            - Uses :func:`file_list` to collect candidate files from
+              ``folder_path`` respecting ``search_word`` and ``max_subfolder``.
+            - Iterates over the candidate files with a progress bar,
+              calling ``load_function(file_path, **kwargs)`` for each file.
+            - Optionally calls ``timerebin(time_rebin)`` on each loaded object
+              to reduce the native time resolution before combining.
+            - For the first successfully loaded file, initializes containers
+              for combined ``original_data``, ``extra_data``, and
+              ``_raw_extra_data``, and stores its metadata as a baseline.
+            - For subsequent files, checks all keys in ``meta_checklist`` for
+              consistency with the baseline metadata; files that do not match
+              are skipped and logged.
+            - Concatenates all compatible datasets along the time axis for
+              ``original_data``, ``extra_data``, and ``_raw_extra_data``.
+            - Removes duplicate timestamps separately from each combined
+              DataFrame using an internal helper, keeping the first occurrence
+              for each timestamp.
+            - Determines the concrete output class based on the type of the
+              first loaded object (Aerosol1D, Aerosol2D, or AerosolAlt) and
+              instantiates the combined object accordingly.
+            - Merges metadata entries such as ``"TEM_samples"`` if present in
+              multiple files (relevant for the PartectorTEM).
+            - Logs the status of each file (loaded or skipped) in a summary
+              list and prints a compact table at the end.
+
+            Files that raise common IO or parsing errors during loading are
+            not fatal: they are simply skipped and reported in the final
+            summary table, which includes filename, load status, and reason.
+
+    Examples:
+        A typical workflow is to load a full day, week, or campaign of
+        measurements that are stored as multiple files (e.g. one per
+        day or per instrument run):
+
+        .. code-block:: python
+
+            import aerosoltools as at
+
+            # Combine all SMPS files for a given campaign folder
+            smps_combined = at.Load_data_from_folder(
+                folder_path="C:/data/SMPS_campaign",
+                load_function=Load_SMPS_file,
+                search_word=".txt",
+                max_subfolder=1,
+                meta_checklist=("serial_number", "instrument"),
+                time_rebin="5min",   # reduce resolution for long campaigns
+                extra_data=True,     # forward to Load_SMPS_file
+            )
     """
-    Load and concatenate aerosol data from a folder using a specified loader function.
-
-    This function iterates over all files in the specified folder (and optionally its
-    subfolders) that match a given search word. Each file is processed using the
-    provided load_function. Files with incompatible metadata (based on keys in
-    meta_checklist) are skipped. The function returns a combined aerosol data
-    object with merged time-series and metadata.
-
-    Parameters
-    ----------
-    folder_path : str
-        Path to the folder containing the data files.
-
-    load_function : function
-        A function that loads a single data file and returns an instance of a class
-        like Aerosol1D, Aerosol2D, or AerosolAlt. The function must return an object
-        with original_data, extra_data, and metadata.
-
-    search_word : str, optional
-        A string that must be present in the filename for the file to be loaded.
-        Defaults to "" (match all files).
-
-    max_subfolder : int, optional
-        Depth of subfolder levels to include in the search.
-        0 means only the base folder is used; 1 includes immediate subfolders, etc.
-
-    meta_checklist : list of str, optional
-        List of metadata keys that must be identical across all loaded files.
-        If any key differs, the file is skipped. Defaults to ["serial_number"].
-
-    time_rebin: : str, optional
-        Key to turn on time_rebin for each file loaded, using the Aerosol1D timerebin function.
-        Inputs can be of the type: "30s", "1min", "2.5h" or "1D"
-        This can be helpful when loading large number of data files, to reduce memory use.
-        Should only be used if the data is inteded to be rebined after being loaded.
-        Defaults to None, which returns the full raw dataset.
-
-    kwargs
-        Additional keyword arguments passed to the load_function.
-
-    Returns
-    -------
-    Combined_data : Aerosol1D or Aerosol2D or AerosolAlt
-        A combined aerosol data object. The returned object inherits from the same
-        class as the first successfully loaded file. It includes:
-
-        - Combined original_data
-        - Combined extra_data
-        - Merged metadata
-
-    Notes
-    -----
-    Files that raise exceptions or fail metadata consistency checks are skipped.
-    A message will be printed for each skipped file, along with the reason.
-    The function will raise an exception if no valid files are found or if the returned
-    object is not an instance of Aerosol1D, Aerosol2D, or AerosolAlt.
-    """
-
     meta_checklist = tuple(meta_checklist or ("serial_number",))
 
+    # Collect candidate files from the folder tree
+    files_any = file_list(folder_path, search_word, max_subfolder)
+    if not files_any:
+        raise FileNotFoundError("No files found matching the given criteria.")
+    files: list[str] = [f for f in files_any if isinstance(f, str)]
+
+    # Log of what happened to each file: {"file", "status", "reason"}
+    summary_log: list[dict[str, str]] = []
+
     counter = 0
-    skipped_files: list[str] = []
     Combined_raw_data: pd.DataFrame | None = None
     Combined_extra_data: pd.DataFrame | None = None
     Combined_raw_extra_data: pd.DataFrame | None = None
     meta: dict[str, Any] = {}
+    Initial_data: Aerosol1D | None = None
 
-    Initial_data: Aerosol1D | None = None  # ← prevents "possibly unbound"
-
-    for file_path in file_list(folder_path, search_word, max_subfolder):
-        print(f"Loading: {file_path}")
+    iterator = tqdm(files, desc="Loading files", unit="file")
+    for file_path in iterator:
+        fname = os.path.basename(file_path)  # only log the filename, not full path
         try:
             data = load_function(file_path, **kwargs)
 
             if time_rebin:
+                # Rebin the data in time to reduce resolution and memory usage
                 data.timerebin(time_rebin)
-                # keep raw copies in case caller expects them
+                # Keep a copy of the rebinned data as the "raw" reference
                 data._raw_data = data._data
                 data._raw_extra_data = data._extra_data
 
             if counter == 0:
+                # Initialize combined containers from the first successful file
                 Initial_data = data
                 meta = dict(data.metadata)
                 Combined_raw_data = data.original_data
                 Combined_extra_data = data.extra_data
                 Combined_raw_extra_data = data._raw_extra_data
                 counter = 1
+                summary_log.append({"file": fname, "status": "Loaded", "reason": "-"})
             else:
-                # Check metadata consistency
+                # Verify that required metadata entries match
                 mismatch_found = False
                 for item in meta_checklist:
                     if data.metadata.get(item) != meta.get(item):
-                        print(f"unequal {item}")
-                        skipped_files.append(file_path)  # type: ignore
+                        summary_log.append(
+                            {
+                                "file": fname,
+                                "status": "Skipped",
+                                "reason": f"Metadata mismatch: {item}",
+                            }
+                        )
                         mismatch_found = True
                         break
 
-                if not mismatch_found:
-                    Combined_raw_data = pd.concat([Combined_raw_data, data.original_data])  # type: ignore[arg-type]
-                    Combined_extra_data = pd.concat([Combined_extra_data, data.extra_data])  # type: ignore[arg-type]
-                    Combined_raw_extra_data = pd.concat([Combined_raw_extra_data, data._raw_extra_data])  # type: ignore[arg-type]
+                if mismatch_found:
+                    continue
 
-                    if "TEM_samples" in data.metadata:
-                        if "TEM_samples" in meta:
-                            meta["TEM_samples"] = pd.concat(
-                                [meta["TEM_samples"], data.metadata["TEM_samples"]]
-                            )
-                        else:
-                            meta["TEM_samples"] = data.metadata["TEM_samples"]
+                # Append compatible data
+                Combined_raw_data = pd.concat(  # type: ignore[arg-type]
+                    [Combined_raw_data, data.original_data]
+                )
+                Combined_extra_data = pd.concat(  # type: ignore[arg-type]
+                    [Combined_extra_data, data.extra_data]
+                )
+                Combined_raw_extra_data = pd.concat(  # type: ignore[arg-type]
+                    [Combined_raw_extra_data, data._raw_extra_data]
+                )
+
+                # Optionally merge TEM sample information if present
+                if "TEM_samples" in data.metadata:
+                    if "TEM_samples" in meta:
+                        meta["TEM_samples"] = pd.concat(
+                            [meta["TEM_samples"], data.metadata["TEM_samples"]]
+                        )
+                    else:
+                        meta["TEM_samples"] = data.metadata["TEM_samples"]
+
+                summary_log.append({"file": fname, "status": "Loaded", "reason": "-"})
 
         except (
             FileNotFoundError,
@@ -350,32 +508,42 @@ def Load_data_from_folder(
             KeyError,
             UnicodeDecodeError,
             TypeError,
+            IndexError,
         ) as e:
-            print(f"Skipping {file_path} due to error: {type(e).__name__}: {e}")
-            skipped_files.append(file_path)  # type: ignore
+            summary_log.append(
+                {
+                    "file": fname,
+                    "status": "Skipped",
+                    "reason": f"{type(e).__name__}: {e}",
+                }
+            )
 
     # ---- Post-loop guards / narrowing -------------------------------------
 
     if Initial_data is None:
+        _print_load_summary(summary_log)
         raise FileNotFoundError(
-            "No valid files found in folder (or all failed to load)."
+            "No valid files found in folder (or all files failed to load)."
         )
 
     if Combined_raw_data is None:
+        _print_load_summary(summary_log)
         raise RuntimeError("Internal error: Combined_raw_data is None after loading.")
 
-    Combined_raw_data = duplicate_remover(Combined_raw_data)
+    # Remove duplicate timestamps from each combined table
+    Combined_raw_data = _duplicate_remover(Combined_raw_data)
 
     if Combined_extra_data is not None:
-        Combined_extra_data = duplicate_remover(Combined_extra_data)
+        Combined_extra_data = _duplicate_remover(Combined_extra_data)
     else:
         Combined_extra_data = pd.DataFrame(index=Combined_raw_data.index)
 
     if Combined_raw_extra_data is not None:
-        Combined_raw_extra_data = duplicate_remover(Combined_raw_extra_data)
+        Combined_raw_extra_data = _duplicate_remover(Combined_raw_extra_data)
     else:
         Combined_raw_extra_data = pd.DataFrame(index=Combined_raw_data.index)
 
+    # Instantiate the appropriate concrete type based on the first file
     if isinstance(Initial_data, Aerosol2D):
         Combined_data: Aerosol1D = Aerosol2D(Combined_raw_data)
     elif isinstance(Initial_data, AerosolAlt):
@@ -383,15 +551,13 @@ def Load_data_from_folder(
     elif isinstance(Initial_data, Aerosol1D):
         Combined_data = Aerosol1D(Combined_raw_data)
     else:
-        raise TypeError("Unsupported data type returned by load_function")
+        _print_load_summary(summary_log)
+        raise TypeError("Unsupported data type returned by load_function.")
 
     Combined_data._extra_data = Combined_extra_data
     Combined_data._raw_extra_data = Combined_raw_extra_data
     Combined_data._meta = meta
 
-    if skipped_files:
-        print("Files skipped due to errors or empty datasets:")
-        for i in skipped_files:
-            print(i)
+    _print_load_summary(summary_log)
 
     return Combined_data

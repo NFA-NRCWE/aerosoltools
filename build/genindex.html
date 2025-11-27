@@ -1,0 +1,926 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#"><link rel="search" title="Search" href="search.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 --><title>Index - aerosoltools</title>
+<link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=580074bf" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/1%20-%20Load%2C%20plot%2C%20and%20metadata%20storage.html">1 – Load, plot, and metadata storage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/2%20-%20Time%20adjustments.html">2 – Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/3%20-%20Defining%20time%20segments%20and%20plotting%20PSD.html">3 – Time segments &amp; PSD plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/4%20-%20Activities%2C%20peaks%2C%20and%20exposure%20statistics.html">4 – Activities, peaks &amp; exposure stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/5%20-%20Dtypes%2C%20PM%20plots%20and%20exposure.html">5 – Dtypes, PM plots &amp; exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/6%20-%20Combine%20NS%2BOPS%20and%20extra_data.html">6 – Combine NS+OPS &amp; extra_data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/7%20-%20Correlation%20between%20instruments.html">7 – Correlation between instruments</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Aerosoltools documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/aerosoltools/aerosol1d/index.html">Aerosol1D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/aerosoltools/aerosol2d/index.html">Aerosol2D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/aerosoltools/aerosolalt/index.html">AerosolAlt</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/aerosoltools/loaders/index.html">Loaders</a><input aria-label="Toggle navigation of Loaders" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/Aethalometer/index.html">aerosoltools.loaders.Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/CPC/index.html">aerosoltools.loaders.CPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/Common/index.html">aerosoltools.loaders.Common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/Discmini/index.html">aerosoltools.loaders.Discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/DustTrak/index.html">aerosoltools.loaders.DustTrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/ELPI/index.html">aerosoltools.loaders.ELPI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/FMPS/index.html">aerosoltools.loaders.FMPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/Fourtec/index.html">aerosoltools.loaders.Fourtec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/Grimm/index.html">aerosoltools.loaders.Grimm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/NS/index.html">aerosoltools.loaders.NS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/OPCN3/index.html">aerosoltools.loaders.OPCN3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/OPS/index.html">aerosoltools.loaders.OPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/Partector/index.html">aerosoltools.loaders.Partector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/loaders/SMPS/index.html">aerosoltools.loaders.SMPS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/aerosoltools/utility/index.html">Utility</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          
+<section class="genindex-section">
+  <h1 id="index">Index</h1>
+  <div class="genindex-jumpbox"><a href="#A"><strong>A</strong></a> | <a href="#B"><strong>B</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#D"><strong>D</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#F"><strong>F</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#L"><strong>L</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#N"><strong>N</strong></a> | <a href="#O"><strong>O</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#S"><strong>S</strong></a> | <a href="#T"><strong>T</strong></a> | <a href="#U"><strong>U</strong></a></div>
+</section>
+<section id="A" class="genindex-section">
+  <h2>A</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.activities">activities (aerosoltools.aerosol1d.Aerosol1D attribute)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#id0">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.activities">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.activities">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.activity_periods">activity_periods (aerosoltools.aerosol1d.Aerosol1D attribute)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#id1">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.activity_periods">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.activity_periods">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D">Aerosol1D (class in aerosoltools.aerosol1d)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D">Aerosol2D (class in aerosoltools.aerosol2d)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt">AerosolAlt (class in aerosoltools.aerosolalt)</a>
+</li>
+        <li>
+    aerosoltools
+
+        <ul>
+          <li><a href="api/aerosoltools/index.html#module-aerosoltools">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.aerosol1d
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#module-aerosoltools.aerosol1d">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.aerosol2d
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#module-aerosoltools.aerosol2d">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.aerosolalt
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#module-aerosoltools.aerosolalt">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/index.html#module-aerosoltools.loaders">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.Aethalometer
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/Aethalometer/index.html#module-aerosoltools.loaders.Aethalometer">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.Common
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/Common/index.html#module-aerosoltools.loaders.Common">module</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li>
+    aerosoltools.loaders.CPC
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/CPC/index.html#module-aerosoltools.loaders.CPC">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.Discmini
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/Discmini/index.html#module-aerosoltools.loaders.Discmini">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.DustTrak
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/DustTrak/index.html#module-aerosoltools.loaders.DustTrak">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.ELPI
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/ELPI/index.html#module-aerosoltools.loaders.ELPI">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.FMPS
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/FMPS/index.html#module-aerosoltools.loaders.FMPS">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.Fourtec
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/Fourtec/index.html#module-aerosoltools.loaders.Fourtec">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.Grimm
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/Grimm/index.html#module-aerosoltools.loaders.Grimm">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.NS
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/NS/index.html#module-aerosoltools.loaders.NS">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.OPCN3
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/OPCN3/index.html#module-aerosoltools.loaders.OPCN3">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.OPS
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/OPS/index.html#module-aerosoltools.loaders.OPS">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.Partector
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/Partector/index.html#module-aerosoltools.loaders.Partector">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.SMPS
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/SMPS/index.html#module-aerosoltools.loaders.SMPS">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.utility
+
+        <ul>
+          <li><a href="api/aerosoltools/utility/index.html#module-aerosoltools.utility">module</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="B" class="genindex-section">
+  <h2>B</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.bin_edges">bin_edges (aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.bin_mids">bin_mids (aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="C" class="genindex-section">
+  <h2>C</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/utility/index.html#aerosoltools.utility.Combine_NS_OPS">Combine_NS_OPS() (in module aerosoltools.utility)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.copy_self">copy_self() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.copy_self">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.copy_self">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.correct_diffusion_losses">correct_diffusion_losses() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="D" class="genindex-section">
+  <h2>D</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.data">data (aerosoltools.aerosol1d.Aerosol1D attribute)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#id2">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.data">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.data">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.DateLike">DateLike (in module aerosoltools.aerosol1d)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.density">density (aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.dtype">dtype (aerosoltools.aerosol1d.Aerosol1D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.dtype">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.dtype">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.dtype_converter">dtype_converter() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="E" class="genindex-section">
+  <h2>E</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.extra_data">extra_data (aerosoltools.aerosol1d.Aerosol1D attribute)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#id3">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.extra_data">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.extra_data">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="F" class="genindex-section">
+  <h2>F</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/loaders/Common/index.html#aerosoltools.loaders.Common.file_list">file_list() (in module aerosoltools.loaders.Common)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="G" class="genindex-section">
+  <h2>G</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.get_activity_data">get_activity_data() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.get_activity_data">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.get_activity_data">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.get_activity_extra_data">get_activity_extra_data() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.get_activity_extra_data">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.get_activity_extra_data">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="I" class="genindex-section">
+  <h2>I</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.instrument">instrument (aerosoltools.aerosol1d.Aerosol1D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.instrument">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.instrument">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="L" class="genindex-section">
+  <h2>L</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/loaders/Aethalometer/index.html#aerosoltools.loaders.Aethalometer.Load_Aethalometer_file">Load_Aethalometer_file() (in module aerosoltools.loaders.Aethalometer)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/CPC/index.html#aerosoltools.loaders.CPC.Load_CPC_file">Load_CPC_file() (in module aerosoltools.loaders.CPC)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/Common/index.html#aerosoltools.loaders.Common.Load_data_from_folder">Load_data_from_folder() (in module aerosoltools.loaders.Common)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/Discmini/index.html#aerosoltools.loaders.Discmini.Load_DiSCmini_file">Load_DiSCmini_file() (in module aerosoltools.loaders.Discmini)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/DustTrak/index.html#aerosoltools.loaders.DustTrak.Load_DustTrak_file">Load_DustTrak_file() (in module aerosoltools.loaders.DustTrak)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/ELPI/index.html#aerosoltools.loaders.ELPI.Load_ELPI_file">Load_ELPI_file() (in module aerosoltools.loaders.ELPI)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/FMPS/index.html#aerosoltools.loaders.FMPS.Load_FMPS_file">Load_FMPS_file() (in module aerosoltools.loaders.FMPS)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/loaders/Fourtec/index.html#aerosoltools.loaders.Fourtec.Load_Fourtec_file">Load_Fourtec_file() (in module aerosoltools.loaders.Fourtec)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/Grimm/index.html#aerosoltools.loaders.Grimm.Load_Grimm_file">Load_Grimm_file() (in module aerosoltools.loaders.Grimm)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/NS/index.html#aerosoltools.loaders.NS.Load_NS_file">Load_NS_file() (in module aerosoltools.loaders.NS)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/OPCN3/index.html#aerosoltools.loaders.OPCN3.Load_OPCN3_file">Load_OPCN3_file() (in module aerosoltools.loaders.OPCN3)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/OPS/index.html#aerosoltools.loaders.OPS.Load_OPS_file">Load_OPS_file() (in module aerosoltools.loaders.OPS)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/Partector/index.html#aerosoltools.loaders.Partector.Load_Partector_file">Load_Partector_file() (in module aerosoltools.loaders.Partector)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/SMPS/index.html#aerosoltools.loaders.SMPS.Load_SMPS_file">Load_SMPS_file() (in module aerosoltools.loaders.SMPS)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="M" class="genindex-section">
+  <h2>M</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.mark_activities">mark_activities() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.mark_activities">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.mark_activities">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.metadata">metadata (aerosoltools.aerosol1d.Aerosol1D attribute)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#id4">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.metadata">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.metadata">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+        <li>
+    module
+
+        <ul>
+          <li><a href="api/aerosoltools/index.html#module-aerosoltools">aerosoltools</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#module-aerosoltools.aerosol1d">aerosoltools.aerosol1d</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#module-aerosoltools.aerosol2d">aerosoltools.aerosol2d</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#module-aerosoltools.aerosolalt">aerosoltools.aerosolalt</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/index.html#module-aerosoltools.loaders">aerosoltools.loaders</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/Aethalometer/index.html#module-aerosoltools.loaders.Aethalometer">aerosoltools.loaders.Aethalometer</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/Common/index.html#module-aerosoltools.loaders.Common">aerosoltools.loaders.Common</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/CPC/index.html#module-aerosoltools.loaders.CPC">aerosoltools.loaders.CPC</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/Discmini/index.html#module-aerosoltools.loaders.Discmini">aerosoltools.loaders.Discmini</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/DustTrak/index.html#module-aerosoltools.loaders.DustTrak">aerosoltools.loaders.DustTrak</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/ELPI/index.html#module-aerosoltools.loaders.ELPI">aerosoltools.loaders.ELPI</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/FMPS/index.html#module-aerosoltools.loaders.FMPS">aerosoltools.loaders.FMPS</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/Fourtec/index.html#module-aerosoltools.loaders.Fourtec">aerosoltools.loaders.Fourtec</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/Grimm/index.html#module-aerosoltools.loaders.Grimm">aerosoltools.loaders.Grimm</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/NS/index.html#module-aerosoltools.loaders.NS">aerosoltools.loaders.NS</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/OPCN3/index.html#module-aerosoltools.loaders.OPCN3">aerosoltools.loaders.OPCN3</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/OPS/index.html#module-aerosoltools.loaders.OPS">aerosoltools.loaders.OPS</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/Partector/index.html#module-aerosoltools.loaders.Partector">aerosoltools.loaders.Partector</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/SMPS/index.html#module-aerosoltools.loaders.SMPS">aerosoltools.loaders.SMPS</a>
+</li>
+          <li><a href="api/aerosoltools/utility/index.html#module-aerosoltools.utility">aerosoltools.utility</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="N" class="genindex-section">
+  <h2>N</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.normalize_logdp">normalize_logdp() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="O" class="genindex-section">
+  <h2>O</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.original_data">original_data (aerosoltools.aerosol1d.Aerosol1D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.original_data">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.original_data">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.original_extra_data">original_extra_data (aerosoltools.aerosol1d.Aerosol1D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.original_extra_data">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.original_extra_data">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="P" class="genindex-section">
+  <h2>P</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.params">params (in module aerosoltools.aerosol1d)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.params">(in module aerosoltools.aerosol2d)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.params">(in module aerosoltools.aerosolalt)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.Peak_finder">Peak_finder() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.Peak_finder">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.Peak_finder">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/utility/index.html#aerosoltools.utility.Plot_correlation">Plot_correlation() (in module aerosoltools.utility)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.plot_PM_timeseries">plot_PM_timeseries() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.plot_psd">plot_psd() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.plot_timeseries">plot_timeseries() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.plot_total_conc">plot_total_conc() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.plot_total_conc">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.plot_total_conc">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.PM_calc">PM_calc() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="S" class="genindex-section">
+  <h2>S</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.serial_number">serial_number (aerosoltools.aerosol1d.Aerosol1D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.serial_number">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.serial_number">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.set_density">set_density() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.size_data">size_data (aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.summarize">summarize() (aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.summarize_activities">summarize_activities() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.summarize_activities">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.summarize_activities">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.summarize_exposure">summarize_exposure() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.summarize_exposure">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.summarize_exposure">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="T" class="genindex-section">
+  <h2>T</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.time">time (aerosoltools.aerosol1d.Aerosol1D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.time">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.time">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.timecrop">timecrop() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.timecrop">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.timecrop">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.timerebin">timerebin() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.timerebin">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.timerebin">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.timeshift">timeshift() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.timeshift">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.timeshift">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.timesmooth">timesmooth() (aerosoltools.aerosol1d.Aerosol1D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.timesmooth">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.timesmooth">(aerosoltools.aerosolalt.AerosolAlt method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.total_concentration">total_concentration (aerosoltools.aerosol1d.Aerosol1D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.total_concentration">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.total_concentration">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="U" class="genindex-section">
+  <h2>U</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.unit">unit (aerosoltools.aerosol1d.Aerosol1D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.unit">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.unit">(aerosoltools.aerosolalt.AerosolAlt property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.unnormalize_logdp">unnormalize_logdp() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>
