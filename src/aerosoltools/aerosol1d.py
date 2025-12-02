@@ -847,10 +847,14 @@ class Aerosol1D:
 
         if inplace:
             self._data.index = self._data.index + total_shift
+            if len(self._extra_data)>0:
+                self._extra_data.index = self._extra_data.index + total_shift
             return self
         else:
             shifted = self.copy_self()
             shifted._data.index = shifted._data.index + total_shift
+            if len(shifted._extra_data)>0:
+                shifted._extra_data.index = shifted._extra_data.index + total_shift
             return shifted
 
     ###########################################################################

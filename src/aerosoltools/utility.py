@@ -10,7 +10,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure, SubFigure
 from numpy.typing import NDArray
 from scipy.optimize import curve_fit
-from scipy.stats import theilslopes
+from scipy.stats import theilslopes, norm
 
 from .aerosol2d import Aerosol2D
 
@@ -491,4 +491,199 @@ def Plot_correlation(
         ax.fill_between(fit_x, fit_y - band, fit_y + band, alpha=0.33)
     ax.set_xlabel("X: {0}".format(X.instrument), fontsize=15)
     ax.set_ylabel("Y: {0}".format(Y.instrument), fontsize=15)
+    return fig, ax
+
+
+def bland_altman_analysis(
+    X,
+    Y,
+    ax_in: Axes | None = None,
+    method: str = 'BA',
+    C : float  = 0.95,
+    *,
+    start_time: pd.Timestamp | str | None = None,
+    end_time: pd.Timestamp | str | None = None,
+    column: str = "Total_conc",
+    match: str = "exact",  # "exact" | "nearest" | "rebin",C=0.95):
+    tolerance: Union[str, pd.Timedelta] = "30s",
+    rebin_freq: Optional[str] = None,
+    rebin_method: Union[str, Callable] = "mean"
+        ):
+    """
+    Plot Bland-Altman 
+        
+
+    Parameters
+    ----------
+    X, Y : Aerosol1D-like
+        Aerosol datasets exposing ``.data`` (DatetimeIndex). The column to correlate is
+        taken from ``obj.data[column]`` if present; otherwise from
+        ``obj.extra_data[column]``. If ``match='rebin'`` is used, objects should
+        implement ``.timerebin``.
+    ax_in : matplotlib.axes.Axes, optional
+        Axes to draw on; if None, a new Figure/Axes is created.
+    method : str, optional
+        Which depiction method to depict;
+        'BA' - Bland-Altman : straight forward comparison between two samples
+        'Gi' - Giavarina : percentage difference in relation to mean
+        'Eu' - Euser : logarithmic of means an difference
+    C : float, optional
+        Confidence interval. Default is 0.95
+    start_time, end_time : pandas.Timestamp or str, optional
+        Inclusive analysis window. If both are provided, each object is cropped via
+        ``obj.timecrop(start_time, end_time, inplace=False)``. Strings are parsed with
+        ``pandas.to_datetime``.
+    column : str, optional
+        Name of the variable to correlate (default "Total_conc"). Looked up in
+        ``obj.data`` first, then ``obj.extra_data``.
+    match : {"exact", "nearest", "rebin"}, optional
+        - "exact"  : keep only timestamps present in both series (default).
+        - "nearest": pair to nearest neighbor within ``tolerance`` (mutual nearest).
+        - "rebin"  : rebin both inputs to a common cadence with ``obj.timerebin``.
+    tolerance : str or pandas.Timedelta, optional
+        Max separation for ``match="nearest"`` (e.g., "30s"). Default "30s".
+    rebin_freq : str, optional
+        Target cadence for ``match="rebin"``. If None, uses the coarser cadence inferred
+        from the inputs.
+    rebin_method : str or callable, optional
+        Aggregation passed to ``obj.timerebin`` when ``match="rebin"`` (default "mean").
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        Handle for the created/used figure.
+    ax : matplotlib.axes.Axes
+        Handle for the axes containing the correlation plot.
+    """
+    
+    # Always return a top-level Figure to keep type hints simple
+    if ax_in is None:
+        fig, ax = plt.subplots()
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        ax.legend(fontsize=15)
+        ax.grid(True)
+    else:
+        ax = ax_in
+        fig = ax.figure
+        
+    #Allign time
+    x_vals, y_vals = _align_series(
+        X,
+        Y,
+        column,
+        start_time,
+        end_time,
+        match=match,
+        tolerance=tolerance,
+        rebin_freq=rebin_freq,
+        rebin_method=rebin_method,
+    )
+    
+    x = x_vals.astype(np.float64, copy=False)
+    y = y_vals.astype(np.float64, copy=False)
+    
+
+    means = (x + y) / 2
+    diffs = x - y
+    
+    if method=='Gi':
+        diffs = diffs / means * 100
+    elif method=='Eu':
+        x = np.log10(x)
+        y = np.log10(y)
+        means = (x + y) / 2
+        diffs = x - y    
+    # Average difference (aka the bias)
+    bias = np.mean(diffs)
+    # Sample standard deviation
+    s = np.std(diffs, ddof=1)  # Use ddof=1 to get the sample standard deviation
+
+
+
+    # Confidence level
+    C = 0.95  # 95%
+    # Significance level, α
+    alpha = 1 - C
+    # Number of tails
+    tails = 2
+    # Quantile (the cumulative probability)
+    q = 1 - (alpha / tails)
+    # Critical z-score, calculated using the percent-point function (aka the
+    # quantile function) of the normal distribution
+    z_star = norm.ppf(q)
+
+    # Limits of agreement (LOAs)
+    loas = [bias - z_star * s,bias + z_star * s]
+
+
+    # Dict
+    Diff = {'BA':f'Difference ({X.unit})',
+            'Gi':'Difference (%)',
+            'Eu':'Log10 of difference'}
+    
+    Mean = {'BA':f'Mean ({X.unit})',
+            'Gi':f'Mean ({X.unit})',
+            'Eu':'Log10 of mean'}
+    # Create plot
+    ax.scatter(means, diffs, c='k', s=20, alpha=0.6, marker='o')
+    # Plot the zero line
+    ax.axhline(y=0, c='k', lw=0.5)
+    # Plot the bias and the limits of agreement
+
+    ax.axhline(y=bias, c='grey', ls='--')
+    # Plot the limits of the agreement
+    
+    # Labels
+    ax.set_title('Bland-Altman Plot for Two Methods of Measuring PEFR')
+    ax.set_xlabel(Mean[method])
+    ax.set_ylabel(Diff[method])
+    # Get axis limits
+    left, right = ax.get_xlim()
+    bottom, top = ax.get_ylim()
+    # Set y-axis limits
+    max_y = max(abs(bottom), abs(top))
+    ax.set_ylim(-max_y * 1.1, max_y * 1.1)
+    # Set x-axis limits
+    domain = right - left
+    ax.set_xlim(left, left + domain * 1.1)
+    # Annotations
+
+    ax.annotate('Bias', (right, bias), (0, 7), textcoords='offset pixels')
+    ax.annotate(f'{bias:+4.2f}', (right, bias), (0, -25), textcoords='offset pixels')
+    
+    if method=='Eu':
+        # Convert the LOAs from horizontal lines in the log space to gradients of
+        # diagonal lines in the native space
+
+        lower_loa_m = 2 * (10**loas[0] - 1) / (10**loas[0] + 1)
+        upper_loa_m = 2 * (10**loas[1] - 1) / (10**loas[1] + 1)
+
+        # Plot the limits of agreement
+        x = np.array([left, right])
+        y = upper_loa_m * x + bias
+        ax.plot(x, y, c='grey', ls='--')
+        y = lower_loa_m * x + bias
+        ax.plot(x, y, c='grey', ls='--')
+        
+        
+    else:
+        ax.axhline(y=loas[1], c='grey', ls='--')
+        ax.axhline(y=loas[0], c='grey', ls='--')
+        
+        # Annotations
+        ax.annotate('+LOA', (right, loas[1]), (0, 7), textcoords='offset pixels')
+        ax.annotate(f'{loas[1]:+4.2f}', (right, loas[1]), (0, -25), textcoords='offset pixels')
+        ax.annotate('-LOA', (right, loas[0]), (0, 7), textcoords='offset pixels')
+        ax.annotate(f'{loas[0]:+4.2f}', (right, loas[0]), (0, -25), textcoords='offset pixels')
+
+    # if method=='BA':
+    #     print(f'For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}')
+    # elif method=='Gi':
+    #     print(f'For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}')
+    # elif method=='Eu':
+    #     bias =
+    #     s = 
+    print(f'For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}')
+    
     return fig, ax

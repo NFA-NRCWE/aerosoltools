@@ -74,8 +74,8 @@ def Load_DustTrak_file(file: str, extra_data: bool = False):
     Dust._meta["instrument"] = meta_lines[0, 1]
     Dust._meta["model_number"] = meta_lines[1, 1]
     Dust._meta["serial_number"] = meta_lines[2, 1]
-    Dust._meta["unit"] = {"ug/m³"}
-    Dust._meta["dtype"] = {"dM"}
+    Dust._meta["unit"] = {'PM1':"ug/m³",'PM2.5':"ug/m³",'PM4':"ug/m³",'PM10':"ug/m³",'Total':"ug/m³"}
+    Dust._meta["dtype"] = {'PM1':"dM",'PM2.5':'dM','PM4':'dM','PM10':'dM','Total':'dM'}
 
     # Attach extra data
     if extra_data:
