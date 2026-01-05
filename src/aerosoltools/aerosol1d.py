@@ -237,6 +237,30 @@ class Aerosol1D:
     """############################# Functions #############################"""
     ###########################################################################
 
+    def calibrate(self,m: float=1,b: float=0):
+        """
+        Apply a correction to the total conc and mark the data as calibrated
+        by a linear function 
+        
+        Parameters
+        ----------
+        m : float
+            The calibration value to be multiplied to the data for correction.
+        b : float
+            A constant offset to be removed. By default is zero and should be 
+            used cautionsly.
+
+        Returns
+        -------
+        None
+        
+        """
+        self._data['Total_conc']=self._data['Total_conc']*m + b
+        
+        self._meta['calibrated']={'m' : m, 'b' : b}
+        
+    ###########################################################################
+
     def copy_self(self):
         """
         Create a deep copy of the current Aerosol1D  object.
@@ -356,46 +380,6 @@ class Aerosol1D:
             if activity not in self._activities:
                 self._activities.append(activity)
             self._activity_periods[activity] = periods
-
-    # def mark_activities(self, activity_periods):
-    #     """
-    #     Mark activities in the data by adding one boolean column per activity.
-
-    #     Parameters
-    #     ----------
-    #     activity_periods : dict
-    #         Dictionary where keys are activity names (str) and values are
-    #         (start, end) tuples or list of (start, end) tuples.
-
-    #     Returns
-    #     -------
-    #     None
-    #     """
-    #     new_cols = {}
-
-    #     for activity, periods in activity_periods.items():
-    #         # Initialize column with False
-    #         col = pd.Series(False, index=self.time)
-
-    #         # Normalize periods
-    #         if isinstance(periods, tuple) and len(periods) == 2:
-    #             periods = [periods]
-
-    #         for start, end in periods:
-    #             mask = (self.time >= pd.Timestamp(start)) & (
-    #                 self.time <= pd.Timestamp(end)
-    #             )
-    #             col[mask] = True
-
-    #         new_cols[activity] = col
-
-    #         # Track metadata
-    #         if activity not in self._activities:
-    #             self._activities.append(activity)
-    #         self._activity_periods[activity] = periods
-
-    #     # Add all new activity columns at once
-    #     self._data = pd.concat([self._data, pd.DataFrame(new_cols)], axis=1)
 
     ###########################################################################
 

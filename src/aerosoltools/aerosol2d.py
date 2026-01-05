@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
+import os
+
 from matplotlib.axes import Axes
 from matplotlib.colors import LogNorm, Normalize
 from matplotlib.ticker import PercentFormatter
@@ -130,6 +132,41 @@ class Aerosol2D(Aerosol1D):
 
     ###########################################################################
     """############################# Functions #############################"""
+    ###########################################################################
+
+    def calibrate(self, m: Union[float, list], inplace: bool = True):
+        """
+        Apply a correction to the total conc and mark the data as calibrated
+        by a linear function. The calibration value is applied to the size data.
+
+        
+        Parameters
+        ----------
+        m : float/list
+            The calibration value to be multiplied to the data for correction.
+            If m is provided as a list, it should be of equal length to the number
+            of bins. The total concentration is then recalculated as the sum.
+        Returns
+        -------
+        None
+        
+        """
+        if type(m)==list:
+            if len(m)==len(self._sizebin_headers):
+                # mask=~np.isnan(self._data['Total_conc'])
+                
+                self._data[self._sizebin_headers]=self.data[self._sizebin_headers]*m
+                self._data['Total_conc']=self.data[self._sizebin_headers].sum(axis=1)
+            else: 
+                raise ValueError("Mismatch between number of bins and list of calibration values")
+        elif type(m)==float:
+            self._data[self._sizebin_headers]=self.data[self._sizebin_headers]*m
+            self._data['Total_conc']=self.data['Total_conc']*m
+        else:
+            raise ValueError("Mismatch between m and expected type")
+            
+        self._meta['calibrated']={'m' : m}
+        # return self
     ###########################################################################
 
     def convert_to_mass_concentration(self, inplace: bool = True):
@@ -774,7 +811,7 @@ class Aerosol2D(Aerosol1D):
         corrected = self.copy_self() if not inplace else self
         size_cols = corrected._sizebin_headers
         corrected._data[size_cols] = corrected._data[size_cols].div(eff, axis=1)
-        corrected._data["Total Concentration"] = corrected._data[size_cols].sum(axis=1)
+        corrected._data["Total_conc"] = corrected._data[size_cols].sum(axis=1)
 
         # Store efficiency in metadata for reference
         corrected._meta["diffusion_efficiency"] = eff.tolist()
@@ -1010,7 +1047,7 @@ class Aerosol2D(Aerosol1D):
 
         time = self.time
         total = self.total_concentration
-        data = self.size_data
+        data = self.normalize_logdp(False).size_data
         bin_edges = self.bin_edges
 
         # Top panel: total concentration
@@ -1072,7 +1109,7 @@ class Aerosol2D(Aerosol1D):
 
         # # Add colorbar
         col = fig.colorbar(mesh, ax=[ax1, ax2])
-        col.set_label(f"{self.dtype}, {self.unit}")
+        col.set_label(f"{self.dtype}/dlogDp, {self.unit}")
 
         # Styling
         ax1.tick_params(axis="y", which="both", direction="out", length=6, width=2)
@@ -1082,7 +1119,7 @@ class Aerosol2D(Aerosol1D):
 
     ###########################################################################
     
-    def summarize(self, filename=None):
+    def summarize(self, filename=None,sheet_name=None):
         """
         Summarize aerosol characteristics for each activity period.
 
@@ -1229,11 +1266,30 @@ class Aerosol2D(Aerosol1D):
             ],
         )
 
-        if filename:
-            summary.to_excel(filename, index=False)
-            print(f"Summary saved to: {filename}")
+
 
         summary_t = summary.set_index("Segment").T
+        # if filename:
+        #     summary_t.to_excel(filename, index=True,sheet_name=sheet_name)
+        #     print(f"Summary saved to: {filename}")
+        if filename:
+            if sheet_name:
+                  # File does NOT exist → create a new workbook
+                if not os.path.exists(filename):
+                    summary_t.to_excel(filename, sheet_name=sheet_name, index=True)
+                
+                # File exists → append or replace sheet
+                else:
+                    with pd.ExcelWriter(
+                        filename,
+                        engine="openpyxl",
+                        mode="a",
+                        if_sheet_exists="replace"   # requires pandas ≥ 1.4
+                    ) as writer:
+                        summary_t.to_excel(writer, sheet_name=sheet_name, index=True)
+            else:
+                summary_t.to_excel(filename, index=True)
+            print(f"Summary saved to: {filename}")
         print("\nSummary of aerosol properties (transposed):\n")
         print(tabulate(summary_t, headers="keys", tablefmt="pretty", floatfmt=".3f"))  # type: ignore
         return summary

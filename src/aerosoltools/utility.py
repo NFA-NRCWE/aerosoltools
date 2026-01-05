@@ -583,60 +583,46 @@ def bland_altman_analysis(
     x = x_vals.astype(np.float64, copy=False)
     y = y_vals.astype(np.float64, copy=False)
     
-
     means = (x + y) / 2
     diffs = x - y
-    
-    if method=='Gi':
-        diffs = diffs / means * 100
-    elif method=='Eu':
-        x = np.log10(x)
-        y = np.log10(y)
-        means = (x + y) / 2
-        diffs = x - y    
     # Average difference (aka the bias)
     bias = np.mean(diffs)
+    if method=='Gi':
+        diffs = diffs / means * 100
+        bias = np.mean(diffs)
+    elif method=='Eu':
+        x_log = np.log10(x)
+        y_log = np.log10(y)
+        # means = (x + y) / 2
+        diffs = x_log - y_log    
+
     # Sample standard deviation
     s = np.std(diffs, ddof=1)  # Use ddof=1 to get the sample standard deviation
 
-
-
-    # Confidence level
-    C = 0.95  # 95%
-    # Significance level, α
-    alpha = 1 - C
-    # Number of tails
-    tails = 2
-    # Quantile (the cumulative probability)
-    q = 1 - (alpha / tails)
-    # Critical z-score, calculated using the percent-point function (aka the
-    # quantile function) of the normal distribution
-    z_star = norm.ppf(q)
-
     # Limits of agreement (LOAs)
-    loas = [bias - z_star * s,bias + z_star * s]
+    
+    # alpha = (1 - C) / 2  # Significance level
+    # z_star = norm.ppf(alpha)  # Critical value
 
-
+    # loas = [bias + z_star * s,bias - z_star * s]
+    loas = norm.interval(C, bias, s)
+    if method=='Eu':
+        diffs = x - y
     # Dict
     Diff = {'BA':f'Difference ({X.unit})',
             'Gi':'Difference (%)',
-            'Eu':'Log10 of difference'}
+            'Eu':f'Difference ({X.unit})'}  #'Log10 of difference'}
     
-    Mean = {'BA':f'Mean ({X.unit})',
-            'Gi':f'Mean ({X.unit})',
-            'Eu':'Log10 of mean'}
-    # Create plot
+    # Mean = {'BA':f'Mean ({X.unit})',
+    #         'Gi':f'Mean ({X.unit})',
+    #         'Eu':'Log10 of mean'}
+    
+    # --- Plot ----------------------------------------------------------------
     ax.scatter(means, diffs, c='k', s=20, alpha=0.6, marker='o')
-    # Plot the zero line
-    ax.axhline(y=0, c='k', lw=0.5)
-    # Plot the bias and the limits of agreement
-
-    ax.axhline(y=bias, c='grey', ls='--')
-    # Plot the limits of the agreement
     
     # Labels
-    ax.set_title('Bland-Altman Plot for Two Methods of Measuring PEFR')
-    ax.set_xlabel(Mean[method])
+    ax.set_title(f'Bland-Altman Plot for {column}')
+    ax.set_xlabel(f'Mean ({X.unit})')
     ax.set_ylabel(Diff[method])
     # Get axis limits
     left, right = ax.get_xlim()
@@ -647,43 +633,48 @@ def bland_altman_analysis(
     # Set x-axis limits
     domain = right - left
     ax.set_xlim(left, left + domain * 1.1)
-    # Annotations
-
-    ax.annotate('Bias', (right, bias), (0, 7), textcoords='offset pixels')
-    ax.annotate(f'{bias:+4.2f}', (right, bias), (0, -25), textcoords='offset pixels')
     
+    # Plot the zero line
+    ax.axhline(y=0, c='k', lw=0.5)
+    # Plot the bias and the limits of agreement
+    fs=15
+    ax.axhline(y=bias, c='grey', ls='--')
+    ax.annotate('Bias', (right, bias), (0, 7), textcoords='offset pixels',fontsize=fs)
+    ax.annotate(f'{bias:+4.2f}', (right, bias), (0, -12), textcoords='offset pixels',fontsize=fs)
+
+    # --- Plot the limits of the agreement--------------------------------------
+
     if method=='Eu':
+        
         # Convert the LOAs from horizontal lines in the log space to gradients of
         # diagonal lines in the native space
-
-        lower_loa_m = 2 * (10**loas[0] - 1) / (10**loas[0] + 1)
-        upper_loa_m = 2 * (10**loas[1] - 1) / (10**loas[1] + 1)
+        lower_loa_m = 2 * (10**(loas[0]-bias) - 1) / (10**(loas[0]-bias) + 1)
+        upper_loa_m = 2 * (10**(loas[1]-bias) - 1) / (10**(loas[1]-bias) + 1)
 
         # Plot the limits of agreement
         x = np.array([left, right])
+        
         y = upper_loa_m * x + bias
         ax.plot(x, y, c='grey', ls='--')
+        ax.annotate('Upper LOA', (right, y[1]), (0,6), textcoords='offset pixels',fontsize=fs)#, annotation_clip=False)
+        ax.annotate(f'{upper_loa_m:+4.2f} × Mean + Bias', (right, y[1]), (0, -15), textcoords='offset pixels' ,fontsize=fs)#, annotation_clip=False)
         y = lower_loa_m * x + bias
         ax.plot(x, y, c='grey', ls='--')
-        
-        
+        ax.annotate('Lower LOA', (right, y[1]), (0, 6), textcoords='offset pixels',fontsize=fs)#, annotation_clip=False)
+        ax.annotate(f'{lower_loa_m:+4.2f} × Mean + Bias', (right, y[1]), (0, -15), textcoords='offset pixels',fontsize=fs)#, annotation_clip=False)
+        # ax.annotate('Lower LOA', (right, y[0]),fontsize=fs)#, annotation_clip=False)
+        # ax.annotate(f'{lower_loa_m:+4.2f} × Mean + Bias', (right, y[0]),fontsize=fs)#, annotation_clip=False)
+        return fig, ax, loas
     else:
         ax.axhline(y=loas[1], c='grey', ls='--')
         ax.axhline(y=loas[0], c='grey', ls='--')
         
         # Annotations
-        ax.annotate('+LOA', (right, loas[1]), (0, 7), textcoords='offset pixels')
-        ax.annotate(f'{loas[1]:+4.2f}', (right, loas[1]), (0, -25), textcoords='offset pixels')
-        ax.annotate('-LOA', (right, loas[0]), (0, 7), textcoords='offset pixels')
-        ax.annotate(f'{loas[0]:+4.2f}', (right, loas[0]), (0, -25), textcoords='offset pixels')
+        ax.annotate('Upper LOA', (right, loas[1]), (0, 6), textcoords='offset pixels',fontsize=fs)
+        ax.annotate(f'{loas[1]:+4.2f}', (right, loas[1]), (0, -15), textcoords='offset pixels',fontsize=fs)
+        ax.annotate('Lower LOA', (right, loas[0]), (0, 6), textcoords='offset pixels',fontsize=fs)
+        ax.annotate(f'{loas[0]:+4.2f}', (right, loas[0]), (0, -15), textcoords='offset pixels',fontsize=fs)
 
-    # if method=='BA':
-    #     print(f'For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}')
-    # elif method=='Gi':
-    #     print(f'For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}')
-    # elif method=='Eu':
-    #     bias =
-    #     s = 
     print(f'For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}')
     
     return fig, ax
