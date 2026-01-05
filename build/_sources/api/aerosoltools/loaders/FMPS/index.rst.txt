@@ -1,0 +1,108 @@
+aerosoltools.loaders.FMPS
+=========================
+
+.. py:module:: aerosoltools.loaders.FMPS
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: Load_FMPS_file(file)
+
+   Description:
+       Load an FMPS size-distribution export and return it as an
+       :class:`Aerosol2D` number-size distribution with metadata.
+
+   :param file: Path to the FMPS data file exported from the FMPS software.
+   :type file: str
+
+   :returns:     FMPS size distributions with a datetime index, total concentration,
+                 size-resolved bins, and associated metadata.
+   :rtype: Aerosol2D
+
+   :raises FileNotFoundError: If ``file`` does not exist or cannot be opened.
+   :raises UnicodeDecodeError: If the file cannot be decoded using the encodings tried by
+       :func:`_detect_delimiter`.
+   :raises Exception: If the file appears to be a raw (unconverted) FMPS export, or if
+       the detected data type cannot be interpreted as a supported FMPS
+       format.
+
+   .. rubric:: Notes
+
+   Detailed description:
+       This loader is intended for FMPS files that have already been
+       converted using the FMPS software (i.e. not raw current files).
+       The file should contain a header with instrument and data settings
+       followed by a tabular size-distribution block.
+
+       Internally, the function:
+
+       - Uses :func:`_detect_delimiter` to infer file encoding and field
+         delimiter.
+       - Reads a header line (after a fixed number of header rows) and
+         checks whether it contains the word ``"Raw"``. If so, an
+         exception is raised, as raw exports must first be converted
+         with the FMPS software.
+       - The data is loaded:
+
+         - reads FMPS bin mid diameters and reconstructs bin edges,
+         - loads the size-resolved concentration matrix and computes
+           ``"Total_conc"`` per time step,
+         - parses timestamps using localized Danish or standard English
+           date/time formats,
+         - extracts metadata from the header (data type marker and serial
+           number),
+         - infers the base data type (Co, dN, Su, Vo, Ma) and whether the
+           values are normalized by ``/dlogDp``,
+         - builds an :class:`Aerosol2D` instance and attaches bin edges,
+           bin mids, instrument name, serial number, unit, and dtype,
+         - calls ``_convert_to_number_concentration()`` followed by
+           :meth:`Aerosol2D.unnormalize_logdp` to express the final
+           distribution as number concentration per bin (dN, cm⁻³).
+
+       The returned :class:`Aerosol2D` object is therefore ready for
+       further analysis or plotting using the standard aerosoltools
+       interface.
+
+   Theory:
+       FMPS exports can represent different moments or metrics of the
+       particle size distribution optionally normalized by ``/dlogDp``.
+       The moment depends on the chosen data type:
+
+       - Co / dN: number-based concentration,
+       - Su: surface-based moment (dS),
+       - Vo: volume-based moment (dV),
+       - Ma: mass-based moment (dM),
+
+       The FMPS header encodes this in a type string (e.g. ``"dN/dlogDp"``).
+       The loader interprets this string to assign the appropriate unit
+       and dtype and then uses internal helpers to convert the distribution
+       to number concentration (dN, cm⁻³) and remove any ``/dlogDp``
+       normalization so that the output is directly comparable to other
+       number-size distributions in aerosoltools.
+
+   .. rubric:: Examples
+
+   Typical usage is to load a converted FMPS file and work directly
+   with the resulting number-size distribution:
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       # Load FMPS data as a 2D number-size distribution
+       fmps = at.Load_FMPS_file("data/FMPS_export.txt")
+
+       # Inspect the data
+       print(fmps.data)
+
+       # Inspect bin_edges and metadata
+       print(fmps.bin_edges)
+       print(fmps.metadata)
+
+       # Plot the time-integrated size distribution
+       fig, ax = fmps.plot_psd()
+
+

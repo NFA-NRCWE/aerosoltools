@@ -2,22 +2,27 @@
 
 **Tools for loading and analyzing aerosol instrument data**
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](./tests)
-![Docs](https://github.com/NFA-NRCWE/aerosoltools/actions/workflows/deploy-docs.yml/badge.svg)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)  
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](./tests)  
+![Docs](https://github.com/NFA-NRCWE/aerosoltools/actions/workflows/deploy-docs.yml/badge.svg)  
 [![PyPI version](https://badge.fury.io/py/aerosoltools.svg)](https://pypi.org/project/aerosoltools/)
+
 ---
 
 ## Overview
 
-`aerosoltools` is a Python library developed at NFA for loading, processing, analyzing, and plotting data from a variety of aerosol instruments. It provides a consistent data structure for time-resolved and size-resolved measurements using `Aerosol1D`, `Aerosol2D`, and `AerosolAlt` classes.
+`aerosoltools` is a Python library developed at NFA for loading, processing, analyzing, and plotting data from a variety of aerosol instruments. It provides consistent data structures for:
 
-The package includes loaders for common instrument exports and a batch-loading utility for processing entire folders.
+- **1D time-series** (e.g. total number or mass) via `Aerosol1D`
+- **2D size-resolved time-series** via `Aerosol2D`
+- **Alternative / legacy formats** via `AerosolAlt`
 
-For the full documenation, and examples of use, visit:
+The package includes loaders for common instrument exports, tools for activity segmentation, and convenience methods for **task-based statistics** and **exposure assessment** (e.g. 8 h TWA, short-term limits, peaks).
 
-[View the documentation](https://nfa-nrcwe.github.io/aerosoltools/)
+For full documentation and usage examples, see:
+
+👉 [View the documentation](https://nfa-nrcwe.github.io/aerosoltools/)
 
 ---
 
@@ -28,6 +33,7 @@ For the full documenation, and examples of use, visit:
 | Aethalometer  | `Load_Aethalometer_file()` | **Magee Scientific**      |
 | CPC           | `Load_CPC_file()`          | **TSI Inc.**              |
 | DiSCmini      | `Load_DiSCmini_file()`     | **Testo**                 |
+| DustTrak      | `Load_DustTrak_file()`     | **TSI Inc.**              |
 | ELPI          | `Load_ELPI_file()`         | **Dekati Ltd.**           |
 | FMPS          | `Load_FMPS_file()`         | **TSI Inc.**              |
 | Fourtec       | `Load_Fourtec()`           | **Fourtec Technologies**  |
@@ -42,52 +48,111 @@ For the full documenation, and examples of use, visit:
 
 ## ✨ Features
 
-- Unified interface for loaded aerosoldata, automatically handling:
-  - Datetime conversion
-  - Particle data formatting
-  - Bin edge/midpoint parsing
-  - Dtype tracking e.g. dN, dV, dM, dS as well as normalization via dlogDp
-  - Metadata extraction
-- Batch loading via `Load_data_from_folder()`
-- Functions for time shifting, cropping, rebinning, and smoothing
-- Enables segmentation to group datapoints within specifc timeframes
-- Returns structured objects for plotting, statistics, or export
-- Functions to plot timeseries, PSD, and correlation plots 
+- **Unified interface** for loaded aerosol data:
+  - Datetime parsing and indexing  
+  - Particle data formatting and bin edges/midpoints  
+  - Dtype tracking (`dN`, `dM`, `dS`, `dV`, and `/dlogDp` normalization)  
+  - Metadata extraction (instrument, units, serial number, etc.)
+
+- **Activity handling**
+  - Mark tasks/segments via `mark_activities()`
+  - Built-in `"All data"` activity
+  - Helper methods to extract activity-specific data
+
+- **Summaries & exposure metrics**
+  - `summarize_activities()` – task-based descriptive statistics (duration, PNC, PMx, size metrics, etc.)
+  - `summarize_exposure()` – detailed exposure assessment:
+    - 1D (`Aerosol1D`): PNC time series
+    - 2D (`Aerosol2D`): PNC, MASS, and Pₓ metrics (e.g. PM₂.₅, PM₄.₂, PN₁₀)
+    - 8 h (or custom) TWA with background level (value or activity)
+    - Short-term limit exceedances (e.g. 15 min window)
+    - Peak counts, high percentiles (C95/C99), IQR, durations above limits
+
+- **Pₓ / fraction utilities (2D)**
+  - Cumulative and band-limited Pₓ (PM, PN, PS, PV)
+  - Reuses previously computed series via internal caching
+
+- **Time operations**
+  - Time shifting, cropping, rebinning, and smoothing
+  - Handles irregular sampling safely for integration and TWA
+
+- **Plotting**
+  - Timeseries plots (with activity shading)
+  - Particle size distributions (PSD)
+  - Simple correlation/comparison plots
+
+- **Batch loading**
+  - `Load_data_from_folder()` to apply a loader across a folder of files
 
 ---
 
 ## 📦 Installation
 
-The package is available via PyPI and can therefore be installed as:
+Install from PyPI:
 
-<pre><code> pip install aerosoltools </code></pre>
+```bash
+pip install aerosoltools
+```
 
 ---
 
 ## Quickstart
+
 ### Load a single instrument file
 
-<pre><code>import aerosoltools as at
+```python
+import aerosoltools as at
+
 elpi = at.Load_ELPI_file("data/elpi_sample.txt")
-elpi.plot_timeseries() </code></pre>
+elpi.plot_timeseries()
+```
 
 ### Access metadata
-<pre><code>elpi.metadata </code></pre>
-  
+
+```python
+elpi.metadata
+```
+
+### Mark activities and summarize
+
+```python
+activity_periods = {
+    "Background": [("2023-09-07 09:06:50", "2023-09-07 09:07:50")],
+    "Emission":   [("2023-09-07 09:07:55", "2023-09-07 09:08:30")],
+}
+
+elpi.mark_activities(activity_periods)
+
+# Task-based summary across all activities
+summary = elpi.summarize_activities()
+
+# Detailed exposure summary for respirable dust (PM4.2) during "Emission"
+exp = elpi.summarize_exposure(
+    metric="PM4.2",
+    activity="Emission",
+    background="Background",  # or a float, or None
+    short_limit=1.0,
+    long_limit=1.0,
+)
+```
+
 ### Batch-load a folder of files
-<pre><code>folder_path = "data/cpc_campaign/"
-data = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file) </code></pre>
-  
----
 
-📄 License
-
-This project is licensed under the MIT License — see the LICENSE file for details.
+```python
+folder_path = "data/cpc_campaign/"
+data_list = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file)
+```
 
 ---
 
-🙌 Acknowledgments
+## 📄 License
+
+This project is licensed under the MIT License — see the `LICENSE` file for details.
+
+---
+
+## 🙌 Acknowledgments
 
 Developed by the NRCWE / NFA community to standardize and accelerate aerosol data workflows.
 
-Feel free to contribute, submit issues, or request support!
+Contributions, issues, and feature requests are very welcome!

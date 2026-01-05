@@ -1,0 +1,756 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
+        <title>aerosoltools.aerosolalt - aerosoltools</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=580074bf" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/1%20-%20Load%2C%20plot%2C%20and%20metadata%20storage.html">1 – Load, plot, and metadata storage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/2%20-%20Time%20adjustments.html">2 – Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/3%20-%20Defining%20time%20segments%20and%20plotting%20PSD.html">3 – Time segments &amp; PSD plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/4%20-%20Activities%2C%20peaks%2C%20and%20exposure%20statistics.html">4 – Activities, peaks &amp; exposure stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/5%20-%20Dtypes%2C%20PM%20plots%20and%20exposure.html">5 – Dtypes, PM plots &amp; exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/6%20-%20Combine%20NS%2BOPS%20and%20extra_data.html">6 – Combine NS+OPS &amp; extra_data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/7%20-%20Correlation%20between%20instruments.html">7 – Correlation between instruments</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Aerosoltools documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/aerosoltools/aerosol1d/index.html">Aerosol1D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/aerosoltools/aerosol2d/index.html">Aerosol2D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/aerosoltools/aerosolalt/index.html">AerosolAlt</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/aerosoltools/loaders/index.html">Loaders</a><input aria-label="Toggle navigation of Loaders" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/Aethalometer/index.html">aerosoltools.loaders.Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/CPC/index.html">aerosoltools.loaders.CPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/Common/index.html">aerosoltools.loaders.Common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/Discmini/index.html">aerosoltools.loaders.Discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/DustTrak/index.html">aerosoltools.loaders.DustTrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/ELPI/index.html">aerosoltools.loaders.ELPI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/FMPS/index.html">aerosoltools.loaders.FMPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/Fourtec/index.html">aerosoltools.loaders.Fourtec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/Grimm/index.html">aerosoltools.loaders.Grimm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/NS/index.html">aerosoltools.loaders.NS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/OPCN3/index.html">aerosoltools.loaders.OPCN3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/OPS/index.html">aerosoltools.loaders.OPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/Partector/index.html">aerosoltools.loaders.Partector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../api/aerosoltools/loaders/SMPS/index.html">aerosoltools.loaders.SMPS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/aerosoltools/utility/index.html">Utility</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for aerosoltools.aerosolalt</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">override</span>  <span class="c1"># Python 3.12+</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>  <span class="c1"># Python ≤ 3.11</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">typing_extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">override</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.dates</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mdates</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.axes</span><span class="w"> </span><span class="kn">import</span> <span class="n">Axes</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.figure</span><span class="w"> </span><span class="kn">import</span> <span class="n">Figure</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tabulate</span><span class="w"> </span><span class="kn">import</span> <span class="n">tabulate</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.aerosol1d</span><span class="w"> </span><span class="kn">import</span> <span class="n">Aerosol1D</span>
+
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;legend.fontsize&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+    <span class="s2">&quot;axes.labelsize&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+    <span class="s2">&quot;axes.titlesize&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+    <span class="s2">&quot;xtick.labelsize&quot;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+    <span class="s2">&quot;ytick.labelsize&quot;</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span>
+    <span class="s2">&quot;figure.figsize&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">19</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+<span class="p">}</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="AerosolAlt">
+<a class="viewcode-back" href="../../api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AerosolAlt</span><span class="p">(</span><span class="n">Aerosol1D</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Description:</span>
+<span class="sd">        One-dimensional aerosol time series with multiple scalar channels.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dataframe (pandas.DataFrame):</span>
+<span class="sd">            Input data with a time column or time index and one or more scalar</span>
+<span class="sd">            data columns. The first time-like column is converted to a</span>
+<span class="sd">            DatetimeIndex if needed.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        Detailed description:</span>
+<span class="sd">            :class:`AerosolAlt` extends :class:`Aerosol1D` for instruments that</span>
+<span class="sd">            log several scalar channels in the same time series, such as:</span>
+
+<span class="sd">            * multiple size-integrated aerosol metrics (e.g. PM1, PM2.5, PM10),</span>
+<span class="sd">            * LDSA, flow, or other auxiliary variables,</span>
+<span class="sd">            * environmental or diagnostic signals.</span>
+
+<span class="sd">            The underlying data model is the same as for :class:`Aerosol1D`</span>
+<span class="sd">            (time-indexed 1D series), but plotting and summary methods accept a</span>
+<span class="sd">            ``parameter`` argument that lets you choose which column in</span>
+<span class="sd">            :attr:`data` is treated as the “primary” signal.</span>
+
+<span class="sd">            Internally, the constructor delegates to :class:`Aerosol1D`:</span>
+
+<span class="sd">            * Ensures a DatetimeIndex is present (or creates one from a time</span>
+<span class="sd">              column).</span>
+<span class="sd">            * Stores the main time series in ``data``.</span>
+<span class="sd">            * Keeps non-core channels in ``extra_data`` (if attached later).</span>
+<span class="sd">            * Carries metadata such as ``instrument``, ``unit`` and ``dtype``</span>
+<span class="sd">              either as scalars or per-column mappings.</span>
+
+<span class="sd">            All activity-handling functionality (e.g. marking activity periods,</span>
+<span class="sd">            cropping by activity) is inherited from :class:`Aerosol1D` and works</span>
+<span class="sd">            transparently for any scalar channel.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        A typical workflow is to use :class:`AerosolAlt` for instruments</span>
+<span class="sd">        with several scalar outputs (e.g. LDSA + flow + flags) and then</span>
+<span class="sd">        select which one to visualise or summarise:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import aerosoltools as at</span>
+<span class="sd">            import pandas as pd</span>
+
+<span class="sd">            # Example: construct from a DataFrame with multiple channels</span>
+<span class="sd">            df = pd.DataFrame(</span>
+<span class="sd">                {</span>
+<span class="sd">                    &quot;Datetime&quot;: pd.date_range(&quot;2024-01-01&quot;, periods=100, freq=&quot;1min&quot;),</span>
+<span class="sd">                    &quot;LDSA&quot;: 50.0,</span>
+<span class="sd">                    &quot;Flow&quot;: 2.0,</span>
+<span class="sd">                    &quot;Flag&quot;: 0,</span>
+<span class="sd">                }</span>
+<span class="sd">            )</span>
+
+<span class="sd">            alt = at.AerosolAlt(df)</span>
+
+<span class="sd">            # Plot LDSA as the primary channel</span>
+<span class="sd">            fig, ax = alt.plot_total_conc(parameter=&quot;LDSA&quot;)</span>
+
+<span class="sd">            # Summarise Flow instead of LDSA</span>
+<span class="sd">            summary = alt.summarize(parameter=&quot;Flow&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">dataframe</span><span class="p">)</span>
+
+    <span class="c1">###########################################################################</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;############################# Functions #############################&quot;&quot;&quot;</span>
+    <span class="c1">###########################################################################</span>
+
+<div class="viewcode-block" id="AerosolAlt.plot_total_conc">
+<a class="viewcode-back" href="../../api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.plot_total_conc">[docs]</a>
+    <span class="nd">@override</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_total_conc</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">ax</span><span class="p">:</span> <span class="n">Axes</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">mark_activities</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">parameter</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Figure</span><span class="p">,</span> <span class="n">Axes</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Description:</span>
+<span class="sd">            Plot a selected scalar channel versus time for an :class:`AerosolAlt`</span>
+<span class="sd">            object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ax (matplotlib.axes.Axes | None, optional):</span>
+<span class="sd">                Existing Matplotlib axes to draw on. If ``None``, a new figure</span>
+<span class="sd">                and axes are created. Defaults to ``None``.</span>
+<span class="sd">            mark_activities (bool | Sequence[str], optional):</span>
+<span class="sd">                Control highlighting of activity periods defined on the object:</span>
+
+<span class="sd">                * ``False`` – no shading (default).</span>
+<span class="sd">                * ``True`` – shade all activities except ``&quot;All data&quot;``.</span>
+<span class="sd">                * sequence of str – shade only the named activities.</span>
+
+<span class="sd">            parameter (int | str, optional):</span>
+<span class="sd">                Index or column name of the signal to plot. If ``int``, it is</span>
+<span class="sd">                interpreted as a positional index into :attr:`data.columns`. If</span>
+<span class="sd">                ``str``, it is treated as a column label. Defaults to ``0``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:</span>
+<span class="sd">                The figure and axes containing the time-series plot.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            LookupError:</span>
+<span class="sd">                If ``parameter`` does not correspond to a valid column index or</span>
+<span class="sd">                column label.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            Detailed description:</span>
+<span class="sd">                This method overrides :meth:`Aerosol1D.plot_total_conc` to allow</span>
+<span class="sd">                plotting of *any* scalar column stored in :attr:`data`, not only</span>
+<span class="sd">                ``&quot;Total_conc&quot;``. It is particularly useful when an instrument</span>
+<span class="sd">                logs multiple scalar metrics alongside time.</span>
+
+<span class="sd">                Internally, the method:</span>
+
+<span class="sd">                * Resolves ``parameter``:</span>
+
+<span class="sd">                  - if an integer, it is used as a positional index into</span>
+<span class="sd">                    :attr:`data.columns`,</span>
+<span class="sd">                  - if a string, it must match a column label.</span>
+
+<span class="sd">                * Creates or reuses a Matplotlib axes (depending on ``ax``).</span>
+<span class="sd">                * Plots the selected column against the object’s time index.</span>
+<span class="sd">                * Configures the x-axis with a concise datetime formatter via</span>
+<span class="sd">                  :mod:`matplotlib.dates`.</span>
+<span class="sd">                * Determines the appropriate ``dtype`` and ``unit``:</span>
+
+<span class="sd">                  - if global (scalar), they are used as-is;</span>
+<span class="sd">                  - if per-column mappings, the entry for the chosen</span>
+<span class="sd">                    ``parameter`` is used.</span>
+
+<span class="sd">                  The y-axis label is constructed from the base dtype</span>
+<span class="sd">                  (e.g. ``&quot;dN&quot;`` from ``&quot;dN/dlogDp&quot;`` when applicable)</span>
+<span class="sd">                  and the corresponding unit.</span>
+
+<span class="sd">                * Optionally shades activity periods defined by</span>
+<span class="sd">                  :meth:`Aerosol1D.mark_activities` when ``mark_activities`` is</span>
+<span class="sd">                  ``True`` or a list of activity names. Each activity receives</span>
+<span class="sd">                  a distinct colour, and overlapping shaded regions are clipped</span>
+<span class="sd">                  to the data’s time extent.</span>
+
+<span class="sd">                * Calls ``fig.tight_layout()`` when it creates the figure to</span>
+<span class="sd">                  ensure margins and labels do not overlap.</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            A typical use is to visualise one of several channels stored in</span>
+<span class="sd">            an :class:`AerosolAlt` object, optionally with activity periods</span>
+<span class="sd">            highlighted:</span>
+
+<span class="sd">            .. code-block:: python</span>
+
+<span class="sd">                import aerosoltools as at</span>
+
+<span class="sd">                # Suppose &#39;alt&#39; is an AerosolAlt with columns: [&quot;LDSA&quot;, &quot;Flow&quot;, &quot;Flag&quot;]</span>
+<span class="sd">                alt = at.Load_Partector_file(&quot;data/Partector_log.txt&quot;)</span>
+
+<span class="sd">                # Plot LDSA with activity shading</span>
+<span class="sd">                fig, ax = alt.plot_total_conc(</span>
+<span class="sd">                    parameter=&quot;LDSA&quot;,</span>
+<span class="sd">                    mark_activities=True,</span>
+<span class="sd">                )</span>
+
+<span class="sd">                # Plot Flow on existing axes without activity shading</span>
+<span class="sd">                fig2, ax2 = plt.subplots()</span>
+<span class="sd">                alt.plot_total_conc(ax=ax2, parameter=&quot;Flow&quot;, mark_activities=False)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Resolve which column to use based on the requested parameter.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">parameter</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">LookupError</span><span class="p">(</span><span class="s2">&quot;Chosen parameter is invalid&quot;</span><span class="p">)</span>
+            <span class="n">parameter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">parameter</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">LookupError</span><span class="p">(</span><span class="s2">&quot;Chosen parameter is invalid&quot;</span><span class="p">)</span>
+
+        <span class="n">new_fig_created</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Create or reuse axes.</span>
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+            <span class="n">new_fig_created</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fig</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">figure</span>
+
+        <span class="c1"># Plot the selected data column against time.</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">parameter</span><span class="p">],</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;-&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Format x-axis as dates.</span>
+        <span class="n">locator</span> <span class="o">=</span> <span class="n">mdates</span><span class="o">.</span><span class="n">AutoDateLocator</span><span class="p">()</span>
+        <span class="n">formatter</span> <span class="o">=</span> <span class="n">mdates</span><span class="o">.</span><span class="n">ConciseDateFormatter</span><span class="p">(</span><span class="n">locator</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_locator</span><span class="p">(</span><span class="n">locator</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_formatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Time&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Resolve dtype/unit for the chosen parameter (can be scalar or per-column).</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">Dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">[</span><span class="n">parameter</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">Unit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Unit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">[</span><span class="n">parameter</span><span class="p">]</span>  <span class="c1"># type: ignore[index]</span>
+
+        <span class="k">if</span> <span class="s2">&quot;/&quot;</span> <span class="ow">in</span> <span class="n">Dtype</span><span class="p">:</span>
+            <span class="n">total_conc_dtype</span> <span class="o">=</span> <span class="n">Dtype</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">total_conc_dtype</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">Unit</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">Dtype</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">Unit</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Optionally highlight activity periods as shaded regions.</span>
+        <span class="k">if</span> <span class="n">mark_activities</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_activity_periods&quot;</span><span class="p">):</span>
+            <span class="n">all_activities</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_activity_periods</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+            <span class="n">color_map</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">colormaps</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">&quot;gist_ncar&quot;</span><span class="p">)</span>
+            <span class="n">activity_colors</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">activity</span><span class="p">:</span> <span class="n">color_map</span><span class="p">(</span><span class="n">i</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_activities</span><span class="p">)))</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">activity</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">all_activities</span><span class="p">)</span>
+            <span class="p">}</span>
+
+            <span class="k">if</span> <span class="n">mark_activities</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">selected_activities</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">all_activities</span> <span class="k">if</span> <span class="n">a</span> <span class="o">!=</span> <span class="s2">&quot;All data&quot;</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mark_activities</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">selected_activities</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">mark_activities</span> <span class="k">if</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activity_periods</span>
+                <span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">selected_activities</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">activity</span> <span class="ow">in</span> <span class="n">selected_activities</span><span class="p">:</span>
+                <span class="n">color</span> <span class="o">=</span> <span class="n">activity_colors</span><span class="p">[</span><span class="n">activity</span><span class="p">]</span>
+                <span class="n">first</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activity_periods</span><span class="p">[</span><span class="n">activity</span><span class="p">]:</span>
+                    <span class="n">ax</span><span class="o">.</span><span class="n">axvspan</span><span class="p">(</span>
+                        <span class="n">cast</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">mdates</span><span class="o">.</span><span class="n">date2num</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">))),</span>
+                        <span class="n">cast</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">mdates</span><span class="o">.</span><span class="n">date2num</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">end</span><span class="p">))),</span>
+                        <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+                        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>
+                        <span class="n">label</span><span class="o">=</span><span class="n">activity</span> <span class="k">if</span> <span class="n">first</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                        <span class="n">zorder</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">first</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="c1"># Clamp x-limits to the actual data range and show legend.</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">mdates</span><span class="o">.</span><span class="n">date2num</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">min</span><span class="p">()))</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">mdates</span><span class="o">.</span><span class="n">date2num</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">max</span><span class="p">()))</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">new_fig_created</span><span class="p">:</span>
+            <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>  <span class="c1"># type: ignore[call-arg]</span>
+
+        <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span>  <span class="c1"># type: ignore[return-value]</span></div>
+
+
+    <span class="c1">###########################################################################</span>
+
+<div class="viewcode-block" id="AerosolAlt.summarize">
+<a class="viewcode-back" href="../../api/aerosoltools/aerosolalt/index.html#aerosoltools.aerosolalt.AerosolAlt.summarize">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">summarize</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">filename</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">parameter</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Description:</span>
+<span class="sd">            Summarise basic statistics of a selected scalar channel by activity.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filename (str | None, optional):</span>
+<span class="sd">                Path to an Excel file to write the summary table to. If</span>
+<span class="sd">                ``None`` (default), the summary is not saved to disk and is</span>
+<span class="sd">                only printed and returned.</span>
+<span class="sd">            parameter (int | str, optional):</span>
+<span class="sd">                Index or column name of the signal to summarise. If an</span>
+<span class="sd">                ``int`` is given, it is interpreted as a positional index into</span>
+<span class="sd">                :attr:`data.columns`. If a ``str`` is given, it is interpreted</span>
+<span class="sd">                as a column label. Defaults to ``0``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas.DataFrame:</span>
+<span class="sd">                A summary table with one row per activity (including</span>
+<span class="sd">                ``&quot;All data&quot;``), containing at least:</span>
+
+<span class="sd">                ``[&quot;Segment&quot;, &quot;Min&quot;, &quot;Max&quot;, &quot;Mean&quot;, &quot;Std&quot;, &quot;N datapoints&quot;]``.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            LookupError:</span>
+<span class="sd">                If ``parameter`` does not correspond to a valid column index or</span>
+<span class="sd">                column label.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            Detailed description:</span>
+<span class="sd">                This method extends :meth:`Aerosol1D.summarize` by allowing the</span>
+<span class="sd">                user to choose which column in :attr:`data` is summarised. It</span>
+<span class="sd">                uses activity flags previously defined on the object to compute</span>
+<span class="sd">                statistics for each segment.</span>
+
+<span class="sd">                Internally, the method:</span>
+
+<span class="sd">                - Resolves ``parameter``:</span>
+
+<span class="sd">                  - if integer, used as a positional index into</span>
+<span class="sd">                    :attr:`data.columns`,</span>
+<span class="sd">                  - if string, used as a column label,</span>
+
+<span class="sd">                  raising :class:`LookupError` if the resolution fails or if</span>
+<span class="sd">                  the index is out of range.</span>
+
+<span class="sd">                - Iterates over all activities in :attr:`activities` (including</span>
+<span class="sd">                  the default ``&quot;All data&quot;`` segment), and for each:</span>
+
+<span class="sd">                  - selects rows belonging to that activity, using either:</span>
+
+<span class="sd">                    - an activity mask in :attr:`data[activity]`, and</span>
+<span class="sd">                    - the selected parameter column,</span>
+
+<span class="sd">                  - computes:</span>
+
+<span class="sd">                    - minimum,</span>
+<span class="sd">                    - maximum,</span>
+<span class="sd">                    - mean,</span>
+<span class="sd">                    - standard deviation,</span>
+<span class="sd">                    - number of data points.</span>
+
+<span class="sd">                - Collects these into a :class:`pandas.DataFrame` and rounds</span>
+<span class="sd">                  the numeric values to three decimal places for readability.</span>
+<span class="sd">                - Prints a nicely formatted version of the table to the</span>
+<span class="sd">                  console using :func:`tabulate`, labelling columns as</span>
+<span class="sd">                  ``&quot;Segment&quot;``, ``&quot;Min&quot;``, ``&quot;Max&quot;``, ``&quot;Mean&quot;``, ``&quot;Std&quot;``,</span>
+<span class="sd">                  and ``&quot;N datapoints&quot;``.</span>
+<span class="sd">                - If ``filename`` is provided, writes the rounded summary to an</span>
+<span class="sd">                  Excel file (without index) and prints the output path.</span>
+
+<span class="sd">                The method then returns the rounded summary DataFrame so it can</span>
+<span class="sd">                be used programmatically (e.g. in reports or further analysis).</span>
+
+<span class="sd">        Examples:</span>
+<span class="sd">            A typical use is to summarise different scalar channels for</span>
+<span class="sd">            predefined activities (e.g. measurement phases, locations,</span>
+<span class="sd">            scenarios):</span>
+
+<span class="sd">            .. code-block:: python</span>
+
+<span class="sd">                import aerosoltools as at</span>
+
+<span class="sd">                # Load an LDSA-like time series</span>
+<span class="sd">                alt = at.Load_Partector_file(&quot;data/Partector_log.txt&quot;)</span>
+
+<span class="sd">                # Suppose activities have been marked already on &#39;alt&#39;</span>
+<span class="sd">                # Summarise LDSA by activity</span>
+<span class="sd">                summary_ldsa = alt.summarize(parameter=&quot;LDSA&quot;)</span>
+
+<span class="sd">                # Summarise Flow channel and save to Excel</span>
+<span class="sd">                summary_flow = alt.summarize(</span>
+<span class="sd">                    filename=&quot;partector_flow_summary.xlsx&quot;,</span>
+<span class="sd">                    parameter=&quot;Flow&quot;,</span>
+<span class="sd">                )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Resolve which column to summarise based on the requested parameter.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">parameter</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_raw_data</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">LookupError</span><span class="p">(</span><span class="s2">&quot;Chosen parameter is invalid&quot;</span><span class="p">)</span>
+            <span class="n">parameter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">parameter</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">LookupError</span><span class="p">(</span><span class="s2">&quot;Chosen parameter is invalid&quot;</span><span class="p">)</span>
+
+        <span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">object</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Loop through all activities (including &quot;All data&quot;) and collect stats.</span>
+        <span class="k">for</span> <span class="n">activity</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">activities</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">subset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">activity</span><span class="p">]][</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">total_concentration</span><span class="p">[</span><span class="n">parameter</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>  <span class="c1"># type: ignore[index]</span>
+                <span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="n">subset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">activity</span><span class="p">]][</span><span class="n">parameter</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">subset</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">activity</span><span class="p">,</span>
+                        <span class="n">subset</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
+                        <span class="n">subset</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+                        <span class="n">subset</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+                        <span class="n">subset</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
+                        <span class="nb">len</span><span class="p">(</span><span class="n">subset</span><span class="p">),</span>
+                    <span class="p">]</span>
+                <span class="p">)</span>
+
+        <span class="c1"># Build the summary table and round for readability.</span>
+        <span class="n">summary</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Segment&quot;</span><span class="p">,</span> <span class="s2">&quot;Min&quot;</span><span class="p">,</span> <span class="s2">&quot;Max&quot;</span><span class="p">,</span> <span class="s2">&quot;Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;Std&quot;</span><span class="p">,</span> <span class="s2">&quot;N datapoints&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">summary_rounded</span> <span class="o">=</span> <span class="n">summary</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+        <span class="c1"># Print a nicely formatted version to the console.</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Summary of total concentration:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="n">tabulate</span><span class="p">(</span>
+                <span class="n">summary_rounded</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
+                <span class="n">headers</span><span class="o">=</span><span class="s2">&quot;keys&quot;</span><span class="p">,</span>
+                <span class="n">tablefmt</span><span class="o">=</span><span class="s2">&quot;pretty&quot;</span><span class="p">,</span>
+                <span class="n">floatfmt</span><span class="o">=</span><span class="s2">&quot;.3f&quot;</span><span class="p">,</span>
+            <span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Optionally save to Excel.</span>
+        <span class="k">if</span> <span class="n">filename</span><span class="p">:</span>
+            <span class="n">summary_rounded</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Summary saved to: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">summary_rounded</span></div>
+</div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

@@ -20,7 +20,9 @@ dependencies = [
     "matplotlib>=3.1.0",
     "tabulate>=0.8.0",
     "openpyxl",
-    "scipy>=1.10"
+    "scipy>=1.10",
+    "tqdm>=4.0",
+    "typing_extensions>=4.0",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +30,13 @@ dev = [
     "pytest",
     "ruff",
     "black"
+]
+docs = [
+  "sphinx>=7.3",
+  "furo>=2024.8.6",
+  "myst-parser>=2.0.0",
+  "sphinx-autoapi>=3.2.1",
+  "sphinx-autodoc-typehints>=2.2.3"
 ]
 
 [tool.setuptools]

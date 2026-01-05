@@ -1,0 +1,2246 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html"><link rel="next" title="aerosoltools.aerosolalt" href="../aerosolalt/index.html"><link rel="prev" title="aerosoltools.aerosol1d" href="../aerosol1d/index.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
+        <title>aerosoltools.aerosol2d - aerosoltools</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=580074bf" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Examples</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/1%20-%20Load%2C%20plot%2C%20and%20metadata%20storage.html">1 – Load, plot, and metadata storage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/2%20-%20Time%20adjustments.html">2 – Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/3%20-%20Defining%20time%20segments%20and%20plotting%20PSD.html">3 – Time segments &amp; PSD plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/4%20-%20Activities%2C%20peaks%2C%20and%20exposure%20statistics.html">4 – Activities, peaks &amp; exposure stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/5%20-%20Dtypes%2C%20PM%20plots%20and%20exposure.html">5 – Dtypes, PM plots &amp; exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/6%20-%20Combine%20NS%2BOPS%20and%20extra_data.html">6 – Combine NS+OPS &amp; extra_data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/7%20-%20Correlation%20between%20instruments.html">7 – Correlation between instruments</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Aerosoltools documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../aerosol1d/index.html">Aerosol1D</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Aerosol2D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../aerosolalt/index.html">AerosolAlt</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../loaders/index.html">Loaders</a><input aria-label="Toggle navigation of Loaders" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/Aethalometer/index.html">aerosoltools.loaders.Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/CPC/index.html">aerosoltools.loaders.CPC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/Common/index.html">aerosoltools.loaders.Common</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/Discmini/index.html">aerosoltools.loaders.Discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/DustTrak/index.html">aerosoltools.loaders.DustTrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/ELPI/index.html">aerosoltools.loaders.ELPI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/FMPS/index.html">aerosoltools.loaders.FMPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/Fourtec/index.html">aerosoltools.loaders.Fourtec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/Grimm/index.html">aerosoltools.loaders.Grimm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/NS/index.html">aerosoltools.loaders.NS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/OPCN3/index.html">aerosoltools.loaders.OPCN3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/OPS/index.html">aerosoltools.loaders.OPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/Partector/index.html">aerosoltools.loaders.Partector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loaders/SMPS/index.html">aerosoltools.loaders.SMPS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../utility/index.html">Utility</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../../../_sources/api/aerosoltools/aerosol2d/index.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="module-aerosoltools.aerosol2d">
+<span id="aerosoltools-aerosol2d"></span><h1>aerosoltools.aerosol2d<a class="headerlink" href="#module-aerosoltools.aerosol2d" title="Link to this heading">¶</a></h1>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.params">
+<span class="sig-prename descclassname"><span class="pre">aerosoltools.aerosol2d.</span></span><span class="sig-name descname"><span class="pre">params</span></span><a class="headerlink" href="#aerosoltools.aerosol2d.params" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">aerosoltools.aerosol2d.</span></span><span class="sig-name descname"><span class="pre">Aerosol2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataframe</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="../aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D"><code class="xref py py-obj docutils literal notranslate"><span class="pre">aerosoltools.aerosol1d.Aerosol1D</span></code></a></p>
+<p>A class for managing time-resolved, size-distributed aerosol data.</p>
+<p>This class extends <cite>Aerosol1D</cite> to handle datasets that contain particle
+size distributions (e.g., number, mass, or surface area concentration
+across particle size bins). It supports transformation between physical
+representations (dN, dS, dV, dW), visualization, activity segmentation,
+and summary statistics including PM values and particle size metrics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dataframe</strong> (<em>pandas.DataFrame</em>) – A DataFrame containing the data to load. The first column should
+contain time stamps or be the DataFrame index. The second column should
+be the total concentration. All remaining columns must represent
+concentration values in size bins with bin midpoints as column headers.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>All data handling is done with <cite>pandas</cite>. Input DataFrames are expected to
+have particle size bin midpoints as column headers, and the class assumes
+these are numeric and represent diameters in nanometers.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.bin_edges">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">bin_edges</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float64</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.bin_edges" title="Link to this definition">¶</a></dt>
+<dd><p>Particle size bin edges in nanometers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>One-dimensional array of bin edge diameters in
+nanometers (dtype <code class="docutils literal notranslate"><span class="pre">float64</span></code>). Length is <code class="docutils literal notranslate"><span class="pre">n</span> <span class="pre">+</span> <span class="pre">1</span></code> when there are
+<code class="docutils literal notranslate"><span class="pre">n</span></code> size bins. A copy is returned so callers cannot mutate the
+internal metadata.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.bin_mids">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">bin_mids</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">numpy.typing.NDArray</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.float64</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.bin_mids" title="Link to this definition">¶</a></dt>
+<dd><p>Particle size bin midpoints in nanometers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>One-dimensional array of bin midpoint diameters in
+nanometers (dtype <code class="docutils literal notranslate"><span class="pre">float64</span></code>). Length is <code class="docutils literal notranslate"><span class="pre">n</span></code> for <code class="docutils literal notranslate"><span class="pre">n</span></code> size
+bins. A copy is returned so callers cannot mutate the internal
+metadata.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.density">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">density</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.density" title="Link to this definition">¶</a></dt>
+<dd><p>Assumed particle density in g/cm³.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Particle density used for conversions between number, volume,
+surface area, and mass distributions. Falls back to the value
+stored in the metadata (typically set at load time or via
+<a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.set_density" title="aerosoltools.aerosol2d.Aerosol2D.set_density"><code class="xref py py-meth docutils literal notranslate"><span class="pre">set_density()</span></code></a>). Defaults to 1.0 g/cm³ if not explicitly set in
+metadata.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.metadata">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.metadata" title="Link to this definition">¶</a></dt>
+<dd><p>Metadata associated with the size-resolved dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dictionary of metadata extracted or defined for this object,
+including bin edges/mids, units, data type (dN/dS/dV/dM),
+instrument information, density, and any additional fields stored
+in <code class="docutils literal notranslate"><span class="pre">self._meta</span></code>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.size_data">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">size_data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pandas.DataFrame</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.size_data" title="Link to this definition">¶</a></dt>
+<dd><p>Size-bin concentration data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Subset of <a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.data" title="aerosoltools.aerosol2d.Aerosol2D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a> containing only the
+columns that represent size-resolved concentration values, ordered
+according to <a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.bin_mids" title="aerosoltools.aerosol2d.Aerosol2D.bin_mids"><code class="xref py py-attr docutils literal notranslate"><span class="pre">bin_mids</span></code></a> (via <code class="xref py py-attr docutils literal notranslate"><span class="pre">_sizebin_headers</span></code>). Each
+column corresponds to a size bin, and each row to a time stamp.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.dtype_converter">
+<span class="sig-name descname"><span class="pre">dtype_converter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dN'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.dtype_converter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.dtype_converter" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Convert the size distribution to a chosen base data type.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dtype</strong> (<em>str</em>) – Target data type string, one of “dN”, “dS”,
+“dV”, or “dM” (case-sensitive). “dN” is number-based,
+“dS” surface-area–based, “dV” volume-based, and “dM”
+mass-based.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em>) – If True, convert this object in place and
+return it. If False, perform the conversion on a deep
+copy and return the new instance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Object whose size-bin data, total_conc, dtype and</dt><dd><p>unit fields have been converted to the requested type
+(self when inplace=True, otherwise a new instance).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D" title="aerosoltools.aerosol2d.Aerosol2D">Aerosol2D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If dtype is not one of “dN”, “dS”, “dV”, “dM”.
+Check the spelling and letter case of the requested type.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method converts the current size-resolved distribution
+between number, surface, volume and mass representations
+using the stored particle density and the bin midpoints.
+Any existing normalization by dlogDp is preserved: data
+stored as dx/dlogDp remain in dx/dlogDp form after
+conversion, and Total_conc is recomputed from the
+underlying base distribution.</p>
+</dd>
+<dt>Theory:</dt><dd><p>Conversions assume spherical particles and use the usual
+geometric relationships between radius, surface area,
+volume and mass (with the density given in g/cm³).
+Number-based distributions can be transformed into volume
+or mass by multiplying with per-particle volume and
+density; surface-area distributions scale similarly via
+4πr².</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Convert a number distribution to mass concentration for
+comparison with gravimetric limits:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">dtype_converter</span><span class="p">(</span><span class="s2">&quot;dM&quot;</span><span class="p">)</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">plot_psd</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.correct_diffusion_losses">
+<span class="sig-name descname"><span class="pre">correct_diffusion_losses</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">D_tube</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">L</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">293</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">101300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.correct_diffusion_losses"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.correct_diffusion_losses" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Correct size distributions for diffusion losses in sampling tubes.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>D_tube</strong> (<em>float</em>) – Inner diameter of the sampling tube in metres.</p></li>
+<li><p><strong>L</strong> (<em>float</em>) – Length of the sampling tube in metres.</p></li>
+<li><p><strong>Q</strong> (<em>float</em>) – Volumetric flow through the tube in L/min.</p></li>
+<li><p><strong>T</strong> (<em>float</em>) – Gas temperature in Kelvin. Defaults to 293 K.</p></li>
+<li><p><strong>P</strong> (<em>float</em>) – Gas pressure in Pascal. Defaults to 101300 Pa.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em>) – If True, apply the correction to this object
+and return it. If False, perform the correction on a deep
+copy and return the new instance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Object with diffusion-loss–corrected size-bin data</dt><dd><p>and updated Total_conc (self when inplace=True, otherwise
+a new instance).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D" title="aerosoltools.aerosol2d.Aerosol2D">Aerosol2D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>None</strong> – The method does not explicitly raise custom exceptions,
+but non-physical values (for example Q or D_tube close to
+zero) can lead to infinities or NaNs in the correction
+factors. Always use positive, realistic geometry and flow
+parameters.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>For each size bin, a transmission efficiency between the
+tube inlet and outlet is computed based on geometry,
+volumetric flow and particle diffusivity. The recorded
+distribution is divided by this efficiency to estimate the
+upstream concentration, and total_conc is recomputed from
+the corrected bins. The size-dependent efficiency curve
+and a flag indicating that diffusion correction has been
+applied are stored in metadata.</p>
+</dd>
+<dt>Theory:</dt><dd><p>The correction builds on classical mass-transfer
+correlations in straight circular tubes. Particle
+diffusivity is estimated via the Stokes–Einstein relation
+with a Cunningham slip correction, Reynolds and Schmidt
+numbers describe the flow, and a Sherwood number
+correlation is used to obtain the mass transfer
+coefficient. The residence parameter and Sherwood number
+define the deposition loss and thus the transmission
+efficiency per size.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Correct ELPI or SMPS data for diffusion losses in a long
+sampling line:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">correct_diffusion_losses</span><span class="p">(</span>
+    <span class="n">D_tube</span><span class="o">=</span><span class="mf">0.004</span><span class="p">,</span>  <span class="c1"># 4 mm ID</span>
+    <span class="n">L</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>        <span class="c1"># 2 m tube</span>
+    <span class="n">Q</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>       <span class="c1"># 10 L/min</span>
+<span class="p">)</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">plot_psd</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.set_density">
+<span class="sig-name descname"><span class="pre">set_density</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.set_density"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.set_density" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Set or update the assumed particle density (g/cm³).</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>density</strong> (<em>float</em><em> | </em><em>int</em>) – New particle density in g/cm³.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The updated object with metadata[“density”]</dt><dd><p>set to the new value. If the current dtype is mass-based
+(“dM” in dtype), the mass distribution and Total_conc are
+rescaled immediately.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D" title="aerosoltools.aerosol2d.Aerosol2D">Aerosol2D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the existing stored density is non-positive
+while the data are mass-based, so rescaling is undefined.
+In that case, manually fix metadata[“density”] or reload
+the data before changing density.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>For non-mass-based data (dN, dS, dV), the method simply
+updates the stored density used in later conversions. For
+mass-based data (dM), it rescales all size-bin values and
+the Total_conc column so that the mass distribution is
+consistent with the new density.</p>
+</dd>
+<dt>Theory:</dt><dd><p>Mass concentration scales linearly with particle density
+for a fixed volume distribution (M = ρ · V). Updating the
+density therefore requires rescaling existing mass values
+to preserve the implied volume distribution.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Update density when reinterpreting a measurement for a
+specific material:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">dtype_converter</span><span class="p">(</span><span class="s2">&quot;dM&quot;</span><span class="p">)</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">set_density</span><span class="p">(</span><span class="mf">1.6</span><span class="p">)</span>  <span class="c1"># g/cm³</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.normalize_logdp">
+<span class="sig-name descname"><span class="pre">normalize_logdp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.normalize_logdp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.normalize_logdp" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>inplace</strong> (<em>bool</em>) – If True, normalize this object in place and
+return it. If False, perform the normalization on a deep
+copy and return the new instance.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The normalized object (self or a new copy)</dt><dd><p>when normalization is applied. If the dtype already
+contains “/dlogDp”, no changes are made and None is
+returned.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D" title="aerosoltools.aerosol2d.Aerosol2D">Aerosol2D</a> | None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the number of size-bin columns does not match
+the number of Δlog₁₀(Dp) widths derived from bin_edges.
+Check that bin_edges and the PSD columns are consistent.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method computes Δlog₁₀(Dp) from bin_edges and divides
+each size-bin column by its corresponding width. The dtype
+string is updated to append “/dlogDp” (for example
+“dN” → “dN/dlogDp”). Only size-bin columns are modified;
+other columns in data (including Total_conc and activity
+masks) are left unchanged.</p>
+</dd>
+<dt>Theory:</dt><dd><p>Plotting or comparing size distributions on a logarithmic
+diameter axis is often done using dN/dlogDp, dM/dlogDp,
+etc., so that equal logarithmic bin widths represent equal
+contributions when integrating over logDp. This method
+implements that per-bin normalization.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Prepare a PSD for log-diameter plotting:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">normalize_logdp</span><span class="p">()</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">plot_psd</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.unnormalize_logdp">
+<span class="sig-name descname"><span class="pre">unnormalize_logdp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.unnormalize_logdp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.unnormalize_logdp" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Undo Δlog₁₀(Dp) normalization (dx/dlogDp → base form).</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>inplace</strong> (<em>bool</em>) – If True, unnormalize this object in place and
+return it. If False, perform the operation on a deep copy
+and return the new instance.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The unnormalized object (self or a new copy)</dt><dd><p>when dtype contains “/dlogDp”. If the data are already in
+base form (no “/dlogDp” in dtype), the method returns None
+and does not modify the object.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D" title="aerosoltools.aerosol2d.Aerosol2D">Aerosol2D</a> | None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the number of PSD columns does not match the
+Δlog₁₀(Dp) array derived from bin_edges.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method multiplies each size-bin column by the
+corresponding Δlog₁₀(Dp), recovering the original base
+distribution (for example dN, dM). The “/dlogDp” suffix is
+removed from the dtype string. This is typically used
+before performing physical integrations or conversions
+that expect base distributions.</p>
+</dd>
+<dt>Theory:</dt><dd><p>This is the exact inverse of normalize_logdp: the integral
+over logDp of dX/dlogDp is equal to the integral over Dp
+of dX when the same Δlog₁₀(Dp) widths are used. Removing
+the normalization restores the original dX.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Convert a normalized PSD back to base units for further
+processing:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="s2">&quot;/dlogDp&quot;</span> <span class="ow">in</span> <span class="n">elpi</span><span class="o">.</span><span class="n">dtype</span><span class="p">:</span>
+    <span class="n">elpi</span><span class="o">.</span><span class="n">unnormalize_logdp</span><span class="p">()</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">dtype_converter</span><span class="p">(</span><span class="s2">&quot;dM&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.PM_calc">
+<span class="sig-name descname"><span class="pre">PM_calc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dM'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">PM</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lower_lim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.PM_calc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.PM_calc" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Compute a size-selective Pₓ time series and store it in extra_data.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dtype</strong> (<em>str</em>) – Base distribution type to integrate, one of
+“dN”, “dS”, “dV”, “dM”. Defaults to “dM” (mass-based).</p></li>
+<li><p><strong>PM</strong> (<em>float</em>) – Upper cut-off diameter in micrometres (µm) for the
+size-selective fraction (nominal 50% penetration point).</p></li>
+<li><p><strong>Lower_lim</strong> (<em>float</em>) – Optional lower cut-off diameter in µm.
+If 0 (default), the result is cumulative from 0 → PM.
+If in (0, PM), the result represents the band-limited
+contribution from Lower_lim → PM.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>self, with a new column added to extra_data named</dt><dd><p>”P{X}{PM}” for cumulative metrics (for example “PM2.5”,
+“PN10”) or “P{X}{Lower_lim}-{PM}” for band-limited ones
+(for example “PM1-5”).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D" title="aerosoltools.aerosol2d.Aerosol2D">Aerosol2D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If Lower_lim is greater than or equal to PM, or if
+Lower_lim is negative. Check the order and magnitude of
+the cut diameters.</p></li>
+<li><p><strong>ValueError</strong> – If dtype is not one of “dN”, “dS”, “dV”, “dM”.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method converts the internal distribution to the
+requested base kind if needed, ensures it is not in
+dx/dlogDp form, and then integrates it with an
+EN 481 / ISO 7708–style size-selective penetration curve
+between Lower_lim and PM. The resulting time series is
+stored in extra_data with a canonical name that encodes
+both the distribution type and cut diameters.</p>
+</dd>
+<dt>Theory:</dt><dd><p>Pₓ metrics generalize well-known PM₁₀, PM₂.₅, etc., and
+can be defined for number (PN), surface (PS), volume (PV)
+and mass (PM). The underlying helper uses a standard
+lognormal penetration curve (GSD 1.5, 50% cut at PM) to
+approximate workplace sampling conventions (for example
+EN 481 / ISO 7708 respirable/inhalable fractions).</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Add PM₂.₅ and PN₁₀ series for later plotting and summary:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">PM_calc</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;dM&quot;</span><span class="p">,</span> <span class="n">PM</span><span class="o">=</span><span class="mf">2.5</span><span class="p">)</span>   <span class="c1"># PM2.5</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">PM_calc</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;dN&quot;</span><span class="p">,</span> <span class="n">PM</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>  <span class="c1"># PN10</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">extra_data</span><span class="p">[[</span><span class="s2">&quot;PM2.5&quot;</span><span class="p">,</span> <span class="s2">&quot;PN10&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.plot_psd">
+<span class="sig-name descname"><span class="pre">plot_psd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">activities</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.plot_psd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.plot_psd" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Plot mean particle size distributions for one or more activities.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>activities</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Names of activities to include.
+If None, all activities in self.activities are considered.
+Activities that do not exist are skipped.</p></li>
+<li><p><strong>normalize</strong> (<em>bool</em>) – If True, plot PSDs in log-diameter–
+normalized form (dx/dlogDp). If the underlying data are not
+normalized, a temporary division by Δlog₁₀(Dp) is applied.
+If False, PSDs are shown in base units, undoing any stored
+normalisation if needed.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em> | </em><em>None</em>) – Axis to plot into. If None,
+a new figure and axes are created.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The</dt><dd><p>figure and axes with the PSD plot.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>None</strong> – Aside from Matplotlib or data consistency errors (for
+example invalid bin_edges or empty activities).</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>For each selected activity, the method filters rows where
+the activity mask is True, optionally converts the data to
+normalized or base form for plotting, and computes mean
+and standard deviation across time in each size bin. It
+then plots the mean PSD as a line on a logarithmic
+diameter axis with a shaded ±1σ envelope. Colors are
+assigned per activity and a legend is added.</p>
+</dd>
+<dt>Theory:</dt><dd><p>Log-diameter–normalized PSDs (for example dN/dlogDp) are
+often preferred for visual comparison because equal
+horizontal distances represent equal decades in size. The
+method supports both normalized and base distributions so
+that you can inspect either representation.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Compare PSDs during two tasks:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">mark_activities</span><span class="p">({</span>
+    <span class="s2">&quot;Task A&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;2025-01-24 09:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2025-01-24 10:00&quot;</span><span class="p">)],</span>
+    <span class="s2">&quot;Task B&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;2025-01-24 10:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2025-01-24 11:00&quot;</span><span class="p">)],</span>
+<span class="p">})</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">plot_psd</span><span class="p">(</span><span class="n">activities</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Task A&quot;</span><span class="p">,</span> <span class="s2">&quot;Task B&quot;</span><span class="p">],</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.plot_PM_timeseries">
+<span class="sig-name descname"><span class="pre">plot_PM_timeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">PM_values</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0.5,</span> <span class="pre">2.5,</span> <span class="pre">10]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dM'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'All</span> <span class="pre">data'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fraction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cummulative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.plot_PM_timeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.plot_PM_timeseries" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Plot time series of one or more size-selective Pₓ metrics.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>PM_values</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – Cut diameters in µm defining the
+Pₓ series to compute (for example [0.5, 2.5, 10]).</p></li>
+<li><p><strong>dtype</strong> (<em>str</em>) – Base distribution type for Pₓ evaluation, one of
+“dN”, “dS”, “dV”, “dM”. Defaults to “dM” (mass-based).</p></li>
+<li><p><strong>activity</strong> (<em>str</em>) – Name of the activity mask selecting which time
+steps to plot. Must be a boolean column in data.</p></li>
+<li><p><strong>fraction</strong> (<em>bool</em>) – If False (default), plot Pₓ in absolute
+units and stack bands between successive PM_values. If
+True, plot the largest Pₓ on the primary axis and the
+fractional contributions of each Pₓ on a secondary axis.</p></li>
+<li><p><strong>cummulative</strong> (<em>bool</em>) – <p>Controls how bands/legend values are
+interpreted:</p>
+<blockquote>
+<div><ul>
+<li><p>False: legend reports band-wise contributions between
+successive PM_values (for example PM10 − PM2.5).</p></li>
+<li><p>True: legend reports cumulative Pₓ at each cut
+(for example PM2.5, PM10).</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The</dt><dd><p>figure and primary axes. When fraction=True, a secondary
+y-axis for fractions is also created.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>Exception</strong> – If the number of PM_values exceeds the internal
+color palette. Reduce PM_values or extend the color list.</p></li>
+<li><p><strong>KeyError</strong> – If activity is not a defined mask column in data.
+Check data.columns and mark_activities/Peak_finder calls.</p></li>
+<li><p><strong>ValueError</strong> – If dtype is not one of “dN”, “dS”, “dV”, “dM”.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method works on a converted copy of the data (using
+dtype_converter) to compute Pₓ series for each requested
+cut diameter via PM_calc. It then restricts to the chosen
+activity and draws either stacked absolute bands or
+fractional contributions relative to the largest Pₓ. Mean
+± standard deviation for each series (or band) are shown
+in the legend for quick comparison.</p>
+</dd>
+<dt>Theory:</dt><dd><p>Pₓ metrics reflect the contribution of different size
+ranges to overall exposure, following EN 481 / ISO 7708
+penetration curves for the chosen base distribution.
+Visualising absolute vs fractional Pₓ helps understand
+whether coarse or fine particles dominate during a task.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Examine how PM0.5, PM2.5 and PM10 evolve during a shift:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">elpi</span><span class="o">.</span><span class="n">plot_PM_timeseries</span><span class="p">(</span>
+    <span class="n">PM_values</span><span class="o">=</span><span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+    <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;dM&quot;</span><span class="p">,</span>
+    <span class="n">activity</span><span class="o">=</span><span class="s2">&quot;All data&quot;</span><span class="p">,</span>
+    <span class="n">fraction</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.plot_timeseries">
+<span class="sig-name descname"><span class="pre">plot_timeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_tot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0,</span> <span class="pre">0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_3d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0,</span> <span class="pre">0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mark_activities</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.plot_timeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.plot_timeseries" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Plot total concentration and a time–size heatmap in one figure.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_tot</strong> (<em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em>) – Y-limits for the total
+concentration panel (ymin, ymax). Use (0, 0) for automatic
+limits; if a non-zero entry is given with zero partner,
+the non-zero value is used directly, while the zero is
+replaced by the max/min in the data.</p></li>
+<li><p><strong>y_3d</strong> (<em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em>) – Color-scale limits for the 2D PSD
+panel (zmin, zmax). Use (0, 0) for automatic limits. To
+enforce a strictly positive lower limit for log scaling,
+set zmin &gt; 0 and zmax = 0 for automatic upper limit, e.g.
+y_3d = (1, 0).</p></li>
+<li><p><strong>log</strong> (<em>bool</em>) – If True, the function attempts to use a logarithmic
+color scale for the 2D panel. If the PSD values used for
+the mesh (after any clipping from y_3d) are not strictly
+positive or the lower limit is ≤ 0, the function
+automatically falls back to a linear color scale and prints
+a warning to the terminal. If False, a linear color scale
+is used directly.</p></li>
+<li><p><strong>ax1</strong> (<em>matplotlib.axes.Axes</em><em> | </em><em>None</em>) – Axis for the top (total
+concentration) plot. If provided, ax2 must also be
+provided.</p></li>
+<li><p><strong>ax2</strong> (<em>matplotlib.axes.Axes</em><em> | </em><em>None</em>) – Axis for the bottom
+(time–size) plot. If provided, ax1 must also be provided.</p></li>
+<li><p><strong>mark_activities</strong> (<em>bool</em><em> | </em><em>Sequence</em><em>[</em><em>str</em><em>]</em>) – Passed to
+plot_total_conc to control activity highlighting. True
+shades all activities except “All data”; a sequence
+restricts shading to specific activities.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A tuple with</dt><dd><p>the figure and a NumPy array [ax1, ax2, colorbar].</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[matplotlib.figure.Figure, numpy.ndarray]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If only one of ax1 or ax2 is supplied. Provide
+both or neither.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl>
+<dt>Detailed description:</dt><dd><p>The method first draws the total concentration time series
+(via plot_total_conc) in the top panel, optionally with
+activity shading and custom y-limits. The bottom panel
+shows a pcolormesh of particle size distribution (PSD)
+with values as a function of time and particle diameter.
+A shared colorbar is added and labeled with the
+current dtype and unit, and the y-axis for the PSD is
+log-scaled in diameter.</p>
+<p>By default, the color scale for the PSD uses a logarithmic
+normalization (log=True). If the PSD values (after any
+clipping via y_3d) include zeros or negatives, or if the
+color-scale lower limit is ≤ 0, the method automatically
+falls back to a linear color scale and prints a clearly
+visible warning to the terminal. To avoid this fallback and
+enforce log scaling, you can specify a strictly positive
+lower limit via y_3d, for example y_3d = (1, 0), which
+clips all values below 1 and lets the method safely use a
+log color scale.</p>
+</dd>
+<dt>Theory:</dt><dd><p>The heatmap represents the evolution of the size
+distribution over time. Combining this with total
+concentration in one figure makes it easier to relate bulk
+peaks to specific size modes or shifts in the
+distribution.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Create an overview plot of an ELPI or SMPS data set:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">,</span> <span class="n">cbar</span><span class="p">)</span> <span class="o">=</span> <span class="n">elpi</span><span class="o">.</span><span class="n">plot_timeseries</span><span class="p">()</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;elpi_timeseries.png&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.summarize_activities">
+<span class="sig-name descname"><span class="pre">summarize_activities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.summarize_activities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.summarize_activities" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Summarize size-resolved aerosol metrics per activity.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em><em> | </em><em>None</em>) – Optional Excel file path. If provided,
+the summary table is written to this file (one sheet,
+activities as rows). If None, no file is written.</p></li>
+<li><p><strong>metrics</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – List of metric names to compute.
+If None, a default set is used: [“PNC”, “PM1”, “PM2.5”,
+“PM4”, “PM10”, “MASS”, “MODE”, “MEDIAN”, “GMD”].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Summary table with:</dt><dd><ul class="simple">
+<li><p>”Segment”</p></li>
+<li><p>”Duration (HH:MM)”</p></li>
+<li><p>For each metric M: “M mean [unit]” and “M std [unit]”.</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If a metric name cannot be interpreted (for
+example malformed PMx string) or is unsupported.</p></li>
+<li><p><strong>ValueError</strong> – If internal preparation for a Pₓ metric fails
+(for example missing PSD columns or inconsistent bin
+metadata).</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>For each activity, the method computes the total duration
+and the requested set of metrics. PNC and MASS are total
+number and mass concentrations. MODE, MEDIAN and GMD are
+size metrics derived from the number distribution. Metrics
+of the form PMx, PNx, PSx, PVx are Pₓ values at cut
+diameter x (in µm) for mass, number, surface area and
+volume, respectively. Each metric is reported as mean and
+standard deviation over the activity. A transposed version
+of the table is printed to the terminal for quick inspection.</p>
+</dd>
+<dt>Theory:</dt><dd><p>The method combines time-weighted activity durations with
+standard PSD-derived metrics: bulk concentrations, Pₓ, and
+central size metrics (mode, median, geometric mean).
+Pₓ metrics are determined using penetration curves given in
+EN 481 / ISO 7708, mimicing cyclone cut-offs rather than
+sharp size cut-offs for PMₓ calculations.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Generate a task-level summary of exposure metrics:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">summarize_activities</span><span class="p">(</span>
+    <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;activity_summary_elpi.xlsx&quot;</span><span class="p">,</span>
+    <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;PNC&quot;</span><span class="p">,</span> <span class="s2">&quot;PM2.5&quot;</span><span class="p">,</span> <span class="s2">&quot;PM10&quot;</span><span class="p">,</span> <span class="s2">&quot;MODE&quot;</span><span class="p">,</span> <span class="s2">&quot;GMD&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.summarize_exposure">
+<span class="sig-name descname"><span class="pre">summarize_exposure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'PM4.2'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exposure_hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">short_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">long_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">short_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'15min'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">twa_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'8h'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peak_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activities</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol2d.html#Aerosol2D.summarize_exposure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.summarize_exposure" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Summarize exposure metrics for one PSD-derived metric across activities.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>metric</strong> (<em>str</em>) – <p>Exposure metric name derived from the underlying
+particle size distribution (PSD). Default is “PM4.2”,
+corresponding to respirable dust.Supported forms:</p>
+<blockquote>
+<div><ul>
+<li><p>”PNC”: total number concentration.</p></li>
+<li><p>”MASS”: total mass concentration.</p></li>
+<li><p>”PM&lt;x&gt;”, “PN&lt;x&gt;”, “PS&lt;x&gt;”, “PV&lt;x&gt;”: cumulative Pₓ at cut
+diameter &lt;x&gt; in µm for mass, number, surface, volume
+(for example “PM4.2”).</p></li>
+<li><p>”PM&lt;a&gt;-&lt;b&gt;”, “PN&lt;a&gt;-&lt;b&gt;”, “PS&lt;a&gt;-&lt;b&gt;”, “PV&lt;a&gt;-&lt;b&gt;”:
+band-limited Pₓ between diameters &lt;a&gt; and &lt;b&gt; in µm
+(for example “PM1-4”, “PM1-4.2”). These are computed
+using the EN 481 / ISO 7708 penetration curves.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>background</strong> (<em>float</em><em> | </em><em>str</em><em> | </em><em>None</em>) – <p>Background level used when
+computing the time-weighted average over <code class="docutils literal notranslate"><span class="pre">twa_window</span></code>.
+The same background level is used for all activities in
+the output. Default is None. Possible entries are:</p>
+<blockquote>
+<div><ul>
+<li><p>None: assume zero background.</p></li>
+<li><p>float: constant background level in metric units.</p></li>
+<li><p>str: name of an activity; the TWA of <code class="docutils literal notranslate"><span class="pre">metric</span></code> over
+that activity is used as background.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>exposure_hours</strong> (<em>float</em><em> | </em><em>None</em>) – Assumed duration of exposure for
+each activity, in hours, when embedding it into the TWA
+window. If None, the measured activity duration is used for
+that activity. If a positive value is given, the same
+exposure duration is applied for all activities.
+Default is None.</p></li>
+<li><p><strong>short_limit</strong> (<em>float</em>) – Short-term concentration limit in metric
+units (for example a 15-min STEL). This value is reported in
+the output as <code class="docutils literal notranslate"><span class="pre">&quot;STEL</span> <span class="pre">[unit]&quot;</span></code>. Default is 1.0 (in metric
+units).</p></li>
+<li><p><strong>long_limit</strong> (<em>float</em>) – Long-term concentration limit in metric
+units (for example an 8-h OEL). This value is reported in the
+output as <code class="docutils literal notranslate"><span class="pre">&quot;Exposure</span> <span class="pre">limit</span> <span class="pre">[unit]&quot;</span></code>. Default is 1.0 (in
+metric units).</p></li>
+<li><p><strong>short_window</strong> (<em>str</em>) – Rolling window used for short-term (STEL)
+evaluation, given as a pandas offset string (for example
+“15min”). This is reported as <code class="docutils literal notranslate"><span class="pre">&quot;STEL</span> <span class="pre">window&quot;</span></code>.
+Default is “15min” (15 minutes).</p></li>
+<li><p><strong>twa_window</strong> (<em>str</em>) – Total duration of the TWA window as a pandas
+offset string (for example “8h”). This is reported as
+<code class="docutils literal notranslate"><span class="pre">&quot;TWA</span> <span class="pre">window&quot;</span></code>. Default is “8h” (8 hours).</p></li>
+<li><p><strong>peak_ratio</strong> (<em>float</em>) – <p>Factor used in peak detection; peaks are
+flagged when the metric exceeds:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">baseline</span> <span class="o">+</span> <span class="n">peak_ratio</span> <span class="o">*</span> <span class="n">rolling_std</span><span class="p">,</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">baseline</span></code> is a rolling median and <code class="docutils literal notranslate"><span class="pre">rolling_std</span></code> is
+a rolling standard deviation over a short window.
+Default is 2.5.</p>
+</p></li>
+<li><p><strong>filename</strong> (<em>str</em><em> | </em><em>None</em>) – Optional path to a CSV/Excel file to which
+the non-transposed result rows are appended. If the file
+exists, rows are appended; otherwise the file is created with
+a header. Supported extensions are “.csv”, “.xls”, “.xlsx”.</p></li>
+<li><p><strong>activities</strong> (<em>Sequence</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Activities to summarize.
+If None (default), all defined activities in
+<a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.activities" title="aerosoltools.aerosol2d.Aerosol2D.activities"><code class="xref py py-attr docutils literal notranslate"><span class="pre">activities</span></code></a> are summarized (for example “All data”,
+“Background”, “Emission”, “Decay”). Activities with no
+marked time steps are skipped.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One row per activity segment with summary
+statistics for the chosen metric. Column names embed their units
+in square brackets. See Notes below (Detailed description) for a
+complete list of columns.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">metric</span></code> cannot be parsed (unsupported string).</p></li>
+<li><p><strong>ValueError</strong> – If a background activity name is given but does not
+exist or has no samples.</p></li>
+<li><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">short_window</span></code> or <code class="docutils literal notranslate"><span class="pre">twa_window</span></code> cannot be
+parsed as pandas-style durations.</p></li>
+<li><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">exposure_hours</span></code> is negative.</p></li>
+<li><p><strong>TypeError</strong> – If <code class="docutils literal notranslate"><span class="pre">background</span></code> is not None, float or str.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl>
+<dt>Detailed description:</dt><dd><p>The method first derives the requested metric time series
+from the underlying 2D PSD (for example PNC from a number
+distribution, PM4.2 from a mass-based Pₓ, or a band metric
+such as PM1–4). Where possible, existing Pₓ series already
+stored in <a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.extra_data" title="aerosoltools.aerosol2d.Aerosol2D.extra_data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">extra_data</span></code></a> are reused; otherwise they are
+computed on a working copy and then used to build the metric
+time series.</p>
+<p>For each selected activity, the method:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Extracts the metric time series within the activity
+using the activity mask.</p></li>
+<li><p>Computes per-step durations from the actual sampling
+times.</p></li>
+<li><p>Forms a time-weighted segment mean, used internally
+when embedding the activity into the TWA window.</p></li>
+<li><p>Computes instantaneous percentiles, peaks, STEL-style
+exceedances and long-term time-above-limit measures.</p></li>
+<li><p>Combines the segment mean with the specified background
+level to obtain an overall TWA for the chosen window.</p></li>
+</ol>
+</div></blockquote>
+<p>The returned DataFrame contains the following columns
+(per activity):</p>
+<blockquote>
+<div><ul>
+<li><dl class="simple">
+<dt>“Segment”</dt><dd><p>Name of the activity segment.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“Metric”</dt><dd><p>Name of the metric that was summarized, e.g.
+“PM4.2”, “PM1-4”, “PNC”, “MASS”.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“Duration [HH:MM]”</dt><dd><p>Duration of the activity derived from the actual
+sampling intervals, formatted as “HH:MM” (hours and
+minutes).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“Max [unit]”</dt><dd><p>Maximum of the instantaneous metric values during the
+activity. The unit is the metric unit (e.g. “µg/m³”,
+“cm⁻³”, “nm²/cm³”, “nm³/cm³”).</p>
+</dd>
+</dl>
+</li>
+<li><p>“95th percentile [unit]”</p></li>
+<li><p>“75th percentile [unit]”</p></li>
+<li><p>“50th percentile [unit]”</p></li>
+<li><p>“25th percentile [unit]”</p></li>
+<li><dl class="simple">
+<dt>“5th percentile [unit]”</dt><dd><p>Percentiles of the instantaneous metric values during
+the activity, all in the same unit as the metric.</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt>“Peaks [count]”</dt><dd><p>Number of distinct peak events detected in the
+activity, where a peak is a contiguous period in which
+the metric exceeds:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">baseline</span> <span class="o">+</span> <span class="n">peak_ratio</span> <span class="o">*</span> <span class="n">rolling_std</span><span class="p">,</span>
+</pre></div>
+</div>
+<p>with <code class="docutils literal notranslate"><span class="pre">baseline</span></code> the rolling median and
+<code class="docutils literal notranslate"><span class="pre">rolling_std</span></code> the rolling standard deviation over a
+short sliding window, covering at least 3 datapoints
+and maximum 15 datapoints, depending on the number
+of available datapoints in the given segment.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“STEL [unit]”</dt><dd><p>Short-term exposure limit used in the STEL
+exceedance calculations (echoing <code class="docutils literal notranslate"><span class="pre">short_limit</span></code>),
+with the same concentration unit as the metric.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“STEL window”</dt><dd><p>Rolling window length used for STEL evaluation,
+echoing <code class="docutils literal notranslate"><span class="pre">short_window</span></code> (for example “15min”).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“STEL exceedance [min]”</dt><dd><p>Total time in minutes during the activity where the
+<strong>full-window</strong> rolling mean is greater than or equal
+to the STEL. Only complete windows are counted in
+this measure.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“STEL episodes [count]”</dt><dd><p>Number of distinct STEL exceedance episodes based on
+the full-window rolling mean. Each contiguous block of
+time where the full-window mean is at or above the
+STEL is counted as one episode.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“Exposure limit [unit]”</dt><dd><p>Long-term exposure limit value used in the long-term
+evaluation (echoing <code class="docutils literal notranslate"><span class="pre">long_limit</span></code>), with the same
+unit as the metric.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“Exposure limit exceedance [min]”</dt><dd><p>Total time in minutes during the activity where the
+instantaneous metric values are greater than or equal
+to the exposure limit.</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt>“TWA concentration [unit]”</dt><dd><p>Time-weighted average concentration of the metric over
+the full TWA window (<code class="docutils literal notranslate"><span class="pre">&quot;TWA</span> <span class="pre">window&quot;</span></code>), combining the
+internal segment mean (optionally stretched to
+<code class="docutils literal notranslate"><span class="pre">exposure_hours</span></code>) with the specified background
+level for the remainder of the window:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">TWA</span> <span class="o">=</span> <span class="p">(</span><span class="n">segment_mean</span> <span class="o">*</span> <span class="n">exposure_minutes</span>
+       <span class="o">+</span> <span class="n">background</span> <span class="o">*</span> <span class="p">(</span><span class="n">twa_minutes</span> <span class="o">-</span> <span class="n">exposure_minutes</span><span class="p">))</span>
+      <span class="o">/</span> <span class="n">twa_minutes</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">twa_minutes</span></code> is the duration of
+<code class="docutils literal notranslate"><span class="pre">twa_window</span></code> in minutes and <code class="docutils literal notranslate"><span class="pre">exposure_minutes</span></code> is
+either the measured activity duration or
+<code class="docutils literal notranslate"><span class="pre">exposure_hours</span> <span class="pre">*</span> <span class="pre">60</span></code>, whichever is used.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“TWA window”</dt><dd><p>Duration of the TWA window over which
+“TWA concentration [unit]” is evaluated, echoing
+<code class="docutils literal notranslate"><span class="pre">twa_window</span></code> (for example “8h”).</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</dd>
+<dt>Theory:</dt><dd><p>Conceptually, the method mirrors typical occupational hygiene
+practice:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Exposure within an activity is represented by
+time-weighted averages and distributional
+descriptors (max and percentiles).</p></li>
+<li><p>Short-term limits (STEL) are evaluated using rolling
+means over a specified window, counting both total time
+above the limit and distinct exceedance episodes.</p></li>
+<li><p>Long-term limits are represented by cumulative
+time-above-limit measures.</p></li>
+<li><p>An overall TWA for an 8-h (or user-specified) reference
+period is constructed by mixing the task exposure with a
+background level for the rest of the window.</p></li>
+</ul>
+</div></blockquote>
+<p>This ensures a transparent link between raw time series
+behaviour and regulatory style metrics such as STEL and
+8-hour OELs.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Summarize respirable PM4.2 exposure for all activities in an
+ELPI dataset, using the “Background” activity as background
+level and a 15-min STEL with an 8-h TWA window:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">summarize_exposure</span><span class="p">(</span>
+    <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;PM4.2&quot;</span><span class="p">,</span>
+    <span class="n">background</span><span class="o">=</span><span class="s2">&quot;Background&quot;</span><span class="p">,</span>
+    <span class="n">short_limit</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
+    <span class="n">long_limit</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+    <span class="n">short_window</span><span class="o">=</span><span class="s2">&quot;15min&quot;</span><span class="p">,</span>
+    <span class="n">twa_window</span><span class="o">=</span><span class="s2">&quot;8h&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Band-limited metrics are handled in the same way, e.g. for a
+PM1–4.2 band:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">code</span><span class="o">-</span><span class="n">block</span><span class="p">::</span> <span class="n">python</span>
+</pre></div>
+</div>
+<blockquote>
+<div><p>elpi.summarize_exposure(metric=”PM1-4.2”)</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.activities">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">activities</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.activities" title="Link to this definition">¶</a></dt>
+<dd><p>Names of all defined activity labels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Activity names for which a boolean mask column exists
+in <a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.data" title="aerosoltools.aerosol2d.Aerosol2D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a> (for example <code class="docutils literal notranslate"><span class="pre">&quot;All</span> <span class="pre">data&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Peak&quot;</span></code>, or
+user-defined labels created via <a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.mark_activities" title="aerosoltools.aerosol2d.Aerosol2D.mark_activities"><code class="xref py py-meth docutils literal notranslate"><span class="pre">mark_activities()</span></code></a>).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.activity_periods">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">activity_periods</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.activity_periods" title="Link to this definition">¶</a></dt>
+<dd><p>Time periods associated with each activity label.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Mapping from activity name (str) to a list of
+<code class="docutils literal notranslate"><span class="pre">(start,</span> <span class="pre">end)</span></code> timestamp tuples, where each tuple defines a
+contiguous period during which the activity is active.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.data">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pandas.DataFrame</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.data" title="Link to this definition">¶</a></dt>
+<dd><p>Main data frame with time index and measurement columns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The full data table, including the time index,
+the primary measurement columns (for example total concentration),
+and any boolean activity mask columns.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.dtype">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dtype</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.dtype" title="Link to this definition">¶</a></dt>
+<dd><p>Data type descriptor for the primary measurements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A short description of the data type, for example
+<code class="docutils literal notranslate"><span class="pre">&quot;dN&quot;</span></code> (number concentration), <code class="docutils literal notranslate"><span class="pre">&quot;dM&quot;</span></code> (mass concentration),
+or <code class="docutils literal notranslate"><span class="pre">&quot;dN/dlogDp&quot;</span></code> when normalized. Falls back to
+<code class="docutils literal notranslate"><span class="pre">&quot;Unknown</span> <span class="pre">dtype&quot;</span></code> if not set in the metadata.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.extra_data">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">extra_data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pandas.DataFrame</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.extra_data" title="Link to this definition">¶</a></dt>
+<dd><p>Additional non-core data columns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Data frame containing extra columns that were
+extracted from the raw data file but are not considered part of the
+core aerosol time series (for example environmental or metadata
+channels). The index is aligned with <a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.data" title="aerosoltools.aerosol2d.Aerosol2D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.instrument">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">instrument</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.instrument" title="Link to this definition">¶</a></dt>
+<dd><p>Instrument used to acquire the measurements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Instrument name or description (for example model/type).
+Falls back to <code class="docutils literal notranslate"><span class="pre">&quot;Unknown</span> <span class="pre">instrument&quot;</span></code> if not set in the metadata.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.original_data">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">original_data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pandas.DataFrame</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.original_data" title="Link to this definition">¶</a></dt>
+<dd><p>Unmodified original main data frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A copy of the raw data as it was immediately after
+loading and initial normalization of the time index and column
+names, before any further processing steps (such as cropping,
+smoothing, or rebinning).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.original_extra_data">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">original_extra_data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pandas.DataFrame</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.original_extra_data" title="Link to this definition">¶</a></dt>
+<dd><p>Unmodified original extra-data frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A copy of the raw extra-data table (if any) before
+any processing steps. This will typically be empty if no extra data
+were extracted at load time.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.serial_number">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">serial_number</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.serial_number" title="Link to this definition">¶</a></dt>
+<dd><p>Instrument serial number.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Serial number of the instrument, if available in the metadata.
+Falls back to <code class="docutils literal notranslate"><span class="pre">&quot;Unknown</span> <span class="pre">serial</span> <span class="pre">number&quot;</span></code> if not set.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.time">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">time</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pandas.DatetimeIndex</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.time" title="Link to this definition">¶</a></dt>
+<dd><p>Time index of the measurements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The time stamps corresponding to each row in
+<a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.data" title="aerosoltools.aerosol2d.Aerosol2D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>. This is the index of the main data frame.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DatetimeIndex</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.total_concentration">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">total_concentration</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pandas.Series</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.total_concentration" title="Link to this definition">¶</a></dt>
+<dd><p>Total aerosol concentration time series.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The total concentration over time. If a column named
+<code class="docutils literal notranslate"><span class="pre">&quot;Total_conc&quot;</span></code> exists in <a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.data" title="aerosoltools.aerosol2d.Aerosol2D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>, that column is
+returned; otherwise the first data column is used as a fallback.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.unit">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">unit</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.unit" title="Link to this definition">¶</a></dt>
+<dd><p>Measurement unit for the primary data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Unit string, for example <code class="docutils literal notranslate"><span class="pre">&quot;#/cm³&quot;</span></code> for number concentration
+or <code class="docutils literal notranslate"><span class="pre">&quot;µg/m³&quot;</span></code> for mass concentration. Falls back to
+<code class="docutils literal notranslate"><span class="pre">&quot;Unknown</span> <span class="pre">unit&quot;</span></code> if not set in the metadata.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.copy_self">
+<span class="sig-name descname"><span class="pre">copy_self</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.copy_self" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Create and return a deep copy of the aerosol time-series object.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>A new object with independent copies of all data,</dt><dd><p>extra_data, metadata, and activity definitions.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="../aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The returned object is completely detached from the original:
+changing masks, cropping, rebinning, or smoothing on the copy
+does not affect the source instance, and vice versa. Both
+the original and the copy retain their own raw_data and
+raw_extra_data snapshots.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Use this when you want to experiment with processing steps
+without changing your original dataset:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cpc_raw</span> <span class="o">=</span> <span class="n">cpc_data</span>
+<span class="n">cpc_proc</span> <span class="o">=</span> <span class="n">cpc_data</span><span class="o">.</span><span class="n">copy_self</span><span class="p">()</span>
+<span class="n">cpc_proc</span><span class="o">.</span><span class="n">timerebin</span><span class="p">(</span><span class="s2">&quot;1min&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">timesmooth</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.get_activity_data">
+<span class="sig-name descname"><span class="pre">get_activity_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">activity_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.get_activity_data" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Return main data restricted to a given activity period.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>activity_name</strong> (<em>str</em>) – Name of the activity/boolean mask column
+to use (for example “All data”, “Peak”, or a user-defined
+label created via mark_activities).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Copy of the main data for time steps where the</dt><dd><p>selected activity is True, with all activity mask columns
+removed. The index is the filtered DatetimeIndex.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If activity_name is not present in self.activities.
+Ensure you call mark_activities or Peak_finder first, or
+check available labels via the activities property.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>This method filters self.data using the chosen activity mask
+and then drops all boolean activity columns so that the result
+only contains “measurement-like” columns (for example
+Total_conc and any other numeric channels). The returned
+DataFrame is safe to modify without affecting the internal
+storage of the Aerosol1D object.</p>
+</dd>
+<dt>Theory:</dt><dd><p>The method performs a simple time-based selection of rows
+flagged by an activity mask.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Extract a clean dataset for a specific task before further
+analysis:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">task_df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_activity_data</span><span class="p">(</span><span class="s2">&quot;Task&quot;</span><span class="p">)</span>
+<span class="n">task_df</span><span class="p">[</span><span class="s2">&quot;Total_conc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.get_activity_extra_data">
+<span class="sig-name descname"><span class="pre">get_activity_extra_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">activity_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.get_activity_extra_data" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Return extra_data restricted to a given activity period.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>activity_name</strong> (<em>str</em>) – Name of the activity/boolean mask column
+in self.data to use as a selector.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Subset of extra_data aligned to the time</dt><dd><p>periods where the chosen activity is True. If extra_data is
+empty, an empty DataFrame is returned.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If activity_name is not present in self.activities.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method uses the activity mask stored in self.data but
+returns rows from self.extra_data. This is useful to inspect
+auxiliary channels (for example temperature, pressure, or
+instrument status signals) corresponding to specific tasks
+or events, without mixing them with the primary aerosol
+time series.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Correlate environmental parameters with a task:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">env_task</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_activity_extra_data</span><span class="p">(</span><span class="s2">&quot;Task&quot;</span><span class="p">)</span>
+<span class="n">env_task</span><span class="p">[[</span><span class="s2">&quot;Temperature&quot;</span><span class="p">,</span> <span class="s2">&quot;RelativeHumidity&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.mark_activities">
+<span class="sig-name descname"><span class="pre">mark_activities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">activity_periods</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'union'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.mark_activities" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Define or update boolean activity masks on the time axis.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>activity_periods</strong> (<em>dict</em>) – <p>Mapping from activity name (str) to
+one of:</p>
+<blockquote>
+<div><ul>
+<li><p>a (start, end) tuple,</p></li>
+<li><p>a list of (start, end) tuples, or</p></li>
+<li><p>None (no active periods).</p></li>
+</ul>
+</div></blockquote>
+<p>Each start/end can be a pandas.Timestamp, datetime, or any
+string understood by pandas.to_datetime.</p>
+</p></li>
+<li><p><strong>mode</strong> (<em>str</em>) – <p>How to combine new periods with existing masks of
+the same name. One of:</p>
+<blockquote>
+<div><ul>
+<li><p>”union”: existing OR new periods (default),</p></li>
+<li><p>”replace”: overwrite any existing mask,</p></li>
+<li><p>”intersection”: keep only overlapping periods.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The object is modified in place by adding/updating</dt><dd><p>boolean columns in self.data and entries in
+self.activity_periods.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If mode is not “union”, “replace”, or “intersection”.
+Check the spelling of mode and choose among the supported
+options.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>For each activity key, a boolean Series is built over the
+current time index. All timestamps falling between any of
+the supplied (start, end) pairs (inclusive) are set to True,
+and others to False. Depending on mode, this new mask is
+merged with any existing column of the same name. The
+normalized list of (start, end) periods is stored in
+self.activity_periods[activity].</p>
+</dd>
+<dt>Theory:</dt><dd><p>The method implements generic time segmentation. Activities
+can represent tasks, locations, process states, or anything
+else defined by the user.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Mark a measurement into “Task” and “Background” segments:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">periods</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Task&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;2025-01-24 09:00&quot;</span><span class="p">,</span> <span class="s2">&quot;2025-01-24 11:00&quot;</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;2025-01-24 12:30&quot;</span><span class="p">,</span> <span class="s2">&quot;2025-01-24 14:00&quot;</span><span class="p">)</span>
+                <span class="p">],</span>
+    <span class="s2">&quot;Background&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;2025-01-24 08:30&quot;</span><span class="p">,</span> <span class="s2">&quot;2025-01-24 09:00&quot;</span><span class="p">)]</span>
+<span class="p">}</span>
+<span class="n">data</span><span class="o">.</span><span class="n">mark_activities</span><span class="p">(</span><span class="n">periods</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">mark_activities</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.Peak_finder">
+<span class="sig-name descname"><span class="pre">Peak_finder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'median'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">specific_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.Peak_finder" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Detect peaks and mark them as an activity labeled ‘Peak’.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>window</strong> (<em>int</em>) – Rolling window size in number of samples used to
+compute the local baseline and spread. Defaults to 15.</p></li>
+<li><p><strong>ratio</strong> (<em>float</em>) – Threshold factor on the rolling standard
+deviation. A time step is flagged as peak when
+value - baseline &gt; ratio * rolling_std. Defaults to 2.5.</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – Aggregation used as the rolling baseline, one of
+“mean”, “median”, “sum”, “min”, “max”. Defaults to “median”.</p></li>
+<li><p><strong>specific_data</strong> (<em>str</em>) – Optional column name to use for peak
+detection. If empty, the total_concentration time series is
+used. Otherwise, the name is looked up first in self.data
+(numeric columns) and then in extra_data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The method adds/updates a boolean “Peak” column in</dt><dd><p>self.data and updates self.activity_periods[“Peak”].</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If method is not one of the supported names. Choose
+one of “mean”, “median”, “sum”, “min”, “max”.</p></li>
+<li><p><strong>ValueError</strong> – If specific_data is not found as a numeric column
+in either self.data or extra_data. Check column names via
+data.columns or extra_data.columns.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method computes a rolling baseline and rolling standard
+deviation over the chosen data series. Points where the
+deviation from the baseline exceeds ratio times the rolling
+standard deviation are marked as peaks. Contiguous True
+segments in this mask are converted to (start, end) time
+intervals and stored as the “Peak” activity.</p>
+</dd>
+<dt>Theory:</dt><dd><p>This is a simple statistical peak detector based on local
+outlier detection relative to a moving baseline and spread.
+It highlights periods where the signal is unusually high
+compared to its recent history.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Automatically tag high-exposure episodes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">Peak_finder</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">31</span><span class="p">,</span> <span class="n">ratio</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">mark_activities</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Peak&quot;</span><span class="p">])</span>
+<span class="n">peak_df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_activity_data</span><span class="p">(</span><span class="s2">&quot;Peak&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.plot_total_conc">
+<span class="sig-name descname"><span class="pre">plot_total_conc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mark_activities</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.plot_total_conc" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Plot the time series of total aerosol concentration.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em> | </em><em>None</em>) – Optional axis to draw the plot on.
+If None, a new figure and axes are created.</p></li>
+<li><p><strong>mark_activities</strong> (<em>bool</em><em> | </em><em>Sequence</em><em>[</em><em>str</em><em>]</em>) – <p>Controls highlighting
+of activity periods:</p>
+<blockquote>
+<div><ul>
+<li><p>False: no highlighting.</p></li>
+<li><p>True: shade all activities except “All data”.</p></li>
+<li><p>sequence of str: shade only the named activities.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The</dt><dd><p>figure and axes containing the plot.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>None</strong> – Any errors usually stem from invalid Matplotlib axes or
+malformed time indices.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method draws total_concentration versus time with a
+grid and labels derived from dtype and unit. The x-axis is
+formatted using Matplotlib’s concise date formatter. If
+mark_activities is enabled, each selected activity is drawn
+as semi-transparent vertical spans covering its active
+periods, with a legend entry per activity.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Inspect an instrument time series with highlighted tasks:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">mark_activities</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;total_concentration.png&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.timecrop">
+<span class="sig-name descname"><span class="pre">timecrop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">focus</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crop_extra</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.timecrop" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Crop the time axis to include or exclude a time interval.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<em>str</em><em> | </em><em>pandas.Timestamp</em><em> | </em><em>None</em>) – Start of the interval.
+If None, cropping starts at the first timestamp.</p></li>
+<li><p><strong>end</strong> (<em>str</em><em> | </em><em>pandas.Timestamp</em><em> | </em><em>None</em>) – End of the interval.
+If None, cropping ends at the last timestamp.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em>) – If True, modify the current object and return
+it. If False, return a cropped deep copy.</p></li>
+<li><p><strong>focus</strong> (<em>bool</em>) – If True, keep only the interval [start, end].
+If False, remove that interval and keep data before start
+and after end.</p></li>
+<li><p><strong>crop_extra</strong> (<em>bool</em>) – If True, also crop extra_data to the same
+time mask (when inplace=True or on the copy).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The cropped object (self when inplace=True, or a</dt><dd><p>new instance when inplace=False).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – May be raised by pandas.to_datetime if start or
+end strings cannot be parsed. Check the date format
+(for example “YYYY-MM-DD HH:MM:SS”).</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>A boolean mask is built over the current time index based
+on start and end. Depending on focus, this mask either
+selects or removes the specified interval. All columns in
+self.data are subset accordingly. When crop_extra is True,
+extra_data is cropped using the same mask, keeping time
+alignment between main and extra channels.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Drop a calibration period at the start of a measurement:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">timecrop</span><span class="p">(</span><span class="n">end</span><span class="o">=</span><span class="s2">&quot;2025-01-24 09:00&quot;</span><span class="p">,</span> <span class="n">focus</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.timerebin">
+<span class="sig-name descname"><span class="pre">timerebin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'s'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.timerebin" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Resample the time series to a new regular frequency.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>freq</strong> (<em>str</em>) – Target sampling interval as a pandas offset alias
+(for example “30s”, “1min”, “5min”, “1H”). Defaults to “s”.</p></li>
+<li><p><strong>start</strong> (<em>datetime</em><em> | </em><em>pandas.Timestamp</em><em> | </em><em>None</em>) – Optional start time
+for the resampling window. If None, the first timestamp is
+used.</p></li>
+<li><p><strong>end</strong> (<em>datetime</em><em> | </em><em>pandas.Timestamp</em><em> | </em><em>None</em>) – Optional end time for
+the resampling window. If None, the last timestamp is used.</p></li>
+<li><p><strong>method</strong> (<em>str</em><em> | </em><em>Callable</em>) – Aggregation function for numeric
+columns. Any aggregation accepted by pandas.DataFrame.resample
+(for example “mean”, “sum”, “median”) or a custom callable.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em>) – If True, update this object and return it. If
+False, leave this instance unchanged and return a rebinned
+deep copy.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The rebinned object (self when inplace=True, or a</dt><dd><p>new instance otherwise) with a regular DatetimeIndex and
+resampled main and extra data.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – May be raised by pandas if freq is not a valid
+offset alias or if start/end cannot be interpreted as
+timestamps.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>Numeric columns in self.data are resampled using the chosen
+method, while boolean columns are aggregated with a logical
+maximum so that any True within a bin keeps the bin True.
+The resulting DataFrame is reindexed to a fully regular
+time grid between the floored start and end times. Extra
+data, if present, are resampled in the same way and aligned
+to the new index. Activity masks such as “All data” are
+maintained and missing boolean values are filled with False.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Convert a high‑frequency logger to 1‑minute averages:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">timerebin</span><span class="p">(</span><span class="n">freq</span><span class="o">=</span><span class="s2">&quot;1min&quot;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;mean&quot;</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.timeshift">
+<span class="sig-name descname"><span class="pre">timeshift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minutes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_extra</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.timeshift" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Shift the time index by a constant offset.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seconds</strong> (<em>float</em>) – Offset in seconds; positive shifts the series
+forward in time, negative backward. Defaults to 0.</p></li>
+<li><p><strong>minutes</strong> (<em>float</em>) – Offset in minutes, converted internally to
+seconds and added to seconds. Defaults to 0.</p></li>
+<li><p><strong>hours</strong> (<em>float</em>) – Offset in hours, converted internally to
+seconds and added to seconds. Defaults to 0.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em>) – If True, shift this object in place and return
+it. If False, return a shifted deep copy. Default is True.</p></li>
+<li><p><strong>shift_extra</strong> (<em>bool</em>) – If True, also shift the index of
+extra_data so that main and extra channels remain aligned.
+Default is True.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Object with shifted time index (self when</dt><dd><p>inplace=True, otherwise a new instance).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>None</strong> – Unless invalid types are passed for the offset arguments.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>A pandas.Timedelta is constructed from the combined offset:
+total_shift = seconds + 60*minutes + 3600*hours.
+This timedelta is added to the index of self.data, and
+optionally to self.extra_data. Activity masks and other
+columns are left unchanged; only timestamps move.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Align measurements from two instruments with a known clock
+offset:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cpc</span><span class="o">.</span><span class="n">timeshift</span><span class="p">(</span><span class="n">minutes</span><span class="o">=+</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">timeshift</span><span class="p">(</span><span class="n">minutes</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">cpc</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">()</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol2d.Aerosol2D.timesmooth">
+<span class="sig-name descname"><span class="pre">timesmooth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol2d.Aerosol2D.timesmooth" title="Link to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Description:</dt><dd><p>Apply a centered rolling smoother to numeric columns.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>window</strong> (<em>int</em>) – Rolling window size in number of samples.
+Defaults to 5.</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – Aggregation used for smoothing, one of
+“mean”, “median”, “sum”, “min”, “max”. Defaults to “mean”.</p></li>
+<li><p><strong>inplace</strong> (<em>bool</em>) – If True, replace the numeric columns of this
+object with their smoothed versions. If False, return a
+smoothed deep copy.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Object with smoothed numeric columns and unchanged</dt><dd><p>boolean/activity columns (self when inplace=True, otherwise
+a new instance).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If method is not among the supported names.
+Choose one of “mean”, “median”, “sum”, “min”, “max”.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method separates numeric and boolean columns in
+self.data. A centered rolling window with at least one
+valid sample (min_periods=1) is applied to numeric columns
+using the requested aggregation, producing a smoothed
+version of each numeric time series. Boolean columns
+untouched.</p>
+</dd>
+<dt>Theory:</dt><dd><p>The smoothing is a simple moving-window operation. It
+can help reduce noise in total concentration or other
+instrument channels prior to further analysis.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Smooth a noisy CPC time series while preserving activities:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">smooth</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">timesmooth</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;median&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">smooth</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">mark_activities</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="../aerosolalt/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">aerosoltools.aerosolalt</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../aerosol1d/index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">aerosoltools.aerosol1d</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">aerosoltools.aerosol2d</a><ul>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.params"><code class="docutils literal notranslate"><span class="pre">params</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D"><code class="docutils literal notranslate"><span class="pre">Aerosol2D</span></code></a><ul>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.bin_edges"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.bin_edges</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.bin_mids"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.bin_mids</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.density"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.density</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.metadata"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.metadata</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.size_data"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.size_data</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.dtype_converter"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.dtype_converter()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.correct_diffusion_losses"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.correct_diffusion_losses()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.set_density"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.set_density()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.normalize_logdp"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.normalize_logdp()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.unnormalize_logdp"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.unnormalize_logdp()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.PM_calc"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.PM_calc()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.plot_psd"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.plot_psd()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.plot_PM_timeseries"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.plot_PM_timeseries()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.plot_timeseries"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.plot_timeseries()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.summarize_activities"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.summarize_activities()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.summarize_exposure"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.summarize_exposure()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.activities"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.activities</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.activity_periods"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.activity_periods</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.data"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.data</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.dtype"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.dtype</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.extra_data"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.extra_data</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.instrument"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.instrument</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.original_data"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.original_data</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.original_extra_data"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.original_extra_data</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.serial_number"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.serial_number</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.time"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.time</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.total_concentration"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.total_concentration</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.unit"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.unit</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.copy_self"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.copy_self()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.get_activity_data"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.get_activity_data()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.get_activity_extra_data"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.get_activity_extra_data()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.mark_activities"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.mark_activities()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.Peak_finder"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.Peak_finder()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.plot_total_conc"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.plot_total_conc()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.timecrop"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.timecrop()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.timerebin"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.timerebin()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.timeshift"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.timeshift()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol2d.Aerosol2D.timesmooth"><code class="docutils literal notranslate"><span class="pre">Aerosol2D.timesmooth()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>
