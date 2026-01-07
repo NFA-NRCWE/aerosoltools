@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import datetime as datetime
 
 import numpy as np
@@ -5,155 +7,43 @@ import pandas as pd
 from matplotlib.dates import date2num
 
 from ..aerosolalt import AerosolAlt
-from .Common import _detect_delimiter
+from .Common import detect_delimiter
 
 ###############################################################################
 
 
-def Load_Partector_file(file: str, extra_data: bool = False) -> AerosolAlt:
-    """Description:
-        Load a Partector LDSA text export and return it as an
-        :class:`AerosolAlt` time series with TEM sampling metadata.
+def Load_Partector_file(file: str, extra_data: bool = False):
+    """
+    Load Partector LDSA data from a .txt file.
 
-    Args:
-        file (str):
-            Path to the Partector ``.txt`` export file.
-        extra_data (bool, optional):
-            If ``True``, additional columns (beyond ``LDSA``, ``TEM`` and
-            ``Flow``) are stored in ``extra_data`` indexed by ``Datetime``.
-            Defaults to ``False``.
+    This function reads the flow, LDSA, and TEM (filter trigger) columns, reconstructs
+    the datetime index from the file's metadata, and returns an `AerosolAlt` object
+    containing the structured data.
 
-    Returns:
-        AerosolAlt:
-            Partector LDSA time series with a datetime index, LDSA, TEM flag,
-            flow, and associated metadata (including a TEM sampling summary).
+    Parameters
+    ----------
+    file : str
+        Path to the Partector `.txt` file.
+    extra_data : bool, optional
+        If True, attaches all additional columns (except LDSA, TEM, Flow)
+        as `extra_data` in the returned class. Default is False.
 
-    Raises:
-        FileNotFoundError:
-            If ``file`` does not exist or cannot be opened.
-        UnicodeDecodeError:
-            If the file cannot be decoded using the encodings tried by
-            :func:`_detect_delimiter`.
-        ValueError:
-            If the start datetime cannot be parsed from the header, or if
-            there are too few TEM sampling points to estimate a sampling
-            volume.
+    Returns
+    -------
+    Par : AerosolAlt
+        A class instance containing datetime-indexed LDSA, TEM flag, and flow.
+        Metadata includes sample volume estimates and instrument info.
 
-    Notes:
-        Detailed description:
-            This loader is tailored to Partector text exports that provide
-            lung-deposited surface area (LDSA), a TEM sampling flag, and flow
-            information as a function of time.
-
-            Internally, the function:
-
-            - Attempts to infer encoding and delimiter via
-              :func:`_detect_delimiter`. If delimiter detection fails, it
-              falls back to tab (``"\\t"``).
-            - Reads the main data block with :func:`pandas.read_csv`, starting
-              at the Partector data header (``header=10``).
-            - Renames core columns:
-
-              - ``"time"`` → ``"Datetime"`` (elapsed seconds),
-              - ``"flow"`` → ``"Flow"``.
-
-            - Reads the header region (first 10 lines) via
-              :func:`numpy.genfromtxt` and extracts the measurement start
-              datetime from the line containing ``"Start: "`` using the format
-              ``"%d.%m.%Y %H:%M:%S"``.
-            - Converts the ``"Datetime"`` column from elapsed seconds to
-              absolute timestamps by adding the parsed start time.
-            - Uses the ``"TEM"`` column (1 during TEM sampling, 0 otherwise) to
-              identify the TEM sampling interval:
-
-              - selects all rows where ``TEM == 1``,
-              - takes the first and last such timestamps as sampling start/end,
-              - raises a ``ValueError`` if fewer than two TEM points are found.
-
-            - Computes the average flow during the TEM sampling period as
-              ``Flow`` (L/min) × 1000 → mL/min.
-            - Estimates the sampling duration in minutes from the difference
-              between the start and end timestamps (using
-              :func:`matplotlib.dates.date2num`), and calculates an approximate
-              TEM sampling volume in mL as:
-
-              .. code-block:: python
-
-                  duration_min = (tem_end - tem_start) in minutes
-                  sample_volume_ml = avg_flow_ml_min * duration_min
-
-            - Packages this information into a small ``TEM_samples`` table with
-              columns ``"Start"``, ``"End"`` and ``"Sample_vol [ml]"`` and
-              stores it in ``metadata["TEM_samples"]``.
-            - Constructs an :class:`AerosolAlt` object using the core columns:
-
-              - ``Datetime``,
-              - ``LDSA``,
-              - ``TEM``,
-              - ``Flow``.
-
-            - Populates metadata:
-
-              - ``instrument`` set to ``"Partector"``,
-              - ``serial_number`` from the first header line (last 3
-                characters),
-              - ``TEM_samples`` as described above.
-              - ``unit`` mapping:
-
-                - ``"LDSA"`` → ``"nm$^{2}$/cm$^{3}$"``,
-                - ``"TEM"`` → ``"bool"``,
-                - ``"Flow"`` → ``"l/min"``,
-
-            - If ``extra_data=True``, all remaining columns (not ``LDSA``,
-              ``TEM``, ``Flow``) are stored in ``extra_data`` with
-              ``Datetime`` as index.
-
-        Theory:
-            The Partector logs LDSA and a binary TEM sampling flag as a
-            function of time. To estimate the TEM sampling volume, the loader
-            assumes:
-
-            - the TEM filter is sampling whenever ``TEM == 1``,
-            - the effective sampling interval is from the first to the last
-              timestamp where ``TEM == 1``,
-            - the flow is reasonably constant over that interval so that the
-              mean flow during ``TEM == 1`` can be used.
-
-            The estimated TEM sampling volume :math:`V_\\mathrm{TEM}` in mL is
-            then given by:
-
-            .. math::
-
-                V_\\mathrm{TEM} \\approx \\bar{Q} \\cdot \\Delta t,
-
-            where :math:`\\bar{Q}` is the mean flow (mL/min) during
-            :math:`TEM = 1` and :math:`\\Delta t` is the sampling duration in
-            minutes between the first and last TEM-flagged timestamps.
-
-      Examples:
-          Typical usage is to load a Partector file and inspect LDSA and TEM
-          sampling information:
-
-          .. code-block:: python
-
-              import aerosoltools as at
-
-              # Load Partector LDSA and TEM information
-              par = at.Load_Partector_file("data/Partector_export.txt",
-                                            extra_data=True)
-
-              # Inspect the main time series
-              print(par.data.head())
-
-              # Inspect the estimated TEM sampling volume(s)
-              print(par.metadata["TEM_samples"])
-
-              # Plot LDSA over time
-              fig, ax = par.plot_total_conc(parameter="LDSA")
+    Notes
+    -----
+    - LDSA is returned in units of `nm²/cm³`.
+    - Flow is averaged over TEM==1 samples and reported in `l/min`.
+    - Sample volume is calculated only for the period where TEM==1.
+    - Requires `Com.detect_delimiter()` for automatic delimiter/encoding detection.
     """
 
     try:
-        encoding, delimiter = _detect_delimiter(file, sample_lines=30)
+        encoding, delimiter = detect_delimiter(file, sample_lines=30)
     except Exception:
         delimiter = "\t"
 

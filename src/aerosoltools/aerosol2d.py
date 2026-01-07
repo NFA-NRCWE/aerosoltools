@@ -1,20 +1,16 @@
 from math import erf
-from typing import Any, Iterable, Mapping, Optional, Sequence, Union, cast
-
-try:
-    from typing import override  # Python 3.12+
-except ImportError:  # Python ≤ 3.11
-    from typing_extensions import override
-
-import os
+from typing import Any, Optional, Sequence, Union, cast
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import numpy as np
 import pandas as pd
+import os
+
 from matplotlib.axes import Axes
 from matplotlib.colors import LogNorm, Normalize
+from matplotlib.ticker import PercentFormatter
 from matplotlib.figure import Figure
 from numpy.typing import NDArray
 from tabulate import tabulate
@@ -62,1531 +58,601 @@ class Aerosol2D(Aerosol1D):
 
     @property
     def bin_edges(self) -> NDArray[np.float64]:
-        """Particle size bin edges in nanometers.
+        """
+        1D array of bin edges in nanometers.
 
-        Returns:
-            numpy.ndarray: One-dimensional array of bin edge diameters in
-            nanometers (dtype ``float64``). Length is ``n + 1`` when there are
-            ``n`` size bins. A copy is returned so callers cannot mutate the
-            internal metadata.
+        Returns
+        -------
+        numpy.ndarray
+            Shape (n,), dtype float64.
         """
         # ensure an array of floats; .copy() so callers can't mutate your internal state
         return np.asarray(self._meta["bin_edges"], dtype=np.float64).copy()
 
     @property
     def bin_mids(self) -> NDArray[np.float64]:
-        """Particle size bin midpoints in nanometers.
+        """
+        1D array of bin mids in nanometers.
 
-        Returns:
-            numpy.ndarray: One-dimensional array of bin midpoint diameters in
-            nanometers (dtype ``float64``). Length is ``n`` for ``n`` size
-            bins. A copy is returned so callers cannot mutate the internal
-            metadata.
+        Returns
+        -------
+        numpy.ndarray
+            Shape (n,), dtype float64.
         """
         return np.asarray(self._meta["bin_mids"], dtype=np.float64).copy()
 
     @property
     def density(self) -> float:
-        """Assumed particle density in g/cm³.
-
-        Returns:
-            float: Particle density used for conversions between number, volume,
-            surface area, and mass distributions. Falls back to the value
-            stored in the metadata (typically set at load time or via
-            :meth:`set_density`). Defaults to 1.0 g/cm³ if not explicitly set in
-            metadata.
         """
-        return float(self._meta.get("density", 1.0))
+        Unit of the measurements.
+
+        Returns
+        -------
+        float
+            Particle density in "g/cm³".
+        """
+        return self._meta.get("density")  # type: ignore
 
     @property
-    def metadata(self) -> dict:
-        """Metadata associated with the size-resolved dataset.
+    def metadata(self):
+        """
+        Meta data as extracted upon loading the data
 
-        Returns:
-            dict: Dictionary of metadata extracted or defined for this object,
-            including bin edges/mids, units, data type (dN/dS/dV/dM),
-            instrument information, density, and any additional fields stored
-            in ``self._meta``.
+        Returns
+        -------
+        dict
+            Meta data related to the loaded data.
+
         """
         return self._meta
 
     @property
     def size_data(self) -> pd.DataFrame:
-        """Size-bin concentration data.
+        """
+        Size-bin concentration data.
 
-        Returns:
-            pandas.DataFrame: Subset of :attr:`data` containing only the
-            columns that represent size-resolved concentration values, ordered
-            according to :attr:`bin_mids` (via :attr:`_sizebin_headers`). Each
-            column corresponds to a size bin, and each row to a time stamp.
+        Returns
+        -------
+        pandas.DataFrame
+            Columns for all size bins in the dataset, in the order of `_sizebin_headers`.
         """
         return self.data.loc[:, self._sizebin_headers]
 
     @property
-    def _sizebin_headers(self) -> list[str]:
-        """Column labels for size-bin concentration data.
+    def _sizebin_headers(self) -> list:
+        """
+        Headers of the sizebin concentration columns within main DataFrame
 
-        Returns:
-            list[str]: Column names used in :attr:`data` for the size-bin
-            distribution, derived from :attr:`bin_mids` (converted to strings).
-            These headers define which columns are treated as the size
-            distribution in methods such as :meth:`convert_to_number_concentration`,
-            :meth:`convert_to_mass_concentration`, and plotting utilities.
+        Returns
+        -------
+        list
+            Headers to access sizebin columns.
         """
         return [str(x) for x in self.bin_mids]
-
-    ###########################################################################
-    """###################### Private Helper Functions #####################"""
-    ###########################################################################
-
-    def _as_base_array(self) -> tuple[NDArray[np.float64], list[str], bool]:
-        """Extract the size-bin data in base (non-/dlogDp) form.
-
-        This helper centralizes the logic needed to work in *physical* (base)
-        units, independent of whether the data are stored as ``*/dlogDp`` or
-        not. It performs the following steps:
-
-        * Selects the size-bin columns from :attr:`data` using
-          :attr:`_sizebin_headers`.
-        * Converts them to a dense ``float64`` numpy array of shape
-          ``(n_times, n_bins)``.
-        * If the current :attr:`dtype` string contains ``"/dlogDp"``, the array
-          is multiplied by Δlog₁₀(Dp) (via :meth:`_dlogdp`) to undo the
-          normalization and return the underlying base distribution.
-
-        Returns:
-            tuple: ``(base_array, headers, was_norm)`` where
-
-                * ``base_array`` (:class:`numpy.ndarray`): Size-bin data in
-                  base units (e.g. dN, dS, dV, dM), shape
-                  ``(n_times, n_bins)``.
-                * ``headers`` (list[str]): Column labels for the size-bin
-                  distribution in :attr:`data`.
-                * ``was_norm`` (bool): ``True`` if the original data were in
-                  ``*/dlogDp`` form, i.e. the :attr:`dtype` string contained
-                  ``"/dlogDp"``; ``False`` otherwise.
-
-        Raises:
-            ValueError: If the length of the Δlog₁₀(Dp) vector does not match
-                the number of size bins (columns).
-        """
-        headers = self._sizebin_headers
-        arr = self._data[headers].to_numpy(dtype=float, copy=True)
-        was_norm = "/dlogDp" in str(self.dtype)
-
-        if was_norm:
-            dlogdp = self._dlogdp()
-            if dlogdp.shape[0] != arr.shape[1]:
-                raise ValueError(
-                    "Mismatch between Δlog₁₀(Dp) array and number of size bins."
-                )
-            arr = arr * dlogdp[None, :]
-
-        return arr.astype(np.float64, copy=False), headers, was_norm
-
-    ###########################################################################
-
-    def _dlogdp(self) -> NDArray[np.float64]:
-        """Compute bin widths in log₁₀(Dp) space.
-
-        This helper derives the logarithmic bin widths Δlog₁₀(Dp) from
-        :attr:`bin_edges`. It is the fundamental quantity used when converting
-        between base distributions (e.g. dN, dM) and their log-diameter–
-        normalized counterparts (e.g. dN/dlogDp).
-
-        Returns:
-            numpy.ndarray: One-dimensional float64 array of Δlog₁₀(Dp) values
-            with length ``n`` for ``n`` size bins.
-
-        Raises:
-            ValueError: If :attr:`bin_edges` does not contain at least two
-                elements or is not one-dimensional.
-        """
-        be = np.asarray(self.bin_edges, dtype=float)
-        if be.ndim != 1 or be.size < 2:
-            raise ValueError(
-                "bin_edges must be a one-dimensional array of length >= 2 to "
-                "compute Δlog₁₀(Dp)."
-            )
-        return np.diff(np.log10(be)).astype(np.float64)
-
-    ###########################################################################
-
-    def _emit(
-        self,
-        base_arr: NDArray[np.float64],
-        headers: list[str],
-        was_norm: bool,
-        unit: str,
-        dtype_base: str,
-        inplace: bool = True,
-    ) -> "Aerosol2D":
-        """Write converted data back to :attr:`data`, with optional /dlogDp.
-
-        This helper takes a size distribution expressed in **base** form
-        (e.g. dN, dS, dV, dM; *not* divided by Δlog₁₀(Dp)) and writes it back to
-        the internal :attr:`data` frame. If the original data were in
-        ``*/dlogDp`` form (``was_norm=True``), the method re-applies the
-        normalization before storing the values, so that the representation
-        (normalized vs. non-normalized) is preserved across conversions.
-
-        Regardless of normalization, the ``Total_conc`` column is recomputed
-        as the sum over the supplied base distribution, ensuring that the total
-        reflects the **true physical** distribution rather than the normalized
-        one.
-
-        Args:
-            base_arr: 2D float64 array of shape ``(n_times, n_bins)``
-                containing the converted size distribution in base units,
-                e.g. dN, dS, dV, or dM.
-            headers: Column labels corresponding to the size-bin data in
-                :attr:`data`.
-            was_norm: Whether the input object was originally stored as
-                ``*/dlogDp`` (``True``) or not (``False``). If ``True``,
-                ``base_arr`` will be divided by Δlog₁₀(Dp) prior to storage
-                and the resulting :attr:`dtype` will have ``"/dlogDp"`` appended.
-            unit: Unit string to write to ``metadata["unit"]``.
-            dtype_base: Base dtype string (e.g. ``"dN"``, ``"dS"``, ``"dV"``,
-                ``"dM"``) to write to ``metadata["dtype"]``. The suffix
-                ``"/dlogDp"`` is added automatically when ``was_norm`` is
-                ``True``.
-            inplace: If ``True`` (default), modify this instance in-place and
-                return it. If ``False``, operate on a deep copy and return the
-                new object, leaving the original unchanged.
-
-        Returns:
-            Aerosol2D: The updated object (``self`` or a new copy) with
-
-            * size-bin data in :attr:`data` updated (in base or ``*/dlogDp``
-              form, consistent with the original),
-            * :attr:`metadata["unit"]` and :attr:`metadata["dtype"]` updated,
-            * :attr:`_TOTAL_COL` (``"Total_conc"``) recomputed from the base
-              distribution.
-
-        Raises:
-            ValueError: If ``base_arr`` is not 2D or its second dimension does
-                not match the number of provided ``headers``. Also raised if
-                Δlog₁₀(Dp) does not match the number of bins when
-                re-normalizing.
-        """
-        if base_arr.ndim != 2:
-            raise ValueError("base_arr must be a 2D array (n_times × n_bins).")
-        if base_arr.shape[1] != len(headers):
-            raise ValueError(
-                "Number of columns in base_arr does not match number of headers."
-            )
-
-        out = self if inplace else self.copy_self()
-
-        if was_norm:
-            dlogdp = self._dlogdp()
-            if dlogdp.shape[0] != base_arr.shape[1]:
-                raise ValueError(
-                    "Mismatch between Δlog₁₀(Dp) array and number of size bins."
-                )
-            arr_out = base_arr / dlogdp[None, :]
-            out._meta["dtype"] = f"{dtype_base}/dlogDp"
-        else:
-            arr_out = base_arr
-            out._meta["dtype"] = dtype_base
-
-        out._meta["unit"] = unit
-        out._data[headers] = pd.DataFrame(
-            arr_out, index=out._data.index, columns=headers
-        )
-
-        # Total_conc is always computed from the base (non-/dlogDp) distribution
-        out._data["Total_conc"] = np.nansum(base_arr, axis=1)
-
-        return out
-
-    ###########################################################################
-
-    def _px_fraction_series(
-        self,
-        dtype: str = "dM",
-        upper: float = 4.2,
-        lower: float = 0.0,
-        work: "Aerosol2D | None" = None,
-    ) -> pd.Series:
-        """Compute a size-selective Pₓ time series for a given band (private core).
-
-        This is the internal numeric routine used by :meth:`PM_calc` and
-        :meth:`summarize` to compute EN 481 / ISO 7708–style size-selective
-        metrics (PM/PN/PS/PV). It integrates the requested distribution in
-        the interval ``[lower, upper]`` (µm) using the standard lognormal
-        penetration curve (GSD = 1.5, 50% cut at ``upper``).
-
-        The result is a 1D :class:`pandas.Series` indexed by :attr:`time`.
-        No data are stored in :attr:`extra_data`; callers decide whether to
-        persist the series.
-
-        Args:
-            dtype (str, optional): Target base distribution kind, one of
-                ``{"dN", "dS", "dV", "dM"}``. The helper ensures the working
-                data are unnormalized (not ``*/dlogDp``) and converted to this
-                dtype before integration. Defaults to ``"dM"``.
-            upper (float, optional): Upper cut-off diameter in micrometers
-                (µm) corresponding to the nominal 50% penetration point.
-                Defaults to ``4.2``.
-            lower (float, optional): Lower cut-off diameter in micrometers
-                (µm). If ``0.0`` (default), the returned series is cumulative
-                from 0 → ``upper``. If in ``(0, upper)``, the returned series
-                represents the band-limited contribution from ``lower`` → ``upper``.
-            work (Aerosol2D | None, optional): Optional pre-prepared working
-                object that is **already** unnormalized (no ``"/dlogDp"`` in
-                :attr:`dtype`) and in the desired ``dtype``. This is used by
-                performance-critical code (e.g. :meth:`summarize`) to avoid
-                repeated conversions. If ``None`` (default), a suitable working
-                copy is created internally as needed.
-
-        Returns:
-            pandas.Series: Time series of the requested Pₓ metric, indexed by
-            :attr:`time`. Empty or invalid time steps (where
-            :attr:`total_concentration` is NaN) are returned as NaN.
-
-        Raises:
-            ValueError: If ``lower`` is negative, or if ``lower`` is not
-                strictly smaller than ``upper``.
-            ValueError: If ``dtype`` is not one of the supported base kinds.
-            ValueError: If a non-``None`` ``work`` object is passed that is
-                still in ``*/dlogDp`` form or not in the requested ``dtype``.
-
-        Notes:
-            * This helper never writes to :attr:`extra_data`; it is purely
-              functional. :meth:`PM_calc` is the public API that stores Pₓ
-              series in :attr:`extra_data` using this core routine.
-            * The integration is always performed on the **unnormalized**
-              distribution (i.e. ``dN``, ``dM`` etc., not ``*/dlogDp``).
-        """
-        if lower < 0:
-            raise ValueError("Lower limit must be non-negative.")
-        if lower >= upper:
-            raise ValueError(
-                f"Lower limit {lower!r} must be smaller than upper limit {upper!r}."
-            )
-
-        # Normalise dtype to base form (strip any spurious '/dlogDp')
-        base_dtype = dtype.replace("/dlogDp", "")
-        if base_dtype not in {"dN", "dS", "dV", "dM"}:
-            raise ValueError(
-                f"Unsupported dtype {dtype!r}. Expected one of 'dN', 'dS', 'dV', 'dM'."
-            )
-
-        # Decide on a working object: either caller-provided or an internal copy
-        if work is not None:
-            # For safety, ensure the work object is already in a suitable state
-            if "/dlogDp" in str(work.dtype):
-                raise ValueError(
-                    "Internal error: 'work' passed to _px_series must be unnormalized "
-                    "(dtype must not contain '/dlogDp')."
-                )
-            if str(work.dtype) != base_dtype:
-                raise ValueError(
-                    "Internal error: 'work' passed to _px_series must already be in "
-                    f"the requested dtype {base_dtype!r}, got {work.dtype!r}."
-                )
-            work_obj = work
-        else:
-            current_dtype = str(self.dtype)
-            base_current = current_dtype.replace("/dlogDp", "")
-            needs_unnorm = "/dlogDp" in current_dtype
-            needs_dtype = base_current != base_dtype
-
-            work_obj: "Aerosol2D" = self
-            if needs_unnorm or needs_dtype:
-                work_obj = self.copy_self()
-                if "/dlogDp" in work_obj.dtype:
-                    work_obj.unnormalize_logdp(inplace=True)
-                if work_obj.dtype != base_dtype:
-                    work_obj.dtype_converter(dtype=base_dtype, inplace=True)
-
-        # Validity mask from the original object (keeps alignment with self.time)
-        valid_mask = self.total_concentration.notna()
-
-        # Bin midpoints in nm and EN 481/ISO 7708 fractions
-        bin_mids = np.asarray(self.bin_mids, dtype=float)
-        pm_nm = upper * 1000.0
-        Y = np.log(bin_mids / pm_nm) / (np.sqrt(2.0) * np.log(1.5))
-        Frac_upper = 0.5 * (1.0 + np.vectorize(erf)(-Y))
-
-        dist = work_obj.size_data.to_numpy(dtype=float)  # (time × bins)
-        upper_vals = np.nansum(dist * Frac_upper[None, :], axis=1)
-
-        if lower > 0:
-            low_nm = lower * 1000.0
-            Yl = np.log(bin_mids / low_nm) / (np.sqrt(2.0) * np.log(1.5))
-            Frac_lower = 0.5 * (1.0 + np.vectorize(erf)(-Yl))
-            lower_vals = np.nansum(dist * Frac_lower[None, :], axis=1)
-            vals = upper_vals - lower_vals
-        else:
-            vals = upper_vals
-
-        # Replace pure zeros with NaN for "empty" steps
-        vals = np.where(vals == 0.0, np.nan, vals)
-
-        series = pd.Series(vals, index=self.time)
-        series = series.where(valid_mask, np.nan)
-        return series
-
-    # ------------------------------------------------------------------
-    # Shared helpers for dtype_converter
-    # ------------------------------------------------------------------
-
-    def _convert_to_mass_concentration(self, inplace: bool = True):
-        """Convert size distribution to mass concentration (dM).
-
-        Converts the current size-resolved distribution to a **mass-based**
-        distribution (``dM``) using the particle density and assuming spherical
-        particles. The resulting size-bin data are stored in the main data
-        frame and the metadata are updated:
-
-        * ``dtype`` → ``"dM"`` (or ``"dM/dlogDp"`` if the input was stored as
-          ``*/dlogDp``),
-        * ``unit`` → ``"ug/m³"``.
-
-        Internally, the conversion is always performed on an *unnormalized*
-        base distribution (e.g. dN, dS, dV), even if the data are stored as
-        ``*/dlogDp``. If the original representation was normalized,
-        Δlog₁₀(Dp) is removed before conversion and re-applied when writing the
-        converted data back. The ``Total_conc`` column is always computed from
-        the underlying base mass distribution.
-
-        Depending on the current data type (:attr:`dtype`), the following
-        transformations are applied per size bin (using bin radius in nm):
-
-        * ``"dN"`` → number → volume → mass
-        * ``"dS"`` → surface area → number → volume → mass
-        * ``"dV"`` → volume → mass
-
-        If the data are already mass-based (``"dM"`` in :attr:`dtype`), the
-        method returns either ``self`` or a deep copy without modification.
-
-        Args:
-            inplace: If ``True`` (default), modify the current instance and
-                return it. If ``False``, perform the conversion on a deep copy
-                and return the new instance.
-
-        Returns:
-            Aerosol2D: The object containing a mass-based size distribution and
-            updated total mass concentration. This is ``self`` when
-            ``inplace=True``, otherwise a new instance.
-
-        Raises:
-            ValueError: If :attr:`dtype` does not contain one of ``"dN"``,
-                ``"dS"``, or ``"dV"`` and does not already indicate mass.
-
-        Notes:
-            * The conversion assumes spherical particles and uses
-              :attr:`density` (in g/cm³).
-            * The conversion internally works in nm and nm³; the factor
-              ``1e-9`` is used to obtain units consistent with µg/m³, matching
-              the rest of this module.
-        """
-        current_dtype = str(self.dtype)
-        if "dM" in current_dtype:
-            return self if inplace else self.copy_self()
-
-        base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
-
-        if "dS" in current_dtype:
-            # Surface area -> Number -> Volume -> Mass
-            surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
-            number_distribution = base_arr / surface_area_per_particle[None, :]
-
-            volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-            volume_distribution = number_distribution * volume_per_particle[None, :]
-
-            mass_distribution = volume_distribution * self.density * 1e-9
-
-        elif "dV" in current_dtype:
-            # Volume -> Mass (direct)
-            mass_distribution = base_arr * self.density * 1e-9
-
-        elif "dN" in current_dtype:
-            # Number -> Volume -> Mass
-            volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-            volume_distribution = base_arr * volume_per_particle[None, :]
-
-            mass_distribution = volume_distribution * self.density * 1e-9
-
-        else:
-            raise ValueError("Unknown data type for conversion to mass.")
-
-        return self._emit(
-            base_arr=mass_distribution,
-            headers=headers,
-            was_norm=was_norm,
-            unit="ug/m³",
-            dtype_base="dM",
-            inplace=inplace,
-        )
-
-    ###########################################################################
-
-    def _convert_to_number_concentration(self, inplace: bool = True):
-        """Convert size distribution to number concentration (dN).
-
-        Converts the current size-resolved distribution to a **number-based**
-        distribution (``dN``). The resulting size-bin data are stored in the
-        main data frame and the metadata are updated:
-
-        * ``dtype`` → ``"dN"`` (or ``"dN/dlogDp"`` if the input was stored as
-          ``*/dlogDp``),
-        * ``unit`` → ``"cm⁻³"``.
-
-        Internally, the conversion is always performed on an unnormalized base
-        distribution (not divided by Δlog₁₀(Dp)), and any prior
-        log-diameter normalization is re-applied on output if needed. The
-        ``Total_conc`` column is computed from the base number distribution.
-
-        Depending on the current data type (:attr:`dtype`), the following
-        transformations are applied per size bin (using bin radius in nm):
-
-        * ``"dV"`` → volume → number
-        * ``"dM"`` → mass → volume → number
-        * ``"dS"`` → surface area → number
-
-        If the data are already number-based (``"dN"`` in :attr:`dtype`), the
-        method returns either ``self`` or a deep copy without modification.
-
-        Args:
-            inplace: If ``True`` (default), modify the current instance and
-                return it. If ``False``, perform the conversion on a deep copy
-                and return the new instance.
-
-        Returns:
-            Aerosol2D: The object containing a number-based size distribution
-            and updated total number concentration. This is ``self`` when
-            ``inplace=True``, otherwise a new instance.
-
-        Raises:
-            ValueError: If :attr:`dtype` does not contain one of ``"dV"``,
-                ``"dM"``, or ``"dS"`` and does not already indicate number
-                concentration.
-
-        Notes:
-            * Conversions that involve volume or mass assume spherical
-              particles and use :attr:`density` for mass–volume relationships.
-        """
-        current_dtype = str(self.dtype)
-        if "dN" in current_dtype:
-            return self if inplace else self.copy_self()
-
-        base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
-
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
-
-        if "dV" in current_dtype:
-            # Volume -> Number
-            number_distribution = base_arr / volume_per_particle[None, :]
-
-        elif "dM" in current_dtype:
-            # Mass -> Volume -> Number
-            volume_distribution = base_arr / self.density * 1e9  # nm³/cm³
-            number_distribution = volume_distribution / volume_per_particle[None, :]
-
-        elif "dS" in current_dtype:
-            # Surface Area -> Number
-            number_distribution = base_arr / surface_area_per_particle[None, :]
-
-        else:
-            raise ValueError("Unknown data type for conversion to number.")
-
-        return self._emit(
-            base_arr=number_distribution,
-            headers=headers,
-            was_norm=was_norm,
-            unit="cm⁻³",
-            dtype_base="dN",
-            inplace=inplace,
-        )
-
-    ###########################################################################
-
-    def _convert_to_surface_concentration(self, inplace: bool = True):
-        """Convert size distribution to surface area concentration (dS).
-
-        Converts the current size-resolved distribution to a **surface-area–
-        based** distribution (``dS``) expressed as nm²/cm³. The resulting
-        size-bin data are stored in the main data frame and the metadata are
-        updated:
-
-        - ``dtype`` → ``"dS"`` (or ``"dS/dlogDp"`` if the input was stored as
-          ``*/dlogDp``),
-        - ``unit`` → ``"nm²/cm³"``.
-
-        The conversion is performed on an unnormalized base distribution and
-        then, if the original data were in ``*/dlogDp`` form, the result is
-        re-normalized before being written back. ``Total_conc`` is always
-        computed from the base surface-area distribution.
-
-        Depending on the current data type (:attr:`dtype`), the following
-        transformations are applied per size bin (using bin radius in nm):
-
-        - ``"dV"`` → volume → number → surface area
-        - ``"dM"`` → mass → volume → number → surface area
-        - ``"dN"`` → number → surface area
-
-        If the data are already surface-area–based (``"dS"`` in
-        :attr:`dtype`), the method returns either ``self`` or a deep copy
-        without modification.
-
-        Args:
-            inplace: If ``True`` (default), modify the current instance and
-                return it. If ``False``, perform the conversion on a deep copy
-                and return the new instance.
-
-        Returns:
-            Aerosol2D: The object containing a surface-area–based size
-            distribution and updated total surface area concentration. This is
-            ``self`` when ``inplace=True``, otherwise a new instance.
-
-        Raises:
-            ValueError: If :attr:`dtype` does not contain one of ``"dV"``,
-                ``"dM"``, or ``"dN"`` and does not already indicate surface
-                area.
-
-        Notes:
-            * Conversions that involve volume or mass assume spherical
-              particles and use :attr:`density` where mass is involved.
-        """
-        current_dtype = str(self.dtype)
-        if "dS" in current_dtype:
-            return self if inplace else self.copy_self()
-
-        base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
-
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-
-        if "dV" in current_dtype:
-            # Volume -> Number -> Surface Area
-            number_distribution = base_arr / volume_per_particle[None, :]
-            surface_area_distribution = (
-                number_distribution * surface_area_per_particle[None, :]
-            )
-
-        elif "dM" in current_dtype:
-            # Mass -> Volume -> Number -> Surface Area
-            volume_distribution = base_arr / self.density * 1e9  # nm³/cm³
-            number_distribution = volume_distribution / volume_per_particle[None, :]
-            surface_area_distribution = (
-                number_distribution * surface_area_per_particle[None, :]
-            )
-
-        elif "dN" in current_dtype:
-            # Number -> Surface Area
-            surface_area_distribution = base_arr * surface_area_per_particle[None, :]
-
-        else:
-            raise ValueError("Unknown data type for conversion to surface area.")
-
-        return self._emit(
-            base_arr=surface_area_distribution,
-            headers=headers,
-            was_norm=was_norm,
-            unit="nm²/cm³",
-            dtype_base="dS",
-            inplace=inplace,
-        )
-
-    ###########################################################################
-
-    def _convert_to_volume_concentration(self, inplace: bool = True):
-        """Convert size distribution to volume concentration (dV).
-
-        Converts the current size-resolved distribution to a **volume-based**
-        distribution (``dV``) expressed as nm³/cm³. The resulting size-bin data
-        are stored in the main data frame and the metadata are updated:
-
-        - ``dtype`` → ``"dV"`` (or ``"dV/dlogDp"`` if the input was stored as
-          ``*/dlogDp``),
-        - ``unit`` → ``"nm³/cm³"``.
-
-        The conversion operates on an unnormalized base distribution and then,
-        if the original data were in ``*/dlogDp`` form, re-applies the
-        normalization before writing back. ``Total_conc`` is computed from the
-        base volume distribution.
-
-        Depending on the current data type (:attr:`dtype`), the following
-        transformations are applied per size bin (using bin radius in nm):
-
-        - ``"dS"`` → surface area → number → volume
-        - ``"dM"`` → mass → volume
-        - ``"dN"`` → number → volume
-
-        If the data are already volume-based (``"dV"`` in :attr:`dtype`), the
-        method returns either ``self`` or a deep copy without modification.
-
-        Args:
-            inplace: If ``True`` (default), modify the current instance and
-                return it. If ``False``, perform the conversion on a deep copy
-                and return the new instance.
-
-        Returns:
-            Aerosol2D: The object containing a volume-based size distribution
-            and updated total volume concentration. This is ``self`` when
-            ``inplace=True``, otherwise a new instance.
-
-        Raises:
-            ValueError: If :attr:`dtype` does not contain one of ``"dS"``,
-                ``"dM"``, or ``"dN"`` and does not already indicate volume.
-
-        Notes:
-            Conversions that involve number, surface, or mass assume
-            spherical particles and use :attr:`density` where mass is
-            involved.
-        """
-        current_dtype = str(self.dtype)
-        if "dV" in current_dtype:
-            return self if inplace else self.copy_self()
-
-        base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
-
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
-
-        if "dS" in current_dtype:
-            # Surface Area -> Number -> Volume
-            number_distribution = base_arr / surface_area_per_particle[None, :]
-            volume_distribution = number_distribution * volume_per_particle[None, :]
-
-        elif "dM" in current_dtype:
-            # Mass -> Volume
-            volume_distribution = base_arr / self.density * 1e9  # nm³/cm³
-
-        elif "dN" in current_dtype:
-            # Number -> Volume
-            volume_distribution = base_arr * volume_per_particle[None, :]
-
-        else:
-            raise ValueError("Unknown data type for conversion to volume.")
-
-        return self._emit(
-            base_arr=volume_distribution,
-            headers=headers,
-            was_norm=was_norm,
-            unit="nm³/cm³",
-            dtype_base="dV",
-            inplace=inplace,
-        )
-
-    # ------------------------------------------------------------------
-    # Shared helpers for summarize_activities / summarize_exposure
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _parse_px_metric_scalar(name_upper: str) -> tuple[str, float] | None:
-        """Parse scalar PM/PN/PS/PV metric names (for example ``"PM2.5"``).
-
-        This helper interprets metric strings of the form ``"PMx"``,
-        ``"PNx"``, ``"PSx"`` or ``"PVx"`` where ``x`` is a numeric cutoff
-        (for example 1, 2.5, 4, 10), and returns the distribution-kind
-        character and numeric cutoff. It is intended for scalar Pₓ metrics,
-        not band-limited metrics.
-
-        Args:
-            name_upper (str): Metric name in uppercase form, typically
-                produced by ``metric.upper()``. Non-scalar metrics such as
-                ``"PM1-4"`` or non-Pₓ metrics such as ``"PNC"``, ``"MASS"``,
-                ``"MODE"`` are safely ignored.
-
-        Returns:
-            tuple[str, float] | None: A tuple ``(dchar, cutoff)`` where
-
-                - ``dchar`` is one of ``"M"``, ``"N"``, ``"S"``, ``"V"``,
-                  corresponding to PM (mass), PN (number), PS (surface)
-                  and PV (volume),
-                - ``cutoff`` is the numeric cut diameter in µm,
-
-            or ``None`` if the metric name is not a supported scalar Pₓ
-            form.
-
-        Raises:
-            ValueError: If the suffix after ``"PM"``, ``"PN"``, ``"PS"``,
-                or ``"PV"`` contains digits but cannot be parsed as a
-                float, indicating a malformed metric string.
-
-        Notes:
-            - This helper does **not** support band-limited forms such as
-              ``"PM1-4"``; use :meth:`_parse_px_band` for those.
-            - Non-Pₓ metrics are filtered upstream by returning ``None``,
-              allowing callers to fall back to other logic.
-        """
-        if name_upper in {"PNC", "MASS", "MODE", "MEDIAN", "GMD"}:
-            return None
-        if not name_upper.startswith(("PM", "PN", "PS", "PV")):
-            return None
-
-        suffix = name_upper[2:]
-        if not any(ch.isdigit() for ch in suffix):
-            return None
-
-        try:
-            cutoff = float(suffix)
-        except ValueError as exc:
-            raise ValueError(
-                f"Cannot parse cutoff from metric '{name_upper}'."
-            ) from exc
-
-        return {"PM": "M", "PN": "N", "PS": "S", "PV": "V"}[name_upper[:2]], cutoff
-
-    ###########################################################################
-
-    @staticmethod
-    def _parse_px_band(name_upper: str) -> tuple[str, float, float] | None:
-        """Parse cumulative or band-limited Pₓ metrics (for example ``"PM4.2"``).
-
-        This helper interprets metric names for cumulative or band-limited
-        Pₓ metrics of the form
-
-        - ``"PMx"``, ``"PNx"``, ``"PSx"``, ``"PVx"``  (cumulative 0 → x),
-        - ``"PMa-b"``, ``"PNa-b"``, etc. (band-limited a → b),
-
-        where ``x``, ``a`` and ``b`` are numeric diameters in µm. It
-        returns the distribution-kind character and the lower and upper
-        cut diameters in micrometres.
-
-        Args:
-            name_upper (str): Metric name in uppercase form. Non-Pₓ
-                metrics such as ``"PNC"`` and ``"MASS"`` are safely
-                ignored and return ``None``.
-
-        Returns:
-            tuple[str, float, float] | None: A tuple ``(dchar, lower, upper)``
-            where
-
-                - ``dchar`` is one of ``"M"``, ``"N"``, ``"S"``, ``"V"``,
-                - ``lower`` is the lower cut diameter in µm (0.0 for
-                  cumulative metrics),
-                - ``upper`` is the upper cut diameter in µm,
-
-            or ``None`` if the metric name is not a supported Pₓ form.
-
-        Raises:
-            ValueError: If the numeric part of the metric cannot be parsed
-                as floats (malformed string), or if the resulting band
-                does not satisfy ``0 <= lower < upper``.
-
-        Notes:
-            - A metric like ``"PM4.2"`` is treated as cumulative from
-              0 → 4.2 µm (``lower = 0.0``).
-            - Band metrics like ``"PM1-4.2"`` are returned with
-              ``lower = 1.0``, ``upper = 4.2`` and are required to satisfy
-              ``0 <= lower < upper``.
-        """
-        if name_upper in {"PNC", "MASS"}:
-            return None
-        if not name_upper.startswith(("PM", "PN", "PS", "PV")):
-            return None
-
-        suffix = name_upper[2:]
-        if "-" in suffix:
-            low_str, high_str = suffix.split("-", 1)
-            try:
-                lower = float(low_str)
-                upper = float(high_str)
-            except ValueError as exc:
-                raise ValueError(
-                    f"Cannot parse band limits from metric '{name_upper}'."
-                ) from exc
-        else:
-            lower = 0.0
-            try:
-                upper = float(suffix)
-            except ValueError as exc:
-                raise ValueError(
-                    f"Cannot parse cutoff from metric '{name_upper}'."
-                ) from exc
-
-        if lower < 0 or lower >= upper:
-            raise ValueError(
-                f"Invalid band specification in metric '{name_upper}': "
-                f"require 0 <= lower < upper."
-            )
-
-        return (
-            {"PM": "M", "PN": "N", "PS": "S", "PV": "V"}[name_upper[:2]],
-            lower,
-            upper,
-        )
-
-    ###########################################################################
-
-    @override
-    def _get_metric_series(self, metric_name: str) -> tuple[pd.Series, str]:
-        """Return a time series and unit for a PNC/MASS/Pₓ metric.
-
-        This helper provides a unified way of obtaining a 1D metric time
-        series derived from the underlying 2D PSD together with its
-        physical unit. It supports bulk metrics (PNC, MASS) and
-        cumulative or band-limited Pₓ metrics (for example ``"PM4.2"``,
-        ``"PM1-4.2"``, ``"PN10"``), using the same EN 481 / ISO 7708
-        penetration curves as :meth:`PM_calc`.
-
-        The function reuses existing Pₓ series in :attr:`extra_data` if
-        present; otherwise it computes them on a working copy.
-
-        Args:
-            metric_name (str): Name of the requested metric, case-insensitive.
-                Supported values include:
-
-                    - ``"PNC"``: total number concentration.
-                    - ``"MASS"``: total mass concentration.
-                    - ``"PMx"``, ``"PNx"``, ``"PSx"``, ``"PVx"``:
-                      cumulative Pₓ up to diameter x (µm).
-                    - ``"PMa-b"``, ``"PNa-b"``, etc.: band-limited Pₓ
-                      between diameters a and b (µm).
-
-        Returns:
-            tuple[pandas.Series, str]: A tuple ``(series, unit)`` where
-
-                - ``series`` is a 1D time series indexed by :attr:`time`
-                  containing the requested metric for each time step,
-                - ``unit`` is the corresponding unit string, one of
-                  ``"cm⁻³"``, ``"µg/m³"``, ``"nm²/cm³"``, ``"nm³/cm³"``.
-
-        Raises:
-            ValueError: If ``metric_name`` cannot be parsed as a supported
-                metric string.
-            ValueError: If a Pₓ metric is requested and, despite internal
-                computation, the corresponding column is not found in
-                :attr:`extra_data`.
-
-        Notes:
-            - For PNC, the helper converts to a number-based distribution
-              and sums across all size bins.
-            - For MASS, it converts to a mass-based distribution and sums
-              across all size bins.
-            - For Pₓ metrics, it uses :meth:`PM_calc` on a working copy,
-              which in turn uses :meth:`_px_fraction_series` as its numeric
-              core. This preserves the canonical naming and storage of Pₓ
-              series in :attr:`extra_data`.
-        """
-        mu = metric_name.upper()
-
-        # Ensure extra_data is aligned to the main time index before using it
-        if self._extra_data.empty:
-            aligned_extra = pd.DataFrame(index=self.time)
-        elif not self._extra_data.index.equals(self.time):
-            aligned_extra = self._extra_data.reindex(self.time)
-        else:
-            aligned_extra = self._extra_data
-
-        # --- Bulk metrics: PNC and MASS, with optional reuse -------------------
-        if mu == "PNC":
-            if "PNC" in aligned_extra.columns:
-                series = aligned_extra["PNC"].astype(float)
-                # Keep the aligned frame on the object
-                self._extra_data = aligned_extra
-                return series, "cm⁻³"
-
-            obj = self._convert_to_number_concentration(inplace=False)
-            series = obj.size_data.sum(axis=1).astype(float)
-
-            # Store for future reuse
-            aligned_extra["PNC"] = series
-            self._extra_data = aligned_extra
-            return series, "cm⁻³"
-
-        if mu == "MASS":
-            if "MASS" in aligned_extra.columns:
-                series = aligned_extra["MASS"].astype(float)
-                self._extra_data = aligned_extra
-                return series, "µg/m³"
-
-            obj = self._convert_to_mass_concentration(inplace=False)
-            series = obj.size_data.sum(axis=1).astype(float)
-
-            # Store for future reuse
-            aligned_extra["MASS"] = series
-            self._extra_data = aligned_extra
-            return series, "µg/m³"
-
-        # --- Pₓ metrics: PM, PN, PS, PV (reusing if already present) ----------
-        parsed = self._parse_px_band(mu)
-        if parsed is None:
-            raise ValueError(f"Unsupported metric string '{metric_name}'.")
-
-        dchar, lower_cut, upper_cut = parsed
-        dtype_map = {"M": "dM", "N": "dN", "S": "dS", "V": "dV"}
-        unit_map = {
-            "M": "µg/m³",
-            "N": "cm⁻³",
-            "S": "nm²/cm³",
-            "V": "nm³/cm³",
-        }
-
-        # Canonical label used by PM_calc / _px_fraction_series
-        if lower_cut <= 0:
-            label = f"P{dchar}{upper_cut:g}"
-        else:
-            label = f"P{dchar}{lower_cut:g}-{upper_cut:g}"
-
-        # Reuse existing series if already present
-        if label in aligned_extra.columns:
-            series = aligned_extra[label].astype(float)
-            self._extra_data = aligned_extra
-            return series, unit_map[dchar]
-
-        # Otherwise compute on a working copy
-        work = self.copy_self()
-        if "/dlogDp" in str(work.dtype):
-            work.unnormalize_logdp(inplace=True)
-        work.dtype_converter(dtype=dtype_map[dchar], inplace=True)
-
-        if lower_cut <= 0:
-            work.PM_calc(dtype=dtype_map[dchar], PM=upper_cut)
-        else:
-            work.PM_calc(dtype=dtype_map[dchar], PM=upper_cut, Lower_lim=lower_cut)
-
-        # Align and store the result back on self for future reuse
-        series = work.extra_data[label].astype(float)
-        aligned_extra[label] = series
-        self._extra_data = aligned_extra
-
-        return series, unit_map[dchar]
 
     ###########################################################################
     """############################# Functions #############################"""
     ###########################################################################
 
-    def dtype_converter(self, dtype: str = "dN", inplace: bool = True):
-        """Description:
-            Convert the size distribution to a chosen base data type.
-
-        Args:
-            dtype (str): Target data type string, one of "dN", "dS",
-                "dV", or "dM" (case-sensitive). "dN" is number-based,
-                "dS" surface-area–based, "dV" volume-based, and "dM"
-                mass-based.
-            inplace (bool): If True, convert this object in place and
-                return it. If False, perform the conversion on a deep
-                copy and return the new instance.
-
-        Returns:
-            Aerosol2D: Object whose size-bin data, total_conc, dtype and
-                unit fields have been converted to the requested type
-                (self when inplace=True, otherwise a new instance).
-
-        Raises:
-            ValueError: If dtype is not one of "dN", "dS", "dV", "dM".
-                Check the spelling and letter case of the requested type.
-
-        Notes:
-            Detailed description:
-                The method converts the current size-resolved distribution
-                between number, surface, volume and mass representations
-                using the stored particle density and the bin midpoints.
-                Any existing normalization by dlogDp is preserved: data
-                stored as dx/dlogDp remain in dx/dlogDp form after
-                conversion, and Total_conc is recomputed from the
-                underlying base distribution.
-
-            Theory:
-                Conversions assume spherical particles and use the usual
-                geometric relationships between radius, surface area,
-                volume and mass (with the density given in g/cm³).
-                Number-based distributions can be transformed into volume
-                or mass by multiplying with per-particle volume and
-                density; surface-area distributions scale similarly via
-                4πr².
-
-        Examples:
-            Convert a number distribution to mass concentration for
-            comparison with gravimetric limits:
-
-            .. code-block:: python
-
-                elpi.dtype_converter("dM")
-                elpi.plot_psd()
+    def calibrate(self, m: Union[float, list], inplace: bool = True):
         """
+        Apply a correction to the total conc and mark the data as calibrated
+        by a linear function. The calibration value is applied to the size data.
 
-        if dtype == "dN":
-            return self._convert_to_number_concentration(inplace)
-        elif dtype == "dS":
-            return self._convert_to_surface_concentration(inplace)
-        elif dtype == "dV":
-            return self._convert_to_volume_concentration(inplace)
-        elif dtype == "dM":
-            return self._convert_to_mass_concentration(inplace)
+        
+        Parameters
+        ----------
+        m : float/list
+            The calibration value to be multiplied to the data for correction.
+            If m is provided as a list, it should be of equal length to the number
+            of bins. The total concentration is then recalculated as the sum.
+        Returns
+        -------
+        None
+        
+        """
+        if type(m)==list:
+            if len(m)==len(self._sizebin_headers):
+                # mask=~np.isnan(self._data['Total_conc'])
+                
+                self._data[self._sizebin_headers]=self.data[self._sizebin_headers]*m
+                self._data['Total_conc']=self.data[self._sizebin_headers].sum(axis=1)
+            else: 
+                raise ValueError("Mismatch between number of bins and list of calibration values")
+        elif type(m)==float:
+            self._data[self._sizebin_headers]=self.data[self._sizebin_headers]*m
+            self._data['Total_conc']=self.data['Total_conc']*m
         else:
-            raise ValueError(
-                f"Unknown target dtype {dtype!r}. Expected one of 'dN', 'dS', 'dV', 'dM'."
+            raise ValueError("Mismatch between m and expected type")
+            
+        self._meta['calibrated']={'m' : m}
+        # return self
+    ###########################################################################
+
+    def convert_to_mass_concentration(self, inplace: bool = True):
+        """
+        Convert particle size distribution data to mass concentration (ug/m³) based on current data type.
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            If True (default), modifies the current instance in-place.
+            If False, returns a new instance with converted mass concentration data.
+
+        Returns
+        -------
+        self or aerosolxd
+            Updated instance with mass concentration data, either in-place or as a copy.
+        """
+        if "dM" in self.dtype:
+            print("Data is already in mass concentration (ug/m³).")
+            return self if inplace else self.copy_self()
+
+        bin_radii = self.bin_mids / 2.0  # convert diameter to radius in nm
+
+        if "dS" in self.dtype:
+            # Convert from surface area to number, then to volume, then to mass
+            surface_area_per_particle = 4 * np.pi * bin_radii**2
+            number_distribution = self.size_data.copy() / surface_area_per_particle
+            volume_per_particle = (4 / 3) * np.pi * bin_radii**3
+            volume_distribution = number_distribution * volume_per_particle
+            mass_distribution = (
+                volume_distribution * self.density * 1e-9
+            )  # convert nm³ to ug
+
+        elif "dV" in self.dtype:
+            # Convert from volume to mass directly
+            mass_distribution = self.size_data.copy() * self.density * 1e-9
+
+        elif "dN" in self.dtype:
+            # Convert from number to volume, then to mass
+            volume_per_particle = (4 / 3) * np.pi * bin_radii**3
+            volume_distribution = self.size_data.copy() * volume_per_particle
+            mass_distribution = volume_distribution * self.density * 1e-9
+        else:
+            raise ValueError("Unknown data type for conversion to mass.")
+
+        # Apply the results
+        target_instance = self if inplace else self.copy_self()
+        target_instance._data[self._sizebin_headers] = mass_distribution
+        target_instance._meta["unit"] = "ug/m³"
+        target_instance._meta["dtype"] = "dM"
+
+        # Update total concentration
+        # Ensure unnormalized data before summing
+        if "/dlogDp" in target_instance.dtype:
+            unnormalized = target_instance.unnormalize_logdp(inplace=False)
+            sum_data = unnormalized.size_data.sum(axis=1)  # type: ignore
+        else:
+            sum_data = mass_distribution.sum(axis=1)
+
+        target_instance._data["Total_conc"] = sum_data
+
+        return target_instance
+
+    ###########################################################################
+
+    def convert_to_number_concentration(self, inplace: bool = True):
+        """
+        Convert particle size distribution data to number concentration (cm⁻³)
+        from the current data type.
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            If True (default), modifies the current instance in-place.
+            If False, returns a new instance with number concentration data.
+
+        Returns
+        -------
+        self or aerosolxd
+            Updated instance with number concentration data, either in-place or as a copy.
+        """
+        if "dN" in self.dtype:
+            print("Data is already in number concentration (cm⁻³).")
+            return self if inplace else self.copy_self()
+
+        bin_radii = self.bin_mids / 2.0  # nm
+
+        if "dV" in self.dtype:
+            # Convert from volume to number
+            volume_per_particle = (4 / 3) * np.pi * bin_radii**3  # nm³
+            number_distribution = self.size_data.copy() / volume_per_particle
+
+        elif "dM" in self.dtype:
+            # Convert from mass to volume, then to number
+            volume_distribution = self.size_data.copy() / self.density * 1e9  # nm³
+            volume_per_particle = (4 / 3) * np.pi * bin_radii**3
+            number_distribution = volume_distribution / volume_per_particle
+
+        elif "dS" in self.dtype:
+            # Convert from surface area to number
+            surface_area_per_particle = 4 * np.pi * bin_radii**2
+            number_distribution = self.size_data.copy() / surface_area_per_particle
+
+        else:
+            raise ValueError("Unknown data type for conversion to number.")
+
+        # Apply the results
+        target_instance = self if inplace else self.copy_self()
+        target_instance._data[self._sizebin_headers] = number_distribution
+        target_instance._meta["unit"] = "cm⁻³"
+        target_instance._meta["dtype"] = "dN"
+
+        # Update total concentration
+        # Ensure unnormalized data before summing
+        if "/dlogDp" in target_instance.dtype:
+            unnormalized = target_instance.unnormalize_logdp(inplace=False)
+            sum_data = unnormalized.size_data.sum(axis=1)  # type: ignore
+        else:
+            sum_data = number_distribution.sum(axis=1)
+
+        target_instance._data["Total_conc"] = sum_data
+
+        return target_instance
+
+    ###########################################################################
+
+    def convert_to_surface_concentration(self, inplace: bool = True):
+        """
+        Convert particle size distribution data to surface area concentration (nm²/cm³)
+        based on the current data type.
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            If True (default), modifies the current instance in-place.
+            If False, returns a new instance with surface area concentration data.
+
+        Returns
+        -------
+        self or aerosolxd
+            Updated instance with surface area concentration data, either in-place or as a copy.
+        """
+        if "dS" in self.dtype:
+            print("Data is already in surface area concentration (nm²/cm³).")
+            return self if inplace else self.copy_self()
+
+        bin_radii = self.bin_mids / 2.0  # in nm
+        surface_area_per_particle = 4 * np.pi * bin_radii**2
+        volume_per_particle = (4 / 3) * np.pi * bin_radii**3
+
+        if "dV" in self.dtype:
+            # Volume -> Number -> Surface Area
+            number_distribution = self.size_data.copy() / volume_per_particle
+            surface_area_distribution = number_distribution * surface_area_per_particle
+
+        elif "dM" in self.dtype:
+            # Mass -> Volume -> Number -> Surface Area
+            volume_distribution = self.size_data.copy() / self.density * 1e9  # nm³/cm³
+            number_distribution = volume_distribution / volume_per_particle
+            surface_area_distribution = number_distribution * surface_area_per_particle
+
+        elif "dN" in self.dtype:
+            # Number -> Surface Area
+            surface_area_distribution = (
+                self.size_data.copy() * surface_area_per_particle
             )
 
-    ###########################################################################
-
-    def correct_diffusion_losses(
-        self,
-        D_tube: float,
-        L: float,
-        Q: float,
-        T: float = 293,
-        P: float = 101300,
-        inplace: bool = True,
-    ):
-        """Description:
-            Correct size distributions for diffusion losses in sampling tubes.
-
-        Args:
-            D_tube (float): Inner diameter of the sampling tube in metres.
-            L (float): Length of the sampling tube in metres.
-            Q (float): Volumetric flow through the tube in L/min.
-            T (float): Gas temperature in Kelvin. Defaults to 293 K.
-            P (float): Gas pressure in Pascal. Defaults to 101300 Pa.
-            inplace (bool): If True, apply the correction to this object
-                and return it. If False, perform the correction on a deep
-                copy and return the new instance.
-
-        Returns:
-            Aerosol2D: Object with diffusion-loss–corrected size-bin data
-                and updated Total_conc (self when inplace=True, otherwise
-                a new instance).
-
-        Raises:
-            None: The method does not explicitly raise custom exceptions,
-                but non-physical values (for example Q or D_tube close to
-                zero) can lead to infinities or NaNs in the correction
-                factors. Always use positive, realistic geometry and flow
-                parameters.
-
-        Notes:
-            Detailed description:
-                For each size bin, a transmission efficiency between the
-                tube inlet and outlet is computed based on geometry,
-                volumetric flow and particle diffusivity. The recorded
-                distribution is divided by this efficiency to estimate the
-                upstream concentration, and total_conc is recomputed from
-                the corrected bins. The size-dependent efficiency curve
-                and a flag indicating that diffusion correction has been
-                applied are stored in metadata.
-
-            Theory:
-                The correction builds on classical mass-transfer
-                correlations in straight circular tubes. Particle
-                diffusivity is estimated via the Stokes–Einstein relation
-                with a Cunningham slip correction, Reynolds and Schmidt
-                numbers describe the flow, and a Sherwood number
-                correlation is used to obtain the mass transfer
-                coefficient. The residence parameter and Sherwood number
-                define the deposition loss and thus the transmission
-                efficiency per size.
-
-        Examples:
-            Correct ELPI or SMPS data for diffusion losses in a long
-            sampling line:
-
-            .. code-block:: python
-
-                elpi.correct_diffusion_losses(
-                    D_tube=0.004,  # 4 mm ID
-                    L=2.0,        # 2 m tube
-                    Q=10.0,       # 10 L/min
-                )
-                elpi.plot_psd()
-        """
-
-        # --- Geometry and flow definition ------------------------------------
-        k = 1.380649e-23  # Boltzmann constant (J/K)
-        Dp = np.array(self.bin_mids) * 1e-9  # particle diameters (m)
-        Q_m3s = Q / (1000 * 60)  # volumetric flow (m³/s) from L/min
-        A = 0.25 * np.pi * D_tube**2  # tube cross-sectional area (m²)
-        V = Q_m3s / A  # average flow velocity (m/s)
-
-        # --- Gas properties and mean free path (T, P dependent) --------------
-        mfp_std = 66.5e-9  # reference mean free path (m)
-        mfp = (
-            mfp_std * (101e3 / P) * (T / 293.15) * ((1 + 110 / 293.15) / (1 + 110 / T))
-        )
-
-        eta_std = 1.708e-5  # reference dynamic viscosity (Pa·s)
-        eta = (
-            eta_std * (T / 273.15) ** 1.5 * (393.396 / (T + 120.246))
-        )  # dynamic viscosity at (T, P)
-        rho = 1.293 * (273.15 / T) * (P / 101300)  # gas density (kg/m³)
-
-        # --- Dimensionless groups: slip, Re, diffusivity, Sc, xi -------------
-        Kn = 2 * mfp / Dp  # Knudsen number
-        Cc = 1 + Kn * (1.142 + 0.558 * np.exp(-0.999 / Kn))  # slip correction
-
-        Re = rho * V * D_tube / eta  # Reynolds number
-
-        Dc = (
-            k * T * Cc / (3 * np.pi * eta * Dp)
-        )  # particle diffusion coefficient (m²/s)
-        Sc = eta / (rho * Dc)  # Schmidt number
-        xi = np.pi * Dc * L / Q_m3s  # dimensionless residence parameter
-
-        # --- Sherwood number (mass transfer) and diffusion efficiency --------
-        if Re < 2000:
-            # Laminar tube flow correlation
-            Sh = 3.66 + 0.2672 / (xi + 0.10079 * xi ** (1 / 3))
         else:
-            # Turbulent correlation: Re and Sc dependent
-            Sh = 0.0118 * Re ** (7 / 8) * Sc ** (1 / 3)
+            raise ValueError("Unknown data type for conversion to surface area.")
 
-        eff = np.exp(-Sh * xi)  # size-dependent transmission efficiency
+        # Apply the results
+        target_instance = self if inplace else self.copy_self()
+        target_instance._data[self._sizebin_headers] = surface_area_distribution
+        target_instance._meta["unit"] = "nm²/cm³"
+        target_instance._meta["dtype"] = "dS"
 
-        # --- Apply correction to size bins and update total concentration ----
-        corrected = self.copy_self() if not inplace else self
-        size_cols = corrected._sizebin_headers
-        corrected._data[size_cols] = corrected._data[size_cols].div(eff, axis=1)
-        corrected._data["Total_conc"] = corrected._data[size_cols].sum(axis=1)
+        # Update total concentration
+        # Ensure unnormalized data before summing
+        if "/dlogDp" in target_instance.dtype:
+            unnormalized = target_instance.unnormalize_logdp(inplace=False)
+            sum_data = unnormalized.size_data.sum(axis=1)  # type: ignore
+        else:
+            sum_data = surface_area_distribution.sum(axis=1)
+        target_instance._data["Total_conc"] = sum_data
 
-        # --- Store efficiency and flag in metadata ---------------------------
-        corrected._meta["diffusion_efficiency"] = eff.tolist()
-        corrected._meta["diffusion_loss_corrected"] = True
-
-        return corrected
+        return target_instance
 
     ###########################################################################
 
-    def set_density(self, density: Union[float, int] = 1.0):
-        """Description:
-            Set or update the assumed particle density (g/cm³).
-
-        Args:
-            density (float | int): New particle density in g/cm³.
-
-        Returns:
-            Aerosol2D: The updated object with metadata["density"]
-                set to the new value. If the current dtype is mass-based
-                ("dM" in dtype), the mass distribution and Total_conc are
-                rescaled immediately.
-
-        Raises:
-            ValueError: If the existing stored density is non-positive
-                while the data are mass-based, so rescaling is undefined.
-                In that case, manually fix metadata["density"] or reload
-                the data before changing density.
-
-        Notes:
-            Detailed description:
-                For non-mass-based data (dN, dS, dV), the method simply
-                updates the stored density used in later conversions. For
-                mass-based data (dM), it rescales all size-bin values and
-                the Total_conc column so that the mass distribution is
-                consistent with the new density.
-
-            Theory:
-                Mass concentration scales linearly with particle density
-                for a fixed volume distribution (M = ρ · V). Updating the
-                density therefore requires rescaling existing mass values
-                to preserve the implied volume distribution.
-
-        Examples:
-            Update density when reinterpreting a measurement for a
-            specific material:
-
-            .. code-block:: python
-
-                elpi.dtype_converter("dM")
-                elpi.set_density(1.6)  # g/cm³
+    def convert_to_volume_concentration(self, inplace: bool = True):
         """
+        Convert particle size distribution data to volume concentration (nm³/cm³)
+        based on the current data type.
 
-        density = float(density)
-        old = float(self.density)
+        Parameters
+        ----------
+        inplace : bool, optional
+            If True (default), modifies the current instance in-place.
+            If False, returns a new instance with volume concentration data.
 
-        if "dM" in str(self.dtype):
-            if old <= 0:
-                raise ValueError(
-                    f"Existing density must be positive for rescaling, got {old!r}."
-                )
+        Returns
+        -------
+        self or aerosolxd
+            Updated instance with volume concentration data, either in-place or as a copy.
+        """
+        if "dV" in self.dtype:
+            print("Data is already in volume concentration (nm³/cm³).")
+            return self if inplace else self.copy_self()
 
-            factor = density / old
-            # Rescale mass bins in-place
-            self._data[self._sizebin_headers] *= factor
+        bin_radii = self.bin_mids / 2.0  # in nm
+        volume_per_particle = (4 / 3) * np.pi * bin_radii**3
+        surface_area_per_particle = 4 * np.pi * bin_radii**2
 
-            # Rescale Total_conc mass concentration
-            if "Total_conc" in self._data.columns:
-                self._data["Total_conc"] *= factor
+        if "dS" in self.dtype:
+            # Surface Area -> Number -> Volume
+            number_distribution = self.size_data.copy() / surface_area_per_particle
+            volume_distribution = number_distribution * volume_per_particle
+
+        elif "dM" in self.dtype:
+            # Mass -> Volume
+            volume_distribution = self.size_data.copy() / self.density * 1e9  # nm³/cm³
+
+        elif "dN" in self.dtype:
+            # Number -> Volume
+            volume_distribution = self.size_data.copy() * volume_per_particle
+
+        else:
+            raise ValueError("Unknown data type for conversion to volume.")
+
+        # Apply the results
+        target_instance = self if inplace else self.copy_self()
+        target_instance._data[self._sizebin_headers] = volume_distribution
+        target_instance._meta["unit"] = "nm³/cm³"
+        target_instance._meta["dtype"] = "dV"
+
+        # Update total concentration
+        # Ensure unnormalized data before summing
+        if "/dlogDp" in target_instance.dtype:
+            unnormalized = target_instance.unnormalize_logdp(inplace=False)
+            sum_data = unnormalized.size_data.sum(axis=1)  # type: ignore
+        else:
+            sum_data = volume_distribution.sum(axis=1)
+        target_instance._data["Total_conc"] = sum_data
+
+        return target_instance
+
+    ###########################################################################
+    def dtype_converter(self, dtype: str = "dN", inplace: bool = True):
+        """
+        Convert particle size distribution data the chosen datatype based on current data type.
+
+        Parameters
+        ----------
+
+        dtype : str, optional
+            Designate the desired datatype for the data to be converted into.
+            Defaults to 'dN'
+
+        inplace : bool, optional
+            If True (default), modifies the current instance in-place.
+            If False, returns a new instance with converted mass concentration data.
+
+        Returns
+        -------
+        self or aerosolxd
+            Updated instance with mass concentration data, either in-place or as a copy.
+        """
+        if dtype == "dN":
+            return self.convert_to_number_concentration(inplace)
+        elif dtype == "dS":
+            return self.convert_to_surface_concentration(inplace)
+        elif dtype == "dV":
+            return self.convert_to_volume_concentration(inplace)
+        elif dtype == "dM":
+            return self.convert_to_mass_concentration(inplace)
+
+    ###########################################################################
+    def set_density(self, density: Union[float, int] = 1.0):
+        """
+        Set density of the aerosol particles in g/cm3
+
+        Parameters
+        ----------
+        density : float
+            Density of the aerosol particles.
+
+        Returns
+        -------
+        class: Aerosol2D
+            The updated density data. If the data was already mass-based then the
+            updated density is applied immidiatly.
+        """
+        if "dM" in self.dtype:
+            unit_density_data = self.size_data.copy() / self.density
+            new_density_data = unit_density_data * density
+            self._data[self._sizebin_headers] = new_density_data
 
         self._meta["density"] = density
         return self
 
     ###########################################################################
-
-    def normalize_logdp(self, inplace: bool = True):
-        """Description:
-            Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).
-
-        Args:
-            inplace (bool): If True, normalize this object in place and
-                return it. If False, perform the normalization on a deep
-                copy and return the new instance.
-
-        Returns:
-            Aerosol2D | None: The normalized object (self or a new copy)
-                when normalization is applied. If the dtype already
-                contains "/dlogDp", no changes are made and None is
-                returned.
-
-        Raises:
-            ValueError: If the number of size-bin columns does not match
-                the number of Δlog₁₀(Dp) widths derived from bin_edges.
-                Check that bin_edges and the PSD columns are consistent.
-
-        Notes:
-            Detailed description:
-                The method computes Δlog₁₀(Dp) from bin_edges and divides
-                each size-bin column by its corresponding width. The dtype
-                string is updated to append "/dlogDp" (for example
-                "dN" → "dN/dlogDp"). Only size-bin columns are modified;
-                other columns in data (including Total_conc and activity
-                masks) are left unchanged.
-
-            Theory:
-                Plotting or comparing size distributions on a logarithmic
-                diameter axis is often done using dN/dlogDp, dM/dlogDp,
-                etc., so that equal logarithmic bin widths represent equal
-                contributions when integrating over logDp. This method
-                implements that per-bin normalization.
-
-        Examples:
-            Prepare a PSD for log-diameter plotting:
-
-            .. code-block:: python
-
-                elpi.normalize_logdp()
-                elpi.plot_psd()
-        """
-
-        # Only normalize if not already in */dlogDp form
-        if "/dlogDp" in str(self.dtype):
-            return
-
-        dlog_dp = self._dlogdp()
-        bin_columns = self._sizebin_headers
-
-        # Sanity check: ensure one width per size bin
-        if dlog_dp.shape[0] != len(bin_columns):
-            raise ValueError("Mismatch between number of bins and dlogDp array.")
-
-        # Apply to self or to a copy
-        target = self if inplace else self.copy_self()
-        target._data[bin_columns] = target._data[bin_columns].div(dlog_dp, axis=1)
-        target._meta["dtype"] = f"{self.dtype}/dlogDp"
-
-        return target
-
-    ###########################################################################
-
-    def unnormalize_logdp(self, inplace: bool = True):
-        """Description:
-            Undo Δlog₁₀(Dp) normalization (dx/dlogDp → base form).
-
-        Args:
-            inplace (bool): If True, unnormalize this object in place and
-                return it. If False, perform the operation on a deep copy
-                and return the new instance.
-
-        Returns:
-            Aerosol2D | None: The unnormalized object (self or a new copy)
-                when dtype contains "/dlogDp". If the data are already in
-                base form (no "/dlogDp" in dtype), the method returns None
-                and does not modify the object.
-
-        Raises:
-            ValueError: If the number of PSD columns does not match the
-                Δlog₁₀(Dp) array derived from bin_edges.
-
-        Notes:
-            Detailed description:
-                The method multiplies each size-bin column by the
-                corresponding Δlog₁₀(Dp), recovering the original base
-                distribution (for example dN, dM). The "/dlogDp" suffix is
-                removed from the dtype string. This is typically used
-                before performing physical integrations or conversions
-                that expect base distributions.
-
-            Theory:
-                This is the exact inverse of normalize_logdp: the integral
-                over logDp of dX/dlogDp is equal to the integral over Dp
-                of dX when the same Δlog₁₀(Dp) widths are used. Removing
-                the normalization restores the original dX.
-
-        Examples:
-            Convert a normalized PSD back to base units for further
-            processing:
-
-            .. code-block:: python
-
-                if "/dlogDp" in elpi.dtype:
-                    elpi.unnormalize_logdp()
-                elpi.dtype_converter("dM")
-        """
-
-        # Only unnormalize if current dtype indicates */dlogDp form
-        if "/dlogDp" not in str(self.dtype):
-            return
-
-        dlog_dp = self._dlogdp()
-        bin_columns = self._sizebin_headers
-
-        # Sanity check: ensure one width per size bin
-        if dlog_dp.shape[0] != len(bin_columns):
-            raise ValueError("Mismatch between number of bins and dlogDp array.")
-
-        # Apply to self or to a copy
-        target = self if inplace else self.copy_self()
-        target._data[bin_columns] = target._data[bin_columns].mul(dlog_dp, axis=1)
-        target._meta["dtype"] = str(self.dtype).replace("/dlogDp", "")
-
-        return target
-
-    ###########################################################################
-
     def PM_calc(self, dtype: str = "dM", PM: float = 4.2, Lower_lim: float = 0):
-        """Description:
-            Compute a size-selective Pₓ time series and store it in extra_data.
-
-        Args:
-            dtype (str): Base distribution type to integrate, one of
-                "dN", "dS", "dV", "dM". Defaults to "dM" (mass-based).
-            PM (float): Upper cut-off diameter in micrometres (µm) for the
-                size-selective fraction (nominal 50% penetration point).
-            Lower_lim (float): Optional lower cut-off diameter in µm.
-                If 0 (default), the result is cumulative from 0 → PM.
-                If in (0, PM), the result represents the band-limited
-                contribution from Lower_lim → PM.
-
-        Returns:
-            Aerosol2D: self, with a new column added to extra_data named
-                "P{X}{PM}" for cumulative metrics (for example "PM2.5",
-                "PN10") or "P{X}{Lower_lim}-{PM}" for band-limited ones
-                (for example "PM1-5").
-
-        Raises:
-            ValueError: If Lower_lim is greater than or equal to PM, or if
-                Lower_lim is negative. Check the order and magnitude of
-                the cut diameters.
-            ValueError: If dtype is not one of "dN", "dS", "dV", "dM".
-
-        Notes:
-            Detailed description:
-                The method converts the internal distribution to the
-                requested base kind if needed, ensures it is not in
-                dx/dlogDp form, and then integrates it with an
-                EN 481 / ISO 7708–style size-selective penetration curve
-                between Lower_lim and PM. The resulting time series is
-                stored in extra_data with a canonical name that encodes
-                both the distribution type and cut diameters.
-
-            Theory:
-                Pₓ metrics generalize well-known PM₁₀, PM₂.₅, etc., and
-                can be defined for number (PN), surface (PS), volume (PV)
-                and mass (PM). The underlying helper uses a standard
-                lognormal penetration curve (GSD 1.5, 50% cut at PM) to
-                approximate workplace sampling conventions (for example
-                EN 481 / ISO 7708 respirable/inhalable fractions).
-
-        Examples:
-            Add PM₂.₅ and PN₁₀ series for later plotting and summary:
-
-            .. code-block:: python
-
-                elpi.PM_calc(dtype="dM", PM=2.5)   # PM2.5
-                elpi.PM_calc(dtype="dN", PM=10.0)  # PN10
-                elpi.extra_data[["PM2.5", "PN10"]].head()
         """
+        Function to calculate Px values from size bins from an array.
 
-        if Lower_lim >= PM:
-            raise ValueError("Lower_lim is larger than or equal to PM.")
+        Parameters
+        ----------
+        dtype : str, optional
+            A key to designate what datatype the PM_calc should return.
+            It adds the selected datetype to the dtype_converter function.
+            Options are: 'dN', 'dS', 'dV', 'dM'.Defaults to 'dM'.
+            This change will not affect the original data.
 
-        base_dtype = dtype.replace("/dlogDp", "")
-        if base_dtype not in {"dN", "dS", "dV", "dM"}:
-            raise ValueError(
-                f"Unsupported dtype {dtype!r}. Expected one of 'dN', 'dS', 'dV', 'dM'."
-            )
+        PM : integer or float
+            PM indicates the D50% for calculating the PM value according to ISO 7708:1995(E)
+            Typical values would be; 1, 2.5, 4.2 or 10. (all in µm)
+            Default is 4.2 µm.
 
-        dchar = base_dtype[-1].upper()  # 'N'/'S'/'V'/'M'
+        Lower_lim: integer or float
+            Lower_lim calculates D50% according to ISO 7708:1995(E), for a diameter value
+            smaller than the chosen PM. This value is then sustracted from the value caluclated from the PM.
+            Example:  PM_calc('dN',PM=10,Lower_lim=4.2) would return the number of particles between 4.2 and 10 µm.
+            Default is 0, which returns the unaltered PM.
 
-        # Canonical output label
-        if Lower_lim <= 0:
-            out_label = f"P{dchar}{PM:g}"
-        else:
-            out_label = f"P{dchar}{Lower_lim:g}-{PM:g}"
+        Returns
+        -------
+        Data_return : numpy.array
+            An array of mass concentration data. The first column is datetime.
+            The other column or columns are PM values corresponding to each time for
+            the specified PM limit.
+        """
+        # Prepare the data for
+        data_copy = self.copy_self()
+        # Maintaines total concentration mask
+        mask = data_copy.data["Total_conc"].notna()
+        # Unnormalize and ensure correct dtype
+        data_copy.unnormalize_logdp()
+        data_copy.dtype_converter(dtype)
 
-        # Compute the series using the core helper
-        series = self._px_fraction_series(dtype=base_dtype, upper=PM, lower=Lower_lim)
+        # Convert to
+        # Remove the datetime and total conc columns as these are not needed for PM
+        # calculations
+        data_copy = data_copy.size_data
 
-        # Ensure extra_data is aligned to self.time and assign the new series
-        if self._extra_data.empty:
-            self._extra_data = pd.DataFrame(index=self.time)
-        elif not self._extra_data.index.equals(self.time):
-            self._extra_data = self._extra_data.reindex(self.time)
+        # Run through the or all of the PM limits specified
 
-        self._extra_data[out_label] = series
+        # convert the current PM limit frim um to nm
+        PM_lim = PM * 1000
+        
+        #Sizebins
+        bin_mids=np.array(self._sizebin_headers).astype(float)
+        #EN 481 calculation
+        Y=np.log(bin_mids/PM_lim)/(2**0.5*np.log(1.5))
+    
+        Frac=0.5*(1+np.vectorize(erf)(-Y))
+        # Apply the fraction to the mass concentration of the bin. 
+        mass_frac = np.nansum(data_copy*Frac,axis=1)
+        
+        if Lower_lim>0:
+            if Lower_lim<PM:
+                
+               	# convert the current PM limit from um to nm
+               	lower_lim = Lower_lim * 1000
+               	#EN 481 calculation
+               	Y=np.log(bin_mids/lower_lim)/(2**0.5*np.log(1.5) )
+                                      
+                Frac=0.5*(1+np.vectorize(erf)(-Y))
+               	# Apply the fraction to the mass concentration of the bin. 
+               	lower_mass_frac = np.nansum(data_copy*Frac,axis=1) 
+                mass_frac=mass_frac-lower_mass_frac
+            else:  raise ValueError("Lower_lim is larger than the chosen PM")
+
+        mass_frac[mass_frac==0] = np.nan #where(mass_frac==0,mass_frac,np.nan)
+         
+        # Add the two values for a final mass concentration
+        self._extra_data[f"P{dtype[-1]}{PM}"] = mass_frac  # .where(mask,np.nan)
+
+        self._extra_data.set_index(self.time, inplace=True)
+        self._extra_data[f"P{dtype[-1]}{PM}"] = self._extra_data[
+            f"P{dtype[-1]}{PM}"
+        ].where(mask, np.nan)
 
         return self
 
     ###########################################################################
 
-    def plot_psd(
-        self,
-        activities: Optional[list[str]] = None,
-        normalize: bool = True,
-        ax=None,
-    ):
-        """Description:
-            Plot mean particle size distributions for one or more activities.
+    def normalize_logdp(self, inplace: bool = True):
+        """
+        Normalize the size distribution data by dlogDp to obtain, e.g., dN/dlogDp.
 
-        Args:
-            activities (list[str] | None): Names of activities to include.
-                If None, all activities in self.activities are considered.
-                Activities that do not exist are skipped.
-            normalize (bool): If True, plot PSDs in log-diameter–
-                normalized form (dx/dlogDp). If the underlying data are not
-                normalized, a temporary division by Δlog₁₀(Dp) is applied.
-                If False, PSDs are shown in base units, undoing any stored
-                normalisation if needed.
-            ax (matplotlib.axes.Axes | None): Axis to plot into. If None,
-                a new figure and axes are created.
+        Parameters
+        ----------
+        inplace : bool, optional
+            If True, modifies current instance in-place.
+            If False, returns a new instance with normalized data.
 
-        Returns:
-            tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]: The
-                figure and axes with the PSD plot.
+        Returns
+        -------
+        self or aerosolxd
+            Instance with normalized size distribution data.
+        """
+        if "/dlogDp" not in self.dtype:
 
-        Raises:
-            None: Aside from Matplotlib or data consistency errors (for
-                example invalid bin_edges or empty activities).
+            log_bin_edges = np.log10(self.bin_edges)
+            dlog_dp = np.diff(log_bin_edges)
 
-        Notes:
-            Detailed description:
-                For each selected activity, the method filters rows where
-                the activity mask is True, optionally converts the data to
-                normalized or base form for plotting, and computes mean
-                and standard deviation across time in each size bin. It
-                then plots the mean PSD as a line on a logarithmic
-                diameter axis with a shaded ±1σ envelope. Colors are
-                assigned per activity and a legend is added.
+            bin_columns = self._sizebin_headers
 
-            Theory:
-                Log-diameter–normalized PSDs (for example dN/dlogDp) are
-                often preferred for visual comparison because equal
-                horizontal distances represent equal decades in size. The
-                method supports both normalized and base distributions so
-                that you can inspect either representation.
+            if len(dlog_dp) != len(bin_columns):
+                raise ValueError("Mismatch between number of bins and dlogDp array.")
 
-        Examples:
-            Compare PSDs during two tasks:
+            normalized_data = self._data[bin_columns].copy().div(dlog_dp, axis=1)
 
-            .. code-block:: python
+            target = self if inplace else self.copy_self()
+            target._data[bin_columns] = normalized_data
 
-                elpi.mark_activities({
-                    "Task A": [("2025-01-24 09:00", "2025-01-24 10:00")],
-                    "Task B": [("2025-01-24 10:00", "2025-01-24 11:00")],
-                })
-                elpi.plot_psd(activities=["Task A", "Task B"], normalize=True)
+            target._meta["dtype"] = f"{self.dtype}/dlogDp"
+
+            return target
+        elif "/dlogDp" in self.dtype:
+            return print("Warning: data already normalized; nothing was changed.")
+
+    ###########################################################################
+
+    def unnormalize_logdp(self, inplace: bool = True):
+        """
+        Reverse dlogDp normalization (e.g., convert dN/dlogDp to dN).
+
+        Parameters
+        ----------
+        inplace : bool, optional
+            If True, modifies current instance in-place.
+            If False, returns a new instance with unnormalized data.
+
+        Returns
+        -------
+        self or aerosolxd
+            Instance with unnormalized size distribution data.
         """
 
+        if "/dlogDp" in self.dtype:
+
+            log_bin_edges = np.log10(self.bin_edges)
+            dlog_dp = np.diff(log_bin_edges)
+
+            bin_columns = self._sizebin_headers
+
+            if len(dlog_dp) != len(bin_columns):
+                raise ValueError("Mismatch between number of bins and dlogDp array.")
+
+            unnormalized_data = self._data[bin_columns].copy().mul(dlog_dp, axis=1)
+
+            target = self if inplace else self.copy_self()
+            target._data[bin_columns] = unnormalized_data
+            target._meta["dtype"] = self.dtype.replace("/dlogDp", "")
+
+            return target
+        else:
+            return print(
+                "Warning: dtype does not contain '/dlogDp'; nothing was changed."
+            )
+
+    ###########################################################################
+
+    def plot_psd(
+        self, activities: Optional[list[str]] = None, normalize: bool = True, ax=None
+    ):
+        """
+        Plot the average particle size distribution (PSD) for the entire dataset and optionally selected activities.
+
+        Parameters
+        ----------
+        activities : list of str, optional
+            List of activity names to include. If None, all defined activities are plotted.
+        normalize : bool, optional
+            Whether to normalize PSD to dlogDp before plotting. If data is already normalized, will respect that.
+        ax : matplotlib.axes.Axes, optional
+            Optional matplotlib Axes object to plot on.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The matplotlib Figure object.
+        ax : matplotlib.axes.Axes
+            The matplotlib Axes object.
+        """
         new_fig_created = False
         if ax is None:
             fig, ax = plt.subplots(figsize=(8, 5))
@@ -1594,12 +660,11 @@ class Aerosol2D(Aerosol1D):
         else:
             fig = ax.figure
 
-        # Set up axes: log diameter on x, grid on both scales
         ax.set_xscale("log")
         ax.set_xlabel("Particle diameter (nm)")
         ax.grid(True, which="both", linestyle="--", linewidth=0.5)
 
-        # Determine current normalization state and Δlog₁₀(Dp)
+        # Determine normalization state
         is_already_normalized = "/dlogDp" in self.dtype
         bin_columns = self._sizebin_headers
         bin_mids = self.bin_mids
@@ -1607,7 +672,7 @@ class Aerosol2D(Aerosol1D):
         dlog_dp = np.diff(log_bin_edges)
         factor_series = pd.Series(dlog_dp, index=bin_columns)
 
-        # Choose y-label based on requested vs. current normalization
+        # Determine label based on normalization intent
         if normalize and not is_already_normalized:
             y_label_dtype = f"{self.dtype}/dlogDp"
         elif not normalize and is_already_normalized:
@@ -1616,7 +681,7 @@ class Aerosol2D(Aerosol1D):
             y_label_dtype = self.dtype
         ax.set_ylabel(f"{y_label_dtype}, {self.unit}")
 
-        # Assign colors per activity
+        # Colormap for activities
         all_activities = sorted(self._activity_periods.keys())
         color_map = plt.colormaps.get_cmap("gist_ncar")
         activity_colors = {
@@ -1624,7 +689,7 @@ class Aerosol2D(Aerosol1D):
             for i, activity in enumerate(all_activities)
         }
 
-        # Determine which activities to plot
+        # Plot selected or all activities
         selected_activities = activities if activities is not None else self.activities
 
         for activity in selected_activities:
@@ -1636,7 +701,6 @@ class Aerosol2D(Aerosol1D):
             if subset.empty:
                 continue
 
-            # Adjust normalization form if requested
             if normalize:
                 if not is_already_normalized:
                     act_data = subset[bin_columns].copy().div(factor_series, axis=1)
@@ -1648,7 +712,6 @@ class Aerosol2D(Aerosol1D):
                 else:
                     act_data = subset[bin_columns].copy()
 
-            # Average and spread across time for the current activity
             avg_act = act_data.mean()
             std_act = act_data.std()
             color = activity_colors.get(activity, None)
@@ -1670,218 +733,269 @@ class Aerosol2D(Aerosol1D):
 
     ###########################################################################
 
-    def plot_PM_timeseries(
+    def correct_diffusion_losses(
         self,
-        PM_values=[0.5, 2.5, 10],
-        dtype: str = "dM",
-        activity: str = "All data",
-        fraction: bool = False,
-        cummulative: bool = False,
+        D_tube: float,
+        L: float,
+        Q: float,
+        T: float = 293,
+        P: float = 101300,
+        inplace: bool = True,
     ):
-        """Description:
-            Plot time series of one or more size-selective Pₓ metrics.
-
-        Args:
-            PM_values (list[float]): Cut diameters in µm defining the
-                Pₓ series to compute (for example [0.5, 2.5, 10]).
-            dtype (str): Base distribution type for Pₓ evaluation, one of
-                "dN", "dS", "dV", "dM". Defaults to "dM" (mass-based).
-            activity (str): Name of the activity mask selecting which time
-                steps to plot. Must be a boolean column in data.
-            fraction (bool): If False (default), plot Pₓ in absolute
-                units and stack bands between successive PM_values. If
-                True, plot the largest Pₓ on the primary axis and the
-                fractional contributions of each Pₓ on a secondary axis.
-            cummulative (bool): Controls how bands/legend values are
-                interpreted:
-
-                    * False: legend reports band-wise contributions between
-                      successive PM_values (for example PM10 − PM2.5).
-                    * True: legend reports cumulative Pₓ at each cut
-                      (for example PM2.5, PM10).
-
-        Returns:
-            tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]: The
-                figure and primary axes. When fraction=True, a secondary
-                y-axis for fractions is also created.
-
-        Raises:
-            Exception: If the number of PM_values exceeds the internal
-                color palette. Reduce PM_values or extend the color list.
-            KeyError: If activity is not a defined mask column in data.
-                Check data.columns and mark_activities/Peak_finder calls.
-            ValueError: If dtype is not one of "dN", "dS", "dV", "dM".
-
-        Notes:
-            Detailed description:
-                The method works on a converted copy of the data (using
-                dtype_converter) to compute Pₓ series for each requested
-                cut diameter via PM_calc. It then restricts to the chosen
-                activity and draws either stacked absolute bands or
-                fractional contributions relative to the largest Pₓ. Mean
-                ± standard deviation for each series (or band) are shown
-                in the legend for quick comparison.
-
-            Theory:
-                Pₓ metrics reflect the contribution of different size
-                ranges to overall exposure, following EN 481 / ISO 7708
-                penetration curves for the chosen base distribution.
-                Visualising absolute vs fractional Pₓ helps understand
-                whether coarse or fine particles dominate during a task.
-
-        Examples:
-            Examine how PM0.5, PM2.5 and PM10 evolve during a shift:
-
-            .. code-block:: python
-
-                fig, ax = elpi.plot_PM_timeseries(
-                    PM_values=[0.5, 2.5, 10],
-                    dtype="dM",
-                    activity="All data",
-                    fraction=False,
-                )
         """
+        Correct for diffusion losses in a sampling tube based on tubing geometry,
+        flow conditions, and particle sizes.
 
-        # Color palette for stacking PM bands
-        colors = [
-            "brown",
-            "chocolate",
-            "darkorange",
-            "gold",
-            "olive",
-            "darkgreen",
-            "teal",
-            "deepskyblue",
-            "darkblue",
-        ]
-        if len(PM_values) > len(colors):
-            raise Exception(
-                "Number of PM values are above the limit. Reduce the number of PM-values"
-            )
+        Parameters
+        ----------
+        D_tube : float
+            Diameter of the tubing (in meters).
+        L : float
+            Length of the tubing (in meters).
+        Q : float
+            Volumetric flow through the tubing (in L/min).
+        T : float, optional
+            Temperature in Kelvin. Default is 293 K.
+        P : float, optional
+            Pressure in Pascals. Default is 101300 Pa.
+        inplace : bool, optional
+            Whether to modify the current instance or return a new one. Default is True.
 
-        # Work on a copy to avoid modifying base distributions
-        data_copy = self.copy_self()
-        data_copy.dtype_converter(dtype=dtype)
+        Returns
+        -------
+        Aerosol2D
+            Instance with diffusion-corrected sizebin data.
+        """
+        # Constants
+        k = 1.380649e-23  # Boltzmann constant
+        Dp = np.array(self.bin_mids) * 1e-9  # Convert nm to meters
+        Q_m3s = Q / (1000 * 60)  # Convert L/min to m³/s
+        A = 0.25 * np.pi * D_tube**2
+        V = Q_m3s / A  # Flow velocity (m/s)
 
-        # Compute P-series for each requested PM limit
-        for i in PM_values:
-            data_copy.PM_calc(dtype=dtype, PM=i)
+        # Mean free path (adjusted for P, T)
+        mfp_std = 66.5e-9  # m
+        mfp = (
+            mfp_std * (101e3 / P) * (T / 293.15) * ((1 + 110 / 293.15) / (1 + 110 / T))
+        )
 
-        # Restrict to selected activity
-        mask = self.data[activity]
-        PM_data = data_copy.extra_data.loc[mask]
+        # Gas properties
+        eta_std = 1.708e-5
+        eta = (
+            eta_std * (T / 273.15) ** 1.5 * (393.396 / (T + 120.246))
+        )  # dynamic viscosity
+        rho = 1.293 * (273.15 / T) * (P / 101300)  # gas density
 
-        # Create figure/axes and set font sizes
-        figure, ax = plt.subplots()
-        plt.xticks(fontsize=25)
-        plt.yticks(fontsize=25)
+        # Knudsen number and slip correction
+        Kn = 2 * mfp / Dp
+        Cc = 1 + Kn * (1.142 + 0.558 * np.exp(-0.999 / Kn))
 
-        # Fractional mode: total on primary axis, fractions on secondary axis
-        if fraction:
-            total_name = f"P{dtype[-1]}{PM_values[-1]}"
-            total = PM_data[total_name]
-            ax.plot(total, color="k", label="Total", lw=3)
+        # Reynolds number
+        Re = rho * V * D_tube / eta
 
-            ax2 = ax.twinx()
-            for i, pmv in enumerate(PM_values):
-                pm = f"P{dtype[-1]}{pmv}"
-                # Safe ratio
-                ratio = PM_data[pm].where(total != 0, np.nan) / total.where(
-                    total != 0, np.nan
-                )
+        # Diffusion coefficient
+        Dc = k * T * Cc / (3 * np.pi * eta * Dp)
+        Sc = eta / (rho * Dc)
+        xi = np.pi * Dc * L / Q_m3s
 
-                if i == 0:
-                    avg, sd = float(PM_data[pm].mean()), float(PM_data[pm].std())
-                    ax2.fill_between(
-                        self.time[mask],
-                        ratio,
-                        alpha=0.75,
-                        color=colors[i],
-                        label=f"{pm}: {avg:.2f}±{sd:.2f}",
-                    )
-                else:
-                    pm_1 = f"P{dtype[-1]}{PM_values[i-1]}"
-                    if cummulative:
-                        avg, sd = float(PM_data[pm].mean()), float(PM_data[pm].std())
-                        ax2.fill_between(
-                            self.time[mask],
-                            PM_data[pm_1].where(total != 0, np.nan)
-                            / total.where(total != 0, np.nan),
-                            ratio,
-                            alpha=0.75,
-                            color=colors[i],
-                            label=f"{pm}: {avg:.2f}±{sd:.2f}",
-                        )
-                    else:
-                        band = PM_data[pm] - PM_data[pm_1]
-                        avg, sd = float(band.mean()), float(band.std())
-                        ax2.fill_between(
-                            self.time[mask],
-                            PM_data[pm_1].where(total != 0, np.nan)
-                            / total.where(total != 0, np.nan),
-                            ratio,
-                            alpha=0.75,
-                            color=colors[i],
-                            label=f"{pm}: {avg:.2f}±{sd:.2f}",
-                        )
-
-            ax2.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-            ax2.set_ylim(0, 1)
-            ax2.set_ylabel(f"P{dtype[-1]} fraction")
-            ax2.legend(
-                loc="best",
-                title=f"Average values ({data_copy.unit})",
-                fontsize=25,
-                title_fontsize=25,
-            )
+        # Sherwood number
+        if Re < 2000:
+            Sh = 3.66 + 0.2672 / (xi + 0.10079 * xi ** (1 / 3))
         else:
-            for i, pmv in enumerate(PM_values):
-                pm = f"P{dtype[-1]}{pmv}"
-                if i == 0:
-                    avg, sd = float(PM_data[pm].mean()), float(PM_data[pm].std())
-                    ax.fill_between(
-                        self.time[mask],
-                        PM_data[pm],
-                        alpha=1,
-                        color=colors[i],
-                        label=f"{pm}: {avg:.2f}±{sd:.2f}",
-                    )
-                else:
-                    pm_1 = f"P{dtype[-1]}{PM_values[i-1]}"
-                    if cummulative:
-                        avg, sd = float(PM_data[pm].mean()), float(PM_data[pm].std())
-                        ax.fill_between(
-                            self.time[mask],
-                            PM_data[pm_1],
-                            PM_data[pm],
-                            color=colors[i],
-                            label=f"{pm}: {avg:.2f}±{sd:.2f}",
-                        )
-                    else:
-                        band = PM_data[pm] - PM_data[pm_1]
-                        avg, sd = float(band.mean()), float(band.std())
-                        ax.fill_between(
-                            self.time[mask],
-                            PM_data[pm_1],
-                            PM_data[pm],
-                            color=colors[i],
-                            label=f"{pm}: {avg:.2f}±{sd:.2f}",
-                        )
-            ax.legend(
-                loc="best",
-                title=f"Average values ({data_copy.unit})",
-                fontsize=25,
-                title_fontsize=25,
-            )
+            Sh = 0.0118 * Re ** (7 / 8) * Sc ** (1 / 3)
 
+        # Diffusion efficiency
+        eff = np.exp(-Sh * xi)
+
+        # Apply correction
+        corrected = self.copy_self() if not inplace else self
+        size_cols = corrected._sizebin_headers
+        corrected._data[size_cols] = corrected._data[size_cols].div(eff, axis=1)
+        corrected._data["Total_conc"] = corrected._data[size_cols].sum(axis=1)
+
+        # Store efficiency in metadata for reference
+        corrected._meta["diffusion_efficiency"] = eff.tolist()
+        corrected._meta["diffusion_loss_corrected"] = True
+
+        return corrected
+    ###########################################################################
+    def plot_PM_timeseries(self, PM_values=[0.5,2.5,10],dtype="dM", activity='All data',
+                           mark_activities: bool | Sequence[str] = False,
+                           fraction=False, cummulative=False):
+        """
+        Plot the total concentration 
+        
+        Parameters
+        ----------
+
+        PM_values : list, optional
+            A list of Dp values for which PM should be plotted.
+            The default is [0.5,2.5,10].
+
+        dtype : string, optional
+            Keyword to specify the datatype. The available options are "number",
+            "surface" and "mass". Default is "number"
+        activity : str
+            Designates which activity should be plotted. Default is "All data"
+        fraction : boolean
+            Decides whether the PM should be plotted as values, or as fraction of the biggest PM value.
+            By default the fraction is off. If True, the total value will be plotted as a line.
+        cummulative : boolean
+            Determines whether the PM value reported in the legend should be PM values or the difference
+            between two PM values. Default is False, which PM_values[0.5,2.5,10] returns the values:
+            P0.5= PM0.5,
+            P2.5=PM2.5-PM0.5
+            P10=PM10-PM2.5
+            Chose True if regular PM values should be used.
+    
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            Handle for the returned figure for saving.
+        ax : matplotlib.axes._subplots.AxesSubplot
+            Handles for the axis of the plot.
+    
+        """
+        #Set up standardized values for later use
+
+        colors = ["brown","chocolate","darkorange","gold","olive","darkgreen","teal","deepskyblue","darkblue"]
+        if len(PM_values)>len(colors):
+            raise Exception("Number of PM values are above the limit. Reduce the number of PM-values")
+        # y_label={"Number"   :   "N$_{Total}$, cm$^{-3}$",
+        #          "Surface"  :   "S$_{Total}$, nm$^{2}$ cm$^{-3}$",
+        #          "Mass"     :   "m$_{Total}$, $\mu$g/m$^{3}$"}
+        # Legend_label={'Number': 'PN',
+        #               'Surface':'PS',
+        #               'Mass':   'PM'}
+        
+        #Corrects for the first letter not being capital in the datatype
+
+     
+        data_copy=self.copy_self()        
+        data_copy.dtype_converter(dtype=dtype)
+        
+        #Generate a dictionary of the lists of PM values
+        # PM={}
+        for i in PM_values:
+            data_copy.PM_calc(dtype=dtype,PM=i)
+            
+        mask = self.data[activity]
+
+        PM_data=data_copy.extra_data.loc[mask]
+        #If no ax is provided, figure and ax is generated here
+
+        figure, ax = plt.subplots()
+        plt.xticks(fontsize=25)  
+        plt.yticks(fontsize=25)         
+            
+        """  
+        Determines the type of plot. The default is a plot with total concentration
+        and the total concentration each pn/pm values reases.
+        If the Fraction has been turned on, the fractional values will be calculated instead
+        """
+        if fraction==True:
+            ax.plot(PM_data[f"P{dtype[-1]}{PM_values[-1]}"],color='k',label='Total',lw=3)
+            ax2 = ax.twinx()
+            PM_fr=PM_data.copy()
+            for i in range(0,len(PM_values)):
+                pm=f"P{dtype[-1]}{PM_values[i]}"
+                
+                PM_fr[pm]=PM_data[pm]/PM_data[f"P{dtype[-1]}{PM_values[-1]}"]
+                if i == 0:
+                    avg_PM = round(PM_data[pm].mean(),2)
+                    sem_PM = round(PM_data[pm].std(),2)
+                    Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    ax2.fill_between(self.time[mask],PM_fr[pm],alpha=0.75,color=colors[i],label=Label)
+                    
+                else:
+                    pm_1=f"P{dtype[-1]}{PM_values[i-1]}"
+                    if cummulative==True:
+                        avg_PM = round(PM_data[pm].mean(),2)
+                        sem_PM = round(PM_data[pm].std(),2)
+                        Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    else:
+                        avg_PM = round(np.nanmean(PM_data[pm]-PM_data[pm_1], axis=0),2)
+                        sem_PM = round(np.nanstd(PM_data[pm]-PM_data[pm_1], axis=0),2)
+                        Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    ax2.fill_between(self.time[mask],PM_fr[pm_1], PM_fr[pm],alpha=0.75,color=colors[i],label=Label)
+            
+            ax2.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+            ax2.set_ylim(0,1)
+            ax2.set_ylabel(f"P{dtype[-1]} fraction")
+            ax2.legend(loc='best',title=f"Average values ({data_copy.unit})",fontsize=25,title_fontsize=25)
+    
+        else:
+            for i in range(0,len(PM_values)):
+                pm=f"P{dtype[-1]}{PM_values[i]}"
+
+                # Label=f"{pm} $\mu$m: {rounder(np.nanmean(PM[pm]),sem_PM)}"
+                if i == 0:
+                    avg_PM = round(PM_data[pm].mean(),2)
+                    sem_PM = round(PM_data[pm].std(),2)
+                    Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    ax.fill_between(self.time[mask],PM_data[pm],alpha=1,color=colors[i],label=Label)
+                else:
+                    pm_1=f"P{dtype[-1]}{PM_values[i-1]}"
+                    if cummulative==True:
+                        avg_PM = round(PM_data[pm].mean(),2)
+                        sem_PM = round(PM_data[pm].std(),2)
+                        Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    else:
+                        avg_PM =  round(np.nanmean(PM_data[pm]-PM_data[pm_1], axis=0),2)
+                        sem_PM = round(np.nanstd(PM_data[pm]-PM_data[pm_1], axis=0),2)
+                        Label=f"{pm}: {avg_PM}+/-{sem_PM}"
+                    ax.fill_between(self.time[mask],PM_data[pm_1], PM_data[pm],color=colors[i],label=Label)
+            ax.legend(loc='best',title=f"Average values ({data_copy.unit})",fontsize=25,title_fontsize=25)
+    
+        #Set the axis settings    
+        
         ax.set_ylim(0)
         ax.set_ylabel(f"P{dtype[-1]}, {data_copy.unit}")
-        loc = mdates.AutoDateLocator()
-        fmt = mdates.ConciseDateFormatter(loc)
-        ax.xaxis.set_major_locator(loc)
-        ax.xaxis.set_major_formatter(fmt)
-        return ax.figure, ax
+        
+        locator = mdates.AutoDateLocator()
+        formatter = mdates.ConciseDateFormatter(locator)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(formatter)
+        
+        # Highlight activities
+        if mark_activities and hasattr(self, "_activity_periods"):
+            # Exclude "All data" unless explicitly requested
+            all_activities = sorted(self._activity_periods.keys())
+            color_map = plt.colormaps.get_cmap("gist_ncar")
+            activity_colors = {
+                activity: color_map(i / max(1, len(all_activities)))
+                for i, activity in enumerate(all_activities)
+            }
 
+            if mark_activities is True:
+                selected_activities = [a for a in all_activities if a != "All data"]
+            elif isinstance(mark_activities, list):
+                selected_activities = [
+                    a for a in mark_activities if a in self._activity_periods
+                ]
+            else:
+                selected_activities = []
+
+            for activity in selected_activities:
+                color = activity_colors[activity]
+                first = True
+                for start, end in self._activity_periods[activity]:
+                    ax.axvspan(
+                        cast(float, mdates.date2num(pd.Timestamp(start))),
+                        cast(float, mdates.date2num(pd.Timestamp(end))),
+                        color=color,
+                        alpha=0.3,
+                        label=activity if first else None,
+                        zorder=3,
+                    )
+                    first = False
+            # Clip x-axis to actual data range
+            # left = float(mdates.date2num(self.time.min()))
+            # right = float(mdates.date2num(self.time.max()))
+            # ax.set_xlim(left, right)
+            ax.legend()
+        
+        return ax.figure,ax
     ###########################################################################
 
     def plot_timeseries(
@@ -1893,88 +1007,34 @@ class Aerosol2D(Aerosol1D):
         ax2: Axes | None = None,
         mark_activities: bool | Sequence[str] = False,
     ) -> tuple[Figure, NDArray[Any]]:
-        """Description:
-            Plot total concentration and a time–size heatmap in one figure.
-
-        Args:
-            y_tot (tuple[float, float]): Y-limits for the total
-                concentration panel (ymin, ymax). Use (0, 0) for automatic
-                limits; if a non-zero entry is given with zero partner,
-                the non-zero value is used directly, while the zero is
-                replaced by the max/min in the data.
-            y_3d (tuple[float, float]): Color-scale limits for the 2D PSD
-                panel (zmin, zmax). Use (0, 0) for automatic limits. To
-                enforce a strictly positive lower limit for log scaling,
-                set zmin > 0 and zmax = 0 for automatic upper limit, e.g.
-                y_3d = (1, 0).
-            log (bool): If True, the function attempts to use a logarithmic
-                color scale for the 2D panel. If the PSD values used for
-                the mesh (after any clipping from y_3d) are not strictly
-                positive or the lower limit is ≤ 0, the function
-                automatically falls back to a linear color scale and prints
-                a warning to the terminal. If False, a linear color scale
-                is used directly.
-            ax1 (matplotlib.axes.Axes | None): Axis for the top (total
-                concentration) plot. If provided, ax2 must also be
-                provided.
-            ax2 (matplotlib.axes.Axes | None): Axis for the bottom
-                (time–size) plot. If provided, ax1 must also be provided.
-            mark_activities (bool | Sequence[str]): Passed to
-                plot_total_conc to control activity highlighting. True
-                shades all activities except "All data"; a sequence
-                restricts shading to specific activities.
-
-        Returns:
-            tuple[matplotlib.figure.Figure, numpy.ndarray]: A tuple with
-                the figure and a NumPy array [ax1, ax2, colorbar].
-
-        Raises:
-            ValueError: If only one of ax1 or ax2 is supplied. Provide
-                both or neither.
-
-        Notes:
-            Detailed description:
-                The method first draws the total concentration time series
-                (via plot_total_conc) in the top panel, optionally with
-                activity shading and custom y-limits. The bottom panel
-                shows a pcolormesh of particle size distribution (PSD)
-                with values as a function of time and particle diameter.
-                A shared colorbar is added and labeled with the
-                current dtype and unit, and the y-axis for the PSD is
-                log-scaled in diameter.
-
-                By default, the color scale for the PSD uses a logarithmic
-                normalization (log=True). If the PSD values (after any
-                clipping via y_3d) include zeros or negatives, or if the
-                color-scale lower limit is ≤ 0, the method automatically
-                falls back to a linear color scale and prints a clearly
-                visible warning to the terminal. To avoid this fallback and
-                enforce log scaling, you can specify a strictly positive
-                lower limit via y_3d, for example y_3d = (1, 0), which
-                clips all values below 1 and lets the method safely use a
-                log color scale.
-
-            Theory:
-                The heatmap represents the evolution of the size
-                distribution over time. Combining this with total
-                concentration in one figure makes it easier to relate bulk
-                peaks to specific size modes or shifts in the
-                distribution.
-
-        Examples:
-            Create an overview plot of an ELPI or SMPS data set:
-
-            .. code-block:: python
-
-                fig, (ax1, ax2, cbar) = elpi.plot_timeseries()
-                fig.savefig("elpi_timeseries.png", dpi=150)
         """
+        Plot total concentration (top) and a size-resolved time series (bottom).
 
-        # Require both axes or neither when passing external axes
+        Parameters
+        ----------
+        y_tot : tuple, optional
+            Y-axis limits for total concentration (min, max). Default auto.
+        y_3d : tuple, optional
+            Colorbar scale limits for 2D mesh (min, max). Default auto.
+        log : bool, optional
+            Whether to apply logarithmic color scaling. Default True.
+        ax1 : matplotlib.axes.Axes, optional
+            Axis for the top plot. If provided, ax2 must also be provided.
+        ax2 : matplotlib.axes.Axes, optional
+            Axis for the mesh plot. If provided, ax1 must also be provided.
+        mark_activities : bool or list of str, optional
+            Passed to `plot_total_conc()` to highlight activity periods.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The figure object.
+        axs : np.ndarray
+            Array of axes and colorbar handle: [ax1, ax2, colorbar].
+        """
         if (ax1 is None) != (ax2 is None):
             raise ValueError("You must provide both ax1 and ax2, or neither.")
 
-        # Create figure/axes if not provided
         if ax1 is None and ax2 is None:
             newplot = True
             fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(10, 6))
@@ -1987,28 +1047,30 @@ class Aerosol2D(Aerosol1D):
 
         time = self.time
         total = self.total_concentration
-        data = self.size_data
+        data = self.normalize_logdp(False).size_data
         bin_edges = self.bin_edges
 
-        # --- Top panel: total concentration (with optional activity shading) ---
+        # Top panel: total concentration
         _, ax_new = self.plot_total_conc(ax=ax1, mark_activities=mark_activities)
-        ax1 = ax_new
-        ax1 = cast(Axes, ax1)
 
-        # Optionally fix y-limits of the total concentration plot
+        ax1 = ax_new
+
+        # Set y-limits for the total_conc plot
         if y_tot != (0, 0):
             ymin = y_tot[0] if y_tot[0] != 0 else total.min() * 0.98
             ymax = y_tot[1] if y_tot[1] != 0 else total.max() * 1.02
             ax1.set_ylim(ymin, ymax)
 
-        # --- Construct time edges for pcolormesh (center ± ½Δt) ---------------
+        dt = (time[1] - time[0]) / 2
+
+        # Generate edges: center ± half step
         dt = (time[1] - time[0]) / 2
         time_edges = pd.DatetimeIndex(np.append(time - dt, [time[-1] + dt]))  # type: ignore
 
         x_grid, y_grid = np.meshgrid(time_edges, bin_edges, indexing="ij")
 
-        # --- Handle color scale limits ----------------------------------------
-        z_data = data.copy()
+        # Handle color scale limits
+        z_data = data
         if y_3d != (0, 0):
             zmin, zmax = y_3d
             if zmin != 0:
@@ -2019,827 +1081,215 @@ class Aerosol2D(Aerosol1D):
             zmin = z_data.min().min()
             zmax = z_data.max().max()
 
-        # --- Choose color normalization (log or linear, with fallback) --------
-        use_log = log
+        # Define color scale
         if log:
-            # Check for non-positive values or non-positive lower limit
-            has_non_positive = (z_data <= 0).any().any()
-            if has_non_positive or zmin <= 0:
-                # Fallback to linear with a big, clear warning
-                print(
-                    "\n" + "=" * 72 + "\nWARNING (plot_timeseries):"
-                    "\n  PSD data contain zero or negative values, or the lower"
-                    "\n  color-scale limit is ≤ 0. Falling back to *linear*"
-                    "\n  color scale for the concentration heatmap."
-                    "\n"
-                    "\n  To enforce log-scaled concentration, set y_3d to use a"
-                    "\n  strictly positive lower limit, for example:"
-                    "\n      y_3d = (1, 0)"
-                    "\n  which clips values below 1 and allows log scaling."
-                    "\n" + "=" * 72 + "\n"
+            if (z_data <= 0).any().any():
+                raise ValueError(
+                    "Data contains zeros or negatives; cannot use log color scale."
                 )
-                use_log = False
-
-        if use_log:
-            # Safety: ensure vmin > 0 for LogNorm
-            vmin = max(zmin, np.nextafter(0, 1))
-            norm = LogNorm(vmin=vmin, vmax=zmax)
+            norm = LogNorm(vmin=zmin, vmax=zmax)
         else:
             norm = Normalize(vmin=zmin, vmax=zmax)
 
-        # --- Bottom panel: size–time pcolormesh -------------------------------
+        # Mesh plot
         mesh = ax2.pcolormesh(
             x_grid, y_grid, z_data, cmap="jet", norm=norm, shading="flat"
         )
 
-        # Axis labels and scales
+        # Set axis labels and scale
         ax2.set_yscale("log")
         ax2.set_ylabel("Dp, nm")
         ax2.set_xlabel("Time")
         if newplot:
             ax1.set_xlabel("")
+        # Use matplotlib's default date handling
         ax2.xaxis.set_major_formatter(
             mdates.ConciseDateFormatter(mdates.AutoDateLocator())
         )
 
-        # Shared colorbar for both panels
+        # # Add colorbar
         col = fig.colorbar(mesh, ax=[ax1, ax2])
-        col.set_label(f"{self.dtype}, {self.unit}")
+        col.set_label(f"{self.dtype}/dlogDp, {self.unit}")
 
-        # Basic styling
+        # Styling
         ax1.tick_params(axis="y", which="both", direction="out", length=6, width=2)
         ax2.tick_params(axis="y", which="both", direction="out", length=6, width=2)
 
         return fig, np.array([ax1, ax2, col], dtype=object)
 
     ###########################################################################
+    
+    def summarize(self, filename=None,sheet_name=None):
+        """
+        Summarize aerosol characteristics for each activity period.
 
-    @override
-    def summarize_activities(
-        self,
-        filename: Optional[str] = None,
-        metrics: Optional[list[str]] = None,
-    ) -> pd.DataFrame:
-        """Description:
-            Summarize size-resolved aerosol metrics per activity.
+        Metrics included for each segment:
+        - PNC (cm⁻³): Particle number concentration (sum across number bins)
+        - PM1, PM2.5, PM4 (respirable), PM10 (inhalable) in µg/m³, calculated using partial bin inclusion
+        - Total mass concentration (µg/m³)
+        - Mode diameter (nm): Bin midpoint with max number conc per timestep
+        - Median diameter (nm): 50% of cumulative number distribution
+        - GMD (nm): Geometric mean diameter (log-space, number-weighted)
 
-        Args:
-            filename (str | None): Optional Excel file path. If provided,
-                the summary table is written to this file (one sheet,
-                activities as rows). If None, no file is written.
-            metrics (list[str] | None): List of metric names to compute.
-                If None, a default set is used: ["PNC", "PM1", "PM2.5",
-                "PM4", "PM10", "MASS", "MODE", "MEDIAN", "GMD"].
+        All metrics include standard deviation across the segment.
 
-        Returns:
-            pandas.DataFrame: Summary table with:
-                * "Segment"
-                * "Duration (HH:MM)"
-                * For each metric M: "M mean [unit]" and "M std [unit]".
+        Parameters
+        ----------
+        filename : str, optional
+            If provided, saves the summary to Excel.
 
-        Raises:
-            ValueError: If a metric name cannot be interpreted (for
-                example malformed PMx string) or is unsupported.
-            ValueError: If internal preparation for a Pₓ metric fails
-                (for example missing PSD columns or inconsistent bin
-                metadata).
-
-        Notes:
-            Detailed description:
-                For each activity, the method computes the total duration
-                and the requested set of metrics. PNC and MASS are total
-                number and mass concentrations. MODE, MEDIAN and GMD are
-                size metrics derived from the number distribution. Metrics
-                of the form PMx, PNx, PSx, PVx are Pₓ values at cut
-                diameter x (in µm) for mass, number, surface area and
-                volume, respectively. Each metric is reported as mean and
-                standard deviation over the activity. A transposed version
-                of the table is printed to the terminal for quick inspection.
-
-            Theory:
-                The method combines time-weighted activity durations with
-                standard PSD-derived metrics: bulk concentrations, Pₓ, and
-                central size metrics (mode, median, geometric mean).
-                Pₓ metrics are determined using penetration curves given in
-                EN 481 / ISO 7708, mimicing cyclone cut-offs rather than
-                sharp size cut-offs for PMₓ calculations.
-
-        Examples:
-            Generate a task-level summary of exposure metrics:
-
-            .. code-block:: python
-
-                elpi.summarize_activities(
-                    filename="activity_summary_elpi.xlsx",
-                    metrics=["PNC", "PM2.5", "PM10", "MODE", "GMD"],
-                )
+        Returns
+        -------
+        pd.DataFrame
+            Summary statistics for all defined activities.
         """
 
-        # --- defaults --------------------------------------------------------
-        if metrics is None:
-            metrics = [
-                "PNC",
-                "PM1",
-                "PM2.5",
-                "PM4",
-                "PM10",
-                "MASS",
-                "MODE",
-                "MEDIAN",
-                "GMD",
-            ]
 
-        # --- helper: duration in minutes per time step (shared helper) -------
-        dt_mins = self._dt_minutes()
-
-        def _px_label(dchar: str, cutoff: float) -> str:
-            return f"P{dchar}{cutoff:g}"
-
-        metrics_upper = [m.upper() for m in metrics]
-
-        want_pnc = "PNC" in metrics_upper
-        want_mass = "MASS" in metrics_upper
-        want_mode = "MODE" in metrics_upper
-        want_median = "MEDIAN" in metrics_upper
-        want_gmd = "GMD" in metrics_upper
-        want_any_size_metric = want_mode or want_median or want_gmd
-
-        # Gather requested Pₓ cutoffs by dtype char (M/N/S/V) using shared parser
-        pm_requests: dict[str, set[float]] = {
-            "M": set(),
-            "N": set(),
-            "S": set(),
-            "V": set(),
-        }
-        for name_upper in metrics_upper:
-            parsed = self._parse_px_metric_scalar(name_upper)
-            if parsed:
-                dchar, cutoff = parsed
-                pm_requests[dchar].add(cutoff)
-
-        # --- prepare prerequisite data only if needed ------------------------
-        number_data = None
-        if want_pnc or want_any_size_metric:
-            number_data = self._convert_to_number_concentration(inplace=False)
-
-        mass_data = None
-        if want_mass:
-            mass_data = self._convert_to_mass_concentration(inplace=False)
-
-        # Precompute Pₓ series for requested dtypes and cutoffs on *one* prepped copy per dtype
-        dtype_map = {"M": "dM", "N": "dN", "S": "dS", "V": "dV"}
-        px_extra: dict[str, pd.DataFrame] = {}
-        for dchar, cutoffs in pm_requests.items():
-            if not cutoffs:
-                continue
-            px_obj = self.copy_self()
-            # ensure unnormalized and in the right dtype once
-            if "/dlogDp" in px_obj.dtype:
-                px_obj.unnormalize_logdp(inplace=True)
-            px_obj.dtype_converter(dtype=dtype_map[dchar], inplace=True)
-            # compute columns for all requested cutoffs; labels standardized in PM_calc
-            for pm in sorted(cutoffs):
-                px_obj.PM_calc(dtype=dtype_map[dchar], PM=pm)
-            px_extra[dchar] = px_obj.extra_data.copy()
-
-        # --- compute per-activity --------------------------------------------
-        rows: list[list[float | str]] = []
-        bin_mids = np.asarray(self.bin_mids, dtype=float)
+        number_data = self.convert_to_number_concentration(inplace=False)
+        mass_data = self.convert_to_mass_concentration(inplace=False)
+        
+        #Make a copy and populate it with PM values
+        data_copy = self.copy_self()
+        for PM in [1,2.5,4,10]:
+            data_copy.PM_calc(PM=PM)
+            
+        rows = []
 
         for activity in self.activities:
             mask = self.data[activity]
             if mask.sum() == 0:
                 continue
 
-            # Duration of this activity (min and HH:MM)
-            duration_minutes = float(dt_mins.loc[mask].sum())
-            duration_hhmm = self._format_hhmm(duration_minutes)
+            num_df = number_data.size_data.loc[mask]
+            mass_df = mass_data.size_data.loc[mask]
 
-            # Initialize with NaNs
-            pnc = pnc_std = float("nan")
-            total_mass = total_mass_std = float("nan")
-            mode_d = mode_d_std = float("nan")
-            median_d = median_d_std = float("nan")
-            gmd = gmd_std = float("nan")
+            # PNC
+            pnc_series = num_df.sum(axis=1)
+            pnc = pnc_series.mean()
+            pnc_std = pnc_series.std()
 
-            # PNC (from number_data)
-            if want_pnc and number_data is not None:
-                num_df = number_data.size_data.loc[mask]
-                s = num_df.sum(axis=1)  # type: ignore[call-arg]
-                pnc, pnc_std = float(s.mean()), float(s.std())
+            # PM fractions (with partial bins)
 
-            # Total mass (from mass_data)
-            if want_mass and mass_data is not None:
-                mass_df = mass_data.size_data.loc[mask]
-                s = mass_df.sum(axis=1)  # type: ignore[call-arg]
-                total_mass, total_mass_std = float(s.mean()), float(s.std())
+            PM_copy = data_copy.extra_data.loc[mask]
 
-            # Size metrics (mode/median/GMD) on number distribution
-            if want_any_size_metric and number_data is not None:
-                num_df = number_data.size_data.loc[mask]
+            pm1, pm1_std = PM_copy['PM1'].mean(), PM_copy['PM1'].std()
+            pm2_5, pm2_5_std = PM_copy['PM2.5'].mean(), PM_copy['PM2.5'].std()
+            pm4, pm4_std = PM_copy['PM4'].mean(), PM_copy['PM4'].std()
+            pm10, pm10_std = PM_copy['PM10'].mean(), PM_copy['PM10'].std()
 
-                mode_list: list[float] = []
-                med_list: list[float] = []
-                gmd_list: list[float] = []
+            # Total mass
+            total_mass_series = mass_df.sum(axis=1)
+            total_mass = total_mass_series.mean()
+            total_mass_std = total_mass_series.std()
 
-                for _, row in num_df.iterrows():  # type: ignore
-                    dist = row.to_numpy(dtype=float)  # type: ignore
-                    tot = float(dist.sum())
-                    if tot <= 0:
-                        continue
+            # Per-time-step size metrics
+            mode_d_list = []
+            median_d_list = []
+            gmd_list = []
 
-                    if want_mode:
-                        mode_idx = int(np.argmax(dist))
-                        mode_list.append(float(bin_mids[mode_idx]))
-
-                    if want_median:
-                        cum = np.cumsum(dist)
-                        cum /= cum[-1]
-                        med_idx = int(np.searchsorted(cum, 0.5))
-                        med_list.append(float(bin_mids[med_idx]))
-
-                    if want_gmd:
-                        positive = dist > 0
-                        if not np.any(positive):
-                            continue
-                        dpos = dist[positive]
-                        mpos = bin_mids[positive]
-                        gval = float(np.exp(np.sum(np.log(mpos) * dpos) / dpos.sum()))
-                        gmd_list.append(gval)
-
-                if want_mode and mode_list:
-                    mode_d, mode_d_std = float(np.mean(mode_list)), float(
-                        np.std(mode_list)
-                    )
-                if want_median and med_list:
-                    median_d, median_d_std = float(np.mean(med_list)), float(
-                        np.std(med_list)
-                    )
-                if want_gmd and gmd_list:
-                    gmd, gmd_std = float(np.mean(gmd_list)), float(np.std(gmd_list))
-
-            # Pₓ metrics collected in requested order
-            px_values: dict[str, tuple[float, float]] = {}
-            for name, name_upper in zip(metrics, metrics_upper):
-                parsed = self._parse_px_metric_scalar(name_upper)
-                if not parsed:
+            for _, row in num_df.iterrows():
+                dist = row.values
+                total = dist.sum()
+                if total == 0:
                     continue
-                dchar, cutoff = parsed
-                df_px = px_extra.get(dchar)
-                if df_px is None:
-                    raise ValueError(
-                        f"Internal error: dtype '{dchar}' was not prepared."
-                    )
-                label = _px_label(dchar, cutoff)
-                if label not in df_px.columns:
-                    raise ValueError(f"Internal error: PX column '{label}' not found.")
-                ser = df_px.loc[mask, label]
-                px_values[label] = (float(ser.mean()), float(ser.std()))
 
-            # Assemble row
-            row: list[float | str] = [activity, duration_hhmm]
-            for name, name_upper in zip(metrics, metrics_upper):
-                if name_upper == "PNC":
-                    row += [round(pnc, 2), round(pnc_std, 2)]
-                elif name_upper == "MASS":
-                    row += [round(total_mass, 2), round(total_mass_std, 2)]
-                elif name_upper == "MODE":
-                    row += [round(mode_d, 1), round(mode_d_std, 1)]
-                elif name_upper == "MEDIAN":
-                    row += [round(median_d, 1), round(median_d_std, 1)]
-                elif name_upper == "GMD":
-                    row += [round(gmd, 1), round(gmd_std, 1)]
-                else:
-                    parsed = self._parse_px_metric_scalar(name_upper)
-                    if not parsed:
-                        raise ValueError(f"Unsupported metric '{name}'.")
-                    dchar, cutoff = parsed
-                    label = _px_label(dchar, cutoff)
-                    mean_val, std_val = px_values[label]
-                    row += [round(mean_val, 2), round(std_val, 2)]
-            rows.append(row)
+                # Mode diameter
+                mode_d = np.array(self.bin_mids)[np.argmax(dist)]
+                mode_d_list.append(mode_d)
 
-        # --- column headers with explicit units ---------------------------------
-        columns: list[str] = ["Segment", "Duration (HH:MM)"]
+                # Median diameter
+                cum = np.cumsum(dist)
+                cum /= cum[-1]
+                median_idx = np.searchsorted(cum, 0.5)
+                median_d = np.array(self.bin_mids)[median_idx]
+                median_d_list.append(median_d)
 
-        unit_map_px = {
-            "M": "µg/m³",
-            "N": "cm⁻³",
-            "S": "nm²/cm³",
-            "V": "nm³/cm³",
-        }
+                # GMD
+                gmd = np.exp(np.sum(np.log(np.array(self.bin_mids)) * dist) / total)
+                gmd_list.append(gmd)
 
-        for name, name_upper in zip(metrics, metrics_upper):
-            parsed = self._parse_px_metric_scalar(name_upper)
-            if parsed:
-                dchar, _ = parsed
-                unit = unit_map_px[dchar]
-                label = f"{name} [{unit}]"
-            elif name_upper == "PNC":
-                label = "PNC [cm⁻³]"
-            elif name_upper == "MASS":
-                label = "Total Mass [µg/m³]"
-            elif name_upper == "MODE":
-                label = "Mode Dp [nm]"
-            elif name_upper == "MEDIAN":
-                label = "Median Dp [nm]"
-            elif name_upper == "GMD":
-                label = "GMD [nm]"
-            else:
-                label = name
-            columns += [label, f"{label} std"]
+            # Final size stats
+            mode_d = np.mean(mode_d_list)
+            mode_d_std = np.std(mode_d_list)
+            median_d = np.mean(median_d_list)
+            median_d_std = np.std(median_d_list)
+            gmd = np.mean(gmd_list)
+            gmd_std = np.std(gmd_list)
 
-        summary = pd.DataFrame(rows, columns=columns)
+            # Store row
+            rows.append(
+                [
+                    activity,
+                    round(pnc, 2),
+                    round(pnc_std, 2),
+                    round(pm1, 2),
+                    round(pm1_std, 2),
+                    round(pm2_5, 2),
+                    round(pm2_5_std, 2),
+                    round(pm4, 2),
+                    round(pm4_std, 2),
+                    round(pm10, 2),
+                    round(pm10_std, 2),
+                    round(total_mass, 2),
+                    round(total_mass_std, 2),
+                    round(mode_d, 1),
+                    round(mode_d_std, 1),
+                    round(median_d, 1),
+                    round(median_d_std, 1),
+                    round(gmd, 1),
+                    round(gmd_std, 1),
+                ]
+            )
 
-        if filename:
-            summary.to_excel(filename, index=False)
-            print(f"Summary saved to: {filename}")
+        summary = pd.DataFrame(
+            rows,
+            columns=[
+                "Segment",
+                "PNC (cm⁻³)",
+                "PNC std (cm⁻³)",
+                "PM1 (µg/m³)",
+                "PM1 std (µg/m³)",
+                "PM2.5 (µg/m³)",
+                "PM2.5 std (µg/m³)",
+                "PM4 (µg/m³)",
+                "PM4 std (µg/m³)",
+                "PM10 (µg/m³)",
+                "PM10 std (µg/m³)",
+                "Total Mass (µg/m³)",
+                "Total Mass std (µg/m³)",
+                "Mode Dp (nm)",
+                "Mode Dp std (nm)",
+                "Median Dp (nm)",
+                "Median Dp std (nm)",
+                "GMD (nm)",
+                "GMD std (nm)",
+            ],
+        )
+
+
 
         summary_t = summary.set_index("Segment").T
+        # if filename:
+        #     summary_t.to_excel(filename, index=True,sheet_name=sheet_name)
+        #     print(f"Summary saved to: {filename}")
+        if filename:
+            if sheet_name:
+                  # File does NOT exist → create a new workbook
+                if not os.path.exists(filename):
+                    summary_t.to_excel(filename, sheet_name=sheet_name, index=True)
+                
+                # File exists → append or replace sheet
+                else:
+                    with pd.ExcelWriter(
+                        filename,
+                        engine="openpyxl",
+                        mode="a",
+                        if_sheet_exists="replace"   # requires pandas ≥ 1.4
+                    ) as writer:
+                        summary_t.to_excel(writer, sheet_name=sheet_name, index=True)
+            else:
+                summary_t.to_excel(filename, index=True)
+            print(f"Summary saved to: {filename}")
         print("\nSummary of aerosol properties (transposed):\n")
         print(tabulate(summary_t, headers="keys", tablefmt="pretty", floatfmt=".3f"))  # type: ignore
-
         return summary
-
-    ###########################################################################
-
-    @override
-    def summarize_exposure(
-        self,
-        metric: str = "PM4.2",
-        background: Union[float, str, None] = None,
-        exposure_hours: Optional[float] = None,
-        short_limit: float = 1.0,
-        long_limit: float = 1.0,
-        short_window: str = "15min",
-        twa_window: str = "8h",
-        peak_ratio: float = 2.5,
-        filename: Optional[str] = None,
-        activities: Optional[Sequence[str]] = None,
-    ) -> pd.DataFrame:
-        """Description:
-            Summarize exposure metrics for one PSD-derived metric across activities.
-
-        Args:
-            metric (str): Exposure metric name derived from the underlying
-                particle size distribution (PSD). Default is "PM4.2",
-                corresponding to respirable dust.Supported forms:
-
-                    - "PNC": total number concentration.
-                    - "MASS": total mass concentration.
-                    - "PM<x>", "PN<x>", "PS<x>", "PV<x>": cumulative Pₓ at cut
-                      diameter <x> in µm for mass, number, surface, volume
-                      (for example "PM4.2").
-                    - "PM<a>-<b>", "PN<a>-<b>", "PS<a>-<b>", "PV<a>-<b>":
-                      band-limited Pₓ between diameters <a> and <b> in µm
-                      (for example "PM1-4", "PM1-4.2"). These are computed
-                      using the EN 481 / ISO 7708 penetration curves.
-
-            background (float | str | None): Background level used when
-                computing the time-weighted average over ``twa_window``.
-                The same background level is used for all activities in
-                the output. Default is None. Possible entries are:
-
-                    * None: assume zero background.
-                    * float: constant background level in metric units.
-                    * str: name of an activity; the TWA of ``metric`` over
-                      that activity is used as background.
-
-            exposure_hours (float | None): Assumed duration of exposure for
-                each activity, in hours, when embedding it into the TWA
-                window. If None, the measured activity duration is used for
-                that activity. If a positive value is given, the same
-                exposure duration is applied for all activities.
-                Default is None.
-
-            short_limit (float): Short-term concentration limit in metric
-                units (for example a 15-min STEL). This value is reported in
-                the output as ``"STEL [unit]"``. Default is 1.0 (in metric
-                units).
-
-            long_limit (float): Long-term concentration limit in metric
-                units (for example an 8-h OEL). This value is reported in the
-                output as ``"Exposure limit [unit]"``. Default is 1.0 (in
-                metric units).
-
-            short_window (str): Rolling window used for short-term (STEL)
-                evaluation, given as a pandas offset string (for example
-                "15min"). This is reported as ``"STEL window"``.
-                Default is "15min" (15 minutes).
-
-            twa_window (str): Total duration of the TWA window as a pandas
-                offset string (for example "8h"). This is reported as
-                ``"TWA window"``. Default is "8h" (8 hours).
-
-            peak_ratio (float): Factor used in peak detection; peaks are
-                flagged when the metric exceeds::
-
-                    baseline + peak_ratio * rolling_std,
-
-                where ``baseline`` is a rolling median and ``rolling_std`` is
-                a rolling standard deviation over a short window.
-                Default is 2.5.
-
-            filename (str | None): Optional path to a CSV/Excel file to which
-                the non-transposed result rows are appended. If the file
-                exists, rows are appended; otherwise the file is created with
-                a header. Supported extensions are ".csv", ".xls", ".xlsx".
-
-            activities (Sequence[str] | None): Activities to summarize.
-                If None (default), all defined activities in
-                :attr:`activities` are summarized (for example "All data",
-                "Background", "Emission", "Decay"). Activities with no
-                marked time steps are skipped.
-
-        Returns:
-            pandas.DataFrame: One row per activity segment with summary
-            statistics for the chosen metric. Column names embed their units
-            in square brackets. See Notes below (Detailed description) for a
-            complete list of columns.
-
-        Raises:
-            ValueError: If ``metric`` cannot be parsed (unsupported string).
-            ValueError: If a background activity name is given but does not
-                exist or has no samples.
-            ValueError: If ``short_window`` or ``twa_window`` cannot be
-                parsed as pandas-style durations.
-            ValueError: If ``exposure_hours`` is negative.
-            TypeError: If ``background`` is not None, float or str.
-
-        Notes:
-            Detailed description:
-                The method first derives the requested metric time series
-                from the underlying 2D PSD (for example PNC from a number
-                distribution, PM4.2 from a mass-based Pₓ, or a band metric
-                such as PM1–4). Where possible, existing Pₓ series already
-                stored in :attr:`extra_data` are reused; otherwise they are
-                computed on a working copy and then used to build the metric
-                time series.
-
-                For each selected activity, the method:
-
-                    1. Extracts the metric time series within the activity
-                       using the activity mask.
-                    2. Computes per-step durations from the actual sampling
-                       times.
-                    3. Forms a time-weighted segment mean, used internally
-                       when embedding the activity into the TWA window.
-                    4. Computes instantaneous percentiles, peaks, STEL-style
-                       exceedances and long-term time-above-limit measures.
-                    5. Combines the segment mean with the specified background
-                       level to obtain an overall TWA for the chosen window.
-
-                The returned DataFrame contains the following columns
-                (per activity):
-
-                    - "Segment"
-                        Name of the activity segment.
-
-                    - "Metric"
-                        Name of the metric that was summarized, e.g.
-                        "PM4.2", "PM1-4", "PNC", "MASS".
-
-                    - "Duration [HH:MM]"
-                        Duration of the activity derived from the actual
-                        sampling intervals, formatted as "HH:MM" (hours and
-                        minutes).
-
-                    - "Max [unit]"
-                        Maximum of the instantaneous metric values during the
-                        activity. The unit is the metric unit (e.g. "µg/m³",
-                        "cm⁻³", "nm²/cm³", "nm³/cm³").
-
-                    - "95th percentile [unit]"
-                    - "75th percentile [unit]"
-                    - "50th percentile [unit]"
-                    - "25th percentile [unit]"
-                    - "5th percentile [unit]"
-                        Percentiles of the instantaneous metric values during
-                        the activity, all in the same unit as the metric.
-
-                    - "Peaks [count]"
-                        Number of distinct peak events detected in the
-                        activity, where a peak is a contiguous period in which
-                        the metric exceeds::
-
-                            baseline + peak_ratio * rolling_std,
-
-                        with ``baseline`` the rolling median and
-                        ``rolling_std`` the rolling standard deviation over a
-                        short sliding window, covering at least 3 datapoints
-                        and maximum 15 datapoints, depending on the number
-                        of available datapoints in the given segment.
-
-                    - "STEL [unit]"
-                        Short-term exposure limit used in the STEL
-                        exceedance calculations (echoing ``short_limit``),
-                        with the same concentration unit as the metric.
-
-                    - "STEL window"
-                        Rolling window length used for STEL evaluation,
-                        echoing ``short_window`` (for example "15min").
-
-                    - "STEL exceedance [min]"
-                        Total time in minutes during the activity where the
-                        **full-window** rolling mean is greater than or equal
-                        to the STEL. Only complete windows are counted in
-                        this measure.
-
-                    - "STEL episodes [count]"
-                        Number of distinct STEL exceedance episodes based on
-                        the full-window rolling mean. Each contiguous block of
-                        time where the full-window mean is at or above the
-                        STEL is counted as one episode.
-
-                    - "Exposure limit [unit]"
-                        Long-term exposure limit value used in the long-term
-                        evaluation (echoing ``long_limit``), with the same
-                        unit as the metric.
-
-                    - "Exposure limit exceedance [min]"
-                        Total time in minutes during the activity where the
-                        instantaneous metric values are greater than or equal
-                        to the exposure limit.
-
-                    - "TWA concentration [unit]"
-                        Time-weighted average concentration of the metric over
-                        the full TWA window (``"TWA window"``), combining the
-                        internal segment mean (optionally stretched to
-                        ``exposure_hours``) with the specified background
-                        level for the remainder of the window::
-
-                            TWA = (segment_mean * exposure_minutes
-                                   + background * (twa_minutes - exposure_minutes))
-                                  / twa_minutes
-
-                        where ``twa_minutes`` is the duration of
-                        ``twa_window`` in minutes and ``exposure_minutes`` is
-                        either the measured activity duration or
-                        ``exposure_hours * 60``, whichever is used.
-
-                    - "TWA window"
-                        Duration of the TWA window over which
-                        "TWA concentration [unit]" is evaluated, echoing
-                        ``twa_window`` (for example "8h").
-
-            Theory:
-                Conceptually, the method mirrors typical occupational hygiene
-                practice:
-
-                    * Exposure within an activity is represented by
-                      time-weighted averages and distributional
-                      descriptors (max and percentiles).
-                    * Short-term limits (STEL) are evaluated using rolling
-                      means over a specified window, counting both total time
-                      above the limit and distinct exceedance episodes.
-                    * Long-term limits are represented by cumulative
-                      time-above-limit measures.
-                    * An overall TWA for an 8-h (or user-specified) reference
-                      period is constructed by mixing the task exposure with a
-                      background level for the rest of the window.
-
-                This ensures a transparent link between raw time series
-                behaviour and regulatory style metrics such as STEL and
-                8-hour OELs.
-
-        Examples:
-            Summarize respirable PM4.2 exposure for all activities in an
-            ELPI dataset, using the "Background" activity as background
-            level and a 15-min STEL with an 8-h TWA window:
-
-            .. code-block:: python
-
-                elpi.summarize_exposure(
-                    metric="PM4.2",
-                    background="Background",
-                    short_limit=5.0,
-                    long_limit=10.0,
-                    short_window="15min",
-                    twa_window="8h",
-                )
-
-            Band-limited metrics are handled in the same way, e.g. for a
-            PM1–4.2 band::
-
-            .. code-block:: python
-
-                elpi.summarize_exposure(metric="PM1-4.2")
-        """
-
-        # --- obtain the time series for the requested metric -------------------
-        series_source, unit = self._get_metric_series(metric)
-
-        # --- time deltas in minutes for integration (irregular sampling safe) ---
-        dt_mins = self._dt_minutes()
-
-        # --- parse windows ------------------------------------------------------
-        try:
-            short_minutes = pd.to_timedelta(short_window).total_seconds() / 60.0
-        except Exception as exc:  # pragma: no cover - defensive
-            raise ValueError(f"Could not parse short_window {short_window!r}.") from exc
-
-        try:
-            twa_minutes = pd.to_timedelta(twa_window).total_seconds() / 60.0
-        except Exception as exc:  # pragma: no cover - defensive
-            raise ValueError(f"Could not parse twa_window {twa_window!r}.") from exc
-
-        # --- background level (one value, reused for all activities) -----------
-        if background is None:
-            bg = 0.0
-        elif isinstance(background, (int, float)):
-            bg = float(background)
-        elif isinstance(background, str):
-            if background not in self.activities:
-                raise ValueError(
-                    f"Background activity '{background}' not found in activities."
-                )
-            mask_bg = self.data[background].astype(bool)
-            if mask_bg.sum() == 0:
-                raise ValueError(
-                    f"Background activity '{background}' has no marked time steps."
-                )
-            s_bg = series_source.loc[mask_bg]
-            dt_bg = dt_mins.loc[mask_bg]
-            dur_bg = float(dt_bg.sum())
-            bg = float((s_bg * dt_bg).sum() / max(dur_bg, 1e-9))
-        else:
-            raise TypeError(
-                "background must be None, a float, or an activity name (str)."
-            )
-
-        # --- assumed exposure duration within the TWA window --------------------
-        if exposure_hours is not None and exposure_hours < 0:
-            raise ValueError("exposure_hours must be non-negative.")
-
-        # --- which activities to summarize -------------------------------------
-        if activities is None:
-            activity_list = list(self.activities)
-        else:
-            activity_list = list(activities)
-
-        # Column labels with units embedded (same for all rows)
-        duration_label = "Duration [HH:MM]"
-        max_label = f"Max [{unit}]"
-        p95_label = f"95th percentile [{unit}]"
-        p75_label = f"75th percentile [{unit}]"
-        p50_label = f"50th percentile [{unit}]"
-        p25_label = f"25th percentile [{unit}]"
-        p5_label = f"5th percentile [{unit}]"
-        peaks_label = "Peaks [count]"
-        stel_label = f"STEL [{unit}]"
-        stel_window_label = "STEL window [offset]"
-        stel_exceed_label = "STEL exceedance [min]"
-        stel_episodes_label = "STEL episodes [count]"
-        exp_limit_label = f"Exposure limit [{unit}]"
-        exp_exceed_label = "Exposure limit exceedance [min]"
-        twa_conc_label = f"TWA concentration [{unit}]"
-        twa_window_label = "TWA window [offset]"
-
-        rows: list[dict[str, Any]] = []
-
-        for activity in activity_list:
-            if activity not in self.activities:
-                raise ValueError(f"Activity '{activity}' not found in activities.")
-
-            mask = self.data[activity].astype(bool)
-            if mask.sum() == 0:
-                # Skip empty activities
-                continue
-
-            s = series_source.loc[mask]
-            dtm = dt_mins.loc[mask]
-
-            # --- basic duration & segment mean ----------------------------------
-            duration_min = float(dtm.sum())
-            duration_hhmm = self._format_hhmm(duration_min)
-            if duration_min <= 0:
-                # Skip pathological segments rather than crashing everything
-                continue
-
-            seg_mean = float((s * dtm).sum() / duration_min)
-            seg_max = float(s.max())
-
-            # percentiles in metric units
-            p95, p75, p50, p25, p5 = map(
-                float, np.nanpercentile(s, [95, 75, 50, 25, 5])
-            )
-
-            # --- short-term limit: full-window rolling mean (episodes) ----------
-            if len(dtm) > 0 and np.isfinite(dtm.median()) and dtm.median() > 0:
-                dt_med = float(dtm.median())
-            else:
-                dt_med = short_minutes  # fall back to something non-zero
-
-            if dt_med <= 0:
-                dt_med = short_minutes
-
-            n_win = max(1, int(round(short_minutes / dt_med)))
-            if n_win > s.size:
-                n_win = s.size
-
-            if s.size == 1:
-                s_roll_full = s.copy()
-            else:
-                s_roll_full = s.rolling(window=n_win, min_periods=n_win).mean()
-
-            full_exceed_mask = s_roll_full >= float(short_limit)
-            short_full_exceed_min = float(dtm.where(full_exceed_mask, 0.0).sum())
-            short_full_episodes = int(
-                ((full_exceed_mask) & (~full_exceed_mask.shift(fill_value=False))).sum()
-            )
-
-            # --- peaks using rolling baseline -----------------------------------
-            window_size = max(3, min(15, s.size))
-            baseline = s.rolling(
-                window=window_size, center=True, min_periods=1
-            ).median()
-            spread = s.rolling(window=window_size, center=True, min_periods=1).std()
-            peak_mask = (s - baseline) > (spread * float(peak_ratio))
-            peak_count = int(((peak_mask) & (~peak_mask.shift(fill_value=False))).sum())
-
-            # --- window TWA with background -------------------------------------
-            if exposure_hours is None:
-                exposure_minutes = duration_min
-            else:
-                exposure_minutes = float(exposure_hours) * 60.0
-
-            if exposure_minutes >= twa_minutes:
-                window_twa = seg_mean
-            else:
-                window_twa = float(
-                    (
-                        seg_mean * exposure_minutes
-                        + bg * (twa_minutes - exposure_minutes)
-                    )
-                    / twa_minutes
-                )
-
-            # instantaneous time above long-term limit within the activity
-            long_exceed_min = float(dtm.where(s >= float(long_limit), 0.0).sum())
-
-            rows.append(
-                {
-                    "Segment": activity,
-                    "Metric": metric,
-                    duration_label: duration_hhmm,
-                    max_label: round(seg_max, 3),
-                    p95_label: round(p95, 3),
-                    p75_label: round(p75, 3),
-                    p50_label: round(p50, 3),
-                    p25_label: round(p25, 3),
-                    p5_label: round(p5, 3),
-                    peaks_label: peak_count,
-                    stel_label: float(short_limit),
-                    stel_window_label: short_window,
-                    stel_exceed_label: round(short_full_exceed_min, 2),
-                    stel_episodes_label: short_full_episodes,
-                    exp_limit_label: float(long_limit),
-                    exp_exceed_label: round(long_exceed_min, 2),
-                    twa_conc_label: round(window_twa, 3),
-                    twa_window_label: twa_window,
-                }
-            )
-
-        result = pd.DataFrame(rows)
-
-        # --- append to file if requested ---------------------------------------
-        if filename and not result.empty:
-            fname = str(filename)
-            lower = fname.lower()
-            if lower.endswith(".csv"):
-                if os.path.exists(fname):
-                    result.to_csv(fname, mode="a", header=False, index=False)
-                else:
-                    result.to_csv(fname, mode="w", header=True, index=False)
-            elif lower.endswith((".xlsx", ".xls")):
-                if os.path.exists(fname):
-                    existing = pd.read_excel(fname)
-                    combined = pd.concat([existing, result], ignore_index=True)
-                else:
-                    combined = result
-                combined.to_excel(fname, index=False)
-            else:
-                raise ValueError(
-                    f"Unsupported file extension for '{filename}'. Use .csv or .xlsx."
-                )
-
-        # --- pretty terminal print (transposed) --------------------------------
-        if not result.empty:
-            result_t = result.set_index("Segment").T
-            display_df = result_t.reset_index().rename(columns={"index": "Metric"})
-            table_data = cast(
-                Mapping[str, Iterable[Any]],
-                display_df.to_dict(orient="list"),
-            )
-
-            print(f"\nExposure summary by segment for metric '{metric}' ({unit}):\n")
-            print(
-                tabulate(
-                    table_data,
-                    headers="keys",
-                    tablefmt="pretty",
-                    floatfmt=".3f",
-                )
-            )
-
-        return result
