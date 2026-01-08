@@ -1,123 +1,290 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
+
+import datetime as dt
 
 import numpy as np
 import pandas as pd
-import datetime as datetime
+
 from ..aerosolalt import AerosolAlt
-from .Common import detect_delimiter
+from .Common import _detect_delimiter
 
 ###############################################################################
 
 
-def Load_DiSCmini_file(file: str, extra_data: bool = False):
+def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
+    """Description:
+        Load a converted DiSCmini export file and return total number
+        concentration, mean size, and LDSA as an :class:`AerosolAlt` time
+        series.
+
+    Args:
+        file (str):
+            Path to the DiSCmini ``.txt`` file exported and converted by the
+            vendor software.
+        extra_data (bool, optional):
+            If ``True``, columns that are not part of the core time series
+            (datetime, total concentration, mean size, LDSA) are stored in
+            the returned object's ``.extra_data`` (and ``._raw_extra_data``)
+            DataFrames, indexed by ``Datetime``. Defaults to ``False``.
+
+    Returns:
+        AerosolAlt:
+            An :class:`~aerosoltools.aerosolalt.AerosolAlt` instance with
+            the loaded data
+
+    Raises:
+        FileNotFoundError:
+            If ``file`` does not exist or cannot be opened. Check the path
+            and file permissions.
+        UnicodeDecodeError:
+            If the file cannot be decoded using the encodings tried by
+            :func:`_detect_delimiter`. This usually indicates a corrupted
+            or non-text file.
+        ValueError:
+            If timestamps or header-derived start date/time strings are in
+            an unsupported format and cannot be parsed. Check that the file
+            was exported using a supported DiSCmini software version and
+            that the regional date/time settings are compatible.
+        KeyError:
+            If expected columns such as ``"TimeStamp"``/``"Time"``,
+            ``"Number"``, or size/LDSA columns are missing or renamed in an
+            unexpected way. Verify that the file is an unmodified DiSCmini
+            export.
+        Exception:
+            If neither direct parsing nor reconstruction of the datetime
+            column succeeds, or if a valid ``"Datetime"`` column cannot be
+            produced after all attempts. The raised message will typically
+            indicate that the file has not been converted correctly or that
+            the datetime format is unsupported.
+
+    Notes:
+        Detailed description:
+            ``Load_DiSCmini_file`` is designed for DiSCmini data that have
+            already been converted by the vendor software to a tab-delimited
+            text format.
+
+            Internally, the function:
+
+            - Reads a subset of columns (up to 7) as strings to robustly
+              handle locale-specific decimal separators and whitespace.
+            - Normalizes column names.
+            - Attempts to parse the ``"Datetime"`` column using two common
+              formats:
+
+              - ``"%d-%b-%Y %H:%M:%S"`` (e.g. ``01-Oct-2023 12:00:00``)
+              - ``"%d-%m-%Y %H:%M:%S"`` (e.g. ``01-10-2023 12:00:00``)
+
+            - If both direct parses fail, it falls back to reconstructing
+              absolute time from header information:
+
+              - Searches the header for lines containing ``"start date:"``
+                and ``"start time:"``.
+              - Parses those as a start datetime.
+              - Interprets the ``"Datetime"`` column as elapsed seconds
+                since that start time, then creates a real timestamp series.
+
+            - Normalizes numeric fields by:
+
+              - Replacing commas with dots as decimal separators.
+              - Removing extraneous whitespace.
+              - Coercing invalid entries to ``NaN``.
+
+            - Extracts the serial number by scanning the early header lines
+              for text containing ``"serial"`` and, if needed, falling back
+              to a small :func:`numpy.genfromtxt` read.
+
+            - Builds the core :class:`AerosolAlt` object from the subset of
+              columns that includes
+
+              - ``"Datetime"`` — measurement timestamps.
+              - ``"Total_conc"`` — particle number concentration (cm⁻³).
+              - ``"Size"`` — mean particle diameter (nm).
+              - ``"LDSA"`` — lung-deposited surface area (nm²/cm³).
+
+            - Populates the ``.meta`` dictionary with, e.g.:
+
+              - ``"instrument"`` — set to ``"DiSCmini"``.
+              - ``"serial_number"`` — serial number parsed from the header.
+              - ``"unit"`` — mapping of variable names to units.
+              - ``"dtype"`` — mapping of variable names to data types
+                (e.g. ``"dN"`` for number concentration, ``"dS"`` for LDSA).
+
+            - Optionally collects all remaining non-core columns into
+              ``.extra_data`` (and ``._raw_extra_data``) when
+              ``extra_data=True``.
+
+    Examples:
+        A typical workflow is to convert a DiSCmini file using the vendor
+        software and then load it for analysis or plotting:
+
+        .. code-block:: python
+
+            import aerosoltools as at
+
+            # Load DiSCmini data with core metrics only
+            dm = at.Load_DiSCmini_file("data/discmini_converted.txt")
+
+            # Quick look at total concentration and LDSA
+            print(dm.data[["Total_conc", "LDSA"]])
+
+            # List available extra channels
+            print(dm_full.extra_data.columns)
+
+            # Plot LDSA over time
+            fig, ax = dm.plot_timeseries()
     """
-    Load and parse data from a DiSCmini .txt file (after conversion), returning an AerosolAlt object.
-
-    This function extracts the datetime, total particle number concentration, average size,
-    and LDSA from the DiSCmini export file. It also stores serial number and units
-    as metadata, and optionally attaches extra columns as `.extra_data`.
-
-    Parameters
-    ----------
-    file : str
-        Path to the .txt file exported from DiSCmini software (after conversion).
-    extra_data : bool, optional
-        If True, attaches unused data columns as `._extra_data` in the AerosolAlt class.
-
-    Returns
-    -------
-    DM : AerosolAlt
-        Object containing parsed time series data and instrument metadata.
-
-    Raises
-    ------
-    Exception
-        If the file has not been converted correctly, or the datetime format is unrecognized.
-
-    Notes
-    -----
-    - The returned data contains: 'Datetime', 'Total_conc' (cm⁻³), 'Size' (nm), and 'LDSA' (nm²/cm³).
-    - Automatically detects encoding and delimiter using `Com.detect_delimiter()`.
-    - Two known datetime formats are supported: `%d-%b-%Y %H:%M:%S` and `%d-%m-%Y %H:%M:%S`.
-    """
+    # Detect encoding + delimiter
     try:
-        encoding, delimiter = detect_delimiter(file, sample_lines=12)
-    except Exception:
+        enc, delim = _detect_delimiter(file, sample_lines=25)  # -> (str, str)
+    except Exception as e:
         raise Exception(
             "DiSCmini data has not been converted or delimiter could not be detected."
-        )
+        ) from e
 
-    # Load selected columns: DateTime, Number, Size, LDSA, etc.
+    # Read first 7 columns as strings; coerce later
     df = pd.read_csv(
-        file, header=4, encoding=encoding, delimiter="\t", usecols=range(0, 7)
+        file,
+        header=4,
+        encoding=enc,
+        delimiter="\t",
+        usecols=range(0, 7),
+        dtype="string",
+        na_values=["", "NA", "N/A", "-", "--"],
     )
-    if 'TimeStamp' in df.columns:
-        
-        df.drop(columns=["Time"], inplace=True)
-        df.rename(columns={"TimeStamp": "Datetime", "Number": "Total_conc"}, inplace=True)
+
+    # Normalize expected column names
+    # Some files use "TimeStamp" (with a separate "Time" column); others use "Time"
+    if "TimeStamp" in df.columns:
+        # keep "TimeStamp" as datetime-like text; "Time" is redundant in these exports
+        if "Time" in df.columns:
+            df.drop(columns=["Time"], inplace=True)
+        df.rename(
+            columns={"TimeStamp": "Datetime", "Number": "Total_conc"}, inplace=True
+        )
     else:
         df.rename(columns={"Time": "Datetime", "Number": "Total_conc"}, inplace=True)
-    # Attempt datetime parsing using known formats
-    try:
-        df["Datetime"] = pd.to_datetime(df["Datetime"], format="%d-%b-%Y %H:%M:%S")
-    except ValueError: 
-        try:
-            df["Datetime"] = pd.to_datetime(df["Datetime"], format="%d-%m-%Y %H:%M:%S")
-        except:
-            try:
-                Discmini_data = np.genfromtxt(file,delimiter=delimiter,encoding=encoding,skip_header=6,usecols=[1,2,3],dtype=str)
-                Discmini_data = np.char.replace(Discmini_data, ',', '.').astype(float)
-                
-                # Read the starting time from the partector file
-                tst=np.genfromtxt(file,delimiter=delimiter,encoding=encoding,usecols=[0],dtype=str)
-                #Locate and strip the starting date from string
-                Date = datetime.datetime.strptime(tst[2].split("start date: ")[1].split("]")[0],"%Y.%m.%d")
-                #Locate and strip the starting time from string
-                Time = datetime.datetime.strptime(tst[3].split("start time: ")[1].split("]")[0],"%H:%M:%S")
-                Time=Time.hour*3600 + Time.minute*60 + Time.second
-                Start_time = Date+datetime.timedelta(0,Time)
-                
-                #Generate time array based on one second per measurement
-                Discmini_datetimes=[]   
-                for idx in df["Datetime"]:#range(0,len(Discmini_data)):
-                    Discmini_datetimes.append(Start_time+datetime.timedelta(0,idx))
-                df["Datetime"]=Discmini_datetimes
-            except Exception:
-                raise Exception(
-                    "Datetime does not match expected format. Ensure file is converted correctly."
-                )
-                
 
-
-    # Extract serial number from metadata (row 2, position 6)
-    meta_line = np.genfromtxt(
-        file,
-        delimiter=delimiter,
-        encoding=encoding,
-        skip_header=1,
-        max_rows=1,
-        dtype=str,
+    # Parse datetime with two known formats; if both fail, attempt reconstruction from header
+    dt_parsed = pd.to_datetime(
+        df["Datetime"], format="%d-%b-%Y %H:%M:%S", errors="coerce"
     )
-    serial_number = str(meta_line).split(" ")[5]
+    if dt_parsed.isna().all():
+        dt_parsed = pd.to_datetime(
+            df["Datetime"], format="%d-%m-%Y %H:%M:%S", errors="coerce"
+        )
 
-    # Create AerosolAlt instance
-    DM = AerosolAlt(df.iloc[:, 0:4])  # Datetime, Total_conc, Size, LDSA
+    if dt_parsed.isna().any():
+        # Fallback: reconstruct absolute time from a start date/time in the file header
+        try:
+            # read minimal header with Python I/O to avoid numpy-encoding stub issues
+            with open(file, "r", encoding=enc) as fh:
+                header_lines = [next(fh) for _ in range(8)]
+            # common patterns:
+            #   "[...] start date: YYYY.MM.DD]"
+            #   "[...] start time: HH:MM:SS]"
+            start_date_line = next(
+                (ln for ln in header_lines if "start date:" in ln), None
+            )
+            start_time_line = next(
+                (ln for ln in header_lines if "start time:" in ln), None
+            )
+            if start_date_line is None or start_time_line is None:
+                raise ValueError("Start date/time not found in header.")
 
-    # Set metadata
+            start_date = dt.datetime.strptime(
+                start_date_line.split("start date: ")[1].split("]")[0], "%Y.%m.%d"
+            )
+            start_time = dt.datetime.strptime(
+                start_time_line.split("start time: ")[1].split("]")[0], "%H:%M:%S"
+            )
+            start_dt = start_date + dt.timedelta(
+                seconds=start_time.hour * 3600
+                + start_time.minute * 60
+                + start_time.second
+            )
+
+            # When this path is used, the "Datetime" column typically holds elapsed seconds
+            # Convert strings like "  12,3" -> "12.3" then to float seconds
+            sec = (
+                df["Datetime"]
+                .fillna("")
+                .str.replace(",", ".", regex=False)
+                .str.replace(r"\s+", "", regex=True)
+            )
+            sec_f = pd.to_numeric(sec, errors="coerce")
+            if sec_f.isna().all():
+                raise ValueError("Elapsed seconds column could not be parsed.")
+            dt_parsed = pd.to_datetime(sec_f, unit="s", origin=start_dt)
+        except Exception as e:
+            raise Exception(
+                "Datetime does not match expected format. Ensure file is converted correctly."
+            ) from e
+
+    df["Datetime"] = dt_parsed
+
+    # Coerce key numeric columns; accept both commas and dots as decimal separators
+    def _to_num(s: pd.Series) -> pd.Series:
+        s = (
+            s.fillna("")
+            .str.replace(",", ".", regex=False)
+            .str.replace(r"\s+", "", regex=True)
+        )
+        return pd.to_numeric(s, errors="coerce")
+
+    # Some exports use "Size" / "LDSA" names consistently
+    if "Size" not in df.columns or "LDSA" not in df.columns:
+        # Try common alternates if present
+        for guess, canonical in [("AvgSize", "Size"), ("LungDepSurfArea", "LDSA")]:
+            if guess in df.columns and canonical not in df.columns:
+                df.rename(columns={guess: canonical}, inplace=True)
+
+    for col in ["Total_conc", "Size", "LDSA"]:
+        if col in df.columns:
+            df[col] = _to_num(df[col])
+
+    # Extract serial number (robustly read a small header block)
+    with open(file, "r", encoding=enc) as fh:
+        meta_line = next(fh)  # line 0
+        # Often serial appears on early lines; scan a few
+        first_lines = [meta_line] + [next(fh) for _ in range(6)]
+    serial_number = None
+    for ln in first_lines:
+        if "serial" in ln.lower():
+            # naive grab: last space-separated token or adjust to your actual pattern
+            toks = ln.strip().replace(",", " ").split()
+            serial_number = toks[-1]
+            break
+    if serial_number is None:
+        # fallback to numpy reader if needed
+        with open(file, "r", encoding=enc) as fh2:
+            arr = np.genfromtxt(
+                fh2, delimiter=delim, skip_header=1, max_rows=1, dtype=str
+            )
+        serial_number = str(arr).split(" ")[-1]
+
+    # Build AerosolAlt on the core four columns (order: Datetime, Total_conc, Size, LDSA)
+    needed = ["Datetime", "Total_conc", "Size", "LDSA"]
+    present = [c for c in needed if c in df.columns]
+    if present[:1] != ["Datetime"]:
+        raise Exception("Datetime column missing after parsing.")
+    DM = AerosolAlt(df[present])
+
+    # Metadata
     DM._meta["instrument"] = "DiSCmini"
     DM._meta["serial_number"] = serial_number
     DM._meta["unit"] = {
-        "Total_conc": "cm$^{-3}$",
+        "Total_conc": "cm⁻³",
         "Size": "nm",
-        "LDSA": "nm$^{2}$/cm$^{3}$",
+        "LDSA": "nm²/cm³",
     }
     DM._meta["dtype"] = {"Total_conc": "dN", "Size": "l", "LDSA": "dS"}
 
-    # Attach extra data if requested
+    # Optional extra data (everything except the main 3 numeric cols) indexed by time
     if extra_data:
-        extra_df = df.drop(columns=list(df)[1:4]).set_index("Datetime")
+        keep = set(["Datetime", "Total_conc", "Size", "LDSA"])
+        extra_cols = [c for c in df.columns if c not in keep]
+        extra_df = df[["Datetime", *extra_cols]].set_index("Datetime")
         DM._extra_data = extra_df
         DM._raw_extra_data = extra_df.copy()
+
     return DM
-
-

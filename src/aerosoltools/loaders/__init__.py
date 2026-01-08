@@ -1,28 +1,31 @@
 """
-aerosoltools.loaders: File loaders for various aerosol instruments.
+Loaders for instrument-specific aerosol data files.
 
-This submodule contains loader functions for reading data files from a wide range of aerosol instruments,
-including:
+This subpackage provides a collection of functions for reading and parsing
+raw exports from common aerosol instruments. Each loader normalizes the
+instrument-specific file format into one of the core classes in
+:mod:`aerosoltools` (:class:`Aerosol1D`, :class:`Aerosol2D`,
+or :class:`AerosolAlt`).
 
-- Aethalometer (Magee Scientific)
-- CPC – Condensation Particle Counter (TSI)
-- DiSCmini – Electrostatic classifier (Testo)
-- DustTrak - Optical Particle Counter (TSI)
-- ELPI – Electric Low Pressure Impactor (Dekati)
-- FMPS – Fast Mobility Particle Sizer (TSI)
-- Fourtec – Bluefish temperature/RH loggers
-- Grimm – Optical particle counters (Grimm Aerosol)
-- NS – NanoScan (TSI)
-- OPC-N3 – Optical Particle Counter (Alphasense)
-- OPS – Optical Particle Sizer (TSI)
-- Partector – PartectorTEM (Naneos)
-- SMPS – Scanning Mobility Particle Sizer (TSI)
+Supported instruments include:
 
-Each function is tailored to a specific instrument format and returns data structured for use
-with `aerosoltools` classes such as `Aerosol1D`, `Aerosol2D` or 'AerosolAlt'.
+* Aethalometer (Magee Scientific)
+* CPC – Condensation Particle Counter (TSI)
+* DiSCmini – Electrostatic dosimeter (Testo)
+* DustTrak – Optical particle counter (TSI)
+* ELPI – Electric Low Pressure Impactor (Dekati)
+* FMPS – Fast Mobility Particle Sizer (TSI)
+* Fourtec – Bluefish temperature / RH loggers
+* Grimm – Optical particle counters (Grimm Aerosol)
+* NS – NanoScan SMPS (TSI)
+* OPC-N3 – Optical particle counter (Alphasense)
+* OPS – Optical Particle Sizer (TSI)
+* Partector – Partector / PartectorTEM (Naneos)
+* SMPS – Scanning Mobility Particle Sizer (TSI)
 
-Additionally, the utility function `Load_data_from_folder()` provides a convenient interface
-for batch-loading multiple compatible files from a directory.
+In addition, :func:`Load_data_from_folder` provides a convenience wrapper
+for batch-loading and concatenating multiple compatible files from a
+directory into a single aerosol object.
 """
 
 from .Aethalometer import Load_Aethalometer_file
