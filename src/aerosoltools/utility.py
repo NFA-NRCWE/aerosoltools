@@ -1099,7 +1099,6 @@ def bland_altman_analysis(
     # Set x-axis limits
     domain = right - left
     ax.set_xlim(left, left + domain * 1.1)
-    
     # Plot the zero line
     ax.axhline(y=0, c='k', lw=0.5)
     # Plot the bias and the limits of agreement
@@ -1114,7 +1113,6 @@ def bland_altman_analysis(
         # diagonal lines in the native space
         lower_loa_m = 2 * (10**(loas[0]-bias) - 1) / (10**(loas[0]-bias) + 1)
         upper_loa_m = 2 * (10**(loas[1]-bias) - 1) / (10**(loas[1]-bias) + 1)
-
         # Plot the limits of agreement
         x = np.array([left, right])
         y = upper_loa_m * x + bias
@@ -1131,7 +1129,6 @@ def bland_altman_analysis(
     else:
         ax.axhline(y=loas[1], c='grey', ls='--')
         ax.axhline(y=loas[0], c='grey', ls='--')
-        
         # Annotations
         ax.annotate('Upper LOA', (right, loas[1]), (0, 6), textcoords='offset pixels',fontsize=fs)
         ax.annotate(f'{loas[1]:+4.2f}', (right, loas[1]), (0, -15), textcoords='offset pixels',fontsize=fs)
