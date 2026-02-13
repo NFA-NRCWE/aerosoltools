@@ -30,7 +30,7 @@ For full documentation and usage examples, see:
 
 | Instrument    | Function                   | Company                   |
 | ------------- | -------------------------- | ------------------------- |
-| Aethalometer  | `Load_Aethalometer_file()` | **Magee Scientific**      |
+| Aethalometer  | `Load_Aethalometer_file()` | **Aethlabs**      |
 | CPC           | `Load_CPC_file()`          | **TSI Inc.**              |
 | DiSCmini      | `Load_DiSCmini_file()`     | **Testo**                 |
 | DustTrak      | `Load_DustTrak_file()`     | **TSI Inc.**              |
