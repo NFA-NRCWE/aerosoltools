@@ -395,55 +395,48 @@ class Aerosol1D:
         return copy.deepcopy(self)
 
     ###########################################################################
-
     def get_activity_data(self, activity_name):
-        """Description:
-            Return main data restricted to a given activity period.
-
+        """Return main data restricted to one or more activity periods.
+    
         Args:
-            activity_name (str): Name of the activity/boolean mask column
-                to use (for example "All data", "Peak", or a user-defined
-                label created via mark_activities).
-
+            activity_name (str | Sequence[str]): Name of the activity/boolean mask
+                column to use, or multiple names. If multiple are provided, rows
+                are returned only where *all* selected activities are True.
+    
         Returns:
             pandas.DataFrame: Copy of the main data for time steps where the
-                selected activity is True, with all activity mask columns
-                removed. The index is the filtered DatetimeIndex.
-
+                selected activity (or combined activities) is True, with all
+                activity mask columns removed.
+    
         Raises:
-            ValueError: If activity_name is not present in self.activities.
-                Ensure you call mark_activities or Peak_finder first, or
-                check available labels via the activities property.
-
-        Notes:
-            Detailed description:
-                This method filters self.data using the chosen activity mask
-                and then drops all boolean activity columns so that the result
-                only contains “measurement-like” columns (for example
-                Total_conc and any other numeric channels). The returned
-                DataFrame is safe to modify without affecting the internal
-                storage of the Aerosol1D object.
-
-            Theory:
-                The method performs a simple time-based selection of rows
-                flagged by an activity mask.
-
-        Examples:
-            Extract a clean dataset for a specific task before further
-            analysis:
-
-            .. code-block:: python
-
-                task_df = data.get_activity_data("Task")
-                task_df["Total_conc"].plot()
+            ValueError: If any activity name is not present in self.activities.
+            TypeError: If activity_name is neither a string nor an iterable of strings.
         """
-
-        if activity_name not in self.activities:
+        # Normalize to a list of activity names
+        if isinstance(activity_name, str):
+            activity_names = [activity_name]
+        else:
+            try:
+                activity_names = list(activity_name)
+            except TypeError as e:
+                raise TypeError(
+                    "activity_name must be a string or an iterable of strings."
+                ) from e
+    
+        if not activity_names:
+            raise ValueError("At least one activity name must be provided.")
+    
+        # Validate
+        missing = [a for a in activity_names if a not in self.activities]
+        if missing:
             raise ValueError(
-                f"Activity '{activity_name}' not found in available activities: {self.activities}"
+                f"Activity(ies) {missing} not found in available activities: {self.activities}"
             )
-
-        return self._data[self._data[activity_name]].drop(columns=self.activities)
+    
+        # Combined mask: True only where ALL selected activities are True
+        mask = self._data[activity_names].all(axis=1)
+    
+        return self._data.loc[mask].drop(columns=self.activities).copy()
 
     ###########################################################################
 
@@ -833,6 +826,7 @@ class Aerosol1D:
     def summarize_activities(
         self,
         filename: Optional[str] = None,
+        sheet_name: Optional[str] = None,
         metrics: Optional[list[str]] = None,
     ) -> pd.DataFrame:
         """Description:
@@ -930,31 +924,34 @@ class Aerosol1D:
             print(tabulate(summary_t, headers="keys", tablefmt="pretty", floatfmt=".3f"))  # type: ignore
 
         # Optional file output (append if exists)
-        if filename:
+        if filename and not summary.empty:
             fname = str(filename)
             lower = fname.lower()
-            if lower.endswith(".csv"):
-                try:
-                    existing = pd.read_csv(fname)
-                    combined = pd.concat([existing, summary], ignore_index=True)
-                except FileNotFoundError:
-                    combined = summary
-                combined.to_csv(fname, index=False)
-            elif lower.endswith((".xls", ".xlsx")):
-                try:
-                    existing = pd.read_excel(fname)
-                    combined = pd.concat([existing, summary], ignore_index=True)
-                except FileNotFoundError:
-                    combined = summary
-                combined.to_excel(fname, index=False)
+            if sheet_name:
+                shname=str(sheet_name)
             else:
-                # Fallback: treat as CSV
-                try:
-                    existing = pd.read_csv(fname)
-                    combined = pd.concat([existing, summary], ignore_index=True)
-                except FileNotFoundError:
-                    combined = summary
-                combined.to_csv(fname, index=False)
+                shname= f"{self.instrument} summary"
+                
+            if lower.endswith(".csv"):
+                if os.path.exists(fname):
+                    summary.to_csv(fname, mode="a", header=False, index=False)
+                else:
+                    summary.to_csv(fname, mode="w", header=True, index=False)
+            elif lower.endswith((".xlsx", ".xls")):
+                if os.path.exists(fname):
+                    with pd.ExcelWriter(
+                        filename,
+                        engine="openpyxl",
+                        mode="a",
+                        if_sheet_exists="replace"   # requires pandas ≥ 1.4
+                    ) as writer:
+                        summary.to_excel(writer, sheet_name=shname, index=False)
+                else:
+                    summary.to_excel(fname, sheet_name=shname, index=False)
+            else:
+                raise ValueError(
+                    f"Unsupported file extension for '{filename}'. Use .csv or .xlsx."
+                )
 
             print(f"\nActivity summary appended to: {filename}")
 

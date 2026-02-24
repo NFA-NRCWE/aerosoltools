@@ -192,7 +192,8 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
     try:
         datetime_df = _parse_danish_datetime(file, delimiter, encoding, time_format)
     except (IndexError, ValueError, KeyError):
-        datetime_df = _parse_standard_datetime(file, delimiter, encoding)
+        datetime_df = _parse_standard_datetime(file, delimiter, encoding, time_format)
+
 
     # Extract metadata from header (data type string and serial number)
     with open(file, "r", encoding=encoding, newline="") as fh:
@@ -333,14 +334,20 @@ def _parse_danish_datetime(
 ###############################################################################
 
 
-def _parse_standard_datetime(file: str, delimiter: str, encoding: str) -> pd.DataFrame:
+def _parse_standard_datetime(
+        file: str, delimiter: str, encoding: str , time_format: str
+                             ) -> pd.DataFrame:
     """Parse FMPS datetimes written in standard English format.
 
     This helper reads month/day/year and time-of-day information from the
-    FMPS header in English (e.g. ``"Jan 02 2025 02:12:34 PM"``), constructs
-    a start timestamp, and then reconstructs a full ``Datetime`` column from
-    the subsequent time strings in the data section.
+    FMPS header in English (e.g. ``"Jan 02 2025 02:12:34 PM"``),
+    constructs a start timestamp, and then converts either:
 
+    - elapsed seconds since start (when ``"Elapsed"`` appears in ``time_format``), or
+    - clock times for each row (if not elapsed),
+    
+    into an absolute ``Datetime`` column.
+    
     Args:
         file:
             Path to the FMPS file.
@@ -348,6 +355,9 @@ def _parse_standard_datetime(file: str, delimiter: str, encoding: str) -> pd.Dat
             Field delimiter used in the file.
         encoding:
             Text encoding used to read the file.
+        time_format:
+            Time format marker read from the header, used to distinguish
+            elapsed time vs. wall-clock times.
 
     Returns:
         pandas.DataFrame:
@@ -394,11 +404,21 @@ def _parse_standard_datetime(file: str, delimiter: str, encoding: str) -> pd.Dat
     )
 
     # Load the time strings for each row and build a regular time grid
-    time_strs = np.genfromtxt(
-        file, delimiter=delimiter, encoding=encoding, skip_header=15, dtype=str
-    )[:, 0]
-    times = [datetime.datetime.strptime(t, "%I:%M:%S %p") for t in time_strs]
-    step = times[1] - times[0]
+    if "Elapsed" in time_format:
+        times = np.genfromtxt(
+            file, delimiter=delimiter, encoding=encoding, skip_header=15, dtype=float
+        )[:, 0]
+        return pd.DataFrame(
+            [start_dt + datetime.timedelta(seconds=int(t)) for t in times],
+            columns=["Datetime"],
+        )
+    else:
+        time_strs = np.genfromtxt(
+            file, delimiter=delimiter, encoding=encoding, skip_header=15, dtype=str
+        )[:, 0]
+        times = [datetime.datetime.strptime(t, "%I:%M:%S %p") for t in time_strs]
+        step = times[1] - times[0]
 
-    dt_index = [start_dt + i * step for i in range(len(times))]
-    return pd.DataFrame(dt_index, columns=["Datetime"])
+        return pd.DataFrame(
+            [start_dt + i * step for i in range(len(times))], columns=["Datetime"]
+        )

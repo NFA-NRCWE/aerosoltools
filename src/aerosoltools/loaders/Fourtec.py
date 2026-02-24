@@ -166,7 +166,7 @@ def Load_Fourtec_file(file: str) -> AerosolAlt:
         df.drop(columns=["Date", "Time"], inplace=True)
 
         # Extract serial number from the second row (header area)
-        SN = str(pd.read_excel(file, skiprows=1, nrows=1, usecols=[2]).iloc[0, 0])
+        SN = str(pd.read_excel(file, skiprows=0, nrows=1, usecols=[2]).iloc[0, 0])
 
     # Build AerosolAlt with core variables only
     fourtec = AerosolAlt(df[["Datetime", "Temperature", "RH"]])

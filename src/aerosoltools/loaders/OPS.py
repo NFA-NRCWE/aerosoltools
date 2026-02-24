@@ -482,7 +482,7 @@ def _Load_OPS_Direct(
     OPS._meta["density"] = float(meta["Density"])
     OPS._meta["instrument"] = "OPS"
     OPS._meta["serial_number"] = meta["Serial Number"]
-    OPS._meta["unit"] = "cm$^{-3}$"
+    OPS._meta["unit"] = "cm⁻³"
     OPS._meta["dtype"] = "dN"
     if extra_data:
         OPS._extra_data = extra
