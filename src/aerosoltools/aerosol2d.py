@@ -186,6 +186,28 @@ class Aerosol2D(Aerosol1D):
 
     ###########################################################################
 
+
+    def _ensure_data_robustness(self,vals) -> pd.Series:
+        """Validity mask from the original object (keeps alignment with self.time)
+
+        This returns a cleaned serires, so that no new data is generated,
+        where before the total_conc was NaN.
+        Args:
+            vals (np.array):
+                array of data structured as a column of data from either data
+                extra data.
+        Returns:
+            pd.Series: Time series of the requested Pₓ metric, indexed by
+            :attr:`time`. Empty or invalid time steps (where
+            :attr:`total_concentration` is NaN) are returned as NaN.
+        """
+
+        valid_mask = self.total_concentration.notna()
+        series = pd.Series(vals, index=self.time)
+
+        return series.where(valid_mask, np.nan)
+    ###########################################################################
+
     def _dlogdp(self) -> NDArray[np.float64]:
         """Compute bin widths in log₁₀(Dp) space.
 
@@ -296,7 +318,11 @@ class Aerosol2D(Aerosol1D):
         )
 
         # Total_conc is always computed from the base (non-/dlogDp) distribution
-        out._data["Total_conc"] = np.nansum(base_arr, axis=1)
+        new_total=np.nansum(base_arr, axis=1)
+
+        series = self._ensure_data_robustness(new_total)
+
+        out._data["Total_conc"] = series
 
         return out
 
@@ -401,8 +427,7 @@ class Aerosol2D(Aerosol1D):
                 if work_obj.dtype != base_dtype:
                     work_obj.dtype_converter(dtype=base_dtype, inplace=True)
 
-        # Validity mask from the original object (keeps alignment with self.time)
-        valid_mask = self.total_concentration.notna()
+
 
         # Bin midpoints in nm and EN 481/ISO 7708 fractions
         bin_mids = np.asarray(self.bin_mids, dtype=float)
@@ -424,9 +449,8 @@ class Aerosol2D(Aerosol1D):
 
         # Replace pure zeros with NaN for "empty" steps
         vals = np.where(vals == 0.0, np.nan, vals)
-
-        series = pd.Series(vals, index=self.time)
-        series = series.where(valid_mask, np.nan)
+        # Validity mask from the original object (keeps alignment with self.time)
+        series = self._ensure_data_robustness(vals)
         return series
 
     # ------------------------------------------------------------------
@@ -443,7 +467,7 @@ class Aerosol2D(Aerosol1D):
 
         * ``dtype`` → ``"dM"`` (or ``"dM/dlogDp"`` if the input was stored as
           ``*/dlogDp``),
-        * ``unit`` → ``"ug/m³"``.
+        * ``unit`` → ``"µg/m³"``.
 
         Internally, the conversion is always performed on an *unnormalized*
         base distribution (e.g. dN, dS, dV), even if the data are stored as
@@ -518,7 +542,7 @@ class Aerosol2D(Aerosol1D):
             base_arr=mass_distribution,
             headers=headers,
             was_norm=was_norm,
-            unit="ug/m³",
+            unit="µg/m³",
             dtype_base="dM",
             inplace=inplace,
         )
@@ -781,66 +805,10 @@ class Aerosol2D(Aerosol1D):
     # Shared helpers for summarize_activities / summarize_exposure
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _parse_px_metric_scalar(name_upper: str) -> tuple[str, float] | None:
-        """Parse scalar PM/PN/PS/PV metric names (for example ``"PM2.5"``).
-
-        This helper interprets metric strings of the form ``"PMx"``,
-        ``"PNx"``, ``"PSx"`` or ``"PVx"`` where ``x`` is a numeric cutoff
-        (for example 1, 2.5, 4, 10), and returns the distribution-kind
-        character and numeric cutoff. It is intended for scalar Pₓ metrics,
-        not band-limited metrics.
-
-        Args:
-            name_upper (str): Metric name in uppercase form, typically
-                produced by ``metric.upper()``. Non-scalar metrics such as
-                ``"PM1-4"`` or non-Pₓ metrics such as ``"PNC"``, ``"MASS"``,
-                ``"MODE"`` are safely ignored.
-
-        Returns:
-            tuple[str, float] | None: A tuple ``(dchar, cutoff)`` where
-
-                - ``dchar`` is one of ``"M"``, ``"N"``, ``"S"``, ``"V"``,
-                  corresponding to PM (mass), PN (number), PS (surface)
-                  and PV (volume),
-                - ``cutoff`` is the numeric cut diameter in µm,
-
-            or ``None`` if the metric name is not a supported scalar Pₓ
-            form.
-
-        Raises:
-            ValueError: If the suffix after ``"PM"``, ``"PN"``, ``"PS"``,
-                or ``"PV"`` contains digits but cannot be parsed as a
-                float, indicating a malformed metric string.
-
-        Notes:
-            - This helper does **not** support band-limited forms such as
-              ``"PM1-4"``; use :meth:`_parse_px_band` for those.
-            - Non-Pₓ metrics are filtered upstream by returning ``None``,
-              allowing callers to fall back to other logic.
-        """
-        if name_upper in {"PNC", "MASS", "MODE", "MEDIAN", "GMD"}:
-            return None
-        if not name_upper.startswith(("PM", "PN", "PS", "PV")):
-            return None
-
-        suffix = name_upper[2:]
-        if not any(ch.isdigit() for ch in suffix):
-            return None
-
-        try:
-            cutoff = float(suffix)
-        except ValueError as exc:
-            raise ValueError(
-                f"Cannot parse cutoff from metric '{name_upper}'."
-            ) from exc
-
-        return {"PM": "M", "PN": "N", "PS": "S", "PV": "V"}[name_upper[:2]], cutoff
-
     ###########################################################################
 
     @staticmethod
-    def _parse_px_band(name_upper: str) -> tuple[str, float, float] | None:
+    def _parse_px_metric_scalar(name_upper: str) -> tuple[str, float, float] | None:
         """Parse cumulative or band-limited Pₓ metrics (for example ``"PM4.2"``).
 
         This helper interprets metric names for cumulative or band-limited
@@ -863,9 +831,11 @@ class Aerosol2D(Aerosol1D):
             where
 
                 - ``dchar`` is one of ``"M"``, ``"N"``, ``"S"``, ``"V"``,
+
+                - ``upper`` is the upper cut diameter in µm,
+
                 - ``lower`` is the lower cut diameter in µm (0.0 for
                   cumulative metrics),
-                - ``upper`` is the upper cut diameter in µm,
 
             or ``None`` if the metric name is not a supported Pₓ form.
 
@@ -878,10 +848,10 @@ class Aerosol2D(Aerosol1D):
             - A metric like ``"PM4.2"`` is treated as cumulative from
               0 → 4.2 µm (``lower = 0.0``).
             - Band metrics like ``"PM1-4.2"`` are returned with
-              ``lower = 1.0``, ``upper = 4.2`` and are required to satisfy
+              ``upper = 4.2`'', ``lower = 1.0`` and are required to satisfy
               ``0 <= lower < upper``.
         """
-        if name_upper in {"PNC", "MASS"}:
+        if name_upper in {"PNC", "MASS", "MODE", "MEDIAN", "GMD"}:
             return None
         if not name_upper.startswith(("PM", "PN", "PS", "PV")):
             return None
@@ -913,8 +883,8 @@ class Aerosol2D(Aerosol1D):
 
         return (
             {"PM": "M", "PN": "N", "PS": "S", "PV": "V"}[name_upper[:2]],
-            lower,
             upper,
+            lower,
         )
 
     ###########################################################################
@@ -1010,11 +980,14 @@ class Aerosol2D(Aerosol1D):
             return series, "µg/m³"
 
         # --- Pₓ metrics: PM, PN, PS, PV (reusing if already present) ----------
-        parsed = self._parse_px_band(mu)
+        # parsed = self._parse_px_band(mu)
+        parsed = self._parse_px_metric_scalar(mu)
         if parsed is None:
             raise ValueError(f"Unsupported metric string '{metric_name}'.")
 
-        dchar, lower_cut, upper_cut = parsed
+        # dchar, lower_cut, upper_cut = parsed
+
+        dchar, upper_cut, lower_cut  = parsed
         dtype_map = {"M": "dM", "N": "dN", "S": "dS", "V": "dV"}
         unit_map = {
             "M": "µg/m³",
@@ -1044,7 +1017,7 @@ class Aerosol2D(Aerosol1D):
         if lower_cut <= 0:
             work.PM_calc(dtype=dtype_map[dchar], PM=upper_cut)
         else:
-            work.PM_calc(dtype=dtype_map[dchar], PM=upper_cut, Lower_lim=lower_cut)
+            work.PM_calc(dtype=dtype_map[dchar], PM=upper_cut, lower_lim=lower_cut)
 
         # Align and store the result back on self for future reuse
         series = work.extra_data[label].astype(float)
@@ -1055,6 +1028,104 @@ class Aerosol2D(Aerosol1D):
 
     ###########################################################################
     """############################# Functions #############################"""
+    ###########################################################################
+    @override
+    def calibrate(self, parameter: str = 'bins' , m: Union[int, float, list] = 1, b: Union[int, float, list] = 0, inplace: bool = True):
+        """
+        Apply a correction to the total conc and mark the data as calibrated
+        by a linear function. The calibration value is applied to the size data.
+
+        Args:
+            parameter (int | str, optional):
+                Index or column name of the signal to plot. If ``int``, it is
+                interpreted as a positional index into :attr:`data.columns`. If
+                ``str``, it is treated as a column label. Defaults to ``0``.
+            m : float/int/list
+                The calibration value to be multiplied to the data for correction.
+                If m is provided as a list, it should be of equal length to the number
+                of bins. The total concentration is then recalculated as the sum.
+            b : float
+                A constant offset to be removed. By default is zero and should be
+                used cautionsly.
+
+        Returns:
+            out (Aerosold2D):
+
+        None
+
+        """
+
+        out = self if inplace else self.copy_self()
+
+        # Resolve which column to use based on the requested parameter.
+        if isinstance(parameter, int):
+            if parameter >= len(self._raw_data.columns):
+                raise LookupError("Chosen parameter is invalid")
+            parameter = self.data.columns[parameter]
+        elif isinstance(parameter, str):
+            pass
+        else:
+            raise LookupError("Chosen parameter is invalid")
+
+        # Apply the correction to the chosen parameter
+
+        if parameter=='bins':
+            #Aerosol2D specfic parameter choise to correct the bins
+            if type(m) is list:
+                if len(m)==len(out._sizebin_headers):
+                    # mask=~np.isnan(out._data['Total_conc'])
+
+                    out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
+                    out._data['Total_conc']=out.data[out._sizebin_headers].sum(axis=1)
+                else:
+                    raise ValueError("Mismatch between number of bins and list of calibration values")
+            elif type(m) is float or type(m) is int:
+                out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
+                out._data['Total_conc']=out.data['Total_conc']*m
+            else:
+                raise ValueError("Mismatch between m and expected type")
+
+        elif type(m) is float or type(m) is int:
+            try:
+                out._data[parameter]=out.data[parameter]*m + b
+            except:
+                out._extra_data[parameter]=out._extra_data[parameter]*m + b
+        else:
+            raise ValueError("Mismatch between m and expected type")
+
+        if 'calibrated' in out._meta:
+            pass
+        else:
+            out._meta['calibrated']={}
+
+        if b==0:
+
+            out._meta['calibrated'][parameter]=m
+        else:
+            out._meta['calibrated'][parameter]={'m' : m, 'b' : b}
+
+        return out
+
+        ###
+        # out = self if inplace else self.copy_self()
+
+        # if type(m)==list:
+        #     if len(m)==len(out._sizebin_headers):
+        #         # mask=~np.isnan(out._data['Total_conc'])
+
+        #         out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
+        #         out._data['Total_conc']=out.data[out._sizebin_headers].sum(axis=1)
+        #     else:
+        #         raise ValueError("Mismatch between number of bins and list of calibration values")
+        # elif type(m)==float or type(m)==int:
+        #     out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
+        #     out._data['Total_conc']=out.data['Total_conc']*m
+        # else:
+        #     raise ValueError("Mismatch between m and expected type")
+
+        # out._meta['calibrated']={'m' : m}
+        # return out
+
     ###########################################################################
 
     def dtype_converter(self, dtype: str = "dN", inplace: bool = True):
@@ -1443,7 +1514,7 @@ class Aerosol2D(Aerosol1D):
 
     ###########################################################################
 
-    def PM_calc(self, dtype: str = "dM", PM: float = 4.2, Lower_lim: float = 0):
+    def PM_calc(self, dtype: str = "dM", PM: float = 4.2, lower_lim: float = 0):
         """Description:
             Compute a size-selective Pₓ time series and store it in extra_data.
 
@@ -1452,20 +1523,20 @@ class Aerosol2D(Aerosol1D):
                 "dN", "dS", "dV", "dM". Defaults to "dM" (mass-based).
             PM (float): Upper cut-off diameter in micrometres (µm) for the
                 size-selective fraction (nominal 50% penetration point).
-            Lower_lim (float): Optional lower cut-off diameter in µm.
+            lower_lim (float): Optional lower cut-off diameter in µm.
                 If 0 (default), the result is cumulative from 0 → PM.
                 If in (0, PM), the result represents the band-limited
-                contribution from Lower_lim → PM.
+                contribution from lower_lim → PM.
 
         Returns:
             Aerosol2D: self, with a new column added to extra_data named
                 "P{X}{PM}" for cumulative metrics (for example "PM2.5",
-                "PN10") or "P{X}{Lower_lim}-{PM}" for band-limited ones
+                "PN10") or "P{X}{lower_lim}-{PM}" for band-limited ones
                 (for example "PM1-5").
 
         Raises:
-            ValueError: If Lower_lim is greater than or equal to PM, or if
-                Lower_lim is negative. Check the order and magnitude of
+            ValueError: If lower_lim is greater than or equal to PM, or if
+                lower_lim is negative. Check the order and magnitude of
                 the cut diameters.
             ValueError: If dtype is not one of "dN", "dS", "dV", "dM".
 
@@ -1475,7 +1546,7 @@ class Aerosol2D(Aerosol1D):
                 requested base kind if needed, ensures it is not in
                 dx/dlogDp form, and then integrates it with an
                 EN 481 / ISO 7708–style size-selective penetration curve
-                between Lower_lim and PM. The resulting time series is
+                between lower_lim and PM. The resulting time series is
                 stored in extra_data with a canonical name that encodes
                 both the distribution type and cut diameters.
 
@@ -1497,8 +1568,8 @@ class Aerosol2D(Aerosol1D):
                 elpi.extra_data[["PM2.5", "PN10"]].head()
         """
 
-        if Lower_lim >= PM:
-            raise ValueError("Lower_lim is larger than or equal to PM.")
+        if lower_lim >= PM:
+            raise ValueError("lower_lim is larger than or equal to PM.")
 
         base_dtype = dtype.replace("/dlogDp", "")
         if base_dtype not in {"dN", "dS", "dV", "dM"}:
@@ -1509,13 +1580,13 @@ class Aerosol2D(Aerosol1D):
         dchar = base_dtype[-1].upper()  # 'N'/'S'/'V'/'M'
 
         # Canonical output label
-        if Lower_lim <= 0:
+        if lower_lim == 0:
             out_label = f"P{dchar}{PM:g}"
         else:
-            out_label = f"P{dchar}{Lower_lim:g}-{PM:g}"
+            out_label = f"P{dchar}{lower_lim:g}-{PM:g}"
 
         # Compute the series using the core helper
-        series = self._px_fraction_series(dtype=base_dtype, upper=PM, lower=Lower_lim)
+        series = self._px_fraction_series(dtype=base_dtype, upper=PM, lower=lower_lim)
 
         # Ensure extra_data is aligned to self.time and assign the new series
         if self._extra_data.empty:
@@ -1534,6 +1605,7 @@ class Aerosol2D(Aerosol1D):
         activities: Optional[list[str]] = None,
         normalize: bool = True,
         ax=None,
+        dtype: str = None
     ):
         """Description:
             Plot mean particle size distributions for one or more activities.
@@ -1587,6 +1659,8 @@ class Aerosol2D(Aerosol1D):
                 elpi.plot_psd(activities=["Task A", "Task B"], normalize=True)
         """
 
+        clas = self if dtype is None else self.dtype_converter(dtype,False)
+
         new_fig_created = False
         if ax is None:
             fig, ax = plt.subplots(figsize=(8, 5))
@@ -1600,24 +1674,24 @@ class Aerosol2D(Aerosol1D):
         ax.grid(True, which="both", linestyle="--", linewidth=0.5)
 
         # Determine current normalization state and Δlog₁₀(Dp)
-        is_already_normalized = "/dlogDp" in self.dtype
-        bin_columns = self._sizebin_headers
-        bin_mids = self.bin_mids
-        log_bin_edges = np.log10(self.bin_edges)
+        is_already_normalized = "/dlogDp" in clas.dtype
+        bin_columns = clas._sizebin_headers
+        bin_mids = clas.bin_mids
+        log_bin_edges = np.log10(clas.bin_edges)
         dlog_dp = np.diff(log_bin_edges)
         factor_series = pd.Series(dlog_dp, index=bin_columns)
 
         # Choose y-label based on requested vs. current normalization
         if normalize and not is_already_normalized:
-            y_label_dtype = f"{self.dtype}/dlogDp"
+            y_label_dtype = f"{clas.dtype}/dlogDp"
         elif not normalize and is_already_normalized:
-            y_label_dtype = self.dtype.replace("/dlogDp", "")
+            y_label_dtype = clas.dtype.replace("/dlogDp", "")
         else:
-            y_label_dtype = self.dtype
-        ax.set_ylabel(f"{y_label_dtype}, {self.unit}")
+            y_label_dtype = clas.dtype
+        ax.set_ylabel(f"{y_label_dtype}, {clas.unit}")
 
         # Assign colors per activity
-        all_activities = sorted(self._activity_periods.keys())
+        all_activities = sorted(clas._activity_periods.keys())
         color_map = plt.colormaps.get_cmap("gist_ncar")
         activity_colors = {
             activity: color_map(i / max(1, len(all_activities)))
@@ -1625,14 +1699,14 @@ class Aerosol2D(Aerosol1D):
         }
 
         # Determine which activities to plot
-        selected_activities = activities if activities is not None else self.activities
+        selected_activities = activities if activities is not None else clas.activities
 
         for activity in selected_activities:
-            if activity not in self.activities:
+            if activity not in clas.activities:
                 print(f"Activity '{activity}' not found. Skipping.")
                 continue
 
-            subset = self.data[self.data[activity]]
+            subset = clas.data[clas.data[activity]]
             if subset.empty:
                 continue
 
@@ -1677,6 +1751,7 @@ class Aerosol2D(Aerosol1D):
         activity: str = "All data",
         fraction: bool = False,
         cummulative: bool = False,
+        mark_activities: bool | Sequence[str] = False,
     ):
         """Description:
             Plot time series of one or more size-selective Pₓ metrics.
@@ -1775,6 +1850,44 @@ class Aerosol2D(Aerosol1D):
         figure, ax = plt.subplots()
         plt.xticks(fontsize=25)
         plt.yticks(fontsize=25)
+
+        # Highlight activities
+        if mark_activities and hasattr(self, "_activity_periods"):
+            # Exclude "All data" unless explicitly requested
+            all_activities = sorted(self._activity_periods.keys())
+            color_map = plt.colormaps.get_cmap("gist_ncar")
+            activity_colors = {
+                activity: color_map(i / max(1, len(all_activities)))
+                for i, activity in enumerate(all_activities)
+            }
+
+            if mark_activities is True:
+                selected_activities = [a for a in all_activities if a != "All data"]
+            elif isinstance(mark_activities, list):
+                selected_activities = [
+                    a for a in mark_activities if a in self._activity_periods
+                ]
+            else:
+                selected_activities = []
+
+            for activity in selected_activities:
+                color = activity_colors[activity]
+                first = True
+                for start, end in self._activity_periods[activity]:
+                    ax.axvspan(
+                        cast(float, mdates.date2num(pd.Timestamp(start))),
+                        cast(float, mdates.date2num(pd.Timestamp(end))),
+                        color=color,
+                        alpha=0.3,
+                        label=activity if first else None,
+                        zorder=3,
+                    )
+                    first = False
+            # Clip x-axis to actual data range
+            left = float(mdates.date2num(self.time.min()))
+            right = float(mdates.date2num(self.time.max()))
+            ax.set_xlim(left, right)
+            ax.legend()
 
         # Fractional mode: total on primary axis, fractions on secondary axis
         if fraction:
@@ -1880,6 +1993,7 @@ class Aerosol2D(Aerosol1D):
         fmt = mdates.ConciseDateFormatter(loc)
         ax.xaxis.set_major_locator(loc)
         ax.xaxis.set_major_formatter(fmt)
+
         return ax.figure, ax
 
     ###########################################################################
@@ -1892,6 +2006,7 @@ class Aerosol2D(Aerosol1D):
         ax1: Axes | None = None,
         ax2: Axes | None = None,
         mark_activities: bool | Sequence[str] = False,
+        dtype: str = None
     ) -> tuple[Figure, NDArray[Any]]:
         """Description:
             Plot total concentration and a time–size heatmap in one figure.
@@ -1923,7 +2038,9 @@ class Aerosol2D(Aerosol1D):
                 plot_total_conc to control activity highlighting. True
                 shades all activities except "All data"; a sequence
                 restricts shading to specific activities.
-
+            dtype (str | None): Designator for the desired datatype to be
+                plotted, independent from current datatype.
+                Chose between; 'dN', 'dS', 'dV', 'dM'
         Returns:
             tuple[matplotlib.figure.Figure, numpy.ndarray]: A tuple with
                 the figure and a NumPy array [ax1, ax2, colorbar].
@@ -1970,6 +2087,8 @@ class Aerosol2D(Aerosol1D):
                 fig.savefig("elpi_timeseries.png", dpi=150)
         """
 
+        clas = self if dtype is None else self.dtype_converter(dtype,False)
+
         # Require both axes or neither when passing external axes
         if (ax1 is None) != (ax2 is None):
             raise ValueError("You must provide both ax1 and ax2, or neither.")
@@ -1985,13 +2104,13 @@ class Aerosol2D(Aerosol1D):
         ax1 = cast(Axes, ax1)
         ax2 = cast(Axes, ax2)
 
-        time = self.time
-        total = self.total_concentration
-        data = self.size_data
-        bin_edges = self.bin_edges
+        time = clas.time
+        total = clas.total_concentration
+        data = clas.size_data
+        bin_edges = clas.bin_edges
 
         # --- Top panel: total concentration (with optional activity shading) ---
-        _, ax_new = self.plot_total_conc(ax=ax1, mark_activities=mark_activities)
+        _, ax_new = clas.plot_total_conc(ax=ax1, mark_activities=mark_activities)
         ax1 = ax_new
         ax1 = cast(Axes, ax1)
 
@@ -2064,7 +2183,7 @@ class Aerosol2D(Aerosol1D):
 
         # Shared colorbar for both panels
         col = fig.colorbar(mesh, ax=[ax1, ax2])
-        col.set_label(f"{self.dtype}, {self.unit}")
+        col.set_label(f"{clas.dtype}, {clas.unit}")
 
         # Basic styling
         ax1.tick_params(axis="y", which="both", direction="out", length=6, width=2)
@@ -2078,6 +2197,7 @@ class Aerosol2D(Aerosol1D):
     def summarize_activities(
         self,
         filename: Optional[str] = None,
+        sheet_name: Optional[str] = None,
         metrics: Optional[list[str]] = None,
     ) -> pd.DataFrame:
         """Description:
@@ -2087,6 +2207,9 @@ class Aerosol2D(Aerosol1D):
             filename (str | None): Optional Excel file path. If provided,
                 the summary table is written to this file (one sheet,
                 activities as rows). If None, no file is written.
+            sheet_name (str | None): Optional sheet name. If provided
+                the data is written in a sheet named as sheet_name.
+                If one already exsits it overwrites the exsisitng sheet.
             metrics (list[str] | None): List of metric names to compute.
                 If None, a default set is used: ["PNC", "PM1", "PM2.5",
                 "PM4", "PM10", "MASS", "MODE", "MEDIAN", "GMD"].
@@ -2152,8 +2275,11 @@ class Aerosol2D(Aerosol1D):
         # --- helper: duration in minutes per time step (shared helper) -------
         dt_mins = self._dt_minutes()
 
-        def _px_label(dchar: str, cutoff: float) -> str:
-            return f"P{dchar}{cutoff:g}"
+        def _px_label(dchar: str, cutoff: float, lower_lim: float=0 ) -> str:
+            if lower_lim==0:
+                return f"P{dchar}{cutoff:g}"
+            else:
+                return f"P{dchar}{lower_lim:g}-{cutoff:g}"
 
         metrics_upper = [m.upper() for m in metrics]
 
@@ -2174,8 +2300,8 @@ class Aerosol2D(Aerosol1D):
         for name_upper in metrics_upper:
             parsed = self._parse_px_metric_scalar(name_upper)
             if parsed:
-                dchar, cutoff = parsed
-                pm_requests[dchar].add(cutoff)
+                dchar, cutoff, lower_lim = parsed
+                pm_requests[dchar].add((cutoff,lower_lim))
 
         # --- prepare prerequisite data only if needed ------------------------
         number_data = None
@@ -2193,13 +2319,9 @@ class Aerosol2D(Aerosol1D):
             if not cutoffs:
                 continue
             px_obj = self.copy_self()
-            # ensure unnormalized and in the right dtype once
-            if "/dlogDp" in px_obj.dtype:
-                px_obj.unnormalize_logdp(inplace=True)
-            px_obj.dtype_converter(dtype=dtype_map[dchar], inplace=True)
-            # compute columns for all requested cutoffs; labels standardized in PM_calc
+
             for pm in sorted(cutoffs):
-                px_obj.PM_calc(dtype=dtype_map[dchar], PM=pm)
+                px_obj.PM_calc(dtype=dtype_map[dchar], PM=pm[0], lower_lim=pm[1])
             px_extra[dchar] = px_obj.extra_data.copy()
 
         # --- compute per-activity --------------------------------------------
@@ -2226,12 +2348,14 @@ class Aerosol2D(Aerosol1D):
             if want_pnc and number_data is not None:
                 num_df = number_data.size_data.loc[mask]
                 s = num_df.sum(axis=1)  # type: ignore[call-arg]
+                s = self._ensure_data_robustness(s)
                 pnc, pnc_std = float(s.mean()), float(s.std())
 
             # Total mass (from mass_data)
             if want_mass and mass_data is not None:
                 mass_df = mass_data.size_data.loc[mask]
                 s = mass_df.sum(axis=1)  # type: ignore[call-arg]
+                s = self._ensure_data_robustness(s)
                 total_mass, total_mass_std = float(s.mean()), float(s.std())
 
             # Size metrics (mode/median/GMD) on number distribution
@@ -2284,13 +2408,13 @@ class Aerosol2D(Aerosol1D):
                 parsed = self._parse_px_metric_scalar(name_upper)
                 if not parsed:
                     continue
-                dchar, cutoff = parsed
+                dchar, cutoff, lower_lim = parsed
                 df_px = px_extra.get(dchar)
                 if df_px is None:
                     raise ValueError(
                         f"Internal error: dtype '{dchar}' was not prepared."
                     )
-                label = _px_label(dchar, cutoff)
+                label = _px_label(dchar, cutoff, lower_lim)
                 if label not in df_px.columns:
                     raise ValueError(f"Internal error: PX column '{label}' not found.")
                 ser = df_px.loc[mask, label]
@@ -2313,8 +2437,8 @@ class Aerosol2D(Aerosol1D):
                     parsed = self._parse_px_metric_scalar(name_upper)
                     if not parsed:
                         raise ValueError(f"Unsupported metric '{name}'.")
-                    dchar, cutoff = parsed
-                    label = _px_label(dchar, cutoff)
+                    dchar, cutoff, lower_lim = parsed
+                    label = _px_label(dchar, cutoff, lower_lim)
                     mean_val, std_val = px_values[label]
                     row += [round(mean_val, 2), round(std_val, 2)]
             rows.append(row)
@@ -2332,7 +2456,7 @@ class Aerosol2D(Aerosol1D):
         for name, name_upper in zip(metrics, metrics_upper):
             parsed = self._parse_px_metric_scalar(name_upper)
             if parsed:
-                dchar, _ = parsed
+                dchar, _ , _= parsed
                 unit = unit_map_px[dchar]
                 label = f"{name} [{unit}]"
             elif name_upper == "PNC":
@@ -2350,6 +2474,38 @@ class Aerosol2D(Aerosol1D):
             columns += [label, f"{label} std"]
 
         summary = pd.DataFrame(rows, columns=columns)
+        # --- append to file if requested ---------------------------------------
+        if filename and not summary.empty:
+            fname = str(filename)
+            lower = fname.lower()
+            if sheet_name:
+                shname=str(sheet_name)
+            else:
+                shname= f"{self.instrument} summary"
+
+            if lower.endswith(".csv"):
+                if os.path.exists(fname):
+                    summary.to_csv(fname, mode="a", header=False, index=False)
+                else:
+                    summary.to_csv(fname, mode="w", header=True, index=False)
+            elif lower.endswith((".xlsx", ".xls")):
+                if os.path.exists(fname):
+                    with pd.ExcelWriter(
+                        filename,
+                        engine="openpyxl",
+                        mode="a",
+                        if_sheet_exists="replace"   # requires pandas ≥ 1.4
+                    ) as writer:
+                        summary.to_excel(writer, sheet_name=shname, index=False)
+                else:
+                    summary.to_excel(fname, sheet_name=shname, index=False)
+            else:
+                raise ValueError(
+                    f"Unsupported file extension for '{filename}'. Use .csv or .xlsx."
+                )
+
+
+
 
         if filename:
             summary.to_excel(filename, index=False)
@@ -2375,6 +2531,7 @@ class Aerosol2D(Aerosol1D):
         twa_window: str = "8h",
         peak_ratio: float = 2.5,
         filename: Optional[str] = None,
+        sheet_name: Optional[str] = None,
         activities: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
         """Description:
@@ -2806,6 +2963,11 @@ class Aerosol2D(Aerosol1D):
         if filename and not result.empty:
             fname = str(filename)
             lower = fname.lower()
+            if sheet_name:
+                shname=str(sheet_name)
+            else:
+                shname= f"{metric} summary"
+
             if lower.endswith(".csv"):
                 if os.path.exists(fname):
                     result.to_csv(fname, mode="a", header=False, index=False)
@@ -2813,11 +2975,15 @@ class Aerosol2D(Aerosol1D):
                     result.to_csv(fname, mode="w", header=True, index=False)
             elif lower.endswith((".xlsx", ".xls")):
                 if os.path.exists(fname):
-                    existing = pd.read_excel(fname)
-                    combined = pd.concat([existing, result], ignore_index=True)
+                    with pd.ExcelWriter(
+                        filename,
+                        engine="openpyxl",
+                        mode="a",
+                        if_sheet_exists="replace"   # requires pandas ≥ 1.4
+                    ) as writer:
+                        result.to_excel(writer, sheet_name=shname, index=False)
                 else:
-                    combined = result
-                combined.to_excel(fname, index=False)
+                    result.to_excel(fname, sheet_name=shname, index=False)
             else:
                 raise ValueError(
                     f"Unsupported file extension for '{filename}'. Use .csv or .xlsx."

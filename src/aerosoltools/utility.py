@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = ["Combine_NS_OPS", "Plot_correlation"]
 
 import datetime as dt
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from numpy.typing import NDArray
 from scipy.optimize import curve_fit
-from scipy.stats import theilslopes
+from scipy.stats import norm, theilslopes
 
 from .aerosol2d import Aerosol2D
 
@@ -26,21 +26,26 @@ def Combine_NS_OPS(
     end: pd.Timestamp | str | None = None,
     *,
     match: str = "rebin",  # "exact" | "nearest" | "rebin"
-    tolerance: Union[str, pd.Timedelta] = "30s",
-    rebin_freq: Optional[str] = None,
-    rebin_method: Union[str, Callable] = "mean",
+    tolerance: str | pd.Timedelta = "30s",
+    rebin_freq: str | None = None,
+    rebin_method: str | Callable = "mean",
 ) -> Aerosol2D:
     """Description:
-        Combine NanoScan (NS) and OPS number size distributions into one
-        time-aligned Aerosol2D spectrum.
+        Combine data from two instruments of overlapping number size distributions,
+        commonly NanoScan (NS) and OPS, into one time-aligned Aerosol2D spectrum.
+        The function can also combine FMPS + OPS or NS + APS with the smallest
+        bin of the instrument with the larger size range being the cutting point
+        of the instrument with smaller size range.
 
     Args:
         NS_data (Aerosol2D):
-            NanoScan measurement as an :class:`~aerosoltools.aerosol2d.Aerosol2D`
-            instance, containing a time-resolved size distribution.
+            Measurements from the instrument with the smaller size range as an
+            :class:`~aerosoltools.aerosol2d.Aerosol2D` instance, containing
+            a time-resolved size distribution.
         OPS_data (Aerosol2D):
-            OPS measurement as an :class:`~aerosoltools.aerosol2d.Aerosol2D`
-            instance, containing a time-resolved size distribution.
+            Measurements from the instrument with the larger size range as an
+            :class:`~aerosoltools.aerosol2d.Aerosol2D` instance, containing
+            a time-resolved size distribution.
         start (pandas.Timestamp | str | None, optional):
             Start time of the period used for combining the two instruments.
             If ``None``, the later of the two available start times
@@ -307,7 +312,7 @@ def Combine_NS_OPS(
     res._meta["bin_edges"] = ns_ops_edges
     res._meta["bin_mids"] = bin_mids
     res._meta["density"] = NS._meta["density"]
-    res._meta["instrument"] = "NS_OPS"
+    res._meta["instrument"] = f"{NS_data.instrument} + {OPS_data.instrument}"
     res._meta["serial_number"] = f"NS: {NS.serial_number}, OPS: {OPS.serial_number}"
     res._meta["unit"] = "cm⁻³"
     res._meta["dtype"] = "dN"
@@ -410,17 +415,17 @@ def _coarser(rule_a: str, rule_b: str) -> str:
 ###############################################################################
 
 
-def _select_column_from_obj(obj, column: str) -> pd.Series:
+def _select_column_from_obj(obj, parameter: str) -> pd.Series:
     """Select a named column from an aerosol-like object.
 
-    The function looks for the requested column first in ``obj.data`` and, if
+    The function looks for the requested parameter first in ``obj.data`` and, if
     not found, in ``obj.extra_data``. It assumes both attributes (if present)
     are pandas objects indexed by time.
 
     Args:
         obj: Object exposing at least a ``data`` attribute (pandas DataFrame)
             and optionally an ``extra_data`` attribute (pandas DataFrame).
-        column: Column name to retrieve.
+        parameter: Column name to retrieve.
 
     Returns:
         pandas.Series: The selected column as a Series with time index.
@@ -429,13 +434,13 @@ def _select_column_from_obj(obj, column: str) -> pd.Series:
         KeyError: If the column is not found in either ``data`` or
             ``extra_data``.
     """
-    if column in obj.data.columns:
-        return obj.data[column]
+    if parameter in obj.data.columns:
+        return obj.data[parameter]
     # extra_data may be empty or missing
     extra = getattr(obj, "extra_data", None)
-    if extra is not None and column in extra.columns:
-        return extra[column]
-    raise KeyError(f"Column '{column}' not found in obj.data or obj.extra_data.")
+    if extra is not None and parameter in extra.columns:
+        return extra[parameter]
+    raise KeyError(f"Column '{parameter}' not found in obj.data or obj.extra_data.")
 
 
 ###############################################################################
@@ -443,9 +448,9 @@ def _select_column_from_obj(obj, column: str) -> pd.Series:
 
 def _extract_series(
     obj,
-    column: str,
-    start_time: Optional[pd.Timestamp | str] = None,
-    end_time: Optional[pd.Timestamp | str] = None,
+    parameter: str,
+    start_time: pd.Timestamp | str | None = None,
+    end_time: pd.Timestamp | str | None = None,
 ) -> pd.Series:
     """Return a numeric time series from an object, optionally time-cropped.
 
@@ -457,7 +462,7 @@ def _extract_series(
     Args:
         obj: Object exposing ``data`` and/or ``extra_data`` and optionally
             ``timecrop``. Typically an :class:`Aerosol1D` or :class:`Aerosol2D`.
-        column: Name of the column to extract from ``data`` or ``extra_data``.
+        parameter: Name of the column to extract from ``data`` or ``extra_data``.
         start_time: Optional start of the time window. May be a
             :class:`pandas.Timestamp` or a string parseable by
             :func:`pandas.to_datetime`.
@@ -470,7 +475,7 @@ def _extract_series(
     if start_time is not None and end_time is not None and hasattr(obj, "timecrop"):
         obj = obj.timecrop(_ts(start_time), _ts(end_time), inplace=False)
 
-    s = _select_column_from_obj(obj, column).copy()
+    s = _select_column_from_obj(obj, parameter).copy()
     # Index is a DatetimeIndex by contract
     s = s.sort_index()
     s = pd.to_numeric(s, errors="coerce")
@@ -483,19 +488,19 @@ def _extract_series(
 def _align_series(
     X,
     Y,
-    column: str,
-    start_time: Optional[pd.Timestamp | str],
-    end_time: Optional[pd.Timestamp | str],
+    parameter: str | tuple,
+    start_time: pd.Timestamp | str | None,
+    end_time: pd.Timestamp | str | None,
     *,
     match: str = "exact",  # "exact" | "nearest" | "rebin"
-    tolerance: Union[str, pd.Timedelta] = "30s",
-    rebin_freq: Optional[str] = None,  # when match="rebin"
-    rebin_method: Union[str, Callable] = "mean",  # when match="rebin"
+    tolerance: str | pd.Timedelta = "30s",
+    rebin_freq: str | None = None,  # when match="rebin"
+    rebin_method: str | Callable = "mean",  # when match="rebin"
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Extract and time-align a variable from two aerosol-like objects.
 
     This helper is used by :func:`Plot_correlation` to obtain two aligned
-    numeric arrays for a given column. It delegates column selection to
+    numeric arrays for one or two given parameters. It delegates column selection to
     :func:`_extract_series`, then applies one of three alignment strategies:
 
     * ``"exact"`` – inner join on identical timestamps.
@@ -509,7 +514,8 @@ def _align_series(
         X: First aerosol-like object, typically :class:`Aerosol1D` or
             :class:`Aerosol2D`.
         Y: Second aerosol-like object.
-        column: Name of the variable to extract from each object.
+        parameter: Name of the variable or variables to extract from each object.
+            If tuple the parameters are read as (parameter_X, parameter_Y)
         start_time: Optional start of the analysis window (string or
             :class:`pandas.Timestamp`).
         end_time: Optional end of the analysis window (string or
@@ -525,14 +531,21 @@ def _align_series(
         tuple[np.ndarray, np.ndarray]: Two 1D NumPy arrays (x, y) containing
         aligned, finite values suitable for regression or plotting.
     """
-    sx = _extract_series(X, column, start_time, end_time).rename("x")
-    sy = _extract_series(Y, column, start_time, end_time).rename("y")
-
+    if type(parameter) is str:
+        sx = _extract_series(X, parameter, start_time, end_time).rename("x")
+        sy = _extract_series(Y, parameter, start_time, end_time).rename("y")
+    elif type(parameter) is tuple:
+        sx = _extract_series(X, parameter[0], start_time, end_time).rename("x")
+        sy = _extract_series(Y, parameter[1], start_time, end_time).rename("y")
+    else:
+        raise ValueError(
+            "Parameter not str or tuple."
+            )
     # If one side has no data at all in this window, fail early
     if sx.empty or sy.empty:
         raise ValueError(
-            "No data for the requested column/time window in one or both objects. "
-            "Check 'start_time'/'end_time' and 'column'."
+            "No data for the requested parameter/time window in one or both objects. "
+            "Check 'start_time'/'end_time' and 'parameter'."
         )
 
     match = match.lower()
@@ -582,7 +595,7 @@ def _align_series(
             tmp = obj.timerebin(
                 freq=target, start=st, end=et, method=rebin_method, inplace=False
             )
-            s = _select_column_from_obj(tmp, column)
+            s = _select_column_from_obj(tmp, parameter)
             return pd.to_numeric(s, errors="coerce").sort_index()
 
         sxr = _rb(X).rename("x")
@@ -652,6 +665,7 @@ def _r2(y_true: NDArray[np.float64], y_fit: NDArray[np.float64]) -> float:
 # =========================
 
 
+
 def Plot_correlation(
     X,
     Y,
@@ -659,11 +673,11 @@ def Plot_correlation(
     *,
     start_time: pd.Timestamp | str | None = None,
     end_time: pd.Timestamp | str | None = None,
-    column: str = "Total_conc",
+    parameter: str | tuple | None = None,
     match: str = "exact",  # "exact" | "nearest" | "rebin"
-    tolerance: Union[str, pd.Timedelta] = "30s",
-    rebin_freq: Optional[str] = None,
-    rebin_method: Union[str, Callable] = "mean",
+    tolerance: str | pd.Timedelta = "30s",
+    rebin_freq: str = None,
+    rebin_method: str | Callable = "mean",
     intercept: bool = True,
     uniform_scaling: bool = True,
     outlier_influence: bool = True,
@@ -692,10 +706,13 @@ def Plot_correlation(
         end_time (pandas.Timestamp | str | None, optional):
             Inclusive end of the analysis window. Same parsing rules as
             ``start_time``.
-        column (str, optional):
+        parameter (str | tuple, optional):
             Name of the variable to correlate. The function first looks for
-            this column in ``obj.data`` and then in ``obj.extra_data``.
+            this parameter in ``obj.data`` and then in ``obj.extra_data``.
+            If tuple the parameters are read as (parameter_X, parameter_Y).
+            If None the first data column is chosen for each dataset.
             The default is ``\"Total_conc\"``
+
         match (str, optional):
             Strategy for aligning the two time series in time. One of:
 
@@ -743,11 +760,11 @@ def Plot_correlation(
     Raises:
         ValueError:
             If one or both objects contain no data for the requested
-            ``column`` and time window, if the chosen alignment strategy
+            ``parameter`` and time window, if the chosen alignment strategy
             yields no matching timestamps, or if all overlapping points are
             non-finite (NaN/inf) after cleaning.
         KeyError:
-            If ``column`` is not found in either ``data`` or ``extra_data`` of
+            If ``parameter`` is not found in either ``data`` or ``extra_data`` of
             one or both objects.
         RuntimeError:
             If the regression fit fails to converge (e.g. due to degenerate
@@ -761,7 +778,7 @@ def Plot_correlation(
             quantity, such as total particle number concentration from two
             instruments. The function:
 
-            * Extracts the requested ``column`` from each object.
+            * Extracts the requested ``parameter`` from each object.
             * Aligns the series in time using the selected ``match`` mode
               (exact timestamps, nearest neighbors, or common rebinned
               cadence).
@@ -812,7 +829,7 @@ def Plot_correlation(
                 ops,
                 start_time="2023-10-01 08:00",
                 end_time="2023-10-01 16:00",
-                column="Total_conc",
+                parameter="Total_conc",
                 match="nearest",
                 tolerance="60s",
                 intercept=True,
@@ -820,12 +837,21 @@ def Plot_correlation(
                 outlier_influence=False,
             )
     """
+    if parameter is None:
+        p_X = X.data.columns[0]
+        p_Y = Y.data.columns[0]
+    elif type(parameter) is str:
+        p_X = parameter
+        p_Y = parameter
+    elif type(parameter) is tuple:
+        p_X = parameter[0]
+        p_Y = parameter[1]
 
     # --- align + clean -------------------------------------------------------
     x_vals, y_vals = _align_series(
         X,
         Y,
-        column,
+        (p_X,p_Y),
         start_time,
         end_time,
         match=match,
@@ -900,8 +926,258 @@ def Plot_correlation(
     if outlier_influence:
         band = np.sqrt((SE_A * fit_x) ** 2 + (SE_B / factor) ** 2)
         ax.fill_between(fit_x, fit_y - band, fit_y + band, alpha=0.33)
-    ax.set_xlabel(f"X: {X.instrument}", fontsize=15)
-    ax.set_ylabel(f"Y: {Y.instrument}", fontsize=15)
+
+
+    ax.set_xlabel(f"{X.instrument} : {p_X}", fontsize=15)
+    ax.set_ylabel(f"{Y.instrument} : {p_Y}", fontsize=15)
     ax.legend(fontsize=15)
     ax.grid(True)
     return fig, ax  # type: ignore
+
+
+###############################################################################
+
+def bland_altman_analysis(
+    X,
+    Y,
+    ax_in: Axes | None = None,
+    method: str = 'BA',
+    C : float  = 0.95,
+    *,
+    start_time: pd.Timestamp | str | None = None,
+    end_time: pd.Timestamp | str | None = None,
+    parameter: str | tuple | None = None,
+    match: str = "exact",  # "exact" | "nearest" | "rebin",C=0.95):
+    tolerance: str | pd.Timedelta = "30s",
+    rebin_freq: str | None = None,
+    rebin_method: str | Callable = "mean"
+        ):
+    """
+    Plot Bland-Altman (difference plot) to highlight difference between two groups
+    of data.
+
+    Args:
+       X:
+           First aerosol dataset. Typically an :class:`Aerosol1D` or
+           :class:`Aerosol2D` instance exposing ``data`` (and optionally
+           ``extra_data`` and ``timerebin``).
+       Y:
+           Second aerosol dataset with the same interface requirements as
+           ``X``.
+       ax_in (matplotlib.axes.Axes | None, optional):
+           Existing Matplotlib axes to draw on. If ``None``, a new figure
+           and axes are created. Default is None.
+       method (str | optional):
+            Choose which analysis method is desired between 'BA', 'Gi', 'Eu';
+            'BA' - Bland-Altman : straight-forward comparison between two samples
+            'Gi' - Giavarina : percentage difference in relation to mean
+            'Eu' - Euser : logarithmic of means an difference
+            Deault is 'BA' resulting in the standard Bland-Altman analysis.
+       C (float | optional):
+            Confidence interval. Default is 0.95
+       start_time (pandas.Timestamp | str | None, optional):
+           Inclusive start of the analysis window. If provided together with
+           ``end_time`` and the objects implement ``timecrop``, the data are
+           cropped to this period before correlation is computed. Strings are
+           parsed with :func:`pandas.to_datetime`. Default is None, meaning
+           start from first common timestamp.
+       end_time (pandas.Timestamp | str | None, optional):
+           Inclusive end of the analysis window. Same parsing rules as
+           ``start_time``.
+       parameter (str | tuple, optional):
+           Name of the variable to correlate. The function first looks for
+           this column in ``obj.data`` and then in ``obj.extra_data``.
+           If tuple the parameters are read as (parameter_X, parameter_Y).
+           If None the first data column is chosen for each dataset.
+           The default is ``\"Total_conc\"``
+       match (str, optional):
+           Strategy for aligning the two time series in time. One of:
+
+           - ``\"exact\"`` (default): Keep only timestamps that are present
+             in both series.
+           - ``\"nearest\"``: Match values from ``Y`` to the timeline of
+             ``X`` using nearest timestamps within ``tolerance``.
+           - ``\"rebin\"``: Rebin both datasets to a common time step using
+             ``timerebin`` and then join on timestamps.
+
+       tolerance (str | pandas.Timedelta, optional):
+           Maximum allowed separation between timestamps when
+           ``match=\"nearest\"`` is used. Can be a pandas offset string
+           (e.g. ``\"30s\"``) or a :class:`pandas.Timedelta`. Ignored for
+           other ``match`` modes.
+       rebin_freq (str | None, optional):
+           Target resampling rule for ``match=\"rebin\"`` (e.g. ``\"1min\"``).
+           If ``None``, the coarser cadence inferred from the two series is
+           chosen automatically. Default is None.
+       rebin_method (str | Callable, optional):
+           Aggregation method passed to ``timerebin`` when ``match=\"rebin\"``
+           is used (e.g. ``\"mean\"``, ``\"median\"``, or a custom function).
+           Default is ``\"mean\"``.
+
+    Returns:
+        tuple[Figure, Axes]:
+            The figure and axes containing the correlation scatter plot, the
+            1:1 line, and the regression line with its equation and R² in
+            the legend.
+
+
+    Notes:
+        Detailed description:
+            ``bland_altman_analysis`` is a function for quickly
+            comparing two aerosol datasets measuring the same physical
+            quantity, such as total particle number concentration from two
+            instruments. The function:
+
+            * Extracts the requested ``parameter`` from each object.
+            * Aligns the series in time using the selected ``match`` mode
+              (exact timestamps, nearest neighbors, or common rebinned
+              cadence).
+            * Removes rows where either series is NaN or infinite.
+            * Fits a linear model relating ``Y`` to ``X``, optionally
+              including an intercept and using either standard or robust
+              regression.
+            * Computes and reports the coefficient of determination (R²).
+            * Plots the scatter of aligned data points, the 1:1 line, the
+              fitted regression line, and (optionally) a confidence band
+              around the fit.
+
+            Axis labels are automatically derived from ``X.instrument`` and
+            ``Y.instrument`` (if available), giving a quick visual summary of
+            how well two instruments agree.
+
+        Theory:
+            The regression models used are simple linear relationships:
+
+            * With intercept: ``y = A·x + B``
+            * Without intercept: ``y = A·x``
+
+            When ``outlier_influence=True``, the parameters ``A`` and ``B``
+            are obtained by minimizing the least-squares error using
+            :func:`scipy.optimize.curve_fit`. Standard errors of the fit
+            parameters are derived from the covariance matrix and propagated
+            to form an approximate 1σ confidence band.
+
+            When ``outlier_influence=False``, the Theil–Sen estimator is used
+            (:func:`scipy.stats.theilslopes`). This approach is more robust to
+            outliers, but no confidence band is drawn.
+    """
+
+    # Always return a top-level Figure to keep type hints simple
+    if ax_in is None:
+        fig, ax = plt.subplots()
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        ax.legend(fontsize=15)
+        ax.grid(True)
+    else:
+        ax = ax_in
+        fig = ax.figure
+
+    if parameter is None:
+        p_X = X.data.columns[0]
+        p_Y = Y.data.columns[0]
+    elif type(parameter) is str:
+        p_X = parameter
+        p_Y = parameter
+    elif type(parameter) is tuple:
+        p_X = parameter[0]
+        p_Y = parameter[1]
+
+    #Allign time
+    x_vals, y_vals = _align_series(
+        X,
+        Y,
+        (p_X,p_Y),
+        start_time,
+        end_time,
+        match=match,
+        tolerance=tolerance,
+        rebin_freq=rebin_freq,
+        rebin_method=rebin_method,
+    )
+
+    x = x_vals.astype(np.float64, copy=False)
+    y = y_vals.astype(np.float64, copy=False)
+
+    means = (x + y) / 2
+    diffs = x - y
+
+    # Average difference (aka the bias)
+    bias = np.median(diffs) #!!!
+    if method=='Gi':
+        diffs = diffs / means * 100
+        bias = np.median(diffs) #!!!
+    elif method=='Eu':
+        x_log = np.log10(x)
+        y_log = np.log10(y)
+        # means = (x + y) / 2
+        diffs = x_log - y_log
+
+    # Sample standard deviation
+    s = np.std(diffs, ddof=1)  # Use ddof=1 to get the sample standard deviation
+    loas = norm.interval(C, bias, s)
+    if method=='Eu':
+        diffs = x - y
+
+    # Dict
+    Diff = {'BA':f'Difference ({X.unit})',
+            'Gi':'Difference (%)',
+            'Eu':f'Difference ({X.unit})'}  #'Log10 of difference'}
+
+    # --- Plot ----------------------------------------------------------------
+    ax.scatter(means, diffs, c='k', s=20, alpha=0.6, marker='o')
+
+    # Labels
+    ax.set_title(f'Bland-Altman Plot for {p_X} vz {p_Y}')
+    ax.set_xlabel(f'Mean ({X.unit})')
+    ax.set_ylabel(Diff[method])
+    # Get axis limits
+    left, right = ax.get_xlim()
+    bottom, top = ax.get_ylim()
+    # Set y-axis limits
+    max_y = max(abs(bottom), abs(top))
+    ax.set_ylim(-max_y * 1.1, max_y * 1.1)
+    # Set x-axis limits
+    domain = right - left
+    ax.set_xlim(left, left + domain * 1.1)
+    # Plot the zero line
+    ax.axhline(y=0, c='k', lw=0.5)
+    # Plot the bias and the limits of agreement
+    fs=15
+    ax.axhline(y=bias, c='grey', ls='--')
+    ax.annotate('Bias', (right, bias), (0, 7), textcoords='offset pixels',fontsize=fs)
+    ax.annotate(f'{bias:+4.2f}', (right, bias), (0, -12), textcoords='offset pixels',fontsize=fs)
+
+    # --- Plot the limits of the agreement--------------------------------------
+    if method=='Eu':
+        # Convert the LOAs from horizontal lines in the log space to gradients of
+        # diagonal lines in the native space
+        lower_loa_m = 2 * (10**(loas[0]-bias) - 1) / (10**(loas[0]-bias) + 1)
+        upper_loa_m = 2 * (10**(loas[1]-bias) - 1) / (10**(loas[1]-bias) + 1)
+        # Plot the limits of agreement
+        x = np.array([left, right])
+        y = upper_loa_m * x + bias
+        ax.plot(x, y, c='grey', ls='--')
+        ax.annotate('Upper LOA', (right, y[1]), (0,6), textcoords='offset pixels',fontsize=fs)
+        ax.annotate(f'{upper_loa_m:+4.2f} × Mean + Bias', (right, y[1]), (0, -15),
+                    textcoords='offset pixels' ,fontsize=fs)
+        y = lower_loa_m * x + bias
+        ax.plot(x, y, c='grey', ls='--')
+        ax.annotate('Lower LOA', (right, y[1]), (0, 6), textcoords='offset pixels',fontsize=fs)
+        ax.annotate(f'{lower_loa_m:+4.2f} × Mean + Bias', (right, y[1]), (0, -15),
+                    textcoords='offset pixels',fontsize=fs)
+        return fig, ax, loas
+    else:
+        ax.axhline(y=loas[1], c='grey', ls='--')
+        ax.axhline(y=loas[0], c='grey', ls='--')
+        # Annotations
+        ax.annotate('Upper LOA', (right, loas[1]), (0, 6), textcoords='offset pixels',fontsize=fs)
+        ax.annotate(f'{loas[1]:+4.2f}', (right, loas[1]), (0, -15), textcoords='offset pixels',fontsize=fs)
+        ax.annotate('Lower LOA', (right, loas[0]), (0, 6), textcoords='offset pixels',fontsize=fs)
+        ax.annotate(f'{loas[0]:+4.2f}', (right, loas[0]), (0, -15), textcoords='offset pixels',fontsize=fs)
+
+    print(f'For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}')
+
+    return fig, ax
+
+###############################################################################

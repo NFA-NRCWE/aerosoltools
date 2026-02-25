@@ -277,7 +277,8 @@ def _Load_OPS_AIM(
 
     # Build edges in nm
     bin_edges: NDArray[np.float64] = np.append(bin_lb, [bin_ub]) * 1000.0
-
+    # Updates the Bin_mids to correctly be the average between upper and lower bin edge
+    bin_mids = ((bin_edges[1:] + bin_edges[:-1]) / 2).round(1)  # nm
     # --- timestamp and columns ----------------------------------------------
     # The AIM export has "Date", "Start Time" -> build a single datetime column
     df.rename(columns={"Sample #": "Datetime"}, inplace=True)
@@ -481,7 +482,7 @@ def _Load_OPS_Direct(
     OPS._meta["density"] = float(meta["Density"])
     OPS._meta["instrument"] = "OPS"
     OPS._meta["serial_number"] = meta["Serial Number"]
-    OPS._meta["unit"] = "cm$^{-3}$"
+    OPS._meta["unit"] = "cm⁻³"
     OPS._meta["dtype"] = "dN"
     if extra_data:
         OPS._extra_data = extra
