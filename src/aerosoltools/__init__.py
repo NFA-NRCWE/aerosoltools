@@ -84,7 +84,7 @@ from .loaders import (
     Load_Partector_file,
     Load_SMPS_file,
 )
-from .utility import  bland_altman_analysis, Combine_NS_OPS, Plot_correlation
+from .utility import Combine_NS_OPS, Plot_correlation, bland_altman_analysis
 
 __all__ = [
     "Aerosol1D",

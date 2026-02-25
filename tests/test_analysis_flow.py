@@ -93,7 +93,7 @@ def test_pm_calc_creates_and_reuses_px_columns():
 
     # Band-limited call: e.g. 1–4.2 µm
     cols_before_band = set(data.extra_data.columns)
-    data.PM_calc(dtype="dM", PM=4.2, Lower_lim=1.0)
+    data.PM_calc(dtype="dM", PM=4.2, lower_lim=1.0)
     new_band_cols = set(data.extra_data.columns) - cols_before_band
     assert (
         len(new_band_cols) == 1

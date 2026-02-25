@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = ["Combine_NS_OPS", "Plot_correlation"]
 
 import datetime as dt
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from numpy.typing import NDArray
 from scipy.optimize import curve_fit
-from scipy.stats import theilslopes, norm
+from scipy.stats import norm, theilslopes
 
 from .aerosol2d import Aerosol2D
 
@@ -31,16 +31,21 @@ def Combine_NS_OPS(
     rebin_method: str | Callable = "mean",
 ) -> Aerosol2D:
     """Description:
-        Combine NanoScan (NS) and OPS number size distributions into one
-        time-aligned Aerosol2D spectrum.
+        Combine data from two instruments of overlapping number size distributions,
+        commonly NanoScan (NS) and OPS, into one time-aligned Aerosol2D spectrum.
+        The function can also combine FMPS + OPS or NS + APS with the smallest
+        bin of the instrument with the larger size range being the cutting point
+        of the instrument with smaller size range.
 
     Args:
         NS_data (Aerosol2D):
-            NanoScan measurement as an :class:`~aerosoltools.aerosol2d.Aerosol2D`
-            instance, containing a time-resolved size distribution.
+            Measurements from the instrument with the smaller size range as an
+            :class:`~aerosoltools.aerosol2d.Aerosol2D` instance, containing
+            a time-resolved size distribution.
         OPS_data (Aerosol2D):
-            OPS measurement as an :class:`~aerosoltools.aerosol2d.Aerosol2D`
-            instance, containing a time-resolved size distribution.
+            Measurements from the instrument with the larger size range as an
+            :class:`~aerosoltools.aerosol2d.Aerosol2D` instance, containing
+            a time-resolved size distribution.
         start (pandas.Timestamp | str | None, optional):
             Start time of the period used for combining the two instruments.
             If ``None``, the later of the two available start times
@@ -526,10 +531,10 @@ def _align_series(
         tuple[np.ndarray, np.ndarray]: Two 1D NumPy arrays (x, y) containing
         aligned, finite values suitable for regression or plotting.
     """
-    if type(parameter)==str:
+    if type(parameter) is str:
         sx = _extract_series(X, parameter, start_time, end_time).rename("x")
         sy = _extract_series(Y, parameter, start_time, end_time).rename("y")
-    elif type(parameter)==tuple:
+    elif type(parameter) is tuple:
         sx = _extract_series(X, parameter[0], start_time, end_time).rename("x")
         sy = _extract_series(Y, parameter[1], start_time, end_time).rename("y")
     else:
@@ -832,16 +837,16 @@ def Plot_correlation(
                 outlier_influence=False,
             )
     """
-    if parameter==None:
+    if parameter is None:
         p_X = X.data.columns[0]
         p_Y = Y.data.columns[0]
-    elif type(parameter)==str:
+    elif type(parameter) is str:
         p_X = parameter
         p_Y = parameter
-    elif type(parameter)==tuple:
+    elif type(parameter) is tuple:
         p_X = parameter[0]
         p_Y = parameter[1]
-       
+
     # --- align + clean -------------------------------------------------------
     x_vals, y_vals = _align_series(
         X,
@@ -921,8 +926,8 @@ def Plot_correlation(
     if outlier_influence:
         band = np.sqrt((SE_A * fit_x) ** 2 + (SE_B / factor) ** 2)
         ax.fill_between(fit_x, fit_y - band, fit_y + band, alpha=0.33)
-        
-        
+
+
     ax.set_xlabel(f"{X.instrument} : {p_X}", fontsize=15)
     ax.set_ylabel(f"{Y.instrument} : {p_Y}", fontsize=15)
     ax.legend(fontsize=15)
@@ -949,8 +954,8 @@ def bland_altman_analysis(
         ):
     """
     Plot Bland-Altman (difference plot) to highlight difference between two groups
-    of data. 
-        
+    of data.
+
     Args:
        X:
            First aerosol dataset. Typically an :class:`Aerosol1D` or
@@ -1015,14 +1020,14 @@ def bland_altman_analysis(
             1:1 line, and the regression line with its equation and R² in
             the legend.
 
-            
+
     Notes:
         Detailed description:
             ``bland_altman_analysis`` is a function for quickly
             comparing two aerosol datasets measuring the same physical
             quantity, such as total particle number concentration from two
             instruments. The function:
-    
+
             * Extracts the requested ``parameter`` from each object.
             * Aligns the series in time using the selected ``match`` mode
               (exact timestamps, nearest neighbors, or common rebinned
@@ -1035,28 +1040,28 @@ def bland_altman_analysis(
             * Plots the scatter of aligned data points, the 1:1 line, the
               fitted regression line, and (optionally) a confidence band
               around the fit.
-    
+
             Axis labels are automatically derived from ``X.instrument`` and
             ``Y.instrument`` (if available), giving a quick visual summary of
             how well two instruments agree.
-    
+
         Theory:
             The regression models used are simple linear relationships:
-    
+
             * With intercept: ``y = A·x + B``
             * Without intercept: ``y = A·x``
-    
+
             When ``outlier_influence=True``, the parameters ``A`` and ``B``
             are obtained by minimizing the least-squares error using
             :func:`scipy.optimize.curve_fit`. Standard errors of the fit
             parameters are derived from the covariance matrix and propagated
             to form an approximate 1σ confidence band.
-    
+
             When ``outlier_influence=False``, the Theil–Sen estimator is used
             (:func:`scipy.stats.theilslopes`). This approach is more robust to
             outliers, but no confidence band is drawn.
     """
-    
+
     # Always return a top-level Figure to keep type hints simple
     if ax_in is None:
         fig, ax = plt.subplots()
@@ -1067,14 +1072,14 @@ def bland_altman_analysis(
     else:
         ax = ax_in
         fig = ax.figure
-    
-    if parameter==None:
+
+    if parameter is None:
         p_X = X.data.columns[0]
         p_Y = Y.data.columns[0]
-    elif type(parameter)==str:
+    elif type(parameter) is str:
         p_X = parameter
         p_Y = parameter
-    elif type(parameter)==tuple:
+    elif type(parameter) is tuple:
         p_X = parameter[0]
         p_Y = parameter[1]
 
@@ -1090,13 +1095,13 @@ def bland_altman_analysis(
         rebin_freq=rebin_freq,
         rebin_method=rebin_method,
     )
-    
+
     x = x_vals.astype(np.float64, copy=False)
     y = y_vals.astype(np.float64, copy=False)
-    
+
     means = (x + y) / 2
     diffs = x - y
-    
+
     # Average difference (aka the bias)
     bias = np.median(diffs) #!!!
     if method=='Gi':
@@ -1106,22 +1111,22 @@ def bland_altman_analysis(
         x_log = np.log10(x)
         y_log = np.log10(y)
         # means = (x + y) / 2
-        diffs = x_log - y_log    
+        diffs = x_log - y_log
 
     # Sample standard deviation
     s = np.std(diffs, ddof=1)  # Use ddof=1 to get the sample standard deviation
     loas = norm.interval(C, bias, s)
     if method=='Eu':
         diffs = x - y
-        
+
     # Dict
     Diff = {'BA':f'Difference ({X.unit})',
             'Gi':'Difference (%)',
             'Eu':f'Difference ({X.unit})'}  #'Log10 of difference'}
-    
+
     # --- Plot ----------------------------------------------------------------
     ax.scatter(means, diffs, c='k', s=20, alpha=0.6, marker='o')
-    
+
     # Labels
     ax.set_title(f'Bland-Altman Plot for {p_X} vz {p_Y}')
     ax.set_xlabel(f'Mean ({X.unit})')
@@ -1154,12 +1159,12 @@ def bland_altman_analysis(
         y = upper_loa_m * x + bias
         ax.plot(x, y, c='grey', ls='--')
         ax.annotate('Upper LOA', (right, y[1]), (0,6), textcoords='offset pixels',fontsize=fs)
-        ax.annotate(f'{upper_loa_m:+4.2f} × Mean + Bias', (right, y[1]), (0, -15), 
+        ax.annotate(f'{upper_loa_m:+4.2f} × Mean + Bias', (right, y[1]), (0, -15),
                     textcoords='offset pixels' ,fontsize=fs)
         y = lower_loa_m * x + bias
         ax.plot(x, y, c='grey', ls='--')
         ax.annotate('Lower LOA', (right, y[1]), (0, 6), textcoords='offset pixels',fontsize=fs)
-        ax.annotate(f'{lower_loa_m:+4.2f} × Mean + Bias', (right, y[1]), (0, -15), 
+        ax.annotate(f'{lower_loa_m:+4.2f} × Mean + Bias', (right, y[1]), (0, -15),
                     textcoords='offset pixels',fontsize=fs)
         return fig, ax, loas
     else:
@@ -1172,7 +1177,7 @@ def bland_altman_analysis(
         ax.annotate(f'{loas[0]:+4.2f}', (right, loas[0]), (0, -15), textcoords='offset pixels',fontsize=fs)
 
     print(f'For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}')
-    
+
     return fig, ax
 
 ###############################################################################

@@ -341,31 +341,31 @@ class Aerosol1D:
     ###########################################################################
     """############################# Functions #############################"""
     ###########################################################################
-    
+
     def calibrate(self,m: float=1,b: float=0):
         """
         Apply a correction to the total conc and mark the data as calibrated
-        by a linear function 
-        
+        by a linear function
+
         Parameters
         ----------
         m : float
             The calibration value to be multiplied to the data for correction.
         b : float
-            A constant offset to be removed. By default is zero and should be 
+            A constant offset to be removed. By default is zero and should be
             used cautionsly.
 
         Returns
         -------
         None
-        
+
         """
         self._data['Total_conc']=self._data['Total_conc']*m + b
-        
+
         self._meta['calibrated']={'m' : m, 'b' : b}
-    
+
     ###########################################################################
-    
+
     def copy_self(self):
         """Description:
             Create and return a deep copy of the aerosol time-series object.
@@ -397,17 +397,17 @@ class Aerosol1D:
     ###########################################################################
     def get_activity_data(self, activity_name):
         """Return main data restricted to one or more activity periods.
-    
+
         Args:
             activity_name (str | Sequence[str]): Name of the activity/boolean mask
                 column to use, or multiple names. If multiple are provided, rows
                 are returned only where *all* selected activities are True.
-    
+
         Returns:
             pandas.DataFrame: Copy of the main data for time steps where the
                 selected activity (or combined activities) is True, with all
                 activity mask columns removed.
-    
+
         Raises:
             ValueError: If any activity name is not present in self.activities.
             TypeError: If activity_name is neither a string nor an iterable of strings.
@@ -422,20 +422,20 @@ class Aerosol1D:
                 raise TypeError(
                     "activity_name must be a string or an iterable of strings."
                 ) from e
-    
+
         if not activity_names:
             raise ValueError("At least one activity name must be provided.")
-    
+
         # Validate
         missing = [a for a in activity_names if a not in self.activities]
         if missing:
             raise ValueError(
                 f"Activity(ies) {missing} not found in available activities: {self.activities}"
             )
-    
+
         # Combined mask: True only where ALL selected activities are True
         mask = self._data[activity_names].all(axis=1)
-    
+
         return self._data.loc[mask].drop(columns=self.activities).copy()
 
     ###########################################################################
@@ -931,7 +931,7 @@ class Aerosol1D:
                 shname=str(sheet_name)
             else:
                 shname= f"{self.instrument} summary"
-                
+
             if lower.endswith(".csv"):
                 if os.path.exists(fname):
                     summary.to_csv(fname, mode="a", header=False, index=False)

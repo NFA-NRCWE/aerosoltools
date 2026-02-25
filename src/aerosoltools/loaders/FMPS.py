@@ -345,9 +345,9 @@ def _parse_standard_datetime(
 
     - elapsed seconds since start (when ``"Elapsed"`` appears in ``time_format``), or
     - clock times for each row (if not elapsed),
-    
+
     into an absolute ``Datetime`` column.
-    
+
     Args:
         file:
             Path to the FMPS file.

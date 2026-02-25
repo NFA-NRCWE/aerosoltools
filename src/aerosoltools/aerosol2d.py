@@ -185,23 +185,23 @@ class Aerosol2D(Aerosol1D):
         return arr.astype(np.float64, copy=False), headers, was_norm
 
     ###########################################################################
-    
+
 
     def _ensure_data_robustness(self,vals) -> pd.Series:
         """Validity mask from the original object (keeps alignment with self.time)
 
         This returns a cleaned serires, so that no new data is generated,
-        where before the total_conc was NaN. 
+        where before the total_conc was NaN.
         Args:
             vals (np.array):
                 array of data structured as a column of data from either data
-                extra data. 
+                extra data.
         Returns:
             pd.Series: Time series of the requested Pₓ metric, indexed by
             :attr:`time`. Empty or invalid time steps (where
             :attr:`total_concentration` is NaN) are returned as NaN.
         """
-                
+
         valid_mask = self.total_concentration.notna()
         series = pd.Series(vals, index=self.time)
 
@@ -833,7 +833,7 @@ class Aerosol2D(Aerosol1D):
                 - ``dchar`` is one of ``"M"``, ``"N"``, ``"S"``, ``"V"``,
 
                 - ``upper`` is the upper cut diameter in µm,
-                
+
                 - ``lower`` is the lower cut diameter in µm (0.0 for
                   cumulative metrics),
 
@@ -986,7 +986,7 @@ class Aerosol2D(Aerosol1D):
             raise ValueError(f"Unsupported metric string '{metric_name}'.")
 
         # dchar, lower_cut, upper_cut = parsed
-        
+
         dchar, upper_cut, lower_cut  = parsed
         dtype_map = {"M": "dM", "N": "dN", "S": "dS", "V": "dV"}
         unit_map = {
@@ -1045,18 +1045,18 @@ class Aerosol2D(Aerosol1D):
                 If m is provided as a list, it should be of equal length to the number
                 of bins. The total concentration is then recalculated as the sum.
             b : float
-                A constant offset to be removed. By default is zero and should be 
+                A constant offset to be removed. By default is zero and should be
                 used cautionsly.
 
         Returns:
             out (Aerosold2D):
-                
+
         None
-        
+
         """
-        
+
         out = self if inplace else self.copy_self()
-        
+
         # Resolve which column to use based on the requested parameter.
         if isinstance(parameter, int):
             if parameter >= len(self._raw_data.columns):
@@ -1066,60 +1066,63 @@ class Aerosol2D(Aerosol1D):
             pass
         else:
             raise LookupError("Chosen parameter is invalid")
-            
+
         # Apply the correction to the chosen parameter
-        
+
         if parameter=='bins':
             #Aerosol2D specfic parameter choise to correct the bins
-            if type(m)==list:
+            if type(m) is list:
                 if len(m)==len(out._sizebin_headers):
                     # mask=~np.isnan(out._data['Total_conc'])
-                    
+
                     out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
                     out._data['Total_conc']=out.data[out._sizebin_headers].sum(axis=1)
-                else: 
+                else:
                     raise ValueError("Mismatch between number of bins and list of calibration values")
-            elif type(m)==float or type(m)==int:
+            elif type(m) is float or type(m) is int:
                 out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
                 out._data['Total_conc']=out.data['Total_conc']*m
             else:
                 raise ValueError("Mismatch between m and expected type")
-                
-        elif type(m)==float or type(m)==int:
-            try:out._data[parameter]=out.data[parameter]*m + b
-            except:out._extra_data[parameter]=out._extra_data[parameter]*m + b
+
+        elif type(m) is float or type(m) is int:
+            try:
+                out._data[parameter]=out.data[parameter]*m + b
+            except:
+                out._extra_data[parameter]=out._extra_data[parameter]*m + b
         else:
             raise ValueError("Mismatch between m and expected type")
-            
+
         if 'calibrated' in out._meta:
             pass
-        else: out._meta['calibrated']={}
-        
+        else:
+            out._meta['calibrated']={}
+
         if b==0:
-            
+
             out._meta['calibrated'][parameter]=m
         else:
             out._meta['calibrated'][parameter]={'m' : m, 'b' : b}
-        
+
         return out
 
         ###
         # out = self if inplace else self.copy_self()
-        
+
         # if type(m)==list:
         #     if len(m)==len(out._sizebin_headers):
         #         # mask=~np.isnan(out._data['Total_conc'])
-                
+
         #         out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
         #         out._data['Total_conc']=out.data[out._sizebin_headers].sum(axis=1)
-        #     else: 
+        #     else:
         #         raise ValueError("Mismatch between number of bins and list of calibration values")
         # elif type(m)==float or type(m)==int:
         #     out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
         #     out._data['Total_conc']=out.data['Total_conc']*m
         # else:
         #     raise ValueError("Mismatch between m and expected type")
-            
+
         # out._meta['calibrated']={'m' : m}
         # return out
 
@@ -1655,9 +1658,9 @@ class Aerosol2D(Aerosol1D):
                 })
                 elpi.plot_psd(activities=["Task A", "Task B"], normalize=True)
         """
-        
-        clas = self if dtype==None else self.dtype_converter(dtype,False)
-        
+
+        clas = self if dtype is None else self.dtype_converter(dtype,False)
+
         new_fig_created = False
         if ax is None:
             fig, ax = plt.subplots(figsize=(8, 5))
@@ -1847,7 +1850,7 @@ class Aerosol2D(Aerosol1D):
         figure, ax = plt.subplots()
         plt.xticks(fontsize=25)
         plt.yticks(fontsize=25)
-        
+
         # Highlight activities
         if mark_activities and hasattr(self, "_activity_periods"):
             # Exclude "All data" unless explicitly requested
@@ -1885,7 +1888,7 @@ class Aerosol2D(Aerosol1D):
             right = float(mdates.date2num(self.time.max()))
             ax.set_xlim(left, right)
             ax.legend()
-            
+
         # Fractional mode: total on primary axis, fractions on secondary axis
         if fraction:
             total_name = f"P{dtype[-1]}{PM_values[-1]}"
@@ -1990,7 +1993,7 @@ class Aerosol2D(Aerosol1D):
         fmt = mdates.ConciseDateFormatter(loc)
         ax.xaxis.set_major_locator(loc)
         ax.xaxis.set_major_formatter(fmt)
-        
+
         return ax.figure, ax
 
     ###########################################################################
@@ -2035,7 +2038,7 @@ class Aerosol2D(Aerosol1D):
                 plot_total_conc to control activity highlighting. True
                 shades all activities except "All data"; a sequence
                 restricts shading to specific activities.
-            dtype (str | None): Designator for the desired datatype to be 
+            dtype (str | None): Designator for the desired datatype to be
                 plotted, independent from current datatype.
                 Chose between; 'dN', 'dS', 'dV', 'dM'
         Returns:
@@ -2084,8 +2087,8 @@ class Aerosol2D(Aerosol1D):
                 fig.savefig("elpi_timeseries.png", dpi=150)
         """
 
-        clas = self if dtype==None else self.dtype_converter(dtype,False)
-        
+        clas = self if dtype is None else self.dtype_converter(dtype,False)
+
         # Require both axes or neither when passing external axes
         if (ax1 is None) != (ax2 is None):
             raise ValueError("You must provide both ax1 and ax2, or neither.")
@@ -2105,7 +2108,7 @@ class Aerosol2D(Aerosol1D):
         total = clas.total_concentration
         data = clas.size_data
         bin_edges = clas.bin_edges
-        
+
         # --- Top panel: total concentration (with optional activity shading) ---
         _, ax_new = clas.plot_total_conc(ax=ax1, mark_activities=mark_activities)
         ax1 = ax_new
@@ -2320,7 +2323,7 @@ class Aerosol2D(Aerosol1D):
             for pm in sorted(cutoffs):
                 px_obj.PM_calc(dtype=dtype_map[dchar], PM=pm[0], lower_lim=pm[1])
             px_extra[dchar] = px_obj.extra_data.copy()
-        
+
         # --- compute per-activity --------------------------------------------
         rows: list[list[float | str]] = []
         bin_mids = np.asarray(self.bin_mids, dtype=float)
@@ -2479,7 +2482,7 @@ class Aerosol2D(Aerosol1D):
                 shname=str(sheet_name)
             else:
                 shname= f"{self.instrument} summary"
-                
+
             if lower.endswith(".csv"):
                 if os.path.exists(fname):
                     summary.to_csv(fname, mode="a", header=False, index=False)
@@ -2955,7 +2958,7 @@ class Aerosol2D(Aerosol1D):
             )
 
         result = pd.DataFrame(rows)
-        
+
         # --- append to file if requested ---------------------------------------
         if filename and not result.empty:
             fname = str(filename)
@@ -2964,7 +2967,7 @@ class Aerosol2D(Aerosol1D):
                 shname=str(sheet_name)
             else:
                 shname= f"{metric} summary"
-                
+
             if lower.endswith(".csv"):
                 if os.path.exists(fname):
                     result.to_csv(fname, mode="a", header=False, index=False)
