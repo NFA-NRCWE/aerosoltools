@@ -6,6 +6,13 @@ post-processing data from a variety of aerosol instruments. It is
 intended for workflows involving time-resolved, size-resolved, and
 instrument-specific particle measurements.
 
+Naming convention
+-----------------
+All public functions are available under both their original
+``PascalCase`` names (e.g. ``Load_ELPI_file``) and PEP 8-compliant
+``snake_case`` aliases (e.g. ``load_elpi_file``). Both forms are
+equivalent; the snake_case names are preferred for new code.
+
 Classes
 -------
 Aerosol1D
@@ -18,51 +25,54 @@ AerosolAlt
 
 Loader functions
 ----------------
-Load_CPC_file
+Each loader is available as both ``Load_<Instrument>_file`` and
+``load_<instrument>_file``.
+
+load_cpc_file / Load_CPC_file
     Load data from condensation particle counters (CPC, TSI).
-Load_DiSCmini_file
+load_discmini_file / Load_DiSCmini_file
     Load data from DiSCmini personal dosimeters (Testo).
-Load_ELPI_file
+load_elpi_file / Load_ELPI_file
     Load data from electrical low-pressure impactors (ELPI, Dekati).
-Load_FMPS_file
+load_fmps_file / Load_FMPS_file
     Load data from fast mobility particle sizers (FMPS, TSI).
-Load_Fourtec_file
+load_fourtec_file / Load_Fourtec_file
     Load environmental logger data (e.g., temperature / relative humidity).
-Load_Grimm_file
+load_grimm_file / Load_Grimm_file
     Load data from Grimm optical particle counters.
-Load_NS_file
+load_ns_file / Load_NS_file
     Load data from NanoScan SMPS (NS, TSI).
-Load_OPCN3_file
+load_opcn3_file / Load_OPCN3_file
     Load data from Alphasense OPC-N3 optical particle counters.
-Load_OPS_file
+load_ops_file / Load_OPS_file
     Load data from optical particle sizers (OPS, TSI).
-Load_Partector_file
+load_partector_file / Load_Partector_file
     Load data from Naneos Partector particle dosimeters.
-Load_SMPS_file
+load_smps_file / Load_SMPS_file
     Load data from scanning mobility particle sizers (SMPS, TSI).
-Load_Aethalometer_file
+load_aethalometer_file / Load_Aethalometer_file
     Load black carbon mass data from MicroAeth / aethalometers.
-Load_DustTrak_file
+load_dusttrak_file / Load_DustTrak_file
     Load PM mass concentration data from DustTrak instruments.
-Load_data_from_folder
+load_data_from_folder / Load_data_from_folder
     Dispatch the appropriate loader over all files in a folder and
     return the combined dataset(s).
 
 Utilities
 ---------
-Combine_NS_OPS
+combine_ns_ops / Combine_NS_OPS
     Combine NanoScan and OPS measurements into a single size-resolved
     dataset with harmonized bin structure.
-Plot_correlation
+plot_correlation / Plot_correlation
     Plot and fit correlations between two aerosol time series (e.g.,
     instrument inter-comparisons).
 
 Typical usage example
 ---------------------
     >>> import aerosoltools as at
-    >>> ns = at.Load_NS_file("nanoscan_example.txt")
-    >>> ops = at.Load_OPS_file("ops_example.txt")
-    >>> combined = at.Combine_NS_OPS(ns, ops)
+    >>> ns = at.load_ns_file("nanoscan_example.txt")
+    >>> ops = at.load_ops_file("ops_example.txt")
+    >>> combined = at.combine_ns_ops(ns, ops)
 """
 
 from .aerosol1d import Aerosol1D
@@ -86,13 +96,36 @@ from .loaders import (
 )
 from .utility import Combine_NS_OPS, Plot_correlation, bland_altman_analysis
 
+# snake_case aliases for PEP 8 consistency
+combine_ns_ops = Combine_NS_OPS
+plot_correlation = Plot_correlation
+load_aethalometer_file = Load_Aethalometer_file
+load_cpc_file = Load_CPC_file
+load_discmini_file = Load_DiSCmini_file
+load_dusttrak_file = Load_DustTrak_file
+load_elpi_file = Load_ELPI_file
+load_fmps_file = Load_FMPS_file
+load_fourtec_file = Load_Fourtec_file
+load_grimm_file = Load_Grimm_file
+load_ns_file = Load_NS_file
+load_opcn3_file = Load_OPCN3_file
+load_ops_file = Load_OPS_file
+load_partector_file = Load_Partector_file
+load_smps_file = Load_SMPS_file
+load_data_from_folder = Load_data_from_folder
+
 __all__ = [
+    # Classes
     "Aerosol1D",
     "Aerosol2D",
     "AerosolAlt",
-    "bland_altman_analysis"
+    # Utilities
+    "bland_altman_analysis",
     "Combine_NS_OPS",
     "Plot_correlation",
+    "combine_ns_ops",
+    "plot_correlation",
+    # Loaders (original names)
     "Load_Aethalometer_file",
     "Load_CPC_file",
     "Load_DiSCmini_file",
@@ -107,4 +140,19 @@ __all__ = [
     "Load_Partector_file",
     "Load_SMPS_file",
     "Load_data_from_folder",
+    # Loaders (snake_case aliases)
+    "load_aethalometer_file",
+    "load_cpc_file",
+    "load_discmini_file",
+    "load_dusttrak_file",
+    "load_elpi_file",
+    "load_fmps_file",
+    "load_fourtec_file",
+    "load_grimm_file",
+    "load_ns_file",
+    "load_opcn3_file",
+    "load_ops_file",
+    "load_partector_file",
+    "load_smps_file",
+    "load_data_from_folder",
 ]

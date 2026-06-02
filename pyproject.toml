@@ -31,6 +31,9 @@ dev = [
     "ruff",
     "black"
 ]
+gui = [
+    "PyQt5>=5.15",
+]
 docs = [
   "sphinx>=7.3",
   "furo>=2024.8.6",
@@ -39,8 +42,19 @@ docs = [
   "sphinx-autodoc-typehints>=2.2.3"
 ]
 
+[project.gui-scripts]
+# Windowless launcher created in the environment's Scripts/ folder on install.
+aerosoltools-gui = "aerosoltools.gui:main"
+
+[project.scripts]
+# One-time helper to drop a Desktop / Start-Menu shortcut for the GUI.
+aerosoltools-gui-shortcut = "aerosoltools.gui.shortcut:main"
+
 [tool.setuptools]
 package-dir = {"" = "src"}
+
+[tool.setuptools.package-data]
+"aerosoltools.gui" = ["*.ico"]
 
 [tool.setuptools.exclude-package-data]
 "*" = ["pytest.ini", "tests/*"]

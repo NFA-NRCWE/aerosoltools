@@ -99,12 +99,12 @@ class AerosolAlt(Aerosol1D):
 
     ###########################################################################
     """############################# Functions #############################"""
+
     ###########################################################################
     @override
-    def calibrate(self,parameter: Union[int,str]=0,
-                  m: float=1,
-                  b: float=0,
-                  inplace=True):
+    def calibrate(
+        self, parameter: Union[int, str] = 0, m: float = 1, b: float = 0, inplace=True
+    ):
         """
         Apply a correction to a chosen parameter and mark the data as calibrated
         by a linear function constructed as: x_cor = m * x + b
@@ -128,7 +128,6 @@ class AerosolAlt(Aerosol1D):
 
         """
 
-
         out = self if inplace else self.copy_self()
 
         # Resolve which column to use based on the requested parameter.
@@ -142,24 +141,20 @@ class AerosolAlt(Aerosol1D):
             raise LookupError("Chosen parameter is invalid")
 
         # Apply the correction to the chosen parameter
-        if type(m) is float or type(m) is int:
-            out._data[parameter]=out.data[parameter]*m + b
+        if isinstance(m, (float, int)):
+            out._data[parameter] = out.data[parameter] * m + b
         else:
             raise ValueError("Mismatch between m and expected type")
 
-        if 'calibrated' in out._meta:
-            pass
-        else:
-            out._meta['calibrated']={}
+        if "calibrated" not in out._meta:
+            out._meta["calibrated"] = {}
 
-        if b==0:
-
-            out._meta['calibrated'][parameter]=m
+        if b == 0:
+            out._meta["calibrated"][parameter] = m
         else:
-            out._meta['calibrated'][parameter]={'m' : m, 'b' : b}
+            out._meta["calibrated"][parameter] = {"m": m, "b": b}
 
         return out
-
 
     @override
     def plot_total_conc(
@@ -507,7 +502,7 @@ class AerosolAlt(Aerosol1D):
 
         return summary_rounded
 
-###########################################################
+    ###########################################################
     @override
     def summarize_activities(
         self,
@@ -569,7 +564,7 @@ class AerosolAlt(Aerosol1D):
 
         # --- defaults --------------------------------------------------------
         if metrics is None:
-            metrics = [ i for i in self._meta['unit']  ]
+            metrics = [i for i in self._meta["unit"]]
 
         # --- helper: duration in minutes per time step (shared helper) -------
         dt_mins = self._dt_minutes()
@@ -591,7 +586,10 @@ class AerosolAlt(Aerosol1D):
             row: list[float | str] = [activity, duration_hhmm]
             for name in metrics:
                 value_df = self.data[name].loc[mask]
-                row += [round(float(value_df.mean()),2), round(float(value_df.std()),2)]
+                row += [
+                    round(float(value_df.mean()), 2),
+                    round(float(value_df.std()), 2),
+                ]
 
             rows.append(row)
 
@@ -600,7 +598,7 @@ class AerosolAlt(Aerosol1D):
 
         for name in metrics:
 
-            unit = self._meta['unit'][name]
+            unit = self._meta["unit"][name]
             label = f"{name} [{unit}]"
             columns += [label, f"{label} std"]
 
@@ -610,9 +608,9 @@ class AerosolAlt(Aerosol1D):
             fname = str(filename)
             lower = fname.lower()
             if sheet_name:
-                shname=str(sheet_name)
+                shname = str(sheet_name)
             else:
-                shname= f"{metrics} summary"
+                shname = f"{metrics} summary"
 
             if lower.endswith(".csv"):
                 if os.path.exists(fname):
@@ -625,7 +623,7 @@ class AerosolAlt(Aerosol1D):
                         filename,
                         engine="openpyxl",
                         mode="a",
-                        if_sheet_exists="replace"   # requires pandas ≥ 1.4
+                        if_sheet_exists="replace",  # requires pandas ≥ 1.4
                     ) as writer:
                         summary.to_excel(writer, sheet_name=shname, index=False)
                 else:
@@ -634,11 +632,7 @@ class AerosolAlt(Aerosol1D):
                 raise ValueError(
                     f"Unsupported file extension for '{filename}'. Use .csv or .xlsx."
                 )
-
-
-        if filename:
-            summary.to_excel(filename, index=False)
-            print(f"Summary saved to: {filename}")
+            print(f"\nActivity summary saved to: {filename}")
 
         summary_t = summary.set_index("Segment").T
         print("\nSummary of aerosol properties (transposed):\n")

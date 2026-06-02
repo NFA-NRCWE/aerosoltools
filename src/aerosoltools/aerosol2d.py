@@ -186,11 +186,10 @@ class Aerosol2D(Aerosol1D):
 
     ###########################################################################
 
-
-    def _ensure_data_robustness(self,vals) -> pd.Series:
+    def _ensure_data_robustness(self, vals) -> pd.Series:
         """Validity mask from the original object (keeps alignment with self.time)
 
-        This returns a cleaned serires, so that no new data is generated,
+        This returns a cleaned series, so that no new data is generated,
         where before the total_conc was NaN.
         Args:
             vals (np.array):
@@ -206,6 +205,67 @@ class Aerosol2D(Aerosol1D):
         series = pd.Series(vals, index=self.time)
 
         return series.where(valid_mask, np.nan)
+
+    ###########################################################################
+
+    @staticmethod
+    def _convert_array(
+        arr: NDArray[np.float64],
+        bin_mids: NDArray[np.float64],
+        from_dtype: str,
+        to_dtype: str,
+        density: float = 1.0,
+    ) -> NDArray[np.float64]:
+        """Convert a (n_times × n_bins) size-distribution array between dtype bases.
+
+        Performs the same physical transformation as the ``_convert_to_*``
+        instance methods but operates entirely on raw NumPy arrays, avoiding a
+        full :class:`Aerosol2D` deep-copy.
+
+        Args:
+            arr: 2-D float64 array of shape ``(n_times, n_bins)``.
+            bin_mids: 1-D array of bin midpoint diameters in nm.
+            from_dtype: Source base dtype — one of ``"dN"``, ``"dS"``,
+                ``"dV"``, ``"dM"``. A ``"/dlogDp"`` suffix is stripped.
+            to_dtype: Target base dtype (same choices).
+            density: Particle density in g/cm³ (used when mass is involved).
+
+        Returns:
+            numpy.ndarray: Converted array with the same shape as ``arr``.
+        """
+        from_base = from_dtype.replace("/dlogDp", "")
+        to_base = to_dtype.replace("/dlogDp", "")
+        if from_base == to_base:
+            return arr
+
+        bin_radii = bin_mids / 2.0  # nm
+        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
+        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
+
+        # Step 1 — normalise to dN
+        if from_base == "dN":
+            number_arr = arr
+        elif from_base == "dM":
+            number_arr = (arr / density * 1e9) / volume_per_particle[None, :]
+        elif from_base == "dV":
+            number_arr = arr / volume_per_particle[None, :]
+        elif from_base == "dS":
+            number_arr = arr / surface_area_per_particle[None, :]
+        else:
+            raise ValueError(f"Unknown from_dtype {from_base!r}.")
+
+        # Step 2 — convert from dN to target
+        if to_base == "dN":
+            return number_arr
+        elif to_base == "dM":
+            return number_arr * volume_per_particle[None, :] * density * 1e-9
+        elif to_base == "dV":
+            return number_arr * volume_per_particle[None, :]
+        elif to_base == "dS":
+            return number_arr * surface_area_per_particle[None, :]
+        else:
+            raise ValueError(f"Unknown to_dtype {to_base!r}.")
+
     ###########################################################################
 
     def _dlogdp(self) -> NDArray[np.float64]:
@@ -318,7 +378,7 @@ class Aerosol2D(Aerosol1D):
         )
 
         # Total_conc is always computed from the base (non-/dlogDp) distribution
-        new_total=np.nansum(base_arr, axis=1)
+        new_total = np.nansum(base_arr, axis=1)
 
         series = self._ensure_data_robustness(new_total)
 
@@ -412,30 +472,24 @@ class Aerosol2D(Aerosol1D):
                     "Internal error: 'work' passed to _px_series must already be in "
                     f"the requested dtype {base_dtype!r}, got {work.dtype!r}."
                 )
-            work_obj = work
+            dist = work.size_data.to_numpy(dtype=float)
         else:
-            current_dtype = str(self.dtype)
-            base_current = current_dtype.replace("/dlogDp", "")
-            needs_unnorm = "/dlogDp" in current_dtype
-            needs_dtype = base_current != base_dtype
-
-            work_obj: "Aerosol2D" = self
-            if needs_unnorm or needs_dtype:
-                work_obj = self.copy_self()
-                if "/dlogDp" in work_obj.dtype:
-                    work_obj.unnormalize_logdp(inplace=True)
-                if work_obj.dtype != base_dtype:
-                    work_obj.dtype_converter(dtype=base_dtype, inplace=True)
-
-
+            # Fast path: extract and convert the underlying array without
+            # deep-copying the full Aerosol2D object.
+            base_arr, _, _ = self._as_base_array()
+            current_base = str(self.dtype).replace("/dlogDp", "")
+            if current_base != base_dtype:
+                dist = self._convert_array(
+                    base_arr, self.bin_mids, current_base, base_dtype, self.density
+                )
+            else:
+                dist = base_arr
 
         # Bin midpoints in nm and EN 481/ISO 7708 fractions
         bin_mids = np.asarray(self.bin_mids, dtype=float)
         pm_nm = upper * 1000.0
         Y = np.log(bin_mids / pm_nm) / (np.sqrt(2.0) * np.log(1.5))
         Frac_upper = 0.5 * (1.0 + np.vectorize(erf)(-Y))
-
-        dist = work_obj.size_data.to_numpy(dtype=float)  # (time × bins)
         upper_vals = np.nansum(dist * Frac_upper[None, :], axis=1)
 
         if lower > 0:
@@ -953,14 +1007,20 @@ class Aerosol2D(Aerosol1D):
         if mu == "PNC":
             if "PNC" in aligned_extra.columns:
                 series = aligned_extra["PNC"].astype(float)
-                # Keep the aligned frame on the object
                 self._extra_data = aligned_extra
                 return series, "cm⁻³"
 
-            obj = self._convert_to_number_concentration(inplace=False)
-            series = obj.size_data.sum(axis=1).astype(float)
+            # Fast path: convert array without deep-copying the object
+            base_arr, _, _ = self._as_base_array()
+            current_base = str(self.dtype).replace("/dlogDp", "")
+            if current_base != "dN":
+                number_arr = self._convert_array(
+                    base_arr, self.bin_mids, current_base, "dN", self.density
+                )
+            else:
+                number_arr = base_arr
+            series = self._ensure_data_robustness(np.nansum(number_arr, axis=1))
 
-            # Store for future reuse
             aligned_extra["PNC"] = series
             self._extra_data = aligned_extra
             return series, "cm⁻³"
@@ -971,23 +1031,29 @@ class Aerosol2D(Aerosol1D):
                 self._extra_data = aligned_extra
                 return series, "µg/m³"
 
-            obj = self._convert_to_mass_concentration(inplace=False)
-            series = obj.size_data.sum(axis=1).astype(float)
+            # Fast path: convert array without deep-copying the object
+            base_arr, _, _ = self._as_base_array()
+            current_base = str(self.dtype).replace("/dlogDp", "")
+            if current_base != "dM":
+                mass_arr = self._convert_array(
+                    base_arr, self.bin_mids, current_base, "dM", self.density
+                )
+            else:
+                mass_arr = base_arr
+            series = self._ensure_data_robustness(np.nansum(mass_arr, axis=1))
 
-            # Store for future reuse
             aligned_extra["MASS"] = series
             self._extra_data = aligned_extra
             return series, "µg/m³"
 
         # --- Pₓ metrics: PM, PN, PS, PV (reusing if already present) ----------
-        # parsed = self._parse_px_band(mu)
         parsed = self._parse_px_metric_scalar(mu)
         if parsed is None:
             raise ValueError(f"Unsupported metric string '{metric_name}'.")
 
         # dchar, lower_cut, upper_cut = parsed
 
-        dchar, upper_cut, lower_cut  = parsed
+        dchar, upper_cut, lower_cut = parsed
         dtype_map = {"M": "dM", "N": "dN", "S": "dS", "V": "dV"}
         unit_map = {
             "M": "µg/m³",
@@ -1028,31 +1094,30 @@ class Aerosol2D(Aerosol1D):
 
     ###########################################################################
     """############################# Functions #############################"""
+
     ###########################################################################
     @override
-    def calibrate(self, parameter: str = 'bins' , m: Union[int, float, list] = 1, b: Union[int, float, list] = 0, inplace: bool = True):
-        """
-        Apply a correction to the total conc and mark the data as calibrated
-        by a linear function. The calibration value is applied to the size data.
+    def calibrate(
+        self,
+        parameter: str = "bins",
+        m: Union[int, float, list] = 1,
+        b: Union[int, float, list] = 0,
+        inplace: bool = True,
+    ):
+        """Apply a linear correction to a parameter and record it in metadata.
 
         Args:
-            parameter (int | str, optional):
-                Index or column name of the signal to plot. If ``int``, it is
-                interpreted as a positional index into :attr:`data.columns`. If
-                ``str``, it is treated as a column label. Defaults to ``0``.
-            m : float/int/list
-                The calibration value to be multiplied to the data for correction.
-                If m is provided as a list, it should be of equal length to the number
-                of bins. The total concentration is then recalculated as the sum.
-            b : float
-                A constant offset to be removed. By default is zero and should be
-                used cautionsly.
+            parameter (str): Column name to correct, or ``"bins"`` to correct
+                all size bins. Defaults to ``"bins"``.
+            m (int | float | list): Multiplicative calibration factor. When a
+                list is supplied for ``parameter="bins"``, its length must match
+                the number of size bins.
+            b (int | float): Additive offset. Defaults to 0.
+            inplace (bool): If True, modify this instance and return it.
+                If False, return a corrected deep copy. Defaults to True.
 
         Returns:
-            out (Aerosold2D):
-
-        None
-
+            Aerosol2D: Corrected object (self or a new copy).
         """
 
         out = self if inplace else self.copy_self()
@@ -1068,63 +1133,39 @@ class Aerosol2D(Aerosol1D):
             raise LookupError("Chosen parameter is invalid")
 
         # Apply the correction to the chosen parameter
-
-        if parameter=='bins':
-            #Aerosol2D specfic parameter choise to correct the bins
-            if type(m) is list:
-                if len(m)==len(out._sizebin_headers):
-                    # mask=~np.isnan(out._data['Total_conc'])
-
-                    out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
-                    out._data['Total_conc']=out.data[out._sizebin_headers].sum(axis=1)
+        if parameter == "bins":
+            # Aerosol2D-specific: correct all size bins
+            if isinstance(m, list):
+                if len(m) == len(out._sizebin_headers):
+                    out._data[out._sizebin_headers] = out.data[out._sizebin_headers] * m
+                    out._data["Total_conc"] = out.data[out._sizebin_headers].sum(axis=1)
                 else:
-                    raise ValueError("Mismatch between number of bins and list of calibration values")
-            elif type(m) is float or type(m) is int:
-                out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
-                out._data['Total_conc']=out.data['Total_conc']*m
+                    raise ValueError(
+                        "Mismatch between number of bins and list of calibration values"
+                    )
+            elif isinstance(m, (float, int)):
+                out._data[out._sizebin_headers] = out.data[out._sizebin_headers] * m
+                out._data["Total_conc"] = out.data["Total_conc"] * m
             else:
                 raise ValueError("Mismatch between m and expected type")
 
-        elif type(m) is float or type(m) is int:
+        elif isinstance(m, (float, int)):
             try:
-                out._data[parameter]=out.data[parameter]*m + b
-            except:
-                out._extra_data[parameter]=out._extra_data[parameter]*m + b
+                out._data[parameter] = out.data[parameter] * m + b
+            except KeyError:
+                out._extra_data[parameter] = out._extra_data[parameter] * m + b
         else:
             raise ValueError("Mismatch between m and expected type")
 
-        if 'calibrated' in out._meta:
-            pass
-        else:
-            out._meta['calibrated']={}
+        if "calibrated" not in out._meta:
+            out._meta["calibrated"] = {}
 
-        if b==0:
-
-            out._meta['calibrated'][parameter]=m
+        if b == 0:
+            out._meta["calibrated"][parameter] = m
         else:
-            out._meta['calibrated'][parameter]={'m' : m, 'b' : b}
+            out._meta["calibrated"][parameter] = {"m": m, "b": b}
 
         return out
-
-        ###
-        # out = self if inplace else self.copy_self()
-
-        # if type(m)==list:
-        #     if len(m)==len(out._sizebin_headers):
-        #         # mask=~np.isnan(out._data['Total_conc'])
-
-        #         out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
-        #         out._data['Total_conc']=out.data[out._sizebin_headers].sum(axis=1)
-        #     else:
-        #         raise ValueError("Mismatch between number of bins and list of calibration values")
-        # elif type(m)==float or type(m)==int:
-        #     out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
-        #     out._data['Total_conc']=out.data['Total_conc']*m
-        # else:
-        #     raise ValueError("Mismatch between m and expected type")
-
-        # out._meta['calibrated']={'m' : m}
-        # return out
 
     ###########################################################################
 
@@ -1394,10 +1435,10 @@ class Aerosol2D(Aerosol1D):
                 copy and return the new instance.
 
         Returns:
-            Aerosol2D | None: The normalized object (self or a new copy)
-                when normalization is applied. If the dtype already
-                contains "/dlogDp", no changes are made and None is
-                returned.
+            Aerosol2D: The normalized object (self when ``inplace=True``,
+                otherwise a new copy). If the dtype already contains
+                ``"/dlogDp"`` the object is already normalized and is
+                returned unchanged (no modification is made).
 
         Raises:
             ValueError: If the number of size-bin columns does not match
@@ -1431,7 +1472,7 @@ class Aerosol2D(Aerosol1D):
 
         # Only normalize if not already in */dlogDp form
         if "/dlogDp" in str(self.dtype):
-            return
+            return self if inplace else self.copy_self()
 
         dlog_dp = self._dlogdp()
         bin_columns = self._sizebin_headers
@@ -1459,10 +1500,10 @@ class Aerosol2D(Aerosol1D):
                 and return the new instance.
 
         Returns:
-            Aerosol2D | None: The unnormalized object (self or a new copy)
-                when dtype contains "/dlogDp". If the data are already in
-                base form (no "/dlogDp" in dtype), the method returns None
-                and does not modify the object.
+            Aerosol2D: The unnormalized object (self when ``inplace=True``,
+                otherwise a new copy). If the dtype does not contain
+                ``"/dlogDp"`` the data are already in base form and the
+                object is returned unchanged (no modification is made).
 
         Raises:
             ValueError: If the number of PSD columns does not match the
@@ -1485,18 +1526,17 @@ class Aerosol2D(Aerosol1D):
 
         Examples:
             Convert a normalized PSD back to base units for further
-            processing:
+            processing (safe to call even if already in base form):
 
             .. code-block:: python
 
-                if "/dlogDp" in elpi.dtype:
-                    elpi.unnormalize_logdp()
+                elpi.unnormalize_logdp()
                 elpi.dtype_converter("dM")
         """
 
         # Only unnormalize if current dtype indicates */dlogDp form
         if "/dlogDp" not in str(self.dtype):
-            return
+            return self if inplace else self.copy_self()
 
         dlog_dp = self._dlogdp()
         bin_columns = self._sizebin_headers
@@ -1605,7 +1645,7 @@ class Aerosol2D(Aerosol1D):
         activities: Optional[list[str]] = None,
         normalize: bool = True,
         ax=None,
-        dtype: str = None
+        dtype: str | None = None,
     ):
         """Description:
             Plot mean particle size distributions for one or more activities.
@@ -1659,7 +1699,7 @@ class Aerosol2D(Aerosol1D):
                 elpi.plot_psd(activities=["Task A", "Task B"], normalize=True)
         """
 
-        clas = self if dtype is None else self.dtype_converter(dtype,False)
+        clas = self if dtype is None else self.dtype_converter(dtype, False)
 
         new_fig_created = False
         if ax is None:
@@ -1746,7 +1786,7 @@ class Aerosol2D(Aerosol1D):
 
     def plot_PM_timeseries(
         self,
-        PM_values=[0.5, 2.5, 10],
+        PM_values: list[float] | None = None,
         dtype: str = "dM",
         activity: str = "All data",
         fraction: bool = False,
@@ -1816,6 +1856,9 @@ class Aerosol2D(Aerosol1D):
                     fraction=False,
                 )
         """
+
+        if PM_values is None:
+            PM_values = [0.5, 2.5, 10]
 
         # Color palette for stacking PM bands
         colors = [
@@ -2006,7 +2049,7 @@ class Aerosol2D(Aerosol1D):
         ax1: Axes | None = None,
         ax2: Axes | None = None,
         mark_activities: bool | Sequence[str] = False,
-        dtype: str = None
+        dtype: str | None = None,
     ) -> tuple[Figure, NDArray[Any]]:
         """Description:
             Plot total concentration and a time–size heatmap in one figure.
@@ -2087,7 +2130,7 @@ class Aerosol2D(Aerosol1D):
                 fig.savefig("elpi_timeseries.png", dpi=150)
         """
 
-        clas = self if dtype is None else self.dtype_converter(dtype,False)
+        clas = self if dtype is None else self.dtype_converter(dtype, False)
 
         # Require both axes or neither when passing external axes
         if (ax1 is None) != (ax2 is None):
@@ -2275,8 +2318,8 @@ class Aerosol2D(Aerosol1D):
         # --- helper: duration in minutes per time step (shared helper) -------
         dt_mins = self._dt_minutes()
 
-        def _px_label(dchar: str, cutoff: float, lower_lim: float=0 ) -> str:
-            if lower_lim==0:
+        def _px_label(dchar: str, cutoff: float, lower_lim: float = 0) -> str:
+            if lower_lim == 0:
                 return f"P{dchar}{cutoff:g}"
             else:
                 return f"P{dchar}{lower_lim:g}-{cutoff:g}"
@@ -2301,28 +2344,52 @@ class Aerosol2D(Aerosol1D):
             parsed = self._parse_px_metric_scalar(name_upper)
             if parsed:
                 dchar, cutoff, lower_lim = parsed
-                pm_requests[dchar].add((cutoff,lower_lim))
+                pm_requests[dchar].add((cutoff, lower_lim))
 
         # --- prepare prerequisite data only if needed ------------------------
-        number_data = None
-        if want_pnc or want_any_size_metric:
-            number_data = self._convert_to_number_concentration(inplace=False)
-
-        mass_data = None
-        if want_mass:
-            mass_data = self._convert_to_mass_concentration(inplace=False)
-
-        # Precompute Pₓ series for requested dtypes and cutoffs on *one* prepped copy per dtype
+        # Extract the base array once and convert to target dtypes via numpy,
+        # avoiding expensive full-object deep copies.
         dtype_map = {"M": "dM", "N": "dN", "S": "dS", "V": "dV"}
-        px_extra: dict[str, pd.DataFrame] = {}
+        current_base = str(self.dtype).replace("/dlogDp", "")
+
+        number_df = None
+        mass_df = None
+        if want_pnc or want_any_size_metric or want_mass:
+            base_arr, _, _ = self._as_base_array()
+
+        if want_pnc or want_any_size_metric:
+            if current_base != "dN":
+                number_arr = self._convert_array(
+                    base_arr, self.bin_mids, current_base, "dN", self.density
+                )
+            else:
+                number_arr = base_arr
+            number_df = pd.DataFrame(
+                number_arr, index=self.time, columns=self._sizebin_headers
+            )
+
+        if want_mass:
+            if current_base != "dM":
+                mass_arr = self._convert_array(
+                    base_arr, self.bin_mids, current_base, "dM", self.density
+                )
+            else:
+                mass_arr = base_arr
+            mass_df = pd.DataFrame(
+                mass_arr, index=self.time, columns=self._sizebin_headers
+            )
+
+        # Precompute Pₓ series directly via _px_fraction_series (no copy_self needed)
+        px_extra: dict[str, dict[str, pd.Series]] = {}
         for dchar, cutoffs in pm_requests.items():
             if not cutoffs:
                 continue
-            px_obj = self.copy_self()
-
-            for pm in sorted(cutoffs):
-                px_obj.PM_calc(dtype=dtype_map[dchar], PM=pm[0], lower_lim=pm[1])
-            px_extra[dchar] = px_obj.extra_data.copy()
+            px_extra[dchar] = {}
+            for pm, lower_lim in sorted(cutoffs):
+                label = _px_label(dchar, pm, lower_lim)
+                px_extra[dchar][label] = self._px_fraction_series(
+                    dtype=dtype_map[dchar], upper=pm, lower=lower_lim
+                )
 
         # --- compute per-activity --------------------------------------------
         rows: list[list[float | str]] = []
@@ -2344,29 +2411,27 @@ class Aerosol2D(Aerosol1D):
             median_d = median_d_std = float("nan")
             gmd = gmd_std = float("nan")
 
-            # PNC (from number_data)
-            if want_pnc and number_data is not None:
-                num_df = number_data.size_data.loc[mask]
-                s = num_df.sum(axis=1)  # type: ignore[call-arg]
-                s = self._ensure_data_robustness(s)
+            # PNC (from number_df)
+            if want_pnc and number_df is not None:
+                num_act = number_df.loc[mask]
+                s = self._ensure_data_robustness(num_act.sum(axis=1))
                 pnc, pnc_std = float(s.mean()), float(s.std())
 
-            # Total mass (from mass_data)
-            if want_mass and mass_data is not None:
-                mass_df = mass_data.size_data.loc[mask]
-                s = mass_df.sum(axis=1)  # type: ignore[call-arg]
-                s = self._ensure_data_robustness(s)
+            # Total mass (from mass_df)
+            if want_mass and mass_df is not None:
+                mass_act = mass_df.loc[mask]
+                s = self._ensure_data_robustness(mass_act.sum(axis=1))
                 total_mass, total_mass_std = float(s.mean()), float(s.std())
 
             # Size metrics (mode/median/GMD) on number distribution
-            if want_any_size_metric and number_data is not None:
-                num_df = number_data.size_data.loc[mask]
+            if want_any_size_metric and number_df is not None:
+                num_act = number_df.loc[mask]
 
                 mode_list: list[float] = []
                 med_list: list[float] = []
                 gmd_list: list[float] = []
 
-                for _, row in num_df.iterrows():  # type: ignore
+                for _, row in num_act.iterrows():  # type: ignore
                     dist = row.to_numpy(dtype=float)  # type: ignore
                     tot = float(dist.sum())
                     if tot <= 0:
@@ -2409,15 +2474,15 @@ class Aerosol2D(Aerosol1D):
                 if not parsed:
                     continue
                 dchar, cutoff, lower_lim = parsed
-                df_px = px_extra.get(dchar)
-                if df_px is None:
+                dchar_dict = px_extra.get(dchar)
+                if dchar_dict is None:
                     raise ValueError(
                         f"Internal error: dtype '{dchar}' was not prepared."
                     )
                 label = _px_label(dchar, cutoff, lower_lim)
-                if label not in df_px.columns:
+                if label not in dchar_dict:
                     raise ValueError(f"Internal error: PX column '{label}' not found.")
-                ser = df_px.loc[mask, label]
+                ser = dchar_dict[label].loc[mask]
                 px_values[label] = (float(ser.mean()), float(ser.std()))
 
             # Assemble row
@@ -2456,7 +2521,7 @@ class Aerosol2D(Aerosol1D):
         for name, name_upper in zip(metrics, metrics_upper):
             parsed = self._parse_px_metric_scalar(name_upper)
             if parsed:
-                dchar, _ , _= parsed
+                dchar, _, _ = parsed
                 unit = unit_map_px[dchar]
                 label = f"{name} [{unit}]"
             elif name_upper == "PNC":
@@ -2479,9 +2544,9 @@ class Aerosol2D(Aerosol1D):
             fname = str(filename)
             lower = fname.lower()
             if sheet_name:
-                shname=str(sheet_name)
+                shname = str(sheet_name)
             else:
-                shname= f"{self.instrument} summary"
+                shname = f"{self.instrument} summary"
 
             if lower.endswith(".csv"):
                 if os.path.exists(fname):
@@ -2494,7 +2559,7 @@ class Aerosol2D(Aerosol1D):
                         filename,
                         engine="openpyxl",
                         mode="a",
-                        if_sheet_exists="replace"   # requires pandas ≥ 1.4
+                        if_sheet_exists="replace",  # requires pandas ≥ 1.4
                     ) as writer:
                         summary.to_excel(writer, sheet_name=shname, index=False)
                 else:
@@ -2503,13 +2568,7 @@ class Aerosol2D(Aerosol1D):
                 raise ValueError(
                     f"Unsupported file extension for '{filename}'. Use .csv or .xlsx."
                 )
-
-
-
-
-        if filename:
-            summary.to_excel(filename, index=False)
-            print(f"Summary saved to: {filename}")
+            print(f"\nActivity summary saved to: {filename}")
 
         summary_t = summary.set_index("Segment").T
         print("\nSummary of aerosol properties (transposed):\n")
@@ -2964,9 +3023,9 @@ class Aerosol2D(Aerosol1D):
             fname = str(filename)
             lower = fname.lower()
             if sheet_name:
-                shname=str(sheet_name)
+                shname = str(sheet_name)
             else:
-                shname= f"{metric} summary"
+                shname = f"{metric} summary"
 
             if lower.endswith(".csv"):
                 if os.path.exists(fname):
@@ -2979,7 +3038,7 @@ class Aerosol2D(Aerosol1D):
                         filename,
                         engine="openpyxl",
                         mode="a",
-                        if_sheet_exists="replace"   # requires pandas ≥ 1.4
+                        if_sheet_exists="replace",  # requires pandas ≥ 1.4
                     ) as writer:
                         result.to_excel(writer, sheet_name=shname, index=False)
                 else:
@@ -2988,6 +3047,7 @@ class Aerosol2D(Aerosol1D):
                 raise ValueError(
                     f"Unsupported file extension for '{filename}'. Use .csv or .xlsx."
                 )
+            print(f"\nExposure summary saved to: {filename}")
 
         # --- pretty terminal print (transposed) --------------------------------
         if not result.empty:
@@ -3009,3 +3069,6 @@ class Aerosol2D(Aerosol1D):
             )
 
         return result
+
+    # snake_case aliases for PEP 8 consistency
+    pm_calc = PM_calc

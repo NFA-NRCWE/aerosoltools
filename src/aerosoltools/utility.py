@@ -538,9 +538,7 @@ def _align_series(
         sx = _extract_series(X, parameter[0], start_time, end_time).rename("x")
         sy = _extract_series(Y, parameter[1], start_time, end_time).rename("y")
     else:
-        raise ValueError(
-            "Parameter not str or tuple."
-            )
+        raise ValueError("Parameter not str or tuple.")
     # If one side has no data at all in this window, fail early
     if sx.empty or sy.empty:
         raise ValueError(
@@ -663,7 +661,6 @@ def _r2(y_true: NDArray[np.float64], y_fit: NDArray[np.float64]) -> float:
 # =========================
 # Main plotting function
 # =========================
-
 
 
 def Plot_correlation(
@@ -851,7 +848,7 @@ def Plot_correlation(
     x_vals, y_vals = _align_series(
         X,
         Y,
-        (p_X,p_Y),
+        (p_X, p_Y),
         start_time,
         end_time,
         match=match,
@@ -927,7 +924,6 @@ def Plot_correlation(
         band = np.sqrt((SE_A * fit_x) ** 2 + (SE_B / factor) ** 2)
         ax.fill_between(fit_x, fit_y - band, fit_y + band, alpha=0.33)
 
-
     ax.set_xlabel(f"{X.instrument} : {p_X}", fontsize=15)
     ax.set_ylabel(f"{Y.instrument} : {p_Y}", fontsize=15)
     ax.legend(fontsize=15)
@@ -937,12 +933,13 @@ def Plot_correlation(
 
 ###############################################################################
 
+
 def bland_altman_analysis(
     X,
     Y,
     ax_in: Axes | None = None,
-    method: str = 'BA',
-    C : float  = 0.95,
+    method: str = "BA",
+    C: float = 0.95,
     *,
     start_time: pd.Timestamp | str | None = None,
     end_time: pd.Timestamp | str | None = None,
@@ -950,8 +947,8 @@ def bland_altman_analysis(
     match: str = "exact",  # "exact" | "nearest" | "rebin",C=0.95):
     tolerance: str | pd.Timedelta = "30s",
     rebin_freq: str | None = None,
-    rebin_method: str | Callable = "mean"
-        ):
+    rebin_method: str | Callable = "mean",
+):
     """
     Plot Bland-Altman (difference plot) to highlight difference between two groups
     of data.
@@ -1083,11 +1080,11 @@ def bland_altman_analysis(
         p_X = parameter[0]
         p_Y = parameter[1]
 
-    #Allign time
+    # Allign time
     x_vals, y_vals = _align_series(
         X,
         Y,
-        (p_X,p_Y),
+        (p_X, p_Y),
         start_time,
         end_time,
         match=match,
@@ -1103,11 +1100,11 @@ def bland_altman_analysis(
     diffs = x - y
 
     # Average difference (aka the bias)
-    bias = np.median(diffs) #!!!
-    if method=='Gi':
+    bias = np.median(diffs)  #!!!
+    if method == "Gi":
         diffs = diffs / means * 100
-        bias = np.median(diffs) #!!!
-    elif method=='Eu':
+        bias = np.median(diffs)  #!!!
+    elif method == "Eu":
         x_log = np.log10(x)
         y_log = np.log10(y)
         # means = (x + y) / 2
@@ -1116,20 +1113,22 @@ def bland_altman_analysis(
     # Sample standard deviation
     s = np.std(diffs, ddof=1)  # Use ddof=1 to get the sample standard deviation
     loas = norm.interval(C, bias, s)
-    if method=='Eu':
+    if method == "Eu":
         diffs = x - y
 
     # Dict
-    Diff = {'BA':f'Difference ({X.unit})',
-            'Gi':'Difference (%)',
-            'Eu':f'Difference ({X.unit})'}  #'Log10 of difference'}
+    Diff = {
+        "BA": f"Difference ({X.unit})",
+        "Gi": "Difference (%)",
+        "Eu": f"Difference ({X.unit})",
+    }  #'Log10 of difference'}
 
     # --- Plot ----------------------------------------------------------------
-    ax.scatter(means, diffs, c='k', s=20, alpha=0.6, marker='o')
+    ax.scatter(means, diffs, c="k", s=20, alpha=0.6, marker="o")
 
     # Labels
-    ax.set_title(f'Bland-Altman Plot for {p_X} vz {p_Y}')
-    ax.set_xlabel(f'Mean ({X.unit})')
+    ax.set_title(f"Bland-Altman Plot for {p_X} vz {p_Y}")
+    ax.set_xlabel(f"Mean ({X.unit})")
     ax.set_ylabel(Diff[method])
     # Get axis limits
     left, right = ax.get_xlim()
@@ -1141,43 +1140,88 @@ def bland_altman_analysis(
     domain = right - left
     ax.set_xlim(left, left + domain * 1.1)
     # Plot the zero line
-    ax.axhline(y=0, c='k', lw=0.5)
+    ax.axhline(y=0, c="k", lw=0.5)
     # Plot the bias and the limits of agreement
-    fs=15
-    ax.axhline(y=bias, c='grey', ls='--')
-    ax.annotate('Bias', (right, bias), (0, 7), textcoords='offset pixels',fontsize=fs)
-    ax.annotate(f'{bias:+4.2f}', (right, bias), (0, -12), textcoords='offset pixels',fontsize=fs)
+    fs = 15
+    ax.axhline(y=bias, c="grey", ls="--")
+    ax.annotate("Bias", (right, bias), (0, 7), textcoords="offset pixels", fontsize=fs)
+    ax.annotate(
+        f"{bias:+4.2f}",
+        (right, bias),
+        (0, -12),
+        textcoords="offset pixels",
+        fontsize=fs,
+    )
 
     # --- Plot the limits of the agreement--------------------------------------
-    if method=='Eu':
+    if method == "Eu":
         # Convert the LOAs from horizontal lines in the log space to gradients of
         # diagonal lines in the native space
-        lower_loa_m = 2 * (10**(loas[0]-bias) - 1) / (10**(loas[0]-bias) + 1)
-        upper_loa_m = 2 * (10**(loas[1]-bias) - 1) / (10**(loas[1]-bias) + 1)
+        lower_loa_m = 2 * (10 ** (loas[0] - bias) - 1) / (10 ** (loas[0] - bias) + 1)
+        upper_loa_m = 2 * (10 ** (loas[1] - bias) - 1) / (10 ** (loas[1] - bias) + 1)
         # Plot the limits of agreement
         x = np.array([left, right])
         y = upper_loa_m * x + bias
-        ax.plot(x, y, c='grey', ls='--')
-        ax.annotate('Upper LOA', (right, y[1]), (0,6), textcoords='offset pixels',fontsize=fs)
-        ax.annotate(f'{upper_loa_m:+4.2f} × Mean + Bias', (right, y[1]), (0, -15),
-                    textcoords='offset pixels' ,fontsize=fs)
+        ax.plot(x, y, c="grey", ls="--")
+        ax.annotate(
+            "Upper LOA", (right, y[1]), (0, 6), textcoords="offset pixels", fontsize=fs
+        )
+        ax.annotate(
+            f"{upper_loa_m:+4.2f} × Mean + Bias",
+            (right, y[1]),
+            (0, -15),
+            textcoords="offset pixels",
+            fontsize=fs,
+        )
         y = lower_loa_m * x + bias
-        ax.plot(x, y, c='grey', ls='--')
-        ax.annotate('Lower LOA', (right, y[1]), (0, 6), textcoords='offset pixels',fontsize=fs)
-        ax.annotate(f'{lower_loa_m:+4.2f} × Mean + Bias', (right, y[1]), (0, -15),
-                    textcoords='offset pixels',fontsize=fs)
+        ax.plot(x, y, c="grey", ls="--")
+        ax.annotate(
+            "Lower LOA", (right, y[1]), (0, 6), textcoords="offset pixels", fontsize=fs
+        )
+        ax.annotate(
+            f"{lower_loa_m:+4.2f} × Mean + Bias",
+            (right, y[1]),
+            (0, -15),
+            textcoords="offset pixels",
+            fontsize=fs,
+        )
         return fig, ax, loas
     else:
-        ax.axhline(y=loas[1], c='grey', ls='--')
-        ax.axhline(y=loas[0], c='grey', ls='--')
+        ax.axhline(y=loas[1], c="grey", ls="--")
+        ax.axhline(y=loas[0], c="grey", ls="--")
         # Annotations
-        ax.annotate('Upper LOA', (right, loas[1]), (0, 6), textcoords='offset pixels',fontsize=fs)
-        ax.annotate(f'{loas[1]:+4.2f}', (right, loas[1]), (0, -15), textcoords='offset pixels',fontsize=fs)
-        ax.annotate('Lower LOA', (right, loas[0]), (0, 6), textcoords='offset pixels',fontsize=fs)
-        ax.annotate(f'{loas[0]:+4.2f}', (right, loas[0]), (0, -15), textcoords='offset pixels',fontsize=fs)
+        ax.annotate(
+            "Upper LOA",
+            (right, loas[1]),
+            (0, 6),
+            textcoords="offset pixels",
+            fontsize=fs,
+        )
+        ax.annotate(
+            f"{loas[1]:+4.2f}",
+            (right, loas[1]),
+            (0, -15),
+            textcoords="offset pixels",
+            fontsize=fs,
+        )
+        ax.annotate(
+            "Lower LOA",
+            (right, loas[0]),
+            (0, 6),
+            textcoords="offset pixels",
+            fontsize=fs,
+        )
+        ax.annotate(
+            f"{loas[0]:+4.2f}",
+            (right, loas[0]),
+            (0, -15),
+            textcoords="offset pixels",
+            fontsize=fs,
+        )
 
-    print(f'For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}')
+    print(f"For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}")
 
     return fig, ax
+
 
 ###############################################################################

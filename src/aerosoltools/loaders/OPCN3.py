@@ -575,8 +575,13 @@ def _Load_OPCN3_file_PM_old(
         "instrument": "OPCN",
         "density": 1.65,
         "serial_number": "unknown",
-        "unit": {"Total_conc": "cm⁻³", "PM1": "ug/m³","PM2.5": "ug/m³","PM10": "ug/m³"},
-        "dtype": {"Total_conc": "dN", "PM1": "dM","PM2.5": "dM","PM10": "dM"},
+        "unit": {
+            "Total_conc": "cm⁻³",
+            "PM1": "ug/m³",
+            "PM2.5": "ug/m³",
+            "PM10": "ug/m³",
+        },
+        "dtype": {"Total_conc": "dN", "PM1": "dM", "PM2.5": "dM", "PM10": "dM"},
     }
 
     if extra_data:
@@ -697,8 +702,13 @@ def _Load_OPCN3_file_PM_new(
         "instrument": "OPCN",
         "density": 1.65,
         "serial_number": "unknown",
-        "unit": {"Total_conc": "cm⁻³", "PM1": "ug/m³","PM2.5": "ug/m³","PM10": "ug/m³"},
-        "dtype": {"Total_conc": "dN", "PM1": "dM","PM2.5": "dM","PM10": "dM"},
+        "unit": {
+            "Total_conc": "cm⁻³",
+            "PM1": "ug/m³",
+            "PM2.5": "ug/m³",
+            "PM10": "ug/m³",
+        },
+        "dtype": {"Total_conc": "dN", "PM1": "dM", "PM2.5": "dM", "PM10": "dM"},
     }
 
     if extra_data:

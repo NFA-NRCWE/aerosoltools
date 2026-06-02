@@ -1,0 +1,74 @@
+"""Qt table model for displaying pandas DataFrames in the GUI."""
+
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+
+from .qt import QtCore
+
+
+class PandasTableModel(QtCore.QAbstractTableModel):
+    """A read-only :class:`QAbstractTableModel` backed by a pandas DataFrame.
+
+    Cells are rendered lazily, so even large frames remain responsive because
+    only the visible viewport is formatted at any time.
+    """
+
+    def __init__(self, df: pd.DataFrame | None = None, float_format: str = "{:.4g}"):
+        super().__init__()
+        self._df = df if df is not None else pd.DataFrame()
+        self._float_format = float_format
+
+    # -- data management ---------------------------------------------------
+    def set_dataframe(self, df: pd.DataFrame) -> None:
+        """Replace the underlying DataFrame and refresh the view."""
+        self.beginResetModel()
+        self._df = df if df is not None else pd.DataFrame()
+        self.endResetModel()
+
+    @property
+    def dataframe(self) -> pd.DataFrame:
+        return self._df
+
+    # -- Qt model interface ------------------------------------------------
+    def rowCount(self, parent=QtCore.QModelIndex()) -> int:  # noqa: N802
+        return 0 if parent.isValid() else len(self._df.index)
+
+    def columnCount(self, parent=QtCore.QModelIndex()) -> int:  # noqa: N802
+        return 0 if parent.isValid() else len(self._df.columns)
+
+    def data(self, index, role=QtCore.Qt.DisplayRole):  # noqa: N802
+        if not index.isValid():
+            return None
+        if role in (QtCore.Qt.DisplayRole, QtCore.Qt.ToolTipRole):
+            value = self._df.iat[index.row(), index.column()]
+            return self._format(value)
+        if role == QtCore.Qt.TextAlignmentRole:
+            return int(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        return None
+
+    def headerData(
+        self, section, orientation, role=QtCore.Qt.DisplayRole
+    ):  # noqa: N802
+        if role != QtCore.Qt.DisplayRole:
+            return None
+        if orientation == QtCore.Qt.Horizontal:
+            return str(self._df.columns[section])
+        # Show timestamps (or whatever the index is) on the row header.
+        label = self._df.index[section]
+        if isinstance(label, pd.Timestamp):
+            return label.strftime("%Y-%m-%d %H:%M:%S")
+        return str(label)
+
+    # -- helpers -----------------------------------------------------------
+    def _format(self, value) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, (float, np.floating)):
+            if np.isnan(value):
+                return ""
+            return self._float_format.format(value)
+        if isinstance(value, pd.Timestamp):
+            return value.strftime("%Y-%m-%d %H:%M:%S")
+        return str(value)

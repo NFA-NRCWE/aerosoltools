@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import datetime as dt
-import os as os
+import os
 from typing import (
     Any,
     Callable,
@@ -234,7 +234,7 @@ class Aerosol1D:
             ``"Total_conc"`` exists in :attr:`data`, that column is
             returned; otherwise the first data column is used as a fallback.
         """
-        if "Total Concentration" in self._data.columns:
+        if "Total_conc" in self._data.columns:
             return self._data["Total_conc"]
         else:
             return self._data.iloc[:, 0]
@@ -342,7 +342,7 @@ class Aerosol1D:
     """############################# Functions #############################"""
     ###########################################################################
 
-    def calibrate(self,m: float=1,b: float=0):
+    def calibrate(self, m: float = 1, b: float = 0):
         """
         Apply a correction to the total conc and mark the data as calibrated
         by a linear function
@@ -360,9 +360,9 @@ class Aerosol1D:
         None
 
         """
-        self._data['Total_conc']=self._data['Total_conc']*m + b
+        self._data["Total_conc"] = self._data["Total_conc"] * m + b
 
-        self._meta['calibrated']={'m' : m, 'b' : b}
+        self._meta["calibrated"] = {"m": m, "b": b}
 
     ###########################################################################
 
@@ -928,9 +928,9 @@ class Aerosol1D:
             fname = str(filename)
             lower = fname.lower()
             if sheet_name:
-                shname=str(sheet_name)
+                shname = str(sheet_name)
             else:
-                shname= f"{self.instrument} summary"
+                shname = f"{self.instrument} summary"
 
             if lower.endswith(".csv"):
                 if os.path.exists(fname):
@@ -943,7 +943,7 @@ class Aerosol1D:
                         filename,
                         engine="openpyxl",
                         mode="a",
-                        if_sheet_exists="replace"   # requires pandas ≥ 1.4
+                        if_sheet_exists="replace",  # requires pandas ≥ 1.4
                     ) as writer:
                         summary.to_excel(writer, sheet_name=shname, index=False)
                 else:
@@ -1569,8 +1569,12 @@ class Aerosol1D:
                 data.plot_total_conc()
         """
 
-        # Select numeric and boolean columns
-        numeric_cols = list(self._data.select_dtypes(exclude="bool").columns)
+        # Select numeric and boolean columns. Use ``include="number"`` (not
+        # ``exclude="bool"``) so that text/object columns — e.g. status or
+        # comment channels in some instruments' extra data — are not fed to a
+        # numeric aggregation, which would raise. Such columns are dropped on
+        # resampling, as they cannot be meaningfully aggregated over time.
+        numeric_cols = list(self._data.select_dtypes(include="number").columns)
         bool_cols = list(self._data.select_dtypes(include="bool").columns)
 
         # Resample main data
@@ -1601,7 +1605,7 @@ class Aerosol1D:
         # Resample extra data (if any)
         rebinned_extra = pd.DataFrame(index=time_index)
         if len(self._extra_data) > 0:
-            num_extra = list(self._extra_data.select_dtypes(exclude="bool").columns)
+            num_extra = list(self._extra_data.select_dtypes(include="number").columns)
             bool_extra = list(self._extra_data.select_dtypes(include="bool").columns)
 
             r_num = (
@@ -1780,3 +1784,6 @@ class Aerosol1D:
             new_obj = self.copy_self()
             new_obj._data = smoothed
             return new_obj
+
+    # snake_case aliases for PEP 8 consistency
+    peak_finder = Peak_finder

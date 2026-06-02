@@ -9,6 +9,39 @@ workspace.json
 .github/workflows/publish-to-pypi.yml
 dist/aerosoltools-0.1.0-py3-none-any.whl
 dist/aerosoltools-0.1.0.tar.gz
+docs/conf.py
+docs/index.md
+docs/api/aerosoltools/index.rst
+docs/api/aerosoltools/aerosol1d/index.rst
+docs/api/aerosoltools/aerosol2d/index.rst
+docs/api/aerosoltools/aerosolalt/index.rst
+docs/api/aerosoltools/loaders/index.rst
+docs/api/aerosoltools/loaders/Aethalometer/index.rst
+docs/api/aerosoltools/loaders/CPC/index.rst
+docs/api/aerosoltools/loaders/Common/index.rst
+docs/api/aerosoltools/loaders/Discmini/index.rst
+docs/api/aerosoltools/loaders/DustTrak/index.rst
+docs/api/aerosoltools/loaders/ELPI/index.rst
+docs/api/aerosoltools/loaders/FMPS/index.rst
+docs/api/aerosoltools/loaders/Fourtec/index.rst
+docs/api/aerosoltools/loaders/Grimm/index.rst
+docs/api/aerosoltools/loaders/NS/index.rst
+docs/api/aerosoltools/loaders/OPCN3/index.rst
+docs/api/aerosoltools/loaders/OPS/index.rst
+docs/api/aerosoltools/loaders/Partector/index.rst
+docs/api/aerosoltools/loaders/SMPS/index.rst
+docs/api/aerosoltools/utility/index.rst
+docs/examples/1 - Load, plot, and metadata storage.ipynb
+docs/examples/2 - Time adjustments.ipynb
+docs/examples/3 - Defining time segments and plotting PSD.ipynb
+docs/examples/4 - Activities, peaks, and exposure statistics.ipynb
+docs/examples/5 - Dtypes, PM plots and exposure.ipynb
+docs/examples/6 - Combine NS+OPS and extra_data.ipynb
+docs/examples/7 - Correlation between instruments.ipynb
+docs/examples/index.md
+docs/examples/.ipynb_checkpoints/Defining time segments, getting statistics, and plotting PSD-checkpoint.ipynb
+docs/examples/.ipynb_checkpoints/Load multiple files and time adjustments-checkpoint.ipynb
+docs/examples/.ipynb_checkpoints/plot_elpi-checkpoint.ipynb
 src/aerosoltools/__init__.py
 src/aerosoltools/aerosol1d.py
 src/aerosoltools/aerosol2d.py
@@ -17,22 +50,40 @@ src/aerosoltools/utility.py
 src/aerosoltools.egg-info/PKG-INFO
 src/aerosoltools.egg-info/SOURCES.txt
 src/aerosoltools.egg-info/dependency_links.txt
+src/aerosoltools.egg-info/entry_points.txt
 src/aerosoltools.egg-info/requires.txt
 src/aerosoltools.egg-info/top_level.txt
 src/aerosoltools/__pycache__/__init__.cpython-311.pyc
 src/aerosoltools/__pycache__/__init__.cpython-312.pyc
+src/aerosoltools/__pycache__/__init__.cpython-313.pyc
 src/aerosoltools/__pycache__/__init__.cpython-39.pyc
 src/aerosoltools/__pycache__/aerosol1d.cpython-311.pyc
 src/aerosoltools/__pycache__/aerosol1d.cpython-312.pyc
+src/aerosoltools/__pycache__/aerosol1d.cpython-313.pyc
 src/aerosoltools/__pycache__/aerosol1d.cpython-39.pyc
 src/aerosoltools/__pycache__/aerosol2d.cpython-311.pyc
 src/aerosoltools/__pycache__/aerosol2d.cpython-312.pyc
+src/aerosoltools/__pycache__/aerosol2d.cpython-313.pyc
 src/aerosoltools/__pycache__/aerosol2d.cpython-39.pyc
 src/aerosoltools/__pycache__/aerosolalt.cpython-311.pyc
 src/aerosoltools/__pycache__/aerosolalt.cpython-312.pyc
+src/aerosoltools/__pycache__/aerosolalt.cpython-313.pyc
 src/aerosoltools/__pycache__/aerosolalt.cpython-39.pyc
 src/aerosoltools/__pycache__/utility.cpython-311.pyc
 src/aerosoltools/__pycache__/utility.cpython-312.pyc
+src/aerosoltools/__pycache__/utility.cpython-313.pyc
+src/aerosoltools/gui/__init__.py
+src/aerosoltools/gui/__main__.py
+src/aerosoltools/gui/aerosoltools.ico
+src/aerosoltools/gui/assets.py
+src/aerosoltools/gui/helpers.py
+src/aerosoltools/gui/loaders.py
+src/aerosoltools/gui/main_window.py
+src/aerosoltools/gui/models.py
+src/aerosoltools/gui/qt.py
+src/aerosoltools/gui/shortcut.py
+src/aerosoltools/gui/tabs.py
+src/aerosoltools/gui/theme.py
 src/aerosoltools/loaders/Aethalometer.py
 src/aerosoltools/loaders/CPC.py
 src/aerosoltools/loaders/Common.py
@@ -50,57 +101,81 @@ src/aerosoltools/loaders/SMPS.py
 src/aerosoltools/loaders/__init__.py
 src/aerosoltools/loaders/__pycache__/Aethalometer.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/Aethalometer.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/Aethalometer.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/Aethalometer.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/CPC.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/CPC.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/CPC.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/CPC.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/Common.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/Common.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/Common.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/Common.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/Discmini.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/Discmini.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/Discmini.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/Discmini.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/DustTrak.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/DustTrak.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/DustTrak.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/ELPI.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/ELPI.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/ELPI.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/ELPI.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/FMPS.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/FMPS.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/FMPS.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/FMPS.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/Fourtec.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/Fourtec.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/Fourtec.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/Fourtec.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/Grimm.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/Grimm.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/Grimm.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/Grimm.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/NS.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/NS.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/NS.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/NS.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/OPCN3.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/OPCN3.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/OPCN3.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/OPCN3.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/OPS.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/OPS.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/OPS.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/OPS.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/Partector.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/Partector.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/Partector.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/Partector.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/SMPS.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/SMPS.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/SMPS.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/SMPS.cpython-39.pyc
 src/aerosoltools/loaders/__pycache__/__init__.cpython-311.pyc
 src/aerosoltools/loaders/__pycache__/__init__.cpython-312.pyc
+src/aerosoltools/loaders/__pycache__/__init__.cpython-313.pyc
 src/aerosoltools/loaders/__pycache__/__init__.cpython-39.pyc
 tests/test_all_loaders.py
 tests/test_analysis_flow.py
 tests/__pycache__/test_all_loaders.cpython-312-pytest-8.3.4.pyc
 tests/__pycache__/test_all_loaders.cpython-312-pytest-8.4.1.pyc
+tests/__pycache__/test_all_loaders.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_all_loaders.cpython-39-pytest-8.3.5.pyc
 tests/__pycache__/test_analysis_flow.cpython-312-pytest-8.3.4.pyc
 tests/__pycache__/test_analysis_flow.cpython-312-pytest-8.4.1.pyc
+tests/__pycache__/test_analysis_flow.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_analysis_flow.cpython-39-pytest-8.3.5.pyc
+tests/data/Combine_example_NS.csv
+tests/data/Combine_example_OPS - file 1.csv
+tests/data/Combine_example_OPS - file 2.csv
+tests/data/Combine_example_OPS - file 3.csv
+tests/data/Combine_example_OPS - file 4.csv
+tests/data/Correlation_example_NS2.csv
 tests/data/Sample_Aetholometer.csv
+tests/data/Sample_CPC_AIM.txt
 tests/data/Sample_CPC_Direct.txt
 tests/data/Sample_Discmini.txt
 tests/data/Sample_ELPI.txt

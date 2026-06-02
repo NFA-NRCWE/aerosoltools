@@ -194,7 +194,6 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
     except (IndexError, ValueError, KeyError):
         datetime_df = _parse_standard_datetime(file, delimiter, encoding, time_format)
 
-
     # Extract metadata from header (data type string and serial number)
     with open(file, "r", encoding=encoding, newline="") as fh:
         for _ in range(12):
@@ -335,8 +334,8 @@ def _parse_danish_datetime(
 
 
 def _parse_standard_datetime(
-        file: str, delimiter: str, encoding: str , time_format: str
-                             ) -> pd.DataFrame:
+    file: str, delimiter: str, encoding: str, time_format: str
+) -> pd.DataFrame:
     """Parse FMPS datetimes written in standard English format.
 
     This helper reads month/day/year and time-of-day information from the

@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: aerosoltools
-Version: 0.1.7.post1.dev18
+Version: 0.2.1.post1.dev13
 Summary: Tools for loading and analyzing aerosol instrument data
 Author: NRCWE community
 Project-URL: Documentation, https://nfa-nrcwe.github.io/aerosoltools/
@@ -22,6 +22,8 @@ Provides-Extra: dev
 Requires-Dist: pytest; extra == "dev"
 Requires-Dist: ruff; extra == "dev"
 Requires-Dist: black; extra == "dev"
+Provides-Extra: gui
+Requires-Dist: PyQt5>=5.15; extra == "gui"
 Provides-Extra: docs
 Requires-Dist: sphinx>=7.3; extra == "docs"
 Requires-Dist: furo>=2024.8.6; extra == "docs"
@@ -62,7 +64,7 @@ For full documentation and usage examples, see:
 
 | Instrument    | Function                   | Company                   |
 | ------------- | -------------------------- | ------------------------- |
-| Aethalometer  | `Load_Aethalometer_file()` | **Magee Scientific**      |
+| Aethalometer  | `Load_Aethalometer_file()` | **Aethlabs**      |
 | CPC           | `Load_CPC_file()`          | **TSI Inc.**              |
 | DiSCmini      | `Load_DiSCmini_file()`     | **Testo**                 |
 | DustTrak      | `Load_DustTrak_file()`     | **TSI Inc.**              |
