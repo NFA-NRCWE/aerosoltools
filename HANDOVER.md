@@ -51,7 +51,7 @@ Requires `PyQt5` (extra: `pip install aerosoltools[gui]`).
 | `main_window.py` | `MainWindow`: menu bar, top bar card, datasets dock, tabs, status bar; loading, active-dataset switching, theme switching, project save/load, derived-dataset ops. Delegates data adjustments to `AdjustmentsBox`. |
 | `adjustments.py` | **`AdjustmentsBox(QGroupBox)`** — the "Data adjustments" controls (crop / resample / smooth / **time-shift**) + handlers. Owned by `MainWindow`, embedded in the Time series tab. Public API: `set_enabled(bool)`, `sync_crop_fields()`. |
 | `widgets.py` | Small presentation-only helpers: `SlackTabBar` (tab-label sizing), `CombineNSOPSDialog` (NS+OPS picker). |
-| `tabs/` | **Package**, one module per tab (re-exported from `tabs/__init__.py`). `_base.py` = `_PlotTab` base + `_export_table`/`_tune_table`/`_active_color_cycle`. Single-view: `raw`, `summary`, `timeseries` (+`ActivityEditorDialog`), `psd`, `heatmap`, `pmbands`. Comparison: `overlay`, `combined_psd`, `cross_summary`, `correlation`. |
+| `tabs/` | **Package**, one module per tab (re-exported from `tabs/__init__.py`). `_base.py` = `_PlotTab` base + `_export_table`/`_tune_table`/`_active_color_cycle`. `raw`, `timeseries` (+`ActivityEditorDialog`), `heatmap`, `pmbands` (single-view, follow the active dataset). `psd` (`PSDTab`), `summary` (`SummaryTab`), `overlay`, `correlation` read the **whole project** (work for one *or* many datasets). |
 | `theme.py` | **Light & dark** themes: palettes, one QSS `string.Template`, `apply_qt_theme(app, mode)`, `apply_mpl_theme(mode)`, runtime accessors (`is_dark()`, `mpl_cycle()`, `fig_facecolor()`…), and the light **`export_rc()`** used for saved figures. |
 | `models.py` | `PandasTableModel` for table views. |
 | `loaders.py` | Instrument → loader registry + filename guesser. |
@@ -242,8 +242,9 @@ with the user's sign-off and a full `pytest` + downstream-import check.
   over the same two helpers. Each file's instrument is guessed individually.
 - **Menu bar:** File → **Import data…** (Ctrl+O) does the multi-file import.
   Shortcuts: New Ctrl+N, Open project Ctrl+Shift+O, Save Ctrl+S, Save as
-  Ctrl+Shift+S, Exit Ctrl+Q, View → Toggle theme Ctrl+T, Datasets panel Ctrl+D,
-  Help → **Keyboard shortcuts** F1. All shortcut-bearing items are created via
+  Ctrl+Shift+S, Exit Ctrl+Q, Datasets panel Ctrl+D, Help → **Keyboard shortcuts**
+  F1. (Theme is set from the View → Theme submenu only.) All shortcut-bearing
+  items are created via
   `MainWindow._menu_action(menu, label, handler, shortcut, tip)`, which records
   `(keys, label)` in `self._shortcut_help` — the single source the
   `KeyboardShortcutsDialog` (in `widgets.py`) renders. `setToolTipsVisible(True)`
@@ -256,6 +257,37 @@ with the user's sign-off and a full `pytest` + downstream-import check.
   statement, insert a docstring at its indent). Whole GUI is `ruff`- and
   `black`-clean (line-length 88) and `pytest` stays green (18).
 
+### Bug-fix round (2026-06-21)
+1. **Overlay view no longer resets on shift.** `OverlayTab._draw(preserve=False)`;
+   `_on_shift`/`_on_item_changed` pass `preserve=True` (capture+restore
+   xlim/ylim around the redraw). Log/normalize toggles still reset (wrapped in
+   `lambda: self._draw()` so the signal's int isn't read as `preserve`). Also
+   fixed a latent refactor bug here: `_apply_shifts` called the removed
+   `main._sync_crop_fields()` → now `main.adjust_box.sync_crop_fields()`.
+2/3. **PSD and Summary tabs merged.** The single-view `PSDTab`/`SummaryTab` were
+   deleted; the former `CombinedPSDTab`/`CrossSummaryTab` were **renamed**
+   `PSDTab`/`SummaryTab` and their files moved to `tabs/psd.py` / `tabs/summary.py`.
+   They already handle a single dataset, so one instrument behaves like the old
+   tabs. Labels are now just "PSD"/"Summary".
+4. **Time series / Overlay / 2D heatmap / PM bands stay separate** (unchanged) —
+   heatmap + PM bands remain single-view (built only for a 2D active dataset).
+5. **One theme control.** Removed the standalone "Toggle theme" (Ctrl+T) action +
+   `_toggle_theme`; the View → Theme submenu (which shows the active mode) is the
+   single control.
+6. **Bland–Altman markers legible on dark.** The core draws the scatter `c="k"`
+   and a black zero line. `CorrelationTab._brighten_for_dark(ax)` recolours
+   near-black artists (scatter → accent, ref lines → light grey) on the **screen
+   path only** (exports stay light). While here, the BA draw is wrapped in
+   `redirect_stdout` — the core ends with `print("… µ …")`, which crashed on a
+   non-UTF-8 console (same class as the summarize fix).
+7. **Combined datasets keep their raw files.** `Dataset.contributing_files` lists
+   the raw files behind a dataset (its own file, or the union of a combine's
+   constituents — set by `_add_derived_dataset(..., source_files=…)`, fed by
+   `_join_same_instrument`/`_combine_ns_ops`). `save_project` copies **every**
+   unique contributing file into `raw_data/` (de-duped) and records per-dataset
+   `"contributing"` rels in the manifest; `load_project` repoints them into the
+   folder. So a join (which drops the originals) still archives them.
+
 ### How to add a comparison tab (the pattern used by steps 5–8)
 - Comparison tabs read a **set** of datasets, not the active one. Give them a
   multi-select of `project.datasets` (checkbox list) and a Compute/Refresh.
@@ -267,6 +299,12 @@ with the user's sign-off and a full `pytest` + downstream-import check.
   (see `PSDTab._brighten_for_dark`), never in `_render_export`.
 
 ## 5. Gotchas / conventions
+- **Resizable side panels:** a tab's right-hand panel goes in a `QSplitter`, not
+  a fixed-width column. `_PlotTab._split_with_side(side_widget, sizes=(…))` pulls
+  the controls/toolbar/canvas into a left pane and adds a draggable divider; it
+  leaves `self._left_col` pointing at the left pane's layout (Time series inserts
+  the adjust box there). `SummaryTab` (a plain `QWidget`) builds its own splitter.
+  Don't put `setMaximumWidth` on side panels — it re-freezes the width.
 - **Detach `self.adjust_box`** (`setParent(None)`) before `tabs.clear()`
   anywhere you tear tabs down (see `_build_tabs`, `_remove_dataset`,
   `_new_project`, `_apply_loaded_project`).

@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
+
+import matplotlib.colors as mcolors
+
 from ...utility import Plot_correlation, bland_altman_analysis
+from .. import theme
 from ..qt import QtWidgets
 from ._base import _PlotTab
 
@@ -137,20 +143,9 @@ class CorrelationTab(_PlotTab):
         side.addStretch(1)
         side_w = QtWidgets.QWidget()
         side_w.setLayout(side)
-        side_w.setMaximumWidth(300)
 
-        # Left column (controls + toolbar + plot) and a side panel.
-        self._left_col = QtWidgets.QVBoxLayout()
-        self._layout.removeItem(self.controls)
-        self._layout.removeWidget(self.toolbar)
-        self._layout.removeWidget(self.canvas)
-        self._left_col.addLayout(self.controls)
-        self._left_col.addWidget(self.toolbar)
-        self._left_col.addWidget(self.canvas, stretch=1)
-        body = QtWidgets.QHBoxLayout()
-        body.addLayout(self._left_col, stretch=1)
-        body.addWidget(side_w)
-        self._layout.addLayout(body, stretch=1)
+        # Plot on the left of a resizable divider, side panel on the right.
+        self._split_with_side(side_w)
 
         self.ax = self.figure.add_subplot(111)
         self._has_drawn = False
@@ -278,25 +273,29 @@ class CorrelationTab(_PlotTab):
             kwargs["rebin_freq"] = self.rebin_freq.text().strip() or None
             kwargs["rebin_method"] = self.rebin_method.currentText()
 
-        if self.analysis.currentText() == "Correlation":
-            Plot_correlation(
-                xds.obj,
-                yds.obj,
-                ax_in=ax,
-                intercept=self.intercept.isChecked(),
-                uniform_scaling=self.uniform.isChecked(),
-                outlier_influence=not self.robust.isChecked(),
-                **kwargs,
-            )
-        else:
-            bland_altman_analysis(
-                xds.obj,
-                yds.obj,
-                ax_in=ax,
-                method=self.ba_method.currentData(),
-                C=float(self.ba_conf.value()),
-                **kwargs,
-            )
+        # The core draws here but also prints a summary line containing a "µ"
+        # glyph, which crashes on a non-UTF-8 console — swallow that stdout (the
+        # plot is the output the GUI shows), as the summary tabs do.
+        with contextlib.redirect_stdout(io.StringIO()):
+            if self.analysis.currentText() == "Correlation":
+                Plot_correlation(
+                    xds.obj,
+                    yds.obj,
+                    ax_in=ax,
+                    intercept=self.intercept.isChecked(),
+                    uniform_scaling=self.uniform.isChecked(),
+                    outlier_influence=not self.robust.isChecked(),
+                    **kwargs,
+                )
+            else:
+                bland_altman_analysis(
+                    xds.obj,
+                    yds.obj,
+                    ax_in=ax,
+                    method=self.ba_method.currentData(),
+                    C=float(self.ba_conf.value()),
+                    **kwargs,
+                )
 
     def _draw(self) -> None:
         """Compute and draw onto the embedded axis, reporting errors inline."""
@@ -304,11 +303,40 @@ class CorrelationTab(_PlotTab):
             self.figure.clear()
             ax = self.figure.add_subplot(111)
             self._draw_on(ax)
+            # The core draws the scatter / reference lines in black, which is
+            # invisible on the dark theme. Brighten them on the screen only;
+            # exports stay light (so black is fine there).
+            if theme.is_dark():
+                self._brighten_for_dark(ax)
             self.ax = ax
             self._has_drawn = True
             self.canvas.draw_idle()
         except Exception as exc:
             self._show_message(f"Could not compute: {exc}")
+
+    @staticmethod
+    def _brighten_for_dark(ax) -> None:
+        """Recolour near-black core-drawn artists so they read on a dark axis.
+
+        The Bland–Altman scatter (``c="k"``) becomes a bright accent colour, and
+        black reference lines (the 1:1 line, the zero line) become a light grey.
+        Coloured artists (the regression line, the correlation scatter, the grey
+        ±LOA lines) are left untouched.
+        """
+
+        def _is_black(color) -> bool:
+            r, g, b = mcolors.to_rgb(color)
+            return max(r, g, b) < 0.25
+
+        accent = theme.mpl_cycle()[0]
+        for coll in ax.collections:  # scatter PathCollections
+            fc = coll.get_facecolor()
+            if len(fc) and _is_black(fc[0]):
+                coll.set_color(accent)
+                coll.set_alpha(0.7)
+        for line in ax.get_lines():
+            if _is_black(line.get_color()):
+                line.set_color("#9bb0c9")
 
     def _render_export(self, fig) -> None:
         """Draw the comparison onto a fresh export figure."""

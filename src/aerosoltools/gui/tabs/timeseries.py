@@ -161,7 +161,6 @@ class TimeSeriesTab(_PlotTab):
 
         # Activities side panel (mark toggle + list + edit + delete).
         self.act_list = QtWidgets.QListWidget()
-        self.act_list.setMaximumWidth(260)
         self.act_list.itemDoubleClicked.connect(lambda _item: self._edit_selected())
         self.edit_btn = QtWidgets.QPushButton("Edit selected activity")
         self.edit_btn.clicked.connect(self._edit_selected)
@@ -182,21 +181,14 @@ class TimeSeriesTab(_PlotTab):
         hint.setWordWrap(True)
         side.addWidget(hint)
 
-        # Two columns: a left column holding the (compact) data-adjustments box
-        # — attached later — plus the view controls, toolbar and plot; and a
-        # full-height activities panel on the right.
-        self._left_col = QtWidgets.QVBoxLayout()
-        self._layout.removeItem(self.controls)
-        self._layout.removeWidget(self.toolbar)
-        self._layout.removeWidget(self.canvas)
-        self._left_col.addLayout(self.controls)
-        self._left_col.addWidget(self.toolbar)
-        self._left_col.addWidget(self.canvas, stretch=1)
-
-        body = QtWidgets.QHBoxLayout()
-        body.addLayout(self._left_col, stretch=1)
-        body.addLayout(side)
-        self._layout.addLayout(body, stretch=1)
+        # Two panes split by a draggable divider: a left pane holding the
+        # (compact) data-adjustments box — attached later via
+        # :meth:`attach_adjust_controls`, which inserts into ``self._left_col`` —
+        # plus the view controls, toolbar and plot; and a resizable activities
+        # panel on the right.
+        side_widget = QtWidgets.QWidget()
+        side_widget.setLayout(side)
+        self._split_with_side(side_widget, sizes=(880, 280))
 
         self.ax = self.figure.add_subplot(111)
         self._span = SpanSelector(

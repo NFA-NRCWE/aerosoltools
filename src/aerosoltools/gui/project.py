@@ -54,6 +54,11 @@ class Dataset:
             self.label = os.path.splitext(os.path.basename(source_path))[0]
         else:
             self.label = f"Dataset {self.id}"
+        # Raw files behind this dataset, used so 'Save project' archives every
+        # source involved in the analysis. A plain loaded dataset is backed by
+        # its own file; a derived/combined dataset is backed by the union of its
+        # constituents' raw files (set via _add_derived_dataset).
+        self.contributing_files: List[str] = [source_path] if source_path else []
         # Comparison-tab state (kept on the dataset so it survives tab
         # rebuilds): a *view-only* time shift for manual peak alignment in the
         # Overlay tab, and whether the dataset is included in the Overlay /

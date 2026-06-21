@@ -17,9 +17,7 @@ from .projectio import load_project, save_project
 from .qt import QtCore, QtGui, QtWidgets
 from .sidebar import DatasetSidebar
 from .tabs import (
-    CombinedPSDTab,
     CorrelationTab,
-    CrossSummaryTab,
     HeatmapTab,
     OverlayTab,
     PMBandsTab,
@@ -301,13 +299,6 @@ class MainWindow(QtWidgets.QMainWindow):
             act.triggered.connect(lambda _c, m=mode: self.set_theme(m))
             self._theme_group.addAction(act)
             theme_menu.addAction(act)
-        self._menu_action(
-            view_menu,
-            "Toggle dark / light theme",
-            self._toggle_theme,
-            "Ctrl+T",
-            "Switch between the dark and light themes.",
-        )
         view_menu.addSeparator()
         self._dock_action = QtWidgets.QAction(
             "Datasets panel", self, checkable=True, checked=True
@@ -351,10 +342,6 @@ class MainWindow(QtWidgets.QMainWindow):
             act.setToolTip(tip)
             act.setStatusTip(tip)
         return act
-
-    def _toggle_theme(self) -> None:
-        """Flip between the dark and light themes (bound to Ctrl+T)."""
-        self.set_theme("light" if self._theme == "dark" else "dark")
 
     def _show_shortcuts(self) -> None:
         """Open the read-only keyboard-shortcuts reference dialog."""
@@ -553,9 +540,22 @@ class MainWindow(QtWidgets.QMainWindow):
             self._sync_header()
 
     def _add_derived_dataset(
-        self, obj, instrument_key: str, label: str, remove_ids=()
+        self, obj, instrument_key: str, label: str, remove_ids=(), source_files=()
     ) -> Dataset:
-        """Add a combined/derived dataset, optionally replacing some sources."""
+        """Add a combined/derived dataset, optionally replacing some sources.
+
+        Args:
+            obj: The derived aerosol object.
+            instrument_key: Instrument key for the result.
+            label: Display label.
+            remove_ids: Dataset ids to remove (e.g. the originals a join replaces).
+            source_files: Raw files behind the result (its constituents' files),
+                recorded so 'Save project' still archives them even though the
+                derived dataset itself has no single source file.
+
+        Returns:
+            Dataset: The newly added dataset.
+        """
         for rid in remove_ids:
             d = self.project.get(rid)
             if d is not None:
@@ -563,6 +563,8 @@ class MainWindow(QtWidgets.QMainWindow):
         ds = Dataset(
             obj=obj, source_path=None, instrument_key=instrument_key, label=label
         )
+        # De-duplicate while preserving order so the raw archive has each file once.
+        ds.contributing_files = list(dict.fromkeys(source_files))
         self.project.datasets.append(ds)
         self.project._apply_activities(ds)  # project the shared tasks onto it
         self.project.active_id = ds.id
@@ -613,11 +615,15 @@ class MainWindow(QtWidgets.QMainWindow):
                 self, "Join failed", traceback.format_exc(limit=2)
             )
             return
+        # Carry every constituent's raw files onto the combined dataset so the
+        # originals are still archived on save even though they're removed here.
+        raw_files = [f for d in group for f in d.contributing_files]
         self._add_derived_dataset(
             combined,
             ds.instrument_key,
             f"{ds.instrument_key} (combined)",
             remove_ids=[d.id for d in group],
+            source_files=raw_files,
         )
 
     def _combine_ns_ops(self) -> None:
@@ -647,8 +653,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 self, "Combine failed", traceback.format_exc(limit=2)
             )
             return
-        # NS+OPS keeps the originals (they remain useful on their own).
-        self._add_derived_dataset(combined, "NS_OPS", "NS + OPS (combined)")
+        # NS+OPS keeps the originals (they remain useful on their own); still
+        # record their raw files on the combined dataset for completeness.
+        self._add_derived_dataset(
+            combined,
+            "NS_OPS",
+            "NS + OPS (combined)",
+            source_files=ns_ds.contributing_files + ops_ds.contributing_files,
+        )
 
     def _refresh_sidebar(self) -> None:
         """Mirror the current datasets and active id into the sidebar."""
@@ -812,9 +824,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # -- tab management ----------------------------------------------------
     def _build_tabs(self) -> None:
+        """(Re)create the tab set appropriate to the active dataset's shape.
+
+        The PSD and Summary tabs read the *whole project* (one or many datasets),
+        so they replace the former single-view PSD/Summary tabs and are always
+        shown. The 2D heatmap and PM-bands tabs stay single-view (they follow the
+        active dataset) and so are only built for a size-resolved active dataset.
+        """
         # Detach the shared adjustments box before clearing the tabs, so
         # deleting the old Time series tab does not destroy it.
-        """(Re)create the tab set appropriate to the active dataset's shape."""
         self.adjust_box.setParent(None)
 
         self.tabs.clear()
@@ -827,38 +845,26 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tabs.addTab(ts, "Time series")
         self._tabs += [raw, ts]
 
+        # Single-view 2D plots that follow the active dataset.
         if helpers.is_2d(self.obj):
-            psd = PSDTab(self)
             heat = HeatmapTab(self)
             pm = PMBandsTab(self)
-            self.tabs.addTab(psd, "PSD")
             self.tabs.addTab(heat, "2D heatmap")
             self.tabs.addTab(pm, "PM bands")
-            self._tabs += [psd, heat, pm]
+            self._tabs += [heat, pm]
 
-        # Summary is intentionally one of the last tabs, so it appears after the
-        # raw/plot views rather than before anything has been marked.
+        # Project-level tabs (work for a single dataset or compare several):
+        # PSD + Summary subsume the old single-view tabs; Overlay + Correlation
+        # are multi-dataset comparisons. All are always shown.
+        psd = PSDTab(self)
         summ = SummaryTab(self)
-        self.tabs.addTab(summ, "Summary")
-        self._tabs.append(summ)
-
-        # Overlay + Combined PSD are multi-dataset comparison tabs (they read
-        # every dataset, not just the active one).
         overlay = OverlayTab(self)
-        self.tabs.addTab(overlay, "Overlay")
-        self._tabs.append(overlay)
-
-        combined_psd = CombinedPSDTab(self)
-        self.tabs.addTab(combined_psd, "Combined PSD")
-        self._tabs.append(combined_psd)
-
-        cross_summary = CrossSummaryTab(self)
-        self.tabs.addTab(cross_summary, "Cross summary")
-        self._tabs.append(cross_summary)
-
         correlation = CorrelationTab(self)
+        self.tabs.addTab(psd, "PSD")
+        self.tabs.addTab(summ, "Summary")
+        self.tabs.addTab(overlay, "Overlay")
         self.tabs.addTab(correlation, "Correlation")
-        self._tabs.append(correlation)
+        self._tabs += [psd, summ, overlay, correlation]
 
         self._tab_sig = "2d" if helpers.is_2d(self.obj) else "1d"
 

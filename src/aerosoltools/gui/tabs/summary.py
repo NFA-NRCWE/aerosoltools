@@ -1,28 +1,70 @@
-"""Per-activity summary tab (single dataset)."""
+"""Per-activity summary table tab (activity stats and exposure metrics).
+
+Works for one *or* several datasets: it runs the core ``summarize_activities`` /
+``summarize_exposure`` on each ticked dataset, prepends ``Dataset`` /
+``Instrument`` columns and concatenates the results, so a single instrument
+behaves like the old single-view Summary tab while multiple instruments are
+combined into one cross-instrument table.
+"""
 
 from __future__ import annotations
 
 import contextlib
 import io
-import os
 
 import pandas as pd
 
 from .. import helpers
 from ..models import PandasTableModel
-from ..qt import QtWidgets
+from ..qt import QtCore, QtWidgets
 from ._base import _export_table, _tune_table
 
 
 class SummaryTab(QtWidgets.QWidget):
-    """Per-activity tabular summaries (activity stats and exposure metrics)."""
+    """One activity/exposure summary table across the ticked datasets.
+
+    Runs the core ``summarize_activities`` / ``summarize_exposure`` on **each
+    ticked dataset**, prepends ``Dataset`` / ``Instrument`` columns, and
+    concatenates the per-dataset tables into one (columns align by name, so
+    metrics that only some instruments report simply leave blanks for the
+    others). With a single dataset ticked it is just that instrument's summary.
+    It is compute-on-demand (a ``Compute`` button) rather than recomputing on
+    every refresh, since exposure stats over many datasets can be costly.
+    """
+
+    _FRACTION_KINDS = ("PM", "PN", "PS", "PV")
 
     def __init__(self, main):
-        """Build the summary-type, metric and exposure-limit controls and table."""
+        """Build the dataset checklist, summary controls and table."""
         super().__init__()
         self.main = main
 
         layout = QtWidgets.QVBoxLayout(self)
+        # A draggable divider between the dataset checklist and the table, so the
+        # list pane can be widened when labels are long (like the datasets dock).
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        splitter.setChildrenCollapsible(False)
+        layout.addWidget(splitter, stretch=1)
+
+        # -- left: datasets to include ------------------------------------
+        self._building = False
+        self.ds_list = QtWidgets.QListWidget()
+        self.ds_list.itemChanged.connect(self._on_ds_changed)
+        side = QtWidgets.QVBoxLayout()
+        side.addWidget(QtWidgets.QLabel("Datasets to include:"))
+        side.addWidget(self.ds_list, stretch=1)
+        left_widget = QtWidgets.QWidget()
+        left_widget.setLayout(side)
+        splitter.addWidget(left_widget)
+
+        # -- right: controls + table --------------------------------------
+        right = QtWidgets.QVBoxLayout()
+        right_widget = QtWidgets.QWidget()
+        right_widget.setLayout(right)
+        splitter.addWidget(right_widget)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([240, 900])
 
         bar = QtWidgets.QHBoxLayout()
         self.kind = QtWidgets.QComboBox()
@@ -31,33 +73,33 @@ class SummaryTab(QtWidgets.QWidget):
         bar.addWidget(QtWidgets.QLabel("Type:"))
         bar.addWidget(self.kind)
 
-        # Metric selector: a kind drop-down, plus a cut-off drop-down that is
-        # only shown for size-selective fractions (PM/PN/PS/PV). This replaces
-        # the old free-text field, which let users type invalid metric strings.
+        # Metric selector (exposure only): a kind drop-down plus a cut-off
+        # drop-down shown only for the size-selective fractions (PM/PN/PS/PV).
         self.metric_label = QtWidgets.QLabel("Metric:")
         bar.addWidget(self.metric_label)
         self.metric_kind = QtWidgets.QComboBox()
         self.metric_kind.currentTextChanged.connect(self._on_metric_kind_change)
         bar.addWidget(self.metric_kind)
         self.metric_cut = QtWidgets.QComboBox()
-        self.metric_cut.setEditable(True)  # allow custom cut-offs too
+        self.metric_cut.setEditable(True)
         self.metric_cut.setFixedWidth(80)
         bar.addWidget(self.metric_cut)
         self.metric_cut_label = QtWidgets.QLabel("µm")
         bar.addWidget(self.metric_cut_label)
-        self._synced_obj = None
 
         self.compute = QtWidgets.QPushButton("Compute")
         self.compute.setObjectName("primary")
-        self.compute.setToolTip("Compute the summary for the current activities.")
-        self.compute.clicked.connect(self.refresh)
+        self.compute.setToolTip(
+            "Build the combined summary table for the ticked datasets."
+        )
+        self.compute.clicked.connect(self._compute)
         bar.addWidget(self.compute)
         bar.addStretch(1)
         self.export_btn = QtWidgets.QPushButton("Export to Excel…")
-        self.export_btn.setToolTip("Save the table to an .xlsx or .csv file.")
+        self.export_btn.setToolTip("Save the combined table to an .xlsx or .csv file.")
         self.export_btn.clicked.connect(self._export)
         bar.addWidget(self.export_btn)
-        layout.addLayout(bar)
+        right.addLayout(bar)
 
         # Second row: exposure-limit parameters (only shown for exposure).
         self.exp_bar = QtWidgets.QHBoxLayout()
@@ -66,44 +108,43 @@ class SummaryTab(QtWidgets.QWidget):
         self.long_limit = self._add_field("OEL (8h limit):", "1.0", width=80)
         self.twa_window = self._add_field("TWA window", "8h", width=70)
         self.exp_bar.addStretch(1)
-        layout.addLayout(self.exp_bar)
+        right.addLayout(self.exp_bar)
 
         self.model = PandasTableModel()
         self.view = QtWidgets.QTableView()
         self.view.setModel(self.model)
         self.view.setAlternatingRowColors(True)
         _tune_table(self.view)
-        layout.addWidget(self.view)
+        right.addWidget(self.view, stretch=1)
 
-        self.status = QtWidgets.QLabel("")
+        self.status = QtWidgets.QLabel(
+            "Tick datasets and click Compute to build the combined summary."
+        )
         self.status.setWordWrap(True)
-        layout.addWidget(self.status)
+        right.addWidget(self.status)
         self._on_kind_change()
 
+    # -- small helpers -----------------------------------------------------
     def _add_field(self, label: str, default: str, width: int) -> QtWidgets.QLineEdit:
-        """Add a labelled line-edit to the exposure-parameter row."""
+        """Add a labelled line-edit to the exposure-parameter row and return it."""
         lbl = QtWidgets.QLabel(label)
         edit = QtWidgets.QLineEdit(default)
         edit.setFixedWidth(width)
         self.exp_bar.addWidget(lbl)
         self.exp_bar.addWidget(edit)
-        # Stash the label so visibility can be toggled together with the field.
         edit._label = lbl  # type: ignore[attr-defined]
         return edit
 
-    @property
-    def obj(self):
-        """Active aerosol object (proxied from the main window)."""
-        return self.main.obj
-
-    _FRACTION_KINDS = ("PM", "PN", "PS", "PV")
+    def _selected_datasets(self) -> list:
+        """Datasets currently ticked for inclusion."""
+        return [d for d in self.main.project.datasets if d.summary_on]
 
     def _limit_fields(self):
         """The four exposure-limit line-edits."""
         return (self.short_limit, self.short_window, self.long_limit, self.twa_window)
 
     def _exposure_widgets(self):
-        """All widgets (and their labels) shown only in Exposure mode."""
+        """Widgets (and their labels) shown only in Exposure mode."""
         widgets = [
             self.metric_label,
             self.metric_kind,
@@ -117,29 +158,35 @@ class SummaryTab(QtWidgets.QWidget):
                 widgets.append(label)
         return widgets
 
+    # -- metric options ----------------------------------------------------
     def _ensure_metric_options(self) -> None:
-        """Populate the metric drop-downs for the loaded object (once per file)."""
-        if self.obj is None or self._synced_obj is self.obj:
-            return
-        self._synced_obj = self.obj
+        """Populate the metric drop-downs from the union of selected datasets."""
+        selected = self._selected_datasets()
+        any_2d = any(helpers.is_2d(d.obj) for d in selected)
+        cur_kind = self.metric_kind.currentText()
+        cur_cut = self.metric_cut.currentText()
+
         self.metric_kind.blockSignals(True)
         self.metric_cut.blockSignals(True)
         self.metric_kind.clear()
         self.metric_cut.clear()
-        if helpers.is_2d(self.obj):
-            self.metric_kind.addItems(["PNC", "MASS", "PM", "PN", "PS", "PV"])
-            self.metric_cut.addItems(
-                ["0.1", "0.25", "0.5", "1", "2.5", "4", "4.2", "10"]
-            )
-            self.metric_kind.setCurrentText("PM")
-            self.metric_cut.setCurrentText("4.2")
-        else:
-            # 1D / AerosolAlt: offer PNC plus the available numeric channels.
-            names = ["PNC"]
-            for _label, kind, name in helpers.plottable_columns(self.obj):
-                if kind in ("data", "extra") and name not in names:
-                    names.append(name)
-            self.metric_kind.addItems(names)
+
+        kinds = ["PNC"]
+        if any_2d:
+            kinds += ["MASS", "PM", "PN", "PS", "PV"]
+        for d in selected:  # add any extra numeric channels present
+            for _label, kind, name in helpers.plottable_columns(d.obj):
+                if kind in ("data", "extra") and name not in kinds:
+                    kinds.append(name)
+        self.metric_kind.addItems(kinds)
+        self.metric_cut.addItems(["0.1", "0.25", "0.5", "1", "2.5", "4", "4.2", "10"])
+
+        # Preserve the user's selection across rebuilds where still valid.
+        ki = self.metric_kind.findText(cur_kind)
+        self.metric_kind.setCurrentText(
+            cur_kind if ki >= 0 else ("PM" if any_2d else "PNC")
+        )
+        self.metric_cut.setCurrentText(cur_cut or "4.2")
         self.metric_kind.blockSignals(False)
         self.metric_cut.blockSignals(False)
         self._on_metric_kind_change()
@@ -167,7 +214,7 @@ class SummaryTab(QtWidgets.QWidget):
         for widget in self._exposure_widgets():
             widget.setVisible(exposure)
         if exposure:
-            self._on_metric_kind_change()  # refine cut-off visibility
+            self._on_metric_kind_change()
 
     @staticmethod
     def _to_float(text: str, default: float) -> float:
@@ -177,44 +224,100 @@ class SummaryTab(QtWidgets.QWidget):
         except (ValueError, AttributeError):
             return default
 
-    def refresh(self) -> None:
-        """Compute the activity or exposure summary for the active dataset."""
-        if self.obj is None:
+    # -- dataset list sync -------------------------------------------------
+    def _sync_datasets(self) -> None:
+        """Rebuild the dataset checklist from the project."""
+        self._building = True
+        self.ds_list.blockSignals(True)
+        self.ds_list.clear()
+        for ds in self.main.project.datasets:
+            item = QtWidgets.QListWidgetItem(f"{ds.label}  ({ds.instrument})")
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+            item.setCheckState(
+                QtCore.Qt.Checked if ds.summary_on else QtCore.Qt.Unchecked
+            )
+            item.setData(QtCore.Qt.UserRole, ds.id)
+            self.ds_list.addItem(item)
+        self.ds_list.blockSignals(False)
+        self._building = False
+
+    def _on_ds_changed(self, item) -> None:
+        """Persist a dataset's include flag and refresh the metric options."""
+        if self._building:
             return
-        # Keep the metric drop-downs in sync with the loaded object.
-        if self._synced_obj is not self.obj:
-            self._synced_obj = None
+        ds = self.main.project.get(item.data(QtCore.Qt.UserRole))
+        if ds is not None:
+            ds.summary_on = item.checkState() == QtCore.Qt.Checked
+        # The available metrics may change with the selection (e.g. a 2D
+        # dataset added/removed), so keep the metric drop-downs in step.
+        if self.kind.currentText() == "Exposure summary":
             self._ensure_metric_options()
-        self.status.setText("")
-        try:
-            # The core summarize_* methods print their table to stdout; swallow
-            # it so the GUI is the single source of truth and a non-UTF-8 console
-            # cannot crash the method on the µg/m³ / cm⁻³ glyphs mid-print.
-            with contextlib.redirect_stdout(io.StringIO()):
-                if self.kind.currentText() == "Exposure summary":
-                    df = self.obj.summarize_exposure(
-                        metric=self._build_metric(),
-                        short_limit=self._to_float(self.short_limit.text(), 1.0),
-                        long_limit=self._to_float(self.long_limit.text(), 1.0),
-                        short_window=self.short_window.text().strip() or "15min",
-                        twa_window=self.twa_window.text().strip() or "8h",
-                    )
-                else:
-                    df = self.obj.summarize_activities()
-            if df is None or df.empty:
-                self.model.set_dataframe(pd.DataFrame())
-                self.status.setText("No data to summarize for the current activities.")
-            else:
-                self.model.set_dataframe(df)
-        except Exception as exc:  # surface errors instead of crashing the GUI
+
+    def refresh(self) -> None:
+        """Re-sync the dataset list; the table itself is built on Compute."""
+        self._sync_datasets()
+        if self.kind.currentText() == "Exposure summary":
+            self._ensure_metric_options()
+
+    # -- compute -----------------------------------------------------------
+    def _compute(self) -> None:
+        """Run the summary per ticked dataset and concatenate the tables."""
+        datasets = self._selected_datasets()
+        if not datasets:
             self.model.set_dataframe(pd.DataFrame())
-            self.status.setText(f"Could not compute summary: {exc}")
+            self.status.setText("Tick at least one dataset to include.")
+            return
+        exposure = self.kind.currentText() == "Exposure summary"
+        metric = self._build_metric() if exposure else None
+
+        frames: list[pd.DataFrame] = []
+        skipped: list[str] = []
+        # The core summarize_* methods print their result table to stdout; with
+        # many datasets that is just noise (the user reads the GUI table), and on
+        # a non-UTF-8 console the unit glyphs (µg/m³, cm⁻³) can even raise an
+        # encoding error mid-method. Swallow that console output during compute.
+        with contextlib.redirect_stdout(io.StringIO()):
+            for ds in datasets:
+                try:
+                    if exposure:
+                        df = ds.obj.summarize_exposure(
+                            metric=metric,
+                            short_limit=self._to_float(self.short_limit.text(), 1.0),
+                            long_limit=self._to_float(self.long_limit.text(), 1.0),
+                            short_window=self.short_window.text().strip() or "15min",
+                            twa_window=self.twa_window.text().strip() or "8h",
+                        )
+                    else:
+                        df = ds.obj.summarize_activities()
+                except Exception as exc:  # e.g. a PM metric on a 1D instrument
+                    skipped.append(f"{ds.label} ({exc})")
+                    continue
+                if df is None or df.empty:
+                    continue
+                df = df.copy()
+                df.insert(0, "Instrument", ds.instrument)
+                df.insert(0, "Dataset", ds.label)
+                frames.append(df)
+
+        if not frames:
+            self.model.set_dataframe(pd.DataFrame())
+            msg = "No data to summarize for the current selection."
+            if skipped:
+                msg += "  Skipped — " + "; ".join(skipped)
+            self.status.setText(msg)
+            return
+
+        combined = pd.concat(frames, ignore_index=True, sort=False)
+        self.model.set_dataframe(combined)
+        note = f"{len(frames)} dataset(s) combined, {len(combined)} rows."
+        if skipped:
+            note += "  Skipped — " + "; ".join(skipped)
+        self.status.setText(note)
 
     def _export(self) -> None:
-        """Save the summary table to an .xlsx or .csv file."""
+        """Save the combined table to an .xlsx or .csv file."""
         df = self.model.dataframe
         kind = (
             "exposure" if self.kind.currentText() == "Exposure summary" else "activity"
         )
-        base = os.path.splitext(os.path.basename(self.main.source_path or "summary"))[0]
-        _export_table(self, df, f"{base}_{kind}_summary", with_index=False)
+        _export_table(self, df, f"{kind}_summary", with_index=False)

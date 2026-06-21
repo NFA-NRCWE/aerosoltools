@@ -15,7 +15,7 @@ import matplotlib as mpl
 import pandas as pd
 
 from .. import theme
-from ..qt import Figure, FigureCanvas, NavigationToolbar, QtWidgets
+from ..qt import Figure, FigureCanvas, NavigationToolbar, QtCore, QtWidgets
 
 
 def _export_table(
@@ -110,6 +110,43 @@ class _PlotTab(QtWidgets.QWidget):
     def obj(self):
         """Active aerosol object (proxied from the main window)."""
         return self.main.obj
+
+    def _split_with_side(self, side_widget, sizes=(820, 300)):
+        """Lay the plot out left of ``side_widget`` with a draggable divider.
+
+        Moves the controls row, toolbar and canvas into a left pane and places a
+        horizontal :class:`QSplitter` between it and ``side_widget`` so the user
+        can resize the side panel (like the datasets dock) instead of it being a
+        fixed width. ``self._left_col`` is left pointing at the left pane's layout
+        so subclasses can still insert into it.
+
+        Args:
+            side_widget: The right-hand side panel (already populated).
+            sizes: Initial ``(left, side)`` widths in pixels.
+
+        Returns:
+            QtWidgets.QSplitter: The created splitter.
+        """
+        self._left_col = QtWidgets.QVBoxLayout()
+        self._layout.removeItem(self.controls)
+        self._layout.removeWidget(self.toolbar)
+        self._layout.removeWidget(self.canvas)
+        self._left_col.addLayout(self.controls)
+        self._left_col.addWidget(self.toolbar)
+        self._left_col.addWidget(self.canvas, stretch=1)
+        left_widget = QtWidgets.QWidget()
+        left_widget.setLayout(self._left_col)
+
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        splitter.addWidget(left_widget)
+        splitter.addWidget(side_widget)
+        # The plot pane takes the extra space; the side panel keeps its width.
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 0)
+        splitter.setChildrenCollapsible(False)
+        splitter.setSizes(list(sizes))
+        self._layout.addWidget(splitter, stretch=1)
+        return splitter
 
     def current_time_xlim(self):
         """Return the (xmin, xmax) of the time axis as Matplotlib date numbers.

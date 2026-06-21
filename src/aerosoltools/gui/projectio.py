@@ -33,19 +33,35 @@ FORMAT = "aerosoltools-project"
 VERSION = 1
 
 
-def _safe_name(idx: int, path: Optional[str]) -> str:
-    """Build a unique, index-prefixed file name for a copied raw file."""
-    base = os.path.basename(path) if path else f"dataset_{idx}.dat"
-    return f"{idx}_{base}"
-
-
 def save_project(project: Project, folder: str, theme: str = "dark") -> None:
-    """Write ``project`` into ``folder`` (created if needed)."""
+    """Write ``project`` into ``folder`` (created if needed).
+
+    Every raw file behind any dataset — including the constituent files of a
+    combined/derived dataset — is copied into ``raw_data/`` (de-duplicated), so
+    the saved folder always contains the full set of sources used in the
+    analysis and the work can be reassessed or recreated from it.
+    """
     os.makedirs(folder, exist_ok=True)
     raw_dir = os.path.join(folder, RAW_DIR)
     ds_dir = os.path.join(folder, DS_DIR)
     os.makedirs(raw_dir, exist_ok=True)
     os.makedirs(ds_dir, exist_ok=True)
+
+    # Copy each unique raw file once; map absolute path -> its relative copy.
+    copied: dict[str, str] = {}
+
+    def _copy_raw(path: Optional[str]) -> Optional[str]:
+        if not path:
+            return None
+        abspath = os.path.abspath(path)
+        if abspath in copied:
+            return copied[abspath]
+        if not os.path.exists(abspath):
+            return None
+        rel = f"{RAW_DIR}/{len(copied)}_{os.path.basename(abspath)}"
+        shutil.copy2(abspath, os.path.join(folder, rel))
+        copied[abspath] = rel
+        return rel
 
     manifest = {
         "format": FORMAT,
@@ -66,10 +82,14 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
     }
 
     for i, ds in enumerate(project.datasets):
-        raw_rel = None
-        if ds.source_path and os.path.exists(ds.source_path):
-            raw_rel = f"{RAW_DIR}/{_safe_name(i, ds.source_path)}"
-            shutil.copy2(ds.source_path, os.path.join(folder, raw_rel))
+        raw_rel = _copy_raw(ds.source_path)
+        # Archive every contributing raw file (the constituents for a combined
+        # dataset; just the source file for a plain one).
+        contributing = []
+        for f in ds.contributing_files:
+            rel = _copy_raw(f)
+            if rel and rel not in contributing:
+                contributing.append(rel)
 
         pkl_rel = f"{DS_DIR}/ds_{i}.pkl"
         with open(os.path.join(folder, pkl_rel), "wb") as fh:
@@ -80,6 +100,7 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
                 "label": ds.label,
                 "instrument_key": ds.instrument_key,
                 "raw": raw_rel,
+                "contributing": contributing,
                 "pickle": pkl_rel,
             }
         )
@@ -126,6 +147,12 @@ def load_project(folder: str) -> tuple[Project, str]:
             instrument_key=entry.get("instrument_key", ""),
             label=entry.get("label"),
         )
+        # Repoint the archived contributing raw files into this folder (so a
+        # re-save preserves them). Older projects without the field keep the
+        # source-based default set in Dataset.__init__.
+        contributing = entry.get("contributing")
+        if contributing:
+            ds.contributing_files = [os.path.join(folder, r) for r in contributing]
         project.datasets.append(ds)
 
     # Restore the active dataset, then re-project the shared activities so every

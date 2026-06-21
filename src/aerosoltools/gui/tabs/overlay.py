@@ -34,7 +34,8 @@ class OverlayTab(_PlotTab):
         self.controls.addWidget(self.metric)
 
         self.log_y = QtWidgets.QCheckBox("Log Y")
-        self.log_y.stateChanged.connect(self._draw)
+        # A scale change rescales the axes, so don't preserve the old view.
+        self.log_y.stateChanged.connect(lambda: self._draw())
         self.controls.addWidget(self.log_y)
 
         self.normalize = QtWidgets.QCheckBox("Normalize (0–1)")
@@ -42,7 +43,7 @@ class OverlayTab(_PlotTab):
             "Scale each series to 0–1 to compare shapes across instruments with "
             "different units/magnitudes."
         )
-        self.normalize.stateChanged.connect(self._draw)
+        self.normalize.stateChanged.connect(lambda: self._draw())
         self.controls.addWidget(self.normalize)
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
@@ -52,7 +53,6 @@ class OverlayTab(_PlotTab):
         self.table = QtWidgets.QTableWidget(0, 3)
         self.table.setHorizontalHeaderLabels(["", "Dataset", "Shift (min)"])
         self.table.verticalHeader().setVisible(False)
-        self.table.setMaximumWidth(320)
         self.table.itemChanged.connect(self._on_item_changed)
 
         self.apply_btn = QtWidgets.QPushButton("Apply shifts permanently")
@@ -74,18 +74,10 @@ class OverlayTab(_PlotTab):
         hint.setWordWrap(True)
         side.addWidget(hint)
 
-        # Left column (controls + toolbar + plot) and a full-height side panel.
-        self._left_col = QtWidgets.QVBoxLayout()
-        self._layout.removeItem(self.controls)
-        self._layout.removeWidget(self.toolbar)
-        self._layout.removeWidget(self.canvas)
-        self._left_col.addLayout(self.controls)
-        self._left_col.addWidget(self.toolbar)
-        self._left_col.addWidget(self.canvas, stretch=1)
-        body = QtWidgets.QHBoxLayout()
-        body.addLayout(self._left_col, stretch=1)
-        body.addLayout(side)
-        self._layout.addLayout(body, stretch=1)
+        # Plot on the left of a resizable divider, side panel on the right.
+        side_widget = QtWidgets.QWidget()
+        side_widget.setLayout(side)
+        self._split_with_side(side_widget)
 
         self.ax = self.figure.add_subplot(111)
 
@@ -167,14 +159,17 @@ class OverlayTab(_PlotTab):
         ds = self.main.project.get(item.data(QtCore.Qt.UserRole))
         if ds is not None:
             ds.overlay_on = item.checkState() == QtCore.Qt.Checked
-            self._draw()
+            # Keep the current zoom/pan: ticking a dataset shouldn't reset it.
+            self._draw(preserve=True)
 
     def _on_shift(self, ds, minutes: float) -> None:
         """Persist a dataset's view-only time shift and redraw."""
         if self._building:
             return
         ds.view_shift = pd.Timedelta(minutes=float(minutes))
-        self._draw()
+        # Preserve the current view so the user can zoom in, then slide a
+        # dataset and watch it move within the same window.
+        self._draw(preserve=True)
 
     def _apply_shifts(self) -> None:
         """Bake the current view shifts permanently into the datasets' time axes."""
@@ -197,7 +192,7 @@ class OverlayTab(_PlotTab):
             ds.obj.timeshift(seconds=ds.view_shift.total_seconds())
             self.main.project._apply_activities(ds)
             ds.view_shift = pd.Timedelta(0)
-        self.main._sync_crop_fields()
+        self.main.adjust_box.sync_crop_fields()
         self.main.refresh_all(reset_view=True)
         self.main._refresh_sidebar()
 
@@ -257,8 +252,17 @@ class OverlayTab(_PlotTab):
                 transform=ax.transAxes,
             )
 
-    def _draw(self) -> None:
-        """Redraw onto the embedded axis, reporting any error inline."""
+    def _draw(self, preserve: bool = False) -> None:
+        """Redraw onto the embedded axis, reporting any error inline.
+
+        Args:
+            preserve: When True, keep the current axis limits (zoom/pan) across
+                the redraw instead of autoscaling — used for view-only shifts and
+                include toggles so the user's zoom survives.
+        """
+        prev = None
+        if preserve and self.ax.has_data():
+            prev = (self.ax.get_xlim(), self.ax.get_ylim())
         try:
             self._draw_on(self.ax)
         except Exception:
@@ -266,6 +270,9 @@ class OverlayTab(_PlotTab):
                 "Could not draw overlay:\n" + traceback.format_exc(limit=1)
             )
             return
+        if prev is not None:
+            self.ax.set_xlim(prev[0])
+            self.ax.set_ylim(prev[1])
         self.canvas.draw_idle()
 
     def _render_export(self, fig) -> None:
