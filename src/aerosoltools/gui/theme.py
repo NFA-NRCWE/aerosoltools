@@ -468,22 +468,27 @@ def apply_mpl_theme(mode: str = "dark") -> None:
 
 # -- runtime accessors used by the widgets ---------------------------------
 def current_mode() -> str:
+    """Return the currently applied theme mode ("dark" or "light")."""
     return _MODE
 
 
 def is_dark() -> bool:
+    """Return True when the dark theme is active."""
     return _MODE == "dark"
 
 
 def fig_facecolor() -> str:
+    """Figure background colour for the current theme."""
     return PALETTES.get(_MODE, _DARK)["PANEL"]
 
 
 def axes_facecolor() -> str:
+    """Axes background colour for the current theme."""
     return PALETTES.get(_MODE, _DARK)["PLOT_BG"]
 
 
 def mpl_cycle() -> list:
+    """Return a copy of the current theme's Matplotlib colour cycle."""
     return list(_CYCLE.get(_MODE, _CYCLE["dark"]))
 
 

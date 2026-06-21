@@ -45,6 +45,7 @@ def describe(obj: Aerosol1D, column: str | None = None) -> Tuple[str, str]:
     unit = obj.unit
 
     def _resolve(meta):
+        """Return ``meta`` as a display string, indexing by ``column`` if it is a dict."""
         if isinstance(meta, dict):
             if column is not None and column in meta:
                 return str(meta[column])

@@ -34,6 +34,7 @@ VERSION = 1
 
 
 def _safe_name(idx: int, path: Optional[str]) -> str:
+    """Build a unique, index-prefixed file name for a copied raw file."""
     base = os.path.basename(path) if path else f"dataset_{idx}.dat"
     return f"{idx}_{base}"
 
@@ -52,13 +53,13 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
         "name": project.name,
         "theme": theme,
         "active_index": (
-            project.index_of(project.active_id)
-            if project.active_id is not None
-            else -1
+            project.index_of(project.active_id) if project.active_id is not None else -1
         ),
         "activities": {
-            name: [[pd.Timestamp(s).isoformat(), pd.Timestamp(e).isoformat()]
-                   for s, e in periods]
+            name: [
+                [pd.Timestamp(s).isoformat(), pd.Timestamp(e).isoformat()]
+                for s, e in periods
+            ]
             for name, periods in project.activities.items()
         },
         "datasets": [],

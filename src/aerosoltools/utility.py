@@ -603,6 +603,43 @@ def _extract_series(
 ###############################################################################
 
 
+def _activity_period_mask(index, X, Y, activity: str) -> NDArray[np.bool_]:
+    """Boolean mask over ``index`` selecting timestamps inside an activity.
+
+    An activity's occurrences are absolute-time ``(start, end)`` intervals
+    shared across datasets, so a timestamp belongs to the activity when it falls
+    within any of those intervals. The periods are read from whichever of the two
+    objects defines the activity (they are projected from the same registry).
+
+    Args:
+        index: Timestamps to test (a :class:`pandas.DatetimeIndex` or similar).
+        X: First aerosol-like object.
+        Y: Second aerosol-like object.
+        activity: Name of the activity whose periods define the selection.
+
+    Returns:
+        numpy.ndarray: Boolean array, ``True`` where the timestamp is inside the
+        activity.
+
+    Raises:
+        ValueError: If neither object defines ``activity``.
+    """
+    periods = None
+    for obj in (X, Y):
+        registry = getattr(obj, "_activity_periods", None)
+        if registry and activity in registry:
+            periods = registry[activity]
+            break
+    if periods is None:
+        raise ValueError(f"Activity '{activity}' is not defined on either dataset.")
+
+    idx = pd.DatetimeIndex(index)
+    mask = np.zeros(len(idx), dtype=bool)
+    for start, end in periods:
+        mask |= (idx >= pd.Timestamp(start)) & (idx <= pd.Timestamp(end))
+    return mask
+
+
 def _align_series(
     X,
     Y,
@@ -614,6 +651,7 @@ def _align_series(
     tolerance: str | pd.Timedelta = "30s",
     rebin_freq: str | None = None,  # when match="rebin"
     rebin_method: str | Callable = "mean",  # when match="rebin"
+    activity: str | None = None,  # restrict to one activity's periods
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Extract and time-align a variable from two aerosol-like objects.
 
@@ -721,6 +759,16 @@ def _align_series(
     else:
         raise ValueError("match must be 'exact', 'nearest', or 'rebin'")
 
+    # Optionally keep only the aligned points that fall inside one activity.
+    # The activity periods are absolute-time, so this works uniformly for all
+    # three match modes (and for activities with several occurrences).
+    if activity is not None and activity != "All data":
+        xy = xy.loc[_activity_period_mask(xy.index, X, Y, activity)]
+        if xy.empty:
+            raise ValueError(
+                f"No aligned data points fall within activity '{activity}'."
+            )
+
     # Remove rows with non-finite values in either series
     vals = xy.to_numpy(dtype=float, copy=False)
     m = np.isfinite(vals).all(axis=1)
@@ -796,6 +844,7 @@ def Plot_correlation(
     intercept: bool = True,
     uniform_scaling: bool = True,
     outlier_influence: bool = True,
+    activity: str | None = None,
 ) -> tuple[Figure, Axes]:
     """Description:
         Create a correlation plot between the same variable from two aerosol
@@ -865,6 +914,12 @@ def Plot_correlation(
             around the fitted line. If ``False``, use the robust
             Theil–Sen estimator (:func:`scipy.stats.theilslopes`) without a
             confidence band.
+        activity (str | None, optional):
+            If given, restrict the correlation to the timestamps inside this
+            activity's marked periods (absolute-time, so multiple occurrences are
+            supported). Useful for correlating only a window where the two
+            instruments measured side by side. ``None`` (default) or
+            ``\"All data\"`` uses the full overlapping record.
 
     Returns:
         tuple[Figure, Axes]:
@@ -973,6 +1028,7 @@ def Plot_correlation(
         tolerance=tolerance,
         rebin_freq=rebin_freq,
         rebin_method=rebin_method,
+        activity=activity,
     )
 
     # Always return a top-level Figure to keep type hints simple
@@ -1066,6 +1122,7 @@ def bland_altman_analysis(
     tolerance: str | pd.Timedelta = "30s",
     rebin_freq: str | None = None,
     rebin_method: str | Callable = "mean",
+    activity: str | None = None,
 ):
     """
     Plot Bland-Altman (difference plot) to highlight difference between two groups
@@ -1128,6 +1185,11 @@ def bland_altman_analysis(
            Aggregation method passed to ``timerebin`` when ``match=\"rebin\"``
            is used (e.g. ``\"mean\"``, ``\"median\"``, or a custom function).
            Default is ``\"mean\"``.
+       activity (str | None, optional):
+           If given, restrict the comparison to the timestamps inside this
+           activity's marked periods (absolute-time, multiple occurrences
+           supported). ``None`` (default) or ``\"All data\"`` uses the full
+           overlapping record.
 
     Returns:
         tuple[Figure, Axes]:
@@ -1209,6 +1271,7 @@ def bland_altman_analysis(
         tolerance=tolerance,
         rebin_freq=rebin_freq,
         rebin_method=rebin_method,
+        activity=activity,
     )
 
     x = x_vals.astype(np.float64, copy=False)

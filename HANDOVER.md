@@ -48,12 +48,17 @@ Requires `PyQt5` (extra: `pip install aerosoltools[gui]`).
 | `project.py` | **`Project`** (datasets + active id + shared activity registry) and **`Dataset`** (obj + label + source_path + instrument_key). Qt-free. |
 | `projectio.py` | `save_project(project, folder, theme)` / `load_project(folder) -> (project, theme)`. Self-contained movable folder. |
 | `sidebar.py` | `DatasetSidebar` widget (list + add/remove/rename); emits Qt signals. |
-| `main_window.py` | `MainWindow`: menu bar, top bar card, datasets dock, tabs, status bar; loading, active-dataset switching, crop/smooth/resample/**time-shift**, theme switching, project save/load. |
-| `tabs.py` | Single-view: `RawDataTab`, `SummaryTab`, `TimeSeriesTab` (marks tasks, hosts the embedded crop/processing/shift boxes), `PSDTab`, `HeatmapTab`, `PMBandsTab`, `_PlotTab` base. Multi-dataset comparison: `OverlayTab`, `CombinedPSDTab`, `CrossSummaryTab`. |
+| `main_window.py` | `MainWindow`: menu bar, top bar card, datasets dock, tabs, status bar; loading, active-dataset switching, theme switching, project save/load, derived-dataset ops. Delegates data adjustments to `AdjustmentsBox`. |
+| `adjustments.py` | **`AdjustmentsBox(QGroupBox)`** — the "Data adjustments" controls (crop / resample / smooth / **time-shift**) + handlers. Owned by `MainWindow`, embedded in the Time series tab. Public API: `set_enabled(bool)`, `sync_crop_fields()`. |
+| `widgets.py` | Small presentation-only helpers: `SlackTabBar` (tab-label sizing), `CombineNSOPSDialog` (NS+OPS picker). |
+| `tabs/` | **Package**, one module per tab (re-exported from `tabs/__init__.py`). `_base.py` = `_PlotTab` base + `_export_table`/`_tune_table`/`_active_color_cycle`. Single-view: `raw`, `summary`, `timeseries` (+`ActivityEditorDialog`), `psd`, `heatmap`, `pmbands`. Comparison: `overlay`, `combined_psd`, `cross_summary`, `correlation`. |
+| `theme.py` | **Light & dark** themes: palettes, one QSS `string.Template`, `apply_qt_theme(app, mode)`, `apply_mpl_theme(mode)`, runtime accessors (`is_dark()`, `mpl_cycle()`, `fig_facecolor()`…), and the light **`export_rc()`** used for saved figures. |
 | `models.py` | `PandasTableModel` for table views. |
 | `loaders.py` | Instrument → loader registry + filename guesser. |
 | `helpers.py` | dtype/unit resolution, plottable columns, activity shading, `delete_activity`. |
 | `assets.py`, `shortcut.py` | App icon path; Windows shortcut creator. |
+
+> Note: `theme.py` is moved up in the table for grouping; the actual import order is unchanged. Run `python -m ruff check src/aerosoltools/gui/` after editing — the package is ruff-clean (E/F/W/I, line-length 88).
 
 ### Key data-flow facts
 - `MainWindow.obj / source_path / source_instrument` are **properties** that
@@ -178,6 +183,14 @@ time-shift**, **save/load project**, **join same-instrument (step 3)**,
   plot in place — alignment can be costly and `refresh_all` fires often. Errors
   (no time overlap, same dataset picked, no shared parameter) are caught and
   shown via `_show_message`. Added in `_build_tabs` after Cross summary.
+  - **Activity-scoped (2026-06-21):** an **Activity** combo restricts the
+    correlation/Bland–Altman to one marked region (e.g. a side-by-side window).
+    This is an **additive core change**: `Plot_correlation` and
+    `bland_altman_analysis` gained an `activity: str | None = None` kwarg, threaded
+    into `_align_series`, which filters the aligned points to the activity's
+    absolute-time `(start, end)` periods (so **multiple occurrences** work, and it's
+    uniform across exact/nearest/rebin). `None`/`"All data"` = full record. Helper:
+    `utility._activity_period_mask(index, X, Y, activity)`.
 
 ### Two follow-on fixes made alongside steps 6–8 (2026-06-21)
 - **`SummaryTab` hardened**: its `summarize_*` calls now also run under
@@ -188,6 +201,60 @@ time-shift**, **save/load project**, **join same-instrument (step 3)**,
   `legend.edgecolor="#cccccc"`. Previously those keys leaked from the dark screen
   theme (rc_context only overrides listed keys), so **every** tab's export drew a
   dark legend box with unreadable dark text when saved from the dark theme.
+
+### GUI refactor (2026-06-21) — file de-bloat + layering
+The GUI was split so no file is oversized (was: `tabs.py` 2169, `main_window.py`
+1106). Behaviour is unchanged; verified by the offscreen smoke tests + `pytest`
+(18 passed) + `ruff` (clean).
+- **`tabs.py` → `tabs/` package**: one module per tab + `_base.py` (the
+  `_PlotTab` base and `_export_table`/`_tune_table`/`_active_color_cycle`
+  helpers). `tabs/__init__.py` re-exports every public tab, so existing
+  `from .tabs import SummaryTab` imports are unchanged. Inside `tabs/*`, imports
+  gained a dot: core is `from ...utility import …`, sibling gui modules are
+  `from .. import helpers, theme` / `from ..qt import …`, base is `from ._base import …`.
+- **`AdjustmentsBox` extracted** to `adjustments.py` from `MainWindow`
+  (`_build_adjust_box` + all crop/smooth/resample/time-shift handlers +
+  `_set_adjust_enabled`/`_sync_crop_fields`). It's a `QGroupBox` subclass holding
+  a `main` back-reference; handlers act on `main.obj` / `main.project` and call
+  `main.refresh_all(...)`. MainWindow now talks to it through two methods:
+  `set_enabled()` and `sync_crop_fields()`. The detach/re-attach invariant is
+  unchanged (it's still `self.adjust_box`, a widget, embedded via
+  `TimeSeriesTab.attach_adjust_controls`).
+- **`SlackTabBar` + `CombineNSOPSDialog`** moved to `widgets.py` (dropped the
+  leading underscore now that they're a shared module's API).
+- **Mechanics:** the tabs split used `ast.get_source_segment` to move classes
+  verbatim, then `ruff check --fix` (`F401`/`I`) to prune/sort imports per module.
+  Re-running that recipe is the way to split further.
+
+### NOT refactored (needs a separate, explicit decision)
+The **core** modules are still large: `aerosol2d.py` (~3074), `aerosol1d.py`
+(~1789), `utility.py` (~1408). They are **shared by other users** and the API must
+stay backward-compatible, so they were left alone. Splitting a class across files
+is un-Pythonic; the realistic options are method-group **mixins** or a subpackage
+with re-exports from `aerosoltools/__init__.py`. Either is higher-risk — do it only
+with the user's sign-off and a full `pytest` + downstream-import check.
+
+### Usability + documentation pass (2026-06-21)
+- **Multi-file import:** the open dialog now uses `getOpenFileNames`. `_open_dialog`
+  → `MainWindow.load_files(paths)`, which loops the new `_ingest_file(path,
+  instrument)` (load → `Dataset` → `project.add_dataset`, no UI work), then calls
+  `_finalize_after_load()` **once**. `load_file` is now a thin single-file wrapper
+  over the same two helpers. Each file's instrument is guessed individually.
+- **Menu bar:** File → **Import data…** (Ctrl+O) does the multi-file import.
+  Shortcuts: New Ctrl+N, Open project Ctrl+Shift+O, Save Ctrl+S, Save as
+  Ctrl+Shift+S, Exit Ctrl+Q, View → Toggle theme Ctrl+T, Datasets panel Ctrl+D,
+  Help → **Keyboard shortcuts** F1. All shortcut-bearing items are created via
+  `MainWindow._menu_action(menu, label, handler, shortcut, tip)`, which records
+  `(keys, label)` in `self._shortcut_help` — the single source the
+  `KeyboardShortcutsDialog` (in `widgets.py`) renders. `setToolTipsVisible(True)`
+  is set so menu tooltips show.
+- **Tooltips:** added on the top-bar controls, sidebar buttons, the shared
+  `_PlotTab` Save button, and the comparison tabs' Compute/Export buttons.
+- **Docstrings:** every GUI function/method/class now has a docstring (Google
+  style — `Args:`/`Returns:` where useful — matching the core's convention). The
+  pass was applied with an `ast`-driven inserter (find each def's first body
+  statement, insert a docstring at its indent). Whole GUI is `ruff`- and
+  `black`-clean (line-length 88) and `pytest` stays green (18).
 
 ### How to add a comparison tab (the pattern used by steps 5–8)
 - Comparison tabs read a **set** of datasets, not the active one. Give them a

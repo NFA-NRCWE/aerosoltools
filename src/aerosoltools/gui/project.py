@@ -29,8 +29,21 @@ Period = Tuple[pd.Timestamp, pd.Timestamp]
 class Dataset:
     """One loaded file (or a derived/combined result) inside a project."""
 
-    def __init__(self, obj, source_path: Optional[str], instrument_key: str,
-                 label: Optional[str] = None):
+    def __init__(
+        self,
+        obj,
+        source_path: Optional[str],
+        instrument_key: str,
+        label: Optional[str] = None,
+    ):
+        """Create a dataset wrapper.
+
+        Args:
+            obj: The loaded aerosol object.
+            source_path: Original file path, or None for a derived dataset.
+            instrument_key: Loader / instrument name.
+            label: Display name; defaults to the file stem or ``Dataset <id>``.
+        """
         self.id: int = next(_ID)
         self.obj = obj
         self.source_path = source_path
@@ -52,10 +65,12 @@ class Dataset:
 
     @property
     def instrument(self) -> str:
+        """Instrument name (the loader key, falling back to the object's own)."""
         return self.instrument_key or getattr(self.obj, "instrument", "Unknown")
 
     @property
     def serial_number(self) -> str:
+        """Instrument serial number, or a placeholder when unavailable."""
         return getattr(self.obj, "serial_number", "Unknown serial number")
 
     def time_span(self) -> Optional[Period]:
@@ -66,6 +81,7 @@ class Dataset:
         return pd.Timestamp(t.min()), pd.Timestamp(t.max())
 
     def n_points(self) -> int:
+        """Number of time steps in the dataset (0 if empty)."""
         return int(self.obj.data.shape[0]) if self.obj is not None else 0
 
 
@@ -73,6 +89,7 @@ class Project:
     """An ordered set of datasets with a shared, project-level task registry."""
 
     def __init__(self, name: str = "Untitled project"):
+        """Create an empty project with the given name."""
         self.name = name
         self.datasets: List[Dataset] = []
         self.active_id: Optional[int] = None
@@ -83,14 +100,17 @@ class Project:
     # -- dataset access ----------------------------------------------------
     @property
     def active(self) -> Optional[Dataset]:
+        """The active :class:`Dataset`, or None."""
         return self.get(self.active_id)
 
     def get(self, ds_id: Optional[int]) -> Optional[Dataset]:
+        """Return the dataset with id ``ds_id``, or None."""
         if ds_id is None:
             return None
         return next((d for d in self.datasets if d.id == ds_id), None)
 
     def index_of(self, ds_id: int) -> int:
+        """Return the position of ``ds_id`` in the dataset list, or -1."""
         for i, d in enumerate(self.datasets):
             if d.id == ds_id:
                 return i
@@ -105,6 +125,7 @@ class Project:
         return ds
 
     def remove_dataset(self, ds_id: int) -> None:
+        """Remove a dataset, reassigning the active id when needed."""
         ds = self.get(ds_id)
         if ds is None:
             return
@@ -113,6 +134,7 @@ class Project:
             self.active_id = self.datasets[0].id if self.datasets else None
 
     def set_active(self, ds_id: int) -> None:
+        """Make ``ds_id`` the active dataset if it exists."""
         if self.get(ds_id) is not None:
             self.active_id = ds_id
 
@@ -139,9 +161,7 @@ class Project:
 
     def set_activity_periods(self, name: str, periods) -> None:
         """Replace a task's full period list and sync it across all datasets."""
-        norm: List[Period] = [
-            (pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods
-        ]
+        norm: List[Period] = [(pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods]
         self.activities[name] = norm
         for ds in self.datasets:
             ds.obj.mark_activities({name: norm}, mode="replace")
