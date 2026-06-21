@@ -1,0 +1,13 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+
+# Claude Code local agent state (worktrees, etc.)
+.claude/
+
+# Local screenshot scratch
+_shots/
+
+# Build / packaging artifacts
+*.egg-info/
+.pytest_cache/
