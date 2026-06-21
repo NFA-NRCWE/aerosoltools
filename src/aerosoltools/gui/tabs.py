@@ -260,6 +260,7 @@ class SummaryTab(QtWidgets.QWidget):
         self._synced_obj = None
 
         self.compute = QtWidgets.QPushButton("Compute")
+        self.compute.setObjectName("primary")
         self.compute.clicked.connect(self.refresh)
         bar.addWidget(self.compute)
         bar.addStretch(1)
@@ -539,20 +540,28 @@ class TimeSeriesTab(_PlotTab):
         self.show_acts.setChecked(True)
         self.show_acts.stateChanged.connect(lambda: self.refresh(reset_view=False))
         self.controls.addWidget(self.show_acts)
-
-        self.mark_mode = QtWidgets.QCheckBox("Mark task mode")
-        self.mark_mode.stateChanged.connect(self._toggle_mark_mode)
-        self.controls.addWidget(self.mark_mode)
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
         # View bookkeeping: preserve zoom/pan across non-rescaling refreshes.
         self._key = None
         self._has_drawn = False
+        # Identity of the object whose columns currently populate the selector,
+        # so the series list re-syncs when the active dataset changes.
+        self._cols_obj = None
 
-        # Activities side panel (list + edit + delete).
+        # Mark-task toggle: a button that stays visually pressed while marking.
+        self.mark_mode = QtWidgets.QPushButton("Mark activities")
+        self.mark_mode.setObjectName("toggle")
+        self.mark_mode.setCheckable(True)
+        self.mark_mode.setToolTip(
+            "Toggle marking on, then drag across the plot to add a task period."
+        )
+        self.mark_mode.toggled.connect(self._toggle_mark_mode)
+
+        # Activities side panel (mark toggle + list + edit + delete).
         self.act_list = QtWidgets.QListWidget()
-        self.act_list.setMaximumWidth(220)
+        self.act_list.setMaximumWidth(260)
         self.act_list.itemDoubleClicked.connect(lambda _item: self._edit_selected())
         self.edit_btn = QtWidgets.QPushButton("Edit selected activity")
         self.edit_btn.clicked.connect(self._edit_selected)
@@ -561,25 +570,31 @@ class TimeSeriesTab(_PlotTab):
         side = QtWidgets.QVBoxLayout()
         side.addWidget(QtWidgets.QLabel("Activities:"))
         side.addWidget(self.act_list, stretch=1)
+        side.addWidget(self.mark_mode)
         side.addWidget(self.edit_btn)
         side.addWidget(self.del_btn)
         hint = QtWidgets.QLabel(
-            "Tip: enable 'Mark task mode', then drag across the plot to add a "
+            "Tip: click 'Mark activities', then drag across the plot to add a "
             "task period (pick an existing task name to add another occurrence). "
-            "Double-click a task to edit its periods. Disable mark mode to zoom/pan."
+            "Double-click a task to edit its periods. Click 'Marking' again to "
+            "stop and zoom/pan."
         )
         hint.setWordWrap(True)
         side.addWidget(hint)
 
-        # Re-arrange: plot on the left, activities panel on the right.
-        body = QtWidgets.QHBoxLayout()
-        plot_box = QtWidgets.QVBoxLayout()
-        # Move toolbar+canvas (already added in base) into the horizontal body.
+        # Two columns: a left column holding the (compact) data-adjustments box
+        # — attached later — plus the view controls, toolbar and plot; and a
+        # full-height activities panel on the right.
+        self._left_col = QtWidgets.QVBoxLayout()
+        self._layout.removeItem(self.controls)
         self._layout.removeWidget(self.toolbar)
         self._layout.removeWidget(self.canvas)
-        plot_box.addWidget(self.toolbar)
-        plot_box.addWidget(self.canvas, stretch=1)
-        body.addLayout(plot_box, stretch=1)
+        self._left_col.addLayout(self.controls)
+        self._left_col.addWidget(self.toolbar)
+        self._left_col.addWidget(self.canvas, stretch=1)
+
+        body = QtWidgets.QHBoxLayout()
+        body.addLayout(self._left_col, stretch=1)
         body.addLayout(side)
         self._layout.addLayout(body, stretch=1)
 
@@ -594,9 +609,20 @@ class TimeSeriesTab(_PlotTab):
         )
         self._span.set_active(False)
 
+    def attach_adjust_controls(self, adjust_box) -> None:
+        """Embed the shared "Data adjustments" box atop the left column.
+
+        The box is built and owned by :class:`MainWindow` (so its handlers can
+        operate on the loaded object), but lives inside this tab so that data
+        adjustments happen where the data is shown.
+        """
+        self._left_col.insertWidget(0, adjust_box)
+
     # -- behaviour ---------------------------------------------------------
     def _toggle_mark_mode(self) -> None:
         active = self.mark_mode.isChecked()
+        # Reflect state in the button label ("Mark activities" -> "Marking").
+        self.mark_mode.setText("Marking" if active else "Mark activities")
         self._span.set_active(active)
         # Deactivate any active toolbar pan/zoom so it doesn't grab the drag.
         if active and self.toolbar.mode:
@@ -618,7 +644,7 @@ class TimeSeriesTab(_PlotTab):
 
         # Offer existing tasks (pick one to add another occurrence) plus a new
         # default name. The combo is editable so a brand-new name can be typed.
-        existing = helpers.user_activities(self.obj)
+        existing = self.main.project.user_activities()
         default = f"Task {len(existing) + 1}"
         items = existing + [default]
         name, ok = QtWidgets.QInputDialog.getItem(
@@ -631,7 +657,8 @@ class TimeSeriesTab(_PlotTab):
         )
         if not ok or not name.strip():
             return
-        helpers.add_activity(self.obj, name.strip(), start, end)
+        # Tasks are shared across all datasets in the project.
+        self.main.project.add_activity(name.strip(), start, end)
         # Keep the current zoom/pan so the view does not snap back after marking.
         self.main.refresh_all(reset_view=False)
 
@@ -639,7 +666,8 @@ class TimeSeriesTab(_PlotTab):
         item = self.act_list.currentItem()
         if item is None or self.obj is None:
             return
-        helpers.delete_activity(self.obj, item.text())
+        # Deleting a task removes it from every dataset in the project.
+        self.main.project.delete_activity(item.text())
         self.main.refresh_all(reset_view=False)
 
     def _edit_selected(self) -> None:
@@ -653,9 +681,8 @@ class TimeSeriesTab(_PlotTab):
         dlg = ActivityEditorDialog(self, name, periods, tmin, tmax)
         if dlg.exec_() != QtWidgets.QDialog.Accepted:
             return
-        # Replace the activity's periods with the edited set (mode="replace"
-        # overwrites both the boolean mask and the stored period list).
-        self.obj.mark_activities({name: dlg.periods()}, mode="replace")
+        # Replace the task's periods across every dataset in the project.
+        self.main.project.set_activity_periods(name, dlg.periods())
         self.main.refresh_all(reset_view=False)
 
     # -- rendering ---------------------------------------------------------
@@ -712,8 +739,11 @@ class TimeSeriesTab(_PlotTab):
             return
         if reset_view is None:
             reset_view = getattr(self.main, "_reset_view", True)
-        if self.column.count() == 0:
+        # Re-sync the series list when first shown or when the active dataset
+        # (and hence the available columns) has changed.
+        if self.column.count() == 0 or self._cols_obj is not self.obj:
             self._sync_columns()
+            self._cols_obj = self.obj
         self._sync_activities()
 
         kind, name = self.column.currentData() or ("total", helpers.TOTAL)
@@ -816,9 +846,26 @@ class PSDTab(_PlotTab):
         try:
             self._plot_on(self.figure)
             self.ax = self.figure.axes[0] if self.figure.axes else None
+            # The core plot_psd picks colours tuned for a white background; on
+            # the dark theme they are too dark, so brighten them for the screen
+            # only (exports keep the core's report colours via _render_export).
+            if self.ax is not None and theme.is_dark():
+                self._brighten_for_dark(self.ax)
             self.canvas.draw_idle()
         except Exception:
             self._show_message("Could not draw PSD:\n" + traceback.format_exc(limit=1))
+
+    @staticmethod
+    def _brighten_for_dark(ax) -> None:
+        """Recolour PSD lines (and their ±1σ fills) with the bright cycle."""
+        cycle = theme.mpl_cycle()
+        for i, line in enumerate(ax.get_lines()):
+            line.set_color(cycle[i % len(cycle)])
+        for i, coll in enumerate(ax.collections):  # fill_between envelopes
+            coll.set_color(cycle[i % len(cycle)])
+            coll.set_alpha(0.20)
+        if ax.get_legend() is not None:
+            ax.legend()  # rebuild so legend swatches match the new colours
 
     def _render_export(self, fig) -> None:
         self._plot_on(fig)
@@ -1001,30 +1048,41 @@ class PMBandsTab(_PlotTab):
 
         ax.clear()
         x = pm_data.index
-        prev = None
         labels = [f"P{dchar}{v:g}" for v in values]
         cmap = ["#5e3c99", "#998ec3", "#d8daeb", "#fee0b6", "#f1a340", "#b35806"]
-        for i, (pm, label) in enumerate(zip(values, labels)):
-            if label not in pm_data.columns:
-                continue
-            series = pm_data[label]
-            color = cmap[i % len(cmap)]
-            if i == 0:
-                ax.fill_between(x, 0, series, label=label, color=color, alpha=0.9)
-            elif self.cumulative:
-                ax.fill_between(x, prev, series, label=label, color=color, alpha=0.9)
-            else:
-                band = series - pm_data[labels[i - 1]]
+        present = [(i, lab) for i, lab in enumerate(labels) if lab in pm_data.columns]
+
+        if self.cumulative.isChecked():
+            # Stacked cumulative areas: 0→Pₓ₀, Pₓ₀→Pₓ₁, …  (top of stack = total).
+            prev = None
+            for i, label in present:
+                series = pm_data[label]
+                lower = 0 if prev is None else prev
+                ax.fill_between(
+                    x, lower, series, label=label, color=cmap[i % len(cmap)], alpha=0.9
+                )
+                prev = series
+        else:
+            # Differential bands, each drawn from zero, so the concentration in
+            # each size range is shown independently (largest first so the
+            # smaller ranges stay visible on top).
+            bands = []
+            prev_label = None
+            for i, label in present:
+                if prev_label is None:
+                    band = pm_data[label]
+                    rng = f"0–{label}"
+                else:
+                    band = pm_data[label] - pm_data[prev_label]
+                    rng = f"{prev_label}–{label}"
+                bands.append((i, rng, band))
+                prev_label = label
+            for i, rng, band in sorted(bands, key=lambda t: -float(np.nanmean(t[2]))):
                 avg = float(np.nanmean(band))
                 ax.fill_between(
-                    x,
-                    pm_data[labels[i - 1]],
-                    series,
-                    label=f"{labels[i - 1]}–{label} (μ={avg:.2g})",
-                    color=color,
-                    alpha=0.9,
+                    x, 0, band, label=f"{rng} (μ={avg:.2g})",
+                    color=cmap[i % len(cmap)], alpha=0.6,
                 )
-            prev = series
 
         ax.set_ylabel(f"P{dchar}, {unit}")
         ax.set_xlabel("Time")
@@ -1052,6 +1110,256 @@ class PMBandsTab(_PlotTab):
     def _render_export(self, fig) -> None:
         ax = fig.add_subplot(111)
         self._plot_on(ax)
+
+    def current_time_xlim(self):
+        if self.ax.has_data():
+            return self.ax.get_xlim()
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Overlay tab (multi-dataset comparison)
+# ---------------------------------------------------------------------------
+class OverlayTab(_PlotTab):
+    """Overlay one metric over time for several datasets at once.
+
+    Unlike the single-view tabs, this reads *all* of the project's datasets. A
+    per-dataset **view-only** time shift lets the user slide instruments in time
+    to line up peaks; "Apply shifts permanently" bakes those shifts into the
+    datasets' time axes (and re-projects the shared, absolute-time tasks).
+    """
+
+    export_tag = "overlay"
+
+    def __init__(self, main):
+        super().__init__(main, nrows=1)
+
+        self.metric = QtWidgets.QComboBox()
+        self.metric.currentIndexChanged.connect(self.refresh)
+        self.controls.addWidget(QtWidgets.QLabel("Metric:"))
+        self.controls.addWidget(self.metric)
+
+        self.log_y = QtWidgets.QCheckBox("Log Y")
+        self.log_y.stateChanged.connect(self._draw)
+        self.controls.addWidget(self.log_y)
+
+        self.normalize = QtWidgets.QCheckBox("Normalize (0–1)")
+        self.normalize.setToolTip(
+            "Scale each series to 0–1 to compare shapes across instruments with "
+            "different units/magnitudes."
+        )
+        self.normalize.stateChanged.connect(self._draw)
+        self.controls.addWidget(self.normalize)
+        self.controls.addStretch(1)
+        self.controls.addWidget(self.save_btn)
+
+        # Side panel: per-dataset include + shift table, plus an apply button.
+        self._building = False
+        self.table = QtWidgets.QTableWidget(0, 3)
+        self.table.setHorizontalHeaderLabels(["", "Dataset", "Shift (min)"])
+        self.table.verticalHeader().setVisible(False)
+        self.table.setMaximumWidth(320)
+        self.table.itemChanged.connect(self._on_item_changed)
+
+        self.apply_btn = QtWidgets.QPushButton("Apply shifts permanently")
+        self.apply_btn.setObjectName("primary")
+        self.apply_btn.setToolTip(
+            "Bake the current view shifts into the datasets (modifies their time "
+            "axes). Shared tasks keep their absolute times."
+        )
+        self.apply_btn.clicked.connect(self._apply_shifts)
+
+        side = QtWidgets.QVBoxLayout()
+        side.addWidget(QtWidgets.QLabel("Datasets to overlay:"))
+        side.addWidget(self.table, stretch=1)
+        side.addWidget(self.apply_btn)
+        hint = QtWidgets.QLabel(
+            "Tick datasets to overlay. Adjust 'Shift (min)' to slide a dataset in "
+            "time and line up peaks (view only until you apply permanently)."
+        )
+        hint.setWordWrap(True)
+        side.addWidget(hint)
+
+        # Left column (controls + toolbar + plot) and a full-height side panel.
+        self._left_col = QtWidgets.QVBoxLayout()
+        self._layout.removeItem(self.controls)
+        self._layout.removeWidget(self.toolbar)
+        self._layout.removeWidget(self.canvas)
+        self._left_col.addLayout(self.controls)
+        self._left_col.addWidget(self.toolbar)
+        self._left_col.addWidget(self.canvas, stretch=1)
+        body = QtWidgets.QHBoxLayout()
+        body.addLayout(self._left_col, stretch=1)
+        body.addLayout(side)
+        self._layout.addLayout(body, stretch=1)
+
+        self.ax = self.figure.add_subplot(111)
+
+    # -- data access -------------------------------------------------------
+    @property
+    def _datasets(self):
+        return self.main.project.datasets
+
+    def _metric_options(self) -> list:
+        names = ["Total concentration"]
+        seen = set(names)
+        for ds in self._datasets:
+            for _label, kind, name in helpers.plottable_columns(ds.obj):
+                if kind == "total" or name in seen:
+                    continue
+                seen.add(name)
+                names.append(name)
+        return names
+
+    def _series_for(self, ds):
+        metric = self.metric.currentText()
+        if metric == "Total concentration":
+            s = ds.obj.total_concentration
+        elif metric in ds.obj.data.columns:
+            s = ds.obj.data[metric]
+        elif ds.obj.extra_data is not None and metric in ds.obj.extra_data.columns:
+            s = ds.obj.extra_data[metric]
+        else:
+            return None
+        return pd.to_numeric(s, errors="coerce")
+
+    # -- table sync --------------------------------------------------------
+    def _sync_metric(self) -> None:
+        current = self.metric.currentText()
+        self.metric.blockSignals(True)
+        self.metric.clear()
+        self.metric.addItems(self._metric_options())
+        idx = self.metric.findText(current)
+        self.metric.setCurrentIndex(idx if idx >= 0 else 0)
+        self.metric.blockSignals(False)
+
+    def _sync_table(self) -> None:
+        self._building = True
+        self.table.blockSignals(True)
+        self.table.setRowCount(0)
+        for ds in self._datasets:
+            r = self.table.rowCount()
+            self.table.insertRow(r)
+            chk = QtWidgets.QTableWidgetItem()
+            chk.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+            chk.setCheckState(
+                QtCore.Qt.Checked if ds.overlay_on else QtCore.Qt.Unchecked
+            )
+            chk.setData(QtCore.Qt.UserRole, ds.id)
+            self.table.setItem(r, 0, chk)
+            name = QtWidgets.QTableWidgetItem(ds.label)
+            name.setFlags(QtCore.Qt.ItemIsEnabled)
+            self.table.setItem(r, 1, name)
+            spin = QtWidgets.QDoubleSpinBox()
+            spin.setRange(-100000.0, 100000.0)
+            spin.setDecimals(2)
+            spin.setValue(ds.view_shift.total_seconds() / 60.0)
+            spin.valueChanged.connect(lambda v, d=ds: self._on_shift(d, v))
+            self.table.setCellWidget(r, 2, spin)
+        self.table.resizeColumnsToContents()
+        self.table.blockSignals(False)
+        self._building = False
+
+    # -- interaction -------------------------------------------------------
+    def _on_item_changed(self, item) -> None:
+        if self._building or item.column() != 0:
+            return
+        ds = self.main.project.get(item.data(QtCore.Qt.UserRole))
+        if ds is not None:
+            ds.overlay_on = item.checkState() == QtCore.Qt.Checked
+            self._draw()
+
+    def _on_shift(self, ds, minutes: float) -> None:
+        if self._building:
+            return
+        ds.view_shift = pd.Timedelta(minutes=float(minutes))
+        self._draw()
+
+    def _apply_shifts(self) -> None:
+        moved = [ds for ds in self._datasets if ds.view_shift != pd.Timedelta(0)]
+        if not moved:
+            QtWidgets.QMessageBox.information(
+                self, "Apply shifts", "There are no view shifts to apply."
+            )
+            return
+        ans = QtWidgets.QMessageBox.question(
+            self,
+            "Apply shifts permanently",
+            f"Permanently shift {len(moved)} dataset(s) by their current view "
+            "shift?\nThis changes their time axes; shared tasks keep their "
+            "absolute times.",
+        )
+        if ans != QtWidgets.QMessageBox.Yes:
+            return
+        for ds in moved:
+            ds.obj.timeshift(seconds=ds.view_shift.total_seconds())
+            self.main.project._apply_activities(ds)
+            ds.view_shift = pd.Timedelta(0)
+        self.main._sync_crop_fields()
+        self.main.refresh_all(reset_view=True)
+        self.main._refresh_sidebar()
+
+    # -- rendering ---------------------------------------------------------
+    def refresh(self) -> None:
+        if not self._datasets:
+            return
+        self._sync_metric()
+        self._sync_table()
+        self._draw()
+
+    def _draw_on(self, ax) -> None:
+        ax.clear()
+        plotted = 0
+        for ds in self._datasets:
+            if not ds.overlay_on:
+                continue
+            s = self._series_for(ds)
+            if s is None or s.empty:
+                continue
+            x = s.index + ds.view_shift  # view-only shift
+            y = s.to_numpy(dtype=float)
+            if self.normalize.isChecked():
+                lo, hi = np.nanmin(y), np.nanmax(y)
+                if np.isfinite(lo) and np.isfinite(hi) and hi > lo:
+                    y = (y - lo) / (hi - lo)
+            label = ds.label
+            mins = ds.view_shift.total_seconds() / 60.0
+            if mins:
+                label += f" ({mins:+.0f} min)"
+            ax.plot(x, y, lw=1.4, label=label)
+            plotted += 1
+
+        ax.set_xlabel("Time")
+        ax.set_ylabel(
+            "Normalized (0–1)" if self.normalize.isChecked()
+            else self.metric.currentText()
+        )
+        ax.grid(True, alpha=0.3)
+        ax.xaxis.set_major_formatter(
+            mdates.ConciseDateFormatter(mdates.AutoDateLocator())
+        )
+        if self.log_y.isChecked():
+            ax.set_yscale("log")
+        if plotted:
+            ax.legend(loc="upper right", fontsize=8)
+        else:
+            ax.text(
+                0.5, 0.5, "Tick one or more datasets to overlay.",
+                ha="center", va="center", transform=ax.transAxes,
+            )
+
+    def _draw(self) -> None:
+        try:
+            self._draw_on(self.ax)
+        except Exception:
+            self._show_message(
+                "Could not draw overlay:\n" + traceback.format_exc(limit=1)
+            )
+            return
+        self.canvas.draw_idle()
+
+    def _render_export(self, fig) -> None:
+        self._draw_on(fig.add_subplot(111))
 
     def current_time_xlim(self):
         if self.ax.has_data():

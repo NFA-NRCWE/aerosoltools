@@ -1,0 +1,150 @@
+"""Project / dataset container for the multi-dataset GUI.
+
+A :class:`Project` holds an ordered collection of :class:`Dataset` objects (the
+files the user has loaded) plus a single *active* dataset that the single-view
+tabs follow. User-defined activities/tasks live on the **project** (not on any
+one dataset): they are stored once here and projected onto every dataset's time
+axis, so marking a task on one instrument applies it to all of them.
+
+This module is intentionally Qt-free so the data model can be reasoned about and
+tested independently of the widgets.
+"""
+
+from __future__ import annotations
+
+import itertools
+import os
+from typing import Dict, List, Optional, Tuple
+
+import pandas as pd
+
+from . import helpers
+
+# Process-wide counter giving every dataset a stable, unique id.
+_ID = itertools.count(1)
+
+Period = Tuple[pd.Timestamp, pd.Timestamp]
+
+
+class Dataset:
+    """One loaded file (or a derived/combined result) inside a project."""
+
+    def __init__(self, obj, source_path: Optional[str], instrument_key: str,
+                 label: Optional[str] = None):
+        self.id: int = next(_ID)
+        self.obj = obj
+        self.source_path = source_path
+        self.instrument_key = instrument_key
+        if label:
+            self.label = label
+        elif source_path:
+            self.label = os.path.splitext(os.path.basename(source_path))[0]
+        else:
+            self.label = f"Dataset {self.id}"
+        # Overlay-tab state (kept on the dataset so it survives tab rebuilds):
+        # a *view-only* time shift for manual peak alignment, and whether the
+        # dataset is included in the overlay.
+        self.view_shift: pd.Timedelta = pd.Timedelta(0)
+        self.overlay_on: bool = True
+
+    @property
+    def instrument(self) -> str:
+        return self.instrument_key or getattr(self.obj, "instrument", "Unknown")
+
+    @property
+    def serial_number(self) -> str:
+        return getattr(self.obj, "serial_number", "Unknown serial number")
+
+    def time_span(self) -> Optional[Period]:
+        """Return ``(start, end)`` timestamps, or ``None`` for empty data."""
+        t = getattr(self.obj, "time", None)
+        if t is None or len(t) == 0:
+            return None
+        return pd.Timestamp(t.min()), pd.Timestamp(t.max())
+
+    def n_points(self) -> int:
+        return int(self.obj.data.shape[0]) if self.obj is not None else 0
+
+
+class Project:
+    """An ordered set of datasets with a shared, project-level task registry."""
+
+    def __init__(self, name: str = "Untitled project"):
+        self.name = name
+        self.datasets: List[Dataset] = []
+        self.active_id: Optional[int] = None
+        # name -> list of (start, end). "All data" is intentionally NOT stored
+        # here; each dataset manages its own "All data" span over its own range.
+        self.activities: Dict[str, List[Period]] = {}
+
+    # -- dataset access ----------------------------------------------------
+    @property
+    def active(self) -> Optional[Dataset]:
+        return self.get(self.active_id)
+
+    def get(self, ds_id: Optional[int]) -> Optional[Dataset]:
+        if ds_id is None:
+            return None
+        return next((d for d in self.datasets if d.id == ds_id), None)
+
+    def index_of(self, ds_id: int) -> int:
+        for i, d in enumerate(self.datasets):
+            if d.id == ds_id:
+                return i
+        return -1
+
+    def add_dataset(self, ds: Dataset) -> Dataset:
+        """Append a dataset, projecting the shared activities onto it."""
+        self.datasets.append(ds)
+        self._apply_activities(ds)
+        if self.active_id is None:
+            self.active_id = ds.id
+        return ds
+
+    def remove_dataset(self, ds_id: int) -> None:
+        ds = self.get(ds_id)
+        if ds is None:
+            return
+        self.datasets.remove(ds)
+        if self.active_id == ds_id:
+            self.active_id = self.datasets[0].id if self.datasets else None
+
+    def set_active(self, ds_id: int) -> None:
+        if self.get(ds_id) is not None:
+            self.active_id = ds_id
+
+    # -- shared (project-level) activities --------------------------------
+    def user_activities(self) -> List[str]:
+        """Names of the shared user tasks (excludes per-dataset 'All data')."""
+        return list(self.activities.keys())
+
+    def _apply_activities(self, ds: Dataset) -> None:
+        """(Re)apply every shared activity onto a single dataset's time axis."""
+        for name, periods in self.activities.items():
+            ds.obj.mark_activities({name: periods}, mode="replace")
+
+    def reapply_all(self) -> None:
+        """Re-project the whole shared registry onto every dataset."""
+        for ds in self.datasets:
+            self._apply_activities(ds)
+
+    def add_activity(self, name: str, start, end) -> None:
+        """Append one occurrence to a task and sync it across all datasets."""
+        periods = list(self.activities.get(name, []))
+        periods.append((pd.Timestamp(start), pd.Timestamp(end)))
+        self.set_activity_periods(name, periods)
+
+    def set_activity_periods(self, name: str, periods) -> None:
+        """Replace a task's full period list and sync it across all datasets."""
+        norm: List[Period] = [
+            (pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods
+        ]
+        self.activities[name] = norm
+        for ds in self.datasets:
+            ds.obj.mark_activities({name: norm}, mode="replace")
+
+    def delete_activity(self, name: str) -> None:
+        """Remove a task from the registry and from every dataset."""
+        self.activities.pop(name, None)
+        for ds in self.datasets:
+            helpers.delete_activity(ds.obj, name)
