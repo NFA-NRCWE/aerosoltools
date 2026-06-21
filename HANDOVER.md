@@ -1,6 +1,6 @@
 # aerosoltools GUI — Handover
 
-_Last updated: 2026-06-19_
+_Last updated: 2026-06-21_
 
 This document lets the author (or another Claude agent) pick up the GUI work
 cold. Read it top-to-bottom once; it explains where the code lives, what is
@@ -49,7 +49,7 @@ Requires `PyQt5` (extra: `pip install aerosoltools[gui]`).
 | `projectio.py` | `save_project(project, folder, theme)` / `load_project(folder) -> (project, theme)`. Self-contained movable folder. |
 | `sidebar.py` | `DatasetSidebar` widget (list + add/remove/rename); emits Qt signals. |
 | `main_window.py` | `MainWindow`: menu bar, top bar card, datasets dock, tabs, status bar; loading, active-dataset switching, crop/smooth/resample/**time-shift**, theme switching, project save/load. |
-| `tabs.py` | `RawDataTab`, `SummaryTab`, `TimeSeriesTab` (marks tasks, hosts the embedded crop/processing/shift boxes), `PSDTab`, `HeatmapTab`, `PMBandsTab`, `_PlotTab` base. |
+| `tabs.py` | Single-view: `RawDataTab`, `SummaryTab`, `TimeSeriesTab` (marks tasks, hosts the embedded crop/processing/shift boxes), `PSDTab`, `HeatmapTab`, `PMBandsTab`, `_PlotTab` base. Multi-dataset comparison: `OverlayTab`, `CombinedPSDTab`, `CrossSummaryTab`. |
 | `models.py` | `PandasTableModel` for table views. |
 | `loaders.py` | Instrument → loader registry + filename guesser. |
 | `helpers.py` | dtype/unit resolution, plottable columns, activity shading, `delete_activity`. |
@@ -103,7 +103,9 @@ Requires `PyQt5` (extra: `pip install aerosoltools[gui]`).
 Done: **theme polish + dark/light toggle**, **menu bar**, **Project + sidebar
 (step 1)**, **project-level shared activities (step 2)**, **permanent
 time-shift**, **save/load project**, **join same-instrument (step 3)**,
-**combine NS+OPS (step 4)**.
+**combine NS+OPS (step 4)**, **overlay tab (step 5)**, **combined PSD (step 6)**,
+**cross-instrument summary (step 7)**, **correlation / Bland–Altman (step 8)**.
+**The original 8-step multi-dataset roadmap is now complete.**
 
 - **Step 3 (done):** new additive core util
   `aerosoltools.combine_measurements([obj, ...])` in `utility.py` (checks same
@@ -128,17 +130,66 @@ time-shift**, **save/load project**, **join same-instrument (step 3)**,
   `view_shift`. Metric = "Total concentration" or any column present in a
   dataset. Added in `_build_tabs` after Summary (always shown).
 
-Remaining (build in this order; reassess with the user after each):
+- **Step 6 (done):** `CombinedPSDTab` in `tabs.py` (multi-dataset comparison,
+  reads the project's **2D** datasets only). Side panel = a checkable dataset
+  list (include flag persisted on `Dataset.psd_on`, like `overlay_on`) + a
+  multi-select activity list (`["All data"] + project.user_activities()`). It
+  draws one curve per (dataset × activity) by calling the core
+  `obj.plot_psd(activities=[act], normalize=…, ax=shared)`, then **relabels +
+  recolours the artists it added** (track `len(ax.lines)`/`len(ax.collections)`
+  before/after each call; the suffix is the new artists). Labels collapse to
+  just the dataset (when one activity) or just the activity (when one dataset),
+  else "dataset – activity". Empty (dataset × task) combos add no line and are
+  skipped. Colours come from `_active_color_cycle()` = the **live**
+  `rcParams['axes.prop_cycle']`, so they're dark on screen and light under
+  `export_rc()` automatically — no `_brighten_for_dark` needed. Controls:
+  Normalize, Log Y, "±σ band" (off by default — bands overlap when comparing
+  many curves). Added in `_build_tabs` right after Overlay (always shown).
 
-6. **Combined PSD** comparison tab: overlay `obj.plot_psd(ax=shared)` per
-   (dataset × task). `plot_psd` already accepts `ax`.
-7. **Cross-instrument summary**: run `summarize_activities/exposure` per
-   dataset, prepend a Dataset/Instrument column, concat into one table.
-8. **Correlation / Bland-Altman** tab: core `Plot_correlation(X, Y,
-   parameter=…, match=…, tolerance=…)` and `bland_altman_analysis(...)` exist.
-   Time alignment is handled by `match` ("exact"/"nearest"/"rebin") + tolerance.
+- **Step 7 (done):** `CrossSummaryTab` in `tabs.py` (table, **not** a
+  `_PlotTab`; mirrors `SummaryTab`'s controls but operates on a dataset set).
+  Side: a checkable dataset list (include flag `Dataset.summary_on`). Type =
+  Activity / Exposure summary (same metric + cut-off + STEL/OEL controls as
+  `SummaryTab`); the exposure metric drop-down is the **union** across the
+  ticked datasets. **Compute-on-demand** (a `Compute` button) rather than
+  recomputing on every `refresh` — exposure over many datasets is costly, and
+  `refresh()` only re-syncs the dataset list. Per dataset it calls the core
+  `summarize_activities()` / `summarize_exposure(metric=…)`, `insert`s
+  `Dataset`/`Instrument` columns, and `pd.concat(sort=False)` — columns align by
+  name, so metrics only some instruments report leave blanks for the rest. A
+  metric invalid for a dataset (e.g. `PM4.2` on a CPC) is caught per-dataset and
+  reported in the status line ("Skipped — …"), not fatal. The whole compute loop
+  runs under `contextlib.redirect_stdout(io.StringIO())` because the core
+  `summarize_*` methods `print()` their table (noise across many datasets, and a
+  non-UTF-8 console chokes on the µ/³ glyphs mid-method). Export to Excel/CSV via
+  the shared `_export_table`. Added in `_build_tabs` after Combined PSD.
 
-### How to add a comparison tab (steps 5–8)
+- **Step 8 (done):** `CorrelationTab` in `tabs.py` (a `_PlotTab`; a **two**-dataset
+  comparison — **X** + **Y** combos, not a checklist). Draws the core
+  `Plot_correlation(X, Y, ax_in=…)` (scatter + 1:1 + regression + R²) or
+  `bland_altman_analysis(X, Y, ax_in=…, method=BA/Gi/Eu, C=…)` on the embedded
+  axis. The **Parameter** combo is the intersection of numeric column names
+  common to both objects (`Total_conc` first if present). Time alignment is
+  delegated to the core via `match` (exact/nearest/rebin) + `tolerance` /
+  `rebin_freq` / `rebin_method`; correlation also exposes intercept /
+  uniform-scaling / robust(Theil–Sen, = `outlier_influence=False`). Side-panel
+  rows show/hide by match mode and analysis type. **Compute-on-demand** (button):
+  `refresh()` only re-syncs the X/Y/parameter selectors and leaves the existing
+  plot in place — alignment can be costly and `refresh_all` fires often. Errors
+  (no time overlap, same dataset picked, no shared parameter) are caught and
+  shown via `_show_message`. Added in `_build_tabs` after Cross summary.
+
+### Two follow-on fixes made alongside steps 6–8 (2026-06-21)
+- **`SummaryTab` hardened**: its `summarize_*` calls now also run under
+  `contextlib.redirect_stdout(io.StringIO())` — same reason as the cross-summary
+  tab (the core `print()` of the result table can raise `UnicodeEncodeError` on a
+  non-UTF-8 Windows console and abort a 2D activity summary).
+- **`theme.export_rc()` legend fix**: it now pins `legend.facecolor="white"` +
+  `legend.edgecolor="#cccccc"`. Previously those keys leaked from the dark screen
+  theme (rc_context only overrides listed keys), so **every** tab's export drew a
+  dark legend box with unreadable dark text when saved from the dark theme.
+
+### How to add a comparison tab (the pattern used by steps 5–8)
 - Comparison tabs read a **set** of datasets, not the active one. Give them a
   multi-select of `project.datasets` (checkbox list) and a Compute/Refresh.
 - They are NOT shape-gated; add them once in `_build_tabs` after Summary, or
@@ -156,6 +207,13 @@ Remaining (build in this order; reassess with the user after each):
   style; everything else is the subtle secondary style.
 - **Exports stay light** regardless of UI theme (`theme.export_rc()` in
   `_PlotTab.save_figure`). The light UI theme is the on-screen preview of that.
+  `rc_context(export_rc())` only overrides the keys it lists — anything omitted
+  leaks from the dark screen profile (this bit the legend box; now pinned light).
+- **Core methods that `print()`** (the `summarize_*` table dumps via `tabulate`)
+  must be wrapped in `contextlib.redirect_stdout(io.StringIO())` when called from
+  the GUI: it silences the redundant console spam and stops a non-UTF-8 console
+  from raising `UnicodeEncodeError` on the µ/³ glyphs mid-method (see
+  `SummaryTab.refresh` and `CrossSummaryTab._compute`).
 - Pickled projects depend on the `aerosoltools` classes being importable; the
   `raw_data/` copies are the portability + Reload fallback. If you later add a
   pickle-failure fallback, re-load from `raw_data/` via the `LOADERS` registry

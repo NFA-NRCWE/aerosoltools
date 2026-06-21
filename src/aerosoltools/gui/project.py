@@ -41,11 +41,14 @@ class Dataset:
             self.label = os.path.splitext(os.path.basename(source_path))[0]
         else:
             self.label = f"Dataset {self.id}"
-        # Overlay-tab state (kept on the dataset so it survives tab rebuilds):
-        # a *view-only* time shift for manual peak alignment, and whether the
-        # dataset is included in the overlay.
+        # Comparison-tab state (kept on the dataset so it survives tab
+        # rebuilds): a *view-only* time shift for manual peak alignment in the
+        # Overlay tab, and whether the dataset is included in the Overlay /
+        # Combined PSD comparisons.
         self.view_shift: pd.Timedelta = pd.Timedelta(0)
         self.overlay_on: bool = True
+        self.psd_on: bool = True
+        self.summary_on: bool = True
 
     @property
     def instrument(self) -> str:

@@ -9,6 +9,8 @@ wherever possible so the GUI stays a thin presentation layer.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import os
 import traceback
 
@@ -18,6 +20,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.widgets import SpanSelector
 
+from ..utility import Plot_correlation, bland_altman_analysis
 from . import helpers, theme
 from .models import PandasTableModel
 from .qt import Figure, FigureCanvas, NavigationToolbar, QtCore, QtWidgets
@@ -390,16 +393,20 @@ class SummaryTab(QtWidgets.QWidget):
             self._ensure_metric_options()
         self.status.setText("")
         try:
-            if self.kind.currentText() == "Exposure summary":
-                df = self.obj.summarize_exposure(
-                    metric=self._build_metric(),
-                    short_limit=self._to_float(self.short_limit.text(), 1.0),
-                    long_limit=self._to_float(self.long_limit.text(), 1.0),
-                    short_window=self.short_window.text().strip() or "15min",
-                    twa_window=self.twa_window.text().strip() or "8h",
-                )
-            else:
-                df = self.obj.summarize_activities()
+            # The core summarize_* methods print their table to stdout; swallow
+            # it so the GUI is the single source of truth and a non-UTF-8 console
+            # cannot crash the method on the µg/m³ / cm⁻³ glyphs mid-print.
+            with contextlib.redirect_stdout(io.StringIO()):
+                if self.kind.currentText() == "Exposure summary":
+                    df = self.obj.summarize_exposure(
+                        metric=self._build_metric(),
+                        short_limit=self._to_float(self.short_limit.text(), 1.0),
+                        long_limit=self._to_float(self.long_limit.text(), 1.0),
+                        short_window=self.short_window.text().strip() or "15min",
+                        twa_window=self.twa_window.text().strip() or "8h",
+                    )
+                else:
+                    df = self.obj.summarize_activities()
             if df is None or df.empty:
                 self.model.set_dataframe(pd.DataFrame())
                 self.status.setText("No data to summarize for the current activities.")
@@ -1365,3 +1372,775 @@ class OverlayTab(_PlotTab):
         if self.ax.has_data():
             return self.ax.get_xlim()
         return None
+
+
+# ---------------------------------------------------------------------------
+# Combined PSD tab (multi-dataset comparison)
+# ---------------------------------------------------------------------------
+def _active_color_cycle() -> list:
+    """Return the colour cycle of the *currently active* rcParams profile.
+
+    Reading the live ``axes.prop_cycle`` keeps colours theme-correct on both
+    paths automatically: the dark/light screen cycle on the embedded canvas, and
+    the light export cycle while ``_render_export`` runs under
+    :func:`theme.export_rc`. This is why this tab does not need the screen-only
+    brighten hack that :class:`PSDTab` uses.
+    """
+    cycle = mpl.rcParams["axes.prop_cycle"].by_key().get("color")
+    return list(cycle) if cycle else theme.mpl_cycle()
+
+
+class CombinedPSDTab(_PlotTab):
+    """Overlay mean particle size distributions across datasets and tasks.
+
+    A comparison tab (like :class:`OverlayTab`): it reads *all* of the project's
+    size-resolved (2D) datasets rather than the active one. The user ticks which
+    datasets and which activities to compare; one mean-PSD curve is drawn per
+    (dataset × activity) pair via the library's own :meth:`Aerosol2D.plot_psd`
+    (``ax=`` shared), then relabelled/recoloured so each combination is distinct.
+    """
+
+    export_tag = "combined_psd"
+
+    def __init__(self, main):
+        super().__init__(main, nrows=1)
+
+        self.normalize = QtWidgets.QCheckBox("Normalize (dx/dlogDp)")
+        self.normalize.setChecked(True)
+        self.normalize.stateChanged.connect(self._draw)
+        self.controls.addWidget(self.normalize)
+
+        self.log_y = QtWidgets.QCheckBox("Log Y")
+        self.log_y.stateChanged.connect(self._draw)
+        self.controls.addWidget(self.log_y)
+
+        self.band = QtWidgets.QCheckBox("±σ band")
+        self.band.setToolTip(
+            "Shade each curve's ±1σ spread. Off by default, since the bands "
+            "overlap heavily when several curves are compared."
+        )
+        self.band.stateChanged.connect(self._draw)
+        self.controls.addWidget(self.band)
+        self.controls.addStretch(1)
+        self.controls.addWidget(self.save_btn)
+
+        # Side panel: datasets to compare (checkable) + activities (multi-select).
+        self._building = False
+        self.ds_list = QtWidgets.QListWidget()
+        self.ds_list.setMaximumWidth(280)
+        self.ds_list.itemChanged.connect(self._on_ds_changed)
+
+        self.act_list = QtWidgets.QListWidget()
+        self.act_list.setMaximumWidth(280)
+        self.act_list.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+        self.act_list.itemSelectionChanged.connect(self._draw)
+
+        side = QtWidgets.QVBoxLayout()
+        side.addWidget(QtWidgets.QLabel("Datasets to compare:"))
+        side.addWidget(self.ds_list, stretch=1)
+        side.addWidget(QtWidgets.QLabel("Activities:"))
+        side.addWidget(self.act_list, stretch=1)
+        hint = QtWidgets.QLabel(
+            "Tick the 2D datasets and the activities to compare. One mean-PSD "
+            "curve is drawn per dataset × activity."
+        )
+        hint.setWordWrap(True)
+        side.addWidget(hint)
+
+        # Left column (controls + toolbar + plot) and a full-height side panel.
+        self._left_col = QtWidgets.QVBoxLayout()
+        self._layout.removeItem(self.controls)
+        self._layout.removeWidget(self.toolbar)
+        self._layout.removeWidget(self.canvas)
+        self._left_col.addLayout(self.controls)
+        self._left_col.addWidget(self.toolbar)
+        self._left_col.addWidget(self.canvas, stretch=1)
+        body = QtWidgets.QHBoxLayout()
+        body.addLayout(self._left_col, stretch=1)
+        body.addLayout(side)
+        self._layout.addLayout(body, stretch=1)
+
+        self.ax = self.figure.add_subplot(111)
+
+    # -- data access -------------------------------------------------------
+    @property
+    def _datasets_2d(self):
+        return [d for d in self.main.project.datasets if helpers.is_2d(d.obj)]
+
+    def _selected_activities(self) -> list:
+        return [i.text() for i in self.act_list.selectedItems()]
+
+    # -- list sync ---------------------------------------------------------
+    def _sync_datasets(self) -> None:
+        self._building = True
+        self.ds_list.blockSignals(True)
+        self.ds_list.clear()
+        for ds in self._datasets_2d:
+            item = QtWidgets.QListWidgetItem(ds.label)
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+            item.setCheckState(
+                QtCore.Qt.Checked if ds.psd_on else QtCore.Qt.Unchecked
+            )
+            item.setData(QtCore.Qt.UserRole, ds.id)
+            self.ds_list.addItem(item)
+        self.ds_list.blockSignals(False)
+        self._building = False
+
+    def _sync_activities(self) -> None:
+        self.act_list.blockSignals(True)
+        selected = {i.text() for i in self.act_list.selectedItems()}
+        self.act_list.clear()
+        names = ["All data"] + self.main.project.user_activities()
+        for name in names:
+            self.act_list.addItem(name)
+            if name in selected:
+                self.act_list.item(self.act_list.count() - 1).setSelected(True)
+        # First time shown (nothing selected yet): default to "All data".
+        if not selected and self.act_list.count():
+            self.act_list.item(0).setSelected(True)
+        self.act_list.blockSignals(False)
+
+    # -- interaction -------------------------------------------------------
+    def _on_ds_changed(self, item) -> None:
+        if self._building:
+            return
+        ds = self.main.project.get(item.data(QtCore.Qt.UserRole))
+        if ds is not None:
+            ds.psd_on = item.checkState() == QtCore.Qt.Checked
+            self._draw()
+
+    # -- rendering ---------------------------------------------------------
+    def refresh(self) -> None:
+        self._sync_datasets()
+        self._sync_activities()
+        self._draw()
+
+    def _draw_on(self, ax) -> None:
+        ax.clear()
+        datasets = [d for d in self._datasets_2d if d.psd_on]
+        activities = self._selected_activities()
+        colors = _active_color_cycle()
+        normalize = self.normalize.isChecked()
+        show_band = self.band.isChecked()
+
+        plotted = 0
+        ci = 0
+        single = len(datasets) == 1 or len(activities) == 1
+        for ds in datasets:
+            for act in activities:
+                if act not in ds.obj.activities:
+                    continue
+                n_lines = len(list(ax.lines))
+                n_coll = len(list(ax.collections))
+                try:
+                    ds.obj.plot_psd(activities=[act], normalize=normalize, ax=ax)
+                except Exception:
+                    continue
+                new_lines = list(ax.lines)[n_lines:]
+                new_coll = list(ax.collections)[n_coll:]
+                if not new_lines:
+                    continue  # activity had no samples in this dataset
+                color = colors[ci % len(colors)]
+                ci += 1
+                # Label by whichever dimension actually varies, to keep the
+                # legend uncluttered when comparing along just one axis.
+                if single and len(activities) == 1:
+                    label = ds.label
+                elif single and len(datasets) == 1:
+                    label = act
+                else:
+                    label = f"{ds.label} – {act}"
+                for j, line in enumerate(new_lines):
+                    line.set_color(color)
+                    line.set_label(label if j == 0 else "_nolegend_")
+                for coll in new_coll:  # fill_between ±1σ envelope
+                    if show_band:
+                        coll.set_color(color)
+                        coll.set_alpha(0.18)
+                    else:
+                        coll.remove()
+                plotted += 1
+
+        if not plotted:
+            ax.clear()
+            msg = (
+                "Tick at least one dataset and one activity to compare."
+                if self._datasets_2d
+                else "Load size-resolved (2D) datasets to compare their PSDs."
+            )
+            ax.text(0.5, 0.5, msg, ha="center", va="center", transform=ax.transAxes)
+            ax.set_axis_off()
+            return
+
+        if self.log_y.isChecked():
+            ax.set_yscale("log")
+        ax.legend(loc="upper right", fontsize=8)
+
+    def _draw(self) -> None:
+        try:
+            self._draw_on(self.ax)
+        except Exception:
+            self._show_message(
+                "Could not draw combined PSD:\n" + traceback.format_exc(limit=1)
+            )
+            return
+        self.canvas.draw_idle()
+
+    def _render_export(self, fig) -> None:
+        self._draw_on(fig.add_subplot(111))
+
+
+# ---------------------------------------------------------------------------
+# Cross-instrument summary tab (multi-dataset comparison)
+# ---------------------------------------------------------------------------
+class CrossSummaryTab(QtWidgets.QWidget):
+    """One combined activity/exposure summary table across several datasets.
+
+    The single-dataset :class:`SummaryTab` runs ``summarize_activities`` /
+    ``summarize_exposure`` on the active object. This comparison tab runs the
+    same core methods on **each ticked dataset**, prepends ``Dataset`` /
+    ``Instrument`` columns, and concatenates the per-dataset tables into one
+    (columns align by name, so metrics that only some instruments report simply
+    leave blanks for the others). It is compute-on-demand (a ``Compute`` button)
+    rather than recomputing on every refresh, since exposure stats over many
+    datasets can be costly.
+    """
+
+    _FRACTION_KINDS = ("PM", "PN", "PS", "PV")
+
+    def __init__(self, main):
+        super().__init__()
+        self.main = main
+
+        layout = QtWidgets.QVBoxLayout(self)
+        body = QtWidgets.QHBoxLayout()
+        layout.addLayout(body, stretch=1)
+
+        # -- left: datasets to include ------------------------------------
+        self._building = False
+        self.ds_list = QtWidgets.QListWidget()
+        self.ds_list.setMaximumWidth(240)
+        self.ds_list.itemChanged.connect(self._on_ds_changed)
+        side = QtWidgets.QVBoxLayout()
+        side.addWidget(QtWidgets.QLabel("Datasets to include:"))
+        side.addWidget(self.ds_list, stretch=1)
+        body.addLayout(side)
+
+        # -- right: controls + table --------------------------------------
+        right = QtWidgets.QVBoxLayout()
+        body.addLayout(right, stretch=1)
+
+        bar = QtWidgets.QHBoxLayout()
+        self.kind = QtWidgets.QComboBox()
+        self.kind.addItems(["Activity summary", "Exposure summary"])
+        self.kind.currentIndexChanged.connect(self._on_kind_change)
+        bar.addWidget(QtWidgets.QLabel("Type:"))
+        bar.addWidget(self.kind)
+
+        # Metric selector (exposure only): a kind drop-down plus a cut-off
+        # drop-down shown only for the size-selective fractions (PM/PN/PS/PV).
+        self.metric_label = QtWidgets.QLabel("Metric:")
+        bar.addWidget(self.metric_label)
+        self.metric_kind = QtWidgets.QComboBox()
+        self.metric_kind.currentTextChanged.connect(self._on_metric_kind_change)
+        bar.addWidget(self.metric_kind)
+        self.metric_cut = QtWidgets.QComboBox()
+        self.metric_cut.setEditable(True)
+        self.metric_cut.setFixedWidth(80)
+        bar.addWidget(self.metric_cut)
+        self.metric_cut_label = QtWidgets.QLabel("µm")
+        bar.addWidget(self.metric_cut_label)
+
+        self.compute = QtWidgets.QPushButton("Compute")
+        self.compute.setObjectName("primary")
+        self.compute.clicked.connect(self._compute)
+        bar.addWidget(self.compute)
+        bar.addStretch(1)
+        self.export_btn = QtWidgets.QPushButton("Export to Excel…")
+        self.export_btn.clicked.connect(self._export)
+        bar.addWidget(self.export_btn)
+        right.addLayout(bar)
+
+        # Second row: exposure-limit parameters (only shown for exposure).
+        self.exp_bar = QtWidgets.QHBoxLayout()
+        self.short_limit = self._add_field("STEL (short-term limit):", "1.0", width=80)
+        self.short_window = self._add_field("over", "15min", width=70)
+        self.long_limit = self._add_field("OEL (8h limit):", "1.0", width=80)
+        self.twa_window = self._add_field("TWA window", "8h", width=70)
+        self.exp_bar.addStretch(1)
+        right.addLayout(self.exp_bar)
+
+        self.model = PandasTableModel()
+        self.view = QtWidgets.QTableView()
+        self.view.setModel(self.model)
+        self.view.setAlternatingRowColors(True)
+        _tune_table(self.view)
+        right.addWidget(self.view, stretch=1)
+
+        self.status = QtWidgets.QLabel(
+            "Tick datasets and click Compute to build the combined summary."
+        )
+        self.status.setWordWrap(True)
+        right.addWidget(self.status)
+        self._on_kind_change()
+
+    # -- small helpers -----------------------------------------------------
+    def _add_field(self, label: str, default: str, width: int) -> QtWidgets.QLineEdit:
+        lbl = QtWidgets.QLabel(label)
+        edit = QtWidgets.QLineEdit(default)
+        edit.setFixedWidth(width)
+        self.exp_bar.addWidget(lbl)
+        self.exp_bar.addWidget(edit)
+        edit._label = lbl  # type: ignore[attr-defined]
+        return edit
+
+    def _selected_datasets(self) -> list:
+        return [d for d in self.main.project.datasets if d.summary_on]
+
+    def _limit_fields(self):
+        return (self.short_limit, self.short_window, self.long_limit, self.twa_window)
+
+    def _exposure_widgets(self):
+        widgets = [
+            self.metric_label,
+            self.metric_kind,
+            self.metric_cut,
+            self.metric_cut_label,
+        ]
+        for field in self._limit_fields():
+            widgets.append(field)
+            label = getattr(field, "_label", None)
+            if label is not None:
+                widgets.append(label)
+        return widgets
+
+    # -- metric options ----------------------------------------------------
+    def _ensure_metric_options(self) -> None:
+        """Populate the metric drop-downs from the union of selected datasets."""
+        selected = self._selected_datasets()
+        any_2d = any(helpers.is_2d(d.obj) for d in selected)
+        cur_kind = self.metric_kind.currentText()
+        cur_cut = self.metric_cut.currentText()
+
+        self.metric_kind.blockSignals(True)
+        self.metric_cut.blockSignals(True)
+        self.metric_kind.clear()
+        self.metric_cut.clear()
+
+        kinds = ["PNC"]
+        if any_2d:
+            kinds += ["MASS", "PM", "PN", "PS", "PV"]
+        for d in selected:  # add any extra numeric channels present
+            for _label, kind, name in helpers.plottable_columns(d.obj):
+                if kind in ("data", "extra") and name not in kinds:
+                    kinds.append(name)
+        self.metric_kind.addItems(kinds)
+        self.metric_cut.addItems(["0.1", "0.25", "0.5", "1", "2.5", "4", "4.2", "10"])
+
+        # Preserve the user's selection across rebuilds where still valid.
+        ki = self.metric_kind.findText(cur_kind)
+        self.metric_kind.setCurrentText(
+            cur_kind if ki >= 0 else ("PM" if any_2d else "PNC")
+        )
+        self.metric_cut.setCurrentText(cur_cut or "4.2")
+        self.metric_kind.blockSignals(False)
+        self.metric_cut.blockSignals(False)
+        self._on_metric_kind_change()
+
+    def _on_metric_kind_change(self, *_args) -> None:
+        exposure = self.kind.currentText() == "Exposure summary"
+        is_fraction = self.metric_kind.currentText().strip() in self._FRACTION_KINDS
+        show_cut = exposure and is_fraction
+        self.metric_cut.setVisible(show_cut)
+        self.metric_cut_label.setVisible(show_cut)
+
+    def _build_metric(self) -> str:
+        kind = self.metric_kind.currentText().strip()
+        if kind in self._FRACTION_KINDS:
+            return f"{kind}{self.metric_cut.currentText().strip()}"
+        return kind
+
+    def _on_kind_change(self) -> None:
+        exposure = self.kind.currentText() == "Exposure summary"
+        if exposure:
+            self._ensure_metric_options()
+        for widget in self._exposure_widgets():
+            widget.setVisible(exposure)
+        if exposure:
+            self._on_metric_kind_change()
+
+    @staticmethod
+    def _to_float(text: str, default: float) -> float:
+        try:
+            return float(text.strip())
+        except (ValueError, AttributeError):
+            return default
+
+    # -- dataset list sync -------------------------------------------------
+    def _sync_datasets(self) -> None:
+        self._building = True
+        self.ds_list.blockSignals(True)
+        self.ds_list.clear()
+        for ds in self.main.project.datasets:
+            item = QtWidgets.QListWidgetItem(f"{ds.label}  ({ds.instrument})")
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+            item.setCheckState(
+                QtCore.Qt.Checked if ds.summary_on else QtCore.Qt.Unchecked
+            )
+            item.setData(QtCore.Qt.UserRole, ds.id)
+            self.ds_list.addItem(item)
+        self.ds_list.blockSignals(False)
+        self._building = False
+
+    def _on_ds_changed(self, item) -> None:
+        if self._building:
+            return
+        ds = self.main.project.get(item.data(QtCore.Qt.UserRole))
+        if ds is not None:
+            ds.summary_on = item.checkState() == QtCore.Qt.Checked
+        # The available metrics may change with the selection (e.g. a 2D
+        # dataset added/removed), so keep the metric drop-downs in step.
+        if self.kind.currentText() == "Exposure summary":
+            self._ensure_metric_options()
+
+    def refresh(self) -> None:
+        """Re-sync the dataset list; the table itself is built on Compute."""
+        self._sync_datasets()
+        if self.kind.currentText() == "Exposure summary":
+            self._ensure_metric_options()
+
+    # -- compute -----------------------------------------------------------
+    def _compute(self) -> None:
+        datasets = self._selected_datasets()
+        if not datasets:
+            self.model.set_dataframe(pd.DataFrame())
+            self.status.setText("Tick at least one dataset to include.")
+            return
+        exposure = self.kind.currentText() == "Exposure summary"
+        metric = self._build_metric() if exposure else None
+
+        frames: list[pd.DataFrame] = []
+        skipped: list[str] = []
+        # The core summarize_* methods print their result table to stdout; with
+        # many datasets that is just noise (the user reads the GUI table), and on
+        # a non-UTF-8 console the unit glyphs (µg/m³, cm⁻³) can even raise an
+        # encoding error mid-method. Swallow that console output during compute.
+        with contextlib.redirect_stdout(io.StringIO()):
+            for ds in datasets:
+                try:
+                    if exposure:
+                        df = ds.obj.summarize_exposure(
+                            metric=metric,
+                            short_limit=self._to_float(self.short_limit.text(), 1.0),
+                            long_limit=self._to_float(self.long_limit.text(), 1.0),
+                            short_window=self.short_window.text().strip() or "15min",
+                            twa_window=self.twa_window.text().strip() or "8h",
+                        )
+                    else:
+                        df = ds.obj.summarize_activities()
+                except Exception as exc:  # e.g. a PM metric on a 1D instrument
+                    skipped.append(f"{ds.label} ({exc})")
+                    continue
+                if df is None or df.empty:
+                    continue
+                df = df.copy()
+                df.insert(0, "Instrument", ds.instrument)
+                df.insert(0, "Dataset", ds.label)
+                frames.append(df)
+
+        if not frames:
+            self.model.set_dataframe(pd.DataFrame())
+            msg = "No data to summarize for the current selection."
+            if skipped:
+                msg += "  Skipped — " + "; ".join(skipped)
+            self.status.setText(msg)
+            return
+
+        combined = pd.concat(frames, ignore_index=True, sort=False)
+        self.model.set_dataframe(combined)
+        note = f"{len(frames)} dataset(s) combined, {len(combined)} rows."
+        if skipped:
+            note += "  Skipped — " + "; ".join(skipped)
+        self.status.setText(note)
+
+    def _export(self) -> None:
+        df = self.model.dataframe
+        kind = (
+            "exposure" if self.kind.currentText() == "Exposure summary" else "activity"
+        )
+        _export_table(
+            self, df, f"cross_instrument_{kind}_summary", with_index=False
+        )
+
+
+# ---------------------------------------------------------------------------
+# Correlation / Bland–Altman tab (two-dataset comparison)
+# ---------------------------------------------------------------------------
+class CorrelationTab(_PlotTab):
+    """Correlate (or Bland–Altman compare) one parameter between two datasets.
+
+    A two-dataset comparison: pick an **X** and a **Y** dataset and a parameter
+    they share, and the tab draws the library's own
+    :func:`~aerosoltools.utility.Plot_correlation` (scatter + 1:1 + regression +
+    R²) or :func:`~aerosoltools.utility.bland_altman_analysis` (difference plot)
+    on the embedded axis. Time alignment between the two instruments is delegated
+    to the core via ``match`` ("exact"/"nearest"/"rebin") + ``tolerance``. The
+    plot is built on **Compute** (alignment can be costly), so a plain ``refresh``
+    only re-syncs the dataset/parameter selectors and leaves the plot in place.
+    """
+
+    export_tag = "correlation"
+
+    def __init__(self, main):
+        super().__init__(main, nrows=1)
+
+        self.analysis = QtWidgets.QComboBox()
+        self.analysis.addItems(["Correlation", "Bland–Altman"])
+        self.analysis.currentIndexChanged.connect(self._on_analysis_change)
+        self.controls.addWidget(QtWidgets.QLabel("Analysis:"))
+        self.controls.addWidget(self.analysis)
+
+        self.x_combo = QtWidgets.QComboBox()
+        self.x_combo.currentIndexChanged.connect(self._on_pair_change)
+        self.controls.addWidget(QtWidgets.QLabel("X:"))
+        self.controls.addWidget(self.x_combo)
+
+        self.y_combo = QtWidgets.QComboBox()
+        self.y_combo.currentIndexChanged.connect(self._on_pair_change)
+        self.controls.addWidget(QtWidgets.QLabel("Y:"))
+        self.controls.addWidget(self.y_combo)
+
+        self.param = QtWidgets.QComboBox()
+        self.param.setMinimumWidth(120)
+        self.controls.addWidget(QtWidgets.QLabel("Parameter:"))
+        self.controls.addWidget(self.param)
+        self.controls.addStretch(1)
+        self.controls.addWidget(self.save_btn)
+
+        # -- side panel: time alignment + analysis options + Compute -------
+        self.match = QtWidgets.QComboBox()
+        self.match.addItems(["exact", "nearest", "rebin"])
+        self.match.currentTextChanged.connect(self._on_match_change)
+        self.tolerance = QtWidgets.QLineEdit("30s")
+        self.tolerance.setToolTip("Max timestamp separation for 'nearest' match.")
+        self.rebin_freq = QtWidgets.QLineEdit()
+        self.rebin_freq.setPlaceholderText("auto")
+        self.rebin_freq.setToolTip("Common time step for 'rebin', e.g. 1min (blank = auto).")
+        self.rebin_method = QtWidgets.QComboBox()
+        self.rebin_method.addItems(["mean", "median", "min", "max", "sum"])
+
+        align = QtWidgets.QGroupBox("Time alignment")
+        align_col = QtWidgets.QVBoxLayout(align)
+        align_col.addWidget(self._field_row("Match:", self.match))
+        self._tol_row = self._field_row("Tolerance:", self.tolerance)
+        self._freq_row = self._field_row("Rebin to:", self.rebin_freq)
+        self._method_row = self._field_row("Aggregation:", self.rebin_method)
+        align_col.addWidget(self._tol_row)
+        align_col.addWidget(self._freq_row)
+        align_col.addWidget(self._method_row)
+
+        # Correlation-only options.
+        self.intercept = QtWidgets.QCheckBox("Fit intercept (y = A·x + B)")
+        self.intercept.setChecked(True)
+        self.uniform = QtWidgets.QCheckBox("Uniform axis scaling")
+        self.uniform.setChecked(True)
+        self.robust = QtWidgets.QCheckBox("Robust fit (Theil–Sen)")
+        self.robust.setToolTip(
+            "Use the outlier-resistant Theil–Sen estimator instead of "
+            "least-squares (drops the confidence band)."
+        )
+        self.corr_box = QtWidgets.QGroupBox("Regression")
+        corr_col = QtWidgets.QVBoxLayout(self.corr_box)
+        corr_col.addWidget(self.intercept)
+        corr_col.addWidget(self.uniform)
+        corr_col.addWidget(self.robust)
+
+        # Bland–Altman-only options.
+        self.ba_method = QtWidgets.QComboBox()
+        self.ba_method.addItem("Bland–Altman (difference)", "BA")
+        self.ba_method.addItem("Giavarina (% of mean)", "Gi")
+        self.ba_method.addItem("Euser (log)", "Eu")
+        self.ba_conf = QtWidgets.QDoubleSpinBox()
+        self.ba_conf.setRange(0.50, 0.999)
+        self.ba_conf.setSingleStep(0.01)
+        self.ba_conf.setDecimals(3)
+        self.ba_conf.setValue(0.95)
+        self.ba_box = QtWidgets.QGroupBox("Bland–Altman")
+        ba_col = QtWidgets.QVBoxLayout(self.ba_box)
+        ba_col.addWidget(self._field_row("Method:", self.ba_method))
+        ba_col.addWidget(self._field_row("Confidence:", self.ba_conf))
+
+        self.compute_btn = QtWidgets.QPushButton("Compute")
+        self.compute_btn.setObjectName("primary")
+        self.compute_btn.clicked.connect(self._draw)
+
+        side = QtWidgets.QVBoxLayout()
+        side.addWidget(align)
+        side.addWidget(self.corr_box)
+        side.addWidget(self.ba_box)
+        side.addWidget(self.compute_btn)
+        hint = QtWidgets.QLabel(
+            "Pick two datasets and a shared parameter, then click Compute. Use "
+            "'nearest'/'rebin' match when the two instruments log on different "
+            "time stamps."
+        )
+        hint.setWordWrap(True)
+        side.addWidget(hint)
+        side.addStretch(1)
+        side_w = QtWidgets.QWidget()
+        side_w.setLayout(side)
+        side_w.setMaximumWidth(300)
+
+        # Left column (controls + toolbar + plot) and a side panel.
+        self._left_col = QtWidgets.QVBoxLayout()
+        self._layout.removeItem(self.controls)
+        self._layout.removeWidget(self.toolbar)
+        self._layout.removeWidget(self.canvas)
+        self._left_col.addLayout(self.controls)
+        self._left_col.addWidget(self.toolbar)
+        self._left_col.addWidget(self.canvas, stretch=1)
+        body = QtWidgets.QHBoxLayout()
+        body.addLayout(self._left_col, stretch=1)
+        body.addWidget(side_w)
+        self._layout.addLayout(body, stretch=1)
+
+        self.ax = self.figure.add_subplot(111)
+        self._has_drawn = False
+        self._on_analysis_change()
+        self._on_match_change()
+
+    # -- small helpers -----------------------------------------------------
+    @staticmethod
+    def _field_row(label_text: str, widget) -> QtWidgets.QWidget:
+        """Wrap ``label + widget`` in a row so both can be hidden together."""
+        row = QtWidgets.QWidget()
+        h = QtWidgets.QHBoxLayout(row)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.addWidget(QtWidgets.QLabel(label_text))
+        h.addWidget(widget, stretch=1)
+        return row
+
+    def _dataset(self, ds_id):
+        return self.main.project.get(ds_id)
+
+    # -- visibility toggles ------------------------------------------------
+    def _on_analysis_change(self, *_a) -> None:
+        is_corr = self.analysis.currentText() == "Correlation"
+        self.corr_box.setVisible(is_corr)
+        self.ba_box.setVisible(not is_corr)
+
+    def _on_match_change(self, *_a) -> None:
+        mode = self.match.currentText()
+        self._tol_row.setVisible(mode == "nearest")
+        self._freq_row.setVisible(mode == "rebin")
+        self._method_row.setVisible(mode == "rebin")
+
+    # -- selector sync -----------------------------------------------------
+    def _sync_pair(self) -> None:
+        datasets = self.main.project.datasets
+        for combo, default_idx in ((self.x_combo, 0), (self.y_combo, 1)):
+            combo.blockSignals(True)
+            prev = combo.currentData()
+            combo.clear()
+            for ds in datasets:
+                combo.addItem(ds.label, ds.id)
+            idx = combo.findData(prev)
+            if idx < 0:
+                idx = min(default_idx, combo.count() - 1)
+            combo.setCurrentIndex(idx)
+            combo.blockSignals(False)
+
+    def _common_parameters(self) -> list:
+        """Numeric column names present in *both* selected datasets."""
+        xds = self._dataset(self.x_combo.currentData())
+        yds = self._dataset(self.y_combo.currentData())
+        if xds is None or yds is None:
+            return []
+
+        def numeric_cols(obj) -> set:
+            cols = set(obj.data.select_dtypes(exclude="bool").columns)
+            extra = getattr(obj, "extra_data", None)
+            if extra is not None and not extra.empty:
+                cols |= set(extra.select_dtypes(exclude="bool").columns)
+            return cols - set(getattr(obj, "activities", []))
+
+        common = numeric_cols(xds.obj) & numeric_cols(yds.obj)
+        ordered = ["Total_conc"] if "Total_conc" in common else []
+        ordered += sorted(c for c in common if c != "Total_conc")
+        return ordered
+
+    def _sync_params(self) -> None:
+        self.param.blockSignals(True)
+        prev = self.param.currentText()
+        self.param.clear()
+        self.param.addItems(self._common_parameters())
+        idx = self.param.findText(prev)
+        if idx >= 0:
+            self.param.setCurrentIndex(idx)
+        self.param.blockSignals(False)
+
+    def _on_pair_change(self, *_a) -> None:
+        self._sync_params()
+
+    def refresh(self) -> None:
+        """Re-sync selectors only; the plot is (re)built on Compute."""
+        self._sync_pair()
+        self._sync_params()
+
+    # -- rendering ---------------------------------------------------------
+    def _draw_on(self, ax) -> None:
+        xds = self._dataset(self.x_combo.currentData())
+        yds = self._dataset(self.y_combo.currentData())
+        if xds is None or yds is None:
+            raise ValueError("Load at least two datasets to compare.")
+        if xds is yds:
+            raise ValueError("Pick two different datasets for X and Y.")
+        if not self.param.count():
+            raise ValueError(
+                "The two datasets share no common parameter to correlate."
+            )
+
+        parameter = self.param.currentText().strip() or None
+        mode = self.match.currentText()
+        kwargs = dict(
+            parameter=parameter,
+            match=mode,
+            tolerance=self.tolerance.text().strip() or "30s",
+        )
+        if mode == "rebin":
+            kwargs["rebin_freq"] = self.rebin_freq.text().strip() or None
+            kwargs["rebin_method"] = self.rebin_method.currentText()
+
+        if self.analysis.currentText() == "Correlation":
+            Plot_correlation(
+                xds.obj,
+                yds.obj,
+                ax_in=ax,
+                intercept=self.intercept.isChecked(),
+                uniform_scaling=self.uniform.isChecked(),
+                outlier_influence=not self.robust.isChecked(),
+                **kwargs,
+            )
+        else:
+            bland_altman_analysis(
+                xds.obj,
+                yds.obj,
+                ax_in=ax,
+                method=self.ba_method.currentData(),
+                C=float(self.ba_conf.value()),
+                **kwargs,
+            )
+
+    def _draw(self) -> None:
+        try:
+            self.figure.clear()
+            ax = self.figure.add_subplot(111)
+            self._draw_on(ax)
+            self.ax = ax
+            self._has_drawn = True
+            self.canvas.draw_idle()
+        except Exception as exc:
+            self._show_message(f"Could not compute: {exc}")
+
+    def _render_export(self, fig) -> None:
+        self._draw_on(fig.add_subplot(111))

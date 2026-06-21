@@ -529,6 +529,11 @@ def export_rc() -> dict:
         "legend.fontsize": 12,
         "legend.frameon": True,
         "legend.framealpha": 0.9,
+        # Pin the legend box light too: otherwise it inherits the dark theme's
+        # panel colour and the dark label text becomes unreadable on the white
+        # export figure (rc_context only overrides the keys listed here).
+        "legend.facecolor": "white",
+        "legend.edgecolor": "#cccccc",
         "legend.labelcolor": "#1f2933",
         "font.size": 12,
     }

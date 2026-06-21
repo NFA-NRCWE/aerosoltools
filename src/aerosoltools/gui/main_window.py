@@ -18,6 +18,9 @@ from .projectio import load_project, save_project
 from .qt import QtCore, QtGui, QtWidgets
 from .sidebar import DatasetSidebar
 from .tabs import (
+    CombinedPSDTab,
+    CorrelationTab,
+    CrossSummaryTab,
     HeatmapTab,
     OverlayTab,
     PMBandsTab,
@@ -894,10 +897,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tabs.addTab(summ, "Summary")
         self._tabs.append(summ)
 
-        # Overlay is a multi-dataset comparison tab (reads all datasets).
+        # Overlay + Combined PSD are multi-dataset comparison tabs (they read
+        # every dataset, not just the active one).
         overlay = OverlayTab(self)
         self.tabs.addTab(overlay, "Overlay")
         self._tabs.append(overlay)
+
+        combined_psd = CombinedPSDTab(self)
+        self.tabs.addTab(combined_psd, "Combined PSD")
+        self._tabs.append(combined_psd)
+
+        cross_summary = CrossSummaryTab(self)
+        self.tabs.addTab(cross_summary, "Cross summary")
+        self._tabs.append(cross_summary)
+
+        correlation = CorrelationTab(self)
+        self.tabs.addTab(correlation, "Correlation")
+        self._tabs.append(correlation)
 
         self._tab_sig = "2d" if helpers.is_2d(self.obj) else "1d"
 
