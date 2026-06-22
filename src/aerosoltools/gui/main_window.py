@@ -11,7 +11,7 @@ from ..utility import Combine_NS_OPS, combine_measurements
 from . import helpers, theme
 from .adjustments import AdjustmentsBox
 from .assets import icon_path
-from .loaders import LOADERS, guess_instrument
+from .loaders import LOADERS, UnrecognizedInstrumentError, require_identified_instrument
 from .project import Dataset, Project
 from .projectio import load_project, save_project
 from .qt import QtCore, QtGui, QtWidgets
@@ -377,7 +377,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self,
             "Import aerosol data file(s)",
             "",
-            "Data files (*.txt *.csv *.xlsx *.xls);;All files (*)",
+            "Data files (*.txt *.csv *.dat *.xlsx *.xls);;All files (*)",
         )
         if paths:
             self.load_files(paths)
@@ -406,10 +406,16 @@ class MainWindow(QtWidgets.QMainWindow):
         unknown or the file fails to load.
         """
         if instrument is None:
-            instrument = (
-                guess_instrument(os.path.basename(path))
-                or self.instrument_combo.currentText()
-            )
+            try:
+                instrument = require_identified_instrument(path)
+            except UnrecognizedInstrumentError as e:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Unknown instrument",
+                    str(e),
+                )
+                return None, None
+
         if instrument not in LOADERS:
             QtWidgets.QMessageBox.warning(
                 self, "Unknown instrument", f"No loader registered for '{instrument}'."
@@ -483,10 +489,10 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         last = None
         for path in paths:
-            # An explicit instrument overrides the per-file guess; otherwise let
-            # _load_obj guess from the name (and fall back to the combo).
-            inst = instrument or guess_instrument(os.path.basename(path))
-            ds = self._ingest_file(path, inst)
+            # If an instrument was explicitly provided, force that loader.
+            # Otherwise, let _load_obj identify the file by:
+            # content sniffer -> filename convention -> user-facing error.
+            ds = self._ingest_file(path, instrument)
             if ds is not None:
                 last = ds
         if last is None:  # every file failed to load
