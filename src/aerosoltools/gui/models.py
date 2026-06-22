@@ -16,6 +16,7 @@ class PandasTableModel(QtCore.QAbstractTableModel):
     """
 
     def __init__(self, df: pd.DataFrame | None = None, float_format: str = "{:.4g}"):
+        """Wrap ``df`` (or an empty frame) and remember the float display format."""
         super().__init__()
         self._df = df if df is not None else pd.DataFrame()
         self._float_format = float_format
@@ -29,16 +30,20 @@ class PandasTableModel(QtCore.QAbstractTableModel):
 
     @property
     def dataframe(self) -> pd.DataFrame:
+        """The DataFrame currently backing the model."""
         return self._df
 
     # -- Qt model interface ------------------------------------------------
     def rowCount(self, parent=QtCore.QModelIndex()) -> int:  # noqa: N802
+        """Return the row count (0 for any non-root parent)."""
         return 0 if parent.isValid() else len(self._df.index)
 
     def columnCount(self, parent=QtCore.QModelIndex()) -> int:  # noqa: N802
+        """Return the column count (0 for any non-root parent)."""
         return 0 if parent.isValid() else len(self._df.columns)
 
     def data(self, index, role=QtCore.Qt.DisplayRole):  # noqa: N802
+        """Return the formatted display text / alignment for a cell."""
         if not index.isValid():
             return None
         if role in (QtCore.Qt.DisplayRole, QtCore.Qt.ToolTipRole):
@@ -51,6 +56,7 @@ class PandasTableModel(QtCore.QAbstractTableModel):
     def headerData(
         self, section, orientation, role=QtCore.Qt.DisplayRole
     ):  # noqa: N802
+        """Return the column name, or the (timestamp) row label, for a header."""
         if role != QtCore.Qt.DisplayRole:
             return None
         if orientation == QtCore.Qt.Horizontal:
@@ -63,6 +69,7 @@ class PandasTableModel(QtCore.QAbstractTableModel):
 
     # -- helpers -----------------------------------------------------------
     def _format(self, value) -> str:
+        """Format one cell value (blank for NaN/None, ISO for timestamps)."""
         if value is None:
             return ""
         if isinstance(value, (float, np.floating)):
