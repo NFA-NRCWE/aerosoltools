@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ["Combine_NS_OPS", "Plot_correlation"]
+__all__ = ["Combine_NS_OPS", "Plot_correlation", "combine_measurements"]
 
 import datetime as dt
 from typing import Callable, Optional, Tuple
@@ -323,6 +323,124 @@ def Combine_NS_OPS(
 
 ###############################################################################
 
+
+def combine_measurements(datasets, *, require_same_serial: bool = True):
+    """Description:
+        Concatenate several measurements from the *same* instrument into one
+        continuous time series — for example the same monitor run on three
+        separate days, with gaps in between. The inputs are joined along the
+        time axis, sorted, de-duplicated, and returned as a single new object
+        of the same class. Gaps between recordings are preserved (no
+        interpolation is performed).
+
+    Args:
+        datasets (Sequence):
+            Two or more aerosol objects of the *same* class (all
+            :class:`~aerosoltools.aerosol1d.Aerosol1D`, all
+            :class:`~aerosoltools.aerosol2d.Aerosol2D`, ...). For size-resolved
+            data the size-bin structure (``bin_edges``) must be identical.
+        require_same_serial (bool, optional):
+            If ``True`` (default), raise when the datasets do not all share the
+            same ``serial_number``. Set to ``False`` to combine regardless
+            (e.g. when serial numbers are missing). Default is True.
+
+    Returns:
+        A new object of the same class as the inputs, spanning the union of all
+        input time ranges, with instrument metadata taken from the first input
+        and the union of all user-defined activity periods re-marked on the
+        combined time axis.
+
+    Raises:
+        ValueError:
+            If no datasets are given, the classes differ, the size-bin
+            structure differs (for 2D data), or the serial numbers differ while
+            ``require_same_serial`` is True.
+
+    Examples:
+        .. code-block:: python
+
+            import aerosoltools as at
+
+            d1 = at.Load_OPS_file("ops_day1.txt")
+            d2 = at.Load_OPS_file("ops_day2.txt")
+            d3 = at.Load_OPS_file("ops_day3.txt")
+            full = at.combine_measurements([d1, d2, d3])
+    """
+    datasets = list(datasets)
+    if not datasets:
+        raise ValueError("Provide at least one dataset to combine.")
+    if len(datasets) == 1:
+        return datasets[0].copy_self()
+
+    base = datasets[0]
+    cls = type(base)
+    for d in datasets[1:]:
+        if type(d) is not cls:
+            raise ValueError(
+                "All datasets must be the same aerosol type to combine "
+                f"(got {cls.__name__} and {type(d).__name__})."
+            )
+
+    if require_same_serial:
+        serials = {str(d.serial_number) for d in datasets}
+        if len(serials) > 1:
+            raise ValueError(
+                "Datasets have different serial numbers "
+                f"({', '.join(sorted(serials))}); refusing to combine. "
+                "Pass require_same_serial=False to override."
+            )
+
+    # Size-resolved data must share an identical bin structure.
+    if "bin_edges" in base._meta:
+        base_edges = np.asarray(base._meta["bin_edges"], dtype=float)
+        for d in datasets[1:]:
+            edges = np.asarray(d._meta.get("bin_edges", []), dtype=float)
+            if edges.shape != base_edges.shape or not np.allclose(edges, base_edges):
+                raise ValueError(
+                    "Size-bin structure differs between datasets; cannot "
+                    "concatenate. (Use Combine_NS_OPS for different instruments.)"
+                )
+
+    def _concat_sorted(frames):
+        frames = [f for f in frames if f is not None and not f.empty]
+        if not frames:
+            return pd.DataFrame()
+        out = pd.concat(frames, axis=0)
+        # Keep the first occurrence of any duplicated timestamp, then sort.
+        out = out[~out.index.duplicated(keep="first")].sort_index()
+        return out
+
+    # Concatenate the numeric main data (boolean activity masks are dropped and
+    # re-derived below) and the extra data.
+    combined = _concat_sorted(
+        [d._data.select_dtypes(exclude="bool") for d in datasets]
+    )
+    combined_extra = _concat_sorted([d._extra_data for d in datasets])
+
+    result = cls(combined.copy())
+    # Restore instrument metadata (instrument, serial, unit, dtype, bins, ...).
+    result._meta = dict(base._meta)
+    result._raw_data = combined.copy()
+    result._extra_data = combined_extra
+    result._raw_extra_data = combined_extra.copy()
+
+    # Union the user-defined activity periods across all inputs and re-mark them
+    # on the combined time axis.
+    merged: dict = {}
+    for d in datasets:
+        for name, periods in getattr(d, "_activity_periods", {}).items():
+            if name == "All data":
+                continue
+            merged.setdefault(name, [])
+            merged[name].extend(list(periods))
+    for name, periods in merged.items():
+        result.mark_activities({name: periods}, mode="replace")
+
+    return result
+
+
+###############################################################################
+
 # =========================
 # Small utilities
 # =========================
@@ -485,6 +603,43 @@ def _extract_series(
 ###############################################################################
 
 
+def _activity_period_mask(index, X, Y, activity: str) -> NDArray[np.bool_]:
+    """Boolean mask over ``index`` selecting timestamps inside an activity.
+
+    An activity's occurrences are absolute-time ``(start, end)`` intervals
+    shared across datasets, so a timestamp belongs to the activity when it falls
+    within any of those intervals. The periods are read from whichever of the two
+    objects defines the activity (they are projected from the same registry).
+
+    Args:
+        index: Timestamps to test (a :class:`pandas.DatetimeIndex` or similar).
+        X: First aerosol-like object.
+        Y: Second aerosol-like object.
+        activity: Name of the activity whose periods define the selection.
+
+    Returns:
+        numpy.ndarray: Boolean array, ``True`` where the timestamp is inside the
+        activity.
+
+    Raises:
+        ValueError: If neither object defines ``activity``.
+    """
+    periods = None
+    for obj in (X, Y):
+        registry = getattr(obj, "_activity_periods", None)
+        if registry and activity in registry:
+            periods = registry[activity]
+            break
+    if periods is None:
+        raise ValueError(f"Activity '{activity}' is not defined on either dataset.")
+
+    idx = pd.DatetimeIndex(index)
+    mask = np.zeros(len(idx), dtype=bool)
+    for start, end in periods:
+        mask |= (idx >= pd.Timestamp(start)) & (idx <= pd.Timestamp(end))
+    return mask
+
+
 def _align_series(
     X,
     Y,
@@ -496,6 +651,7 @@ def _align_series(
     tolerance: str | pd.Timedelta = "30s",
     rebin_freq: str | None = None,  # when match="rebin"
     rebin_method: str | Callable = "mean",  # when match="rebin"
+    activity: str | None = None,  # restrict to one activity's periods
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Extract and time-align a variable from two aerosol-like objects.
 
@@ -603,6 +759,16 @@ def _align_series(
     else:
         raise ValueError("match must be 'exact', 'nearest', or 'rebin'")
 
+    # Optionally keep only the aligned points that fall inside one activity.
+    # The activity periods are absolute-time, so this works uniformly for all
+    # three match modes (and for activities with several occurrences).
+    if activity is not None and activity != "All data":
+        xy = xy.loc[_activity_period_mask(xy.index, X, Y, activity)]
+        if xy.empty:
+            raise ValueError(
+                f"No aligned data points fall within activity '{activity}'."
+            )
+
     # Remove rows with non-finite values in either series
     vals = xy.to_numpy(dtype=float, copy=False)
     m = np.isfinite(vals).all(axis=1)
@@ -678,6 +844,7 @@ def Plot_correlation(
     intercept: bool = True,
     uniform_scaling: bool = True,
     outlier_influence: bool = True,
+    activity: str | None = None,
 ) -> tuple[Figure, Axes]:
     """Description:
         Create a correlation plot between the same variable from two aerosol
@@ -747,6 +914,12 @@ def Plot_correlation(
             around the fitted line. If ``False``, use the robust
             Theil–Sen estimator (:func:`scipy.stats.theilslopes`) without a
             confidence band.
+        activity (str | None, optional):
+            If given, restrict the correlation to the timestamps inside this
+            activity's marked periods (absolute-time, so multiple occurrences are
+            supported). Useful for correlating only a window where the two
+            instruments measured side by side. ``None`` (default) or
+            ``\"All data\"`` uses the full overlapping record.
 
     Returns:
         tuple[Figure, Axes]:
@@ -855,6 +1028,7 @@ def Plot_correlation(
         tolerance=tolerance,
         rebin_freq=rebin_freq,
         rebin_method=rebin_method,
+        activity=activity,
     )
 
     # Always return a top-level Figure to keep type hints simple
@@ -948,6 +1122,7 @@ def bland_altman_analysis(
     tolerance: str | pd.Timedelta = "30s",
     rebin_freq: str | None = None,
     rebin_method: str | Callable = "mean",
+    activity: str | None = None,
 ):
     """
     Plot Bland-Altman (difference plot) to highlight difference between two groups
@@ -1010,6 +1185,11 @@ def bland_altman_analysis(
            Aggregation method passed to ``timerebin`` when ``match=\"rebin\"``
            is used (e.g. ``\"mean\"``, ``\"median\"``, or a custom function).
            Default is ``\"mean\"``.
+       activity (str | None, optional):
+           If given, restrict the comparison to the timestamps inside this
+           activity's marked periods (absolute-time, multiple occurrences
+           supported). ``None`` (default) or ``\"All data\"`` uses the full
+           overlapping record.
 
     Returns:
         tuple[Figure, Axes]:
@@ -1091,6 +1271,7 @@ def bland_altman_analysis(
         tolerance=tolerance,
         rebin_freq=rebin_freq,
         rebin_method=rebin_method,
+        activity=activity,
     )
 
     x = x_vals.astype(np.float64, copy=False)

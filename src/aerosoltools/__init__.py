@@ -94,11 +94,17 @@ from .loaders import (
     Load_Partector_file,
     Load_SMPS_file,
 )
-from .utility import Combine_NS_OPS, Plot_correlation, bland_altman_analysis
+from .utility import (
+    Combine_NS_OPS,
+    Plot_correlation,
+    bland_altman_analysis,
+    combine_measurements,
+)
 
 # snake_case aliases for PEP 8 consistency
 combine_ns_ops = Combine_NS_OPS
 plot_correlation = Plot_correlation
+Combine_measurements = combine_measurements  # PascalCase alias
 load_aethalometer_file = Load_Aethalometer_file
 load_cpc_file = Load_CPC_file
 load_discmini_file = Load_DiSCmini_file
@@ -125,6 +131,8 @@ __all__ = [
     "Plot_correlation",
     "combine_ns_ops",
     "plot_correlation",
+    "combine_measurements",
+    "Combine_measurements",
     # Loaders (original names)
     "Load_Aethalometer_file",
     "Load_CPC_file",

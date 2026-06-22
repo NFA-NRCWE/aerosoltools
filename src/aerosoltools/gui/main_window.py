@@ -7,51 +7,53 @@ import os
 import traceback
 from typing import List, Optional
 
-import pandas as pd
-
-from . import helpers
+from ..utility import Combine_NS_OPS, combine_measurements
+from . import helpers, theme
+from .adjustments import AdjustmentsBox
 from .assets import icon_path
 from .loaders import LOADERS, guess_instrument
+from .project import Dataset, Project
+from .projectio import load_project, save_project
 from .qt import QtCore, QtGui, QtWidgets
+from .sidebar import DatasetSidebar
 from .tabs import (
+    CorrelationTab,
     HeatmapTab,
+    OverlayTab,
     PMBandsTab,
     PSDTab,
     RawDataTab,
     SummaryTab,
     TimeSeriesTab,
 )
-
-
-class _SlackTabBar(QtWidgets.QTabBar):
-    """Tab bar that pads each tab's width hint so labels never clip.
-
-    Qt's default size hint for a stylesheet-padded tab can under-allocate
-    width, clipping the first/last characters of the label. Adding a fixed
-    slack to the hint guarantees the full text is shown.
-    """
-
-    def tabSizeHint(self, index):  # noqa: N802
-        size = super().tabSizeHint(index)
-        size.setWidth(size.width() + 28)
-        return size
+from .widgets import CombineNSOPSDialog, KeyboardShortcutsDialog, SlackTabBar
 
 
 class MainWindow(QtWidgets.QMainWindow):
     """Top-level window: a load bar, dtype/density controls, and data tabs."""
 
     def __init__(self, path: Optional[str] = None, instrument: Optional[str] = None):
+        """Build the window and optionally load a file on startup.
+
+        Args:
+            path: Optional data file to open immediately.
+            instrument: Optional loader name; guessed from the file name when None.
+        """
         super().__init__()
         self.setWindowTitle("aerosoltools viewer")
-        self.resize(1200, 800)
+        self.resize(1340, 860)
         _icon = icon_path()
         if _icon:
             self.setWindowIcon(QtGui.QIcon(_icon))
 
-        self.obj = None
-        self.source_path: Optional[str] = None
-        self.source_instrument: Optional[str] = None
+        # The project owns the loaded datasets and the shared task registry.
+        self.project = Project()
+        self._project_path: Optional[str] = None  # folder of the saved project
+        self._theme: str = theme.current_mode()
         self._tabs: List = []
+        # Signature ("1d"/"2d") of the tab set currently built, so switching the
+        # active dataset only rebuilds tabs when the data shape actually changes.
+        self._tab_sig: Optional[str] = None
         # When True, plot tabs autoscale on the next refresh; when False they
         # preserve the user's current zoom/pan (e.g. after marking a task).
         self._reset_view: bool = True
@@ -61,21 +63,94 @@ class MainWindow(QtWidgets.QMainWindow):
         if path:
             self.load_file(path, instrument)
 
+    # -- active-dataset views ---------------------------------------------
+    # The single-view tabs read these (unchanged) attributes; they now resolve
+    # to whichever dataset is active in the sidebar.
+    @property
+    def obj(self):
+        """Active dataset's aerosol object, or None when nothing is loaded."""
+        ds = self.project.active
+        return ds.obj if ds is not None else None
+
+    @property
+    def source_path(self) -> Optional[str]:
+        """Active dataset's source file path, or None."""
+        ds = self.project.active
+        return ds.source_path if ds is not None else None
+
+    @property
+    def source_instrument(self) -> Optional[str]:
+        """Active dataset's instrument key, or None."""
+        ds = self.project.active
+        return ds.instrument_key if ds is not None else None
+
     # -- UI construction ---------------------------------------------------
     def _build_ui(self) -> None:
+        """Assemble the menu, sidebar, top bar, tabs and status bar."""
+        self._build_menu()
+        self._build_sidebar()
+
         central = QtWidgets.QWidget()
-        self.setCentralWidget(central)
+        central.setObjectName("Central")
         layout = QtWidgets.QVBoxLayout(central)
+        layout.setContentsMargins(14, 14, 14, 10)
+        layout.setSpacing(12)
 
-        bar = QtWidgets.QHBoxLayout()
+        layout.addWidget(self._build_top_bar())
 
-        open_btn = QtWidgets.QPushButton("Open file…")
+        # The crop / resample / smooth / time-shift controls are built here but
+        # *not* added to the main layout: the Time series tab embeds them, so
+        # processing always happens where the data is visible.
+        self.adjust_box = AdjustmentsBox(self)
+
+        # Tabs sit directly below the top bar.
+        self.tabs = QtWidgets.QTabWidget()
+        self.tabs.setTabBar(SlackTabBar())
+        self.tabs.tabBar().setExpanding(False)
+        self.tabs.setElideMode(QtCore.Qt.ElideNone)
+        self.tabs.setDocumentMode(True)
+        layout.addWidget(self.tabs, stretch=1)
+
+        # Wrap the central content in a scroll area, so when a pane is too small
+        # to fit, a scrollbar appears instead of enforcing a hard minimum size
+        # (which would block the datasets splitter from being dragged).
+        scroll = QtWidgets.QScrollArea()
+        scroll.setObjectName("CentralScroll")
+        scroll.setWidget(central)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.setCentralWidget(scroll)
+
+        # File / dataset info lives in the status bar at the bottom.
+        self.info = QtWidgets.QLabel("No data loaded. Use 'Import data…' to begin.")
+        self.statusBar().addWidget(self.info)
+
+        self._set_2d_controls_enabled(False)
+        self.adjust_box.set_enabled(False)
+
+    def _build_top_bar(self) -> QtWidgets.QWidget:
+        """Build the raised top control bar (open / instrument / dtype / density)."""
+        frame = QtWidgets.QFrame()
+        frame.setObjectName("TopBar")
+        bar = QtWidgets.QHBoxLayout(frame)
+        bar.setContentsMargins(14, 10, 14, 10)
+        bar.setSpacing(8)
+
+        open_btn = QtWidgets.QPushButton("Import data…")
+        open_btn.setObjectName("primary")
+        open_btn.setToolTip(
+            "Import one or more instrument data files as datasets (Ctrl+O)."
+        )
         open_btn.clicked.connect(self._open_dialog)
         bar.addWidget(open_btn)
 
         bar.addWidget(QtWidgets.QLabel("Instrument:"))
         self.instrument_combo = QtWidgets.QComboBox()
         self.instrument_combo.addItems(list(LOADERS.keys()))
+        self.instrument_combo.setToolTip(
+            "Loader to use for files whose instrument cannot be guessed from the "
+            "file name."
+        )
         bar.addWidget(self.instrument_combo)
 
         self.reload_btn = QtWidgets.QPushButton("Reload")
@@ -93,6 +168,10 @@ class MainWindow(QtWidgets.QMainWindow):
         bar.addWidget(self.dtype_label)
         self.dtype_combo = QtWidgets.QComboBox()
         self.dtype_combo.addItems(["dN", "dM", "dS", "dV"])
+        self.dtype_combo.setToolTip(
+            "Distribution basis for size-resolved data: number (dN), mass (dM), "
+            "surface (dS) or volume (dV)."
+        )
         self.dtype_combo.currentIndexChanged.connect(self._on_dtype_change)
         bar.addWidget(self.dtype_combo)
 
@@ -102,131 +181,183 @@ class MainWindow(QtWidgets.QMainWindow):
         self.density_spin.setRange(0.1, 25.0)
         self.density_spin.setSingleStep(0.1)
         self.density_spin.setValue(1.0)
+        self.density_spin.setToolTip(
+            "Particle density (g/cm³) used when converting to mass-based metrics."
+        )
         self.density_spin.editingFinished.connect(self._on_density_change)
         bar.addWidget(self.density_spin)
 
         bar.addStretch(1)
-        layout.addLayout(bar)
 
-        self.info = QtWidgets.QLabel("No file loaded. Use 'Open file…' to begin.")
-        self.info.setStyleSheet("color: #5b6573; padding: 2px;")
-        layout.addWidget(self.info)
+        # Soft glow for a raised, high-end "card" feel (cyan on the dark theme).
+        shadow = QtWidgets.QGraphicsDropShadowEffect(frame)
+        shadow.setBlurRadius(26)
+        shadow.setColor(QtGui.QColor(*theme.shadow_rgba()))
+        shadow.setOffset(0, 0)
+        frame.setGraphicsEffect(shadow)
+        self._topbar_shadow = shadow
+        return frame
 
-        layout.addWidget(self._build_crop_bar())
-        layout.addWidget(self._build_processing_bar())
+    def _build_sidebar(self) -> None:
+        """Build the detachable left-hand datasets panel."""
+        self.sidebar = DatasetSidebar()
+        self.sidebar.add_requested.connect(self._open_dialog)
+        self.sidebar.dataset_selected.connect(self.set_active_dataset)
+        self.sidebar.remove_requested.connect(self._remove_dataset)
+        self.sidebar.rename_requested.connect(self._rename_dataset)
+        self.sidebar.join_requested.connect(self._join_same_instrument)
+        self.sidebar.combine_ns_ops_requested.connect(self._combine_ns_ops)
 
-        self.tabs = QtWidgets.QTabWidget()
-        self.tabs.setTabBar(_SlackTabBar())
-        self.tabs.tabBar().setExpanding(False)
-        self.tabs.setElideMode(QtCore.Qt.ElideNone)
-        layout.addWidget(self.tabs, stretch=1)
+        # Scroll the sidebar when the dock is dragged too narrow, instead of
+        # enforcing a minimum width (which would freeze the splitter).
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidget(self.sidebar)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
 
-        self._set_2d_controls_enabled(False)
-        self._set_crop_enabled(False)
-        self._set_processing_enabled(False)
-
-    def _build_processing_bar(self) -> QtWidgets.QWidget:
-        """Build smoothing and resampling (time-resolution) controls."""
-        box = QtWidgets.QGroupBox("Smoothing && resampling")
-        row = QtWidgets.QHBoxLayout(box)
-
-        methods = ["mean", "median", "min", "max", "sum"]
-
-        # --- smoothing (rolling window over samples) ---
-        row.addWidget(QtWidgets.QLabel("Smooth window:"))
-        self.smooth_window = QtWidgets.QSpinBox()
-        self.smooth_window.setRange(2, 999)
-        self.smooth_window.setValue(5)
-        self.smooth_window.setToolTip("Rolling window size, in number of samples")
-        row.addWidget(self.smooth_window)
-
-        self.smooth_method = QtWidgets.QComboBox()
-        self.smooth_method.addItems(methods)
-        row.addWidget(self.smooth_method)
-
-        self.smooth_btn = QtWidgets.QPushButton("Apply smoothing")
-        self.smooth_btn.clicked.connect(self._apply_smoothing)
-        row.addWidget(self.smooth_btn)
-
-        row.addSpacing(24)
-
-        # --- resampling (rebin to a coarser time step) ---
-        row.addWidget(QtWidgets.QLabel("Resample to:"))
-        self.resample_freq = QtWidgets.QLineEdit("1min")
-        self.resample_freq.setFixedWidth(80)
-        self.resample_freq.setToolTip(
-            "Target time step as a pandas offset, e.g. 30s, 1min, 5min, 1H"
+        dock = QtWidgets.QDockWidget("Datasets", self)
+        dock.setObjectName("DatasetsDock")
+        dock.setWidget(scroll)
+        # Detachable (float / re-dock) but not closable, so it cannot be lost.
+        dock.setFeatures(
+            QtWidgets.QDockWidget.DockWidgetMovable
+            | QtWidgets.QDockWidget.DockWidgetFloatable
         )
-        row.addWidget(self.resample_freq)
-
-        self.resample_method = QtWidgets.QComboBox()
-        self.resample_method.addItems(methods)
-        row.addWidget(self.resample_method)
-
-        self.resample_btn = QtWidgets.QPushButton("Apply resampling")
-        self.resample_btn.clicked.connect(self._apply_resampling)
-        row.addWidget(self.resample_btn)
-
-        row.addStretch(1)
-        hint = QtWidgets.QLabel("(use Reload to undo)")
-        hint.setStyleSheet("color: #5b6573;")
-        row.addWidget(hint)
-        return box
-
-    def _set_processing_enabled(self, enabled: bool) -> None:
-        for w in (
-            self.smooth_window,
-            self.smooth_method,
-            self.smooth_btn,
-            self.resample_freq,
-            self.resample_method,
-            self.resample_btn,
-        ):
-            w.setEnabled(enabled)
-
-    def _build_crop_bar(self) -> QtWidgets.QWidget:
-        """Build the time-cropping controls (start/end pickers, apply, trim)."""
-        box = QtWidgets.QGroupBox("Crop time range")
-        row = QtWidgets.QHBoxLayout(box)
-
-        fmt = "yyyy-MM-dd HH:mm:ss"
-        row.addWidget(QtWidgets.QLabel("From:"))
-        self.crop_start = QtWidgets.QDateTimeEdit()
-        self.crop_start.setDisplayFormat(fmt)
-        self.crop_start.setCalendarPopup(True)
-        row.addWidget(self.crop_start)
-
-        row.addWidget(QtWidgets.QLabel("To:"))
-        self.crop_end = QtWidgets.QDateTimeEdit()
-        self.crop_end.setDisplayFormat(fmt)
-        self.crop_end.setCalendarPopup(True)
-        row.addWidget(self.crop_end)
-
-        self.crop_btn = QtWidgets.QPushButton("Apply crop")
-        self.crop_btn.clicked.connect(self._apply_crop)
-        row.addWidget(self.crop_btn)
-
-        self.crop_view_btn = QtWidgets.QPushButton("Crop to current view")
-        self.crop_view_btn.setToolTip(
-            "Crop to the time window currently shown on the active plot "
-            "(Time series, 2D heatmap, or PM bands)"
+        dock.setAllowedAreas(
+            QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea
         )
-        self.crop_view_btn.clicked.connect(self._crop_to_view)
-        row.addWidget(self.crop_view_btn)
+        # A small floor so the dock can be dragged narrow (scrollbar appears)
+        # but never collapses to an ungrabbable sliver.
+        dock.setMinimumWidth(80)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
+        self.resizeDocks([dock], [240], QtCore.Qt.Horizontal)
+        self.datasets_dock = dock
 
-        row.addStretch(1)
-        return box
+    def _build_menu(self) -> None:
+        """Build the top menu bar (File / View / Help) with shortcuts + tooltips.
 
-    def _set_crop_enabled(self, enabled: bool) -> None:
-        for w in (
-            self.crop_start,
-            self.crop_end,
-            self.crop_btn,
-            self.crop_view_btn,
-        ):
-            w.setEnabled(enabled)
+        Every shortcut-bearing action is created through :meth:`_menu_action`,
+        which records the binding in ``self._shortcut_help`` so the Help →
+        Keyboard shortcuts dialog stays in sync with the real menu.
+        """
+        # (keys, description) pairs collected as shortcuts are assigned, used to
+        # populate the Keyboard-shortcuts help dialog.
+        self._shortcut_help: List[tuple] = []
+        mb = self.menuBar()
+
+        file_menu = mb.addMenu("&File")
+        file_menu.setToolTipsVisible(True)
+        self._menu_action(
+            file_menu,
+            "New project",
+            self._new_project,
+            "Ctrl+N",
+            "Discard the current project and start an empty one.",
+        )
+        self._menu_action(
+            file_menu,
+            "Open project…",
+            self._open_project,
+            "Ctrl+Shift+O",
+            "Open a previously saved project folder.",
+        )
+        file_menu.addSeparator()
+        self._menu_action(
+            file_menu,
+            "Save project",
+            self._save_project,
+            "Ctrl+S",
+            "Save the project to its folder (prompts for one the first time).",
+        )
+        self._menu_action(
+            file_menu,
+            "Save project as…",
+            self._save_project_as,
+            "Ctrl+Shift+S",
+            "Save the project to a new folder.",
+        )
+        file_menu.addSeparator()
+        self._menu_action(
+            file_menu,
+            "Import data…",
+            self._open_dialog,
+            "Ctrl+O",
+            "Import one or more instrument data files as datasets.",
+        )
+        file_menu.addSeparator()
+        self._menu_action(
+            file_menu, "Exit", self.close, "Ctrl+Q", "Quit the application."
+        )
+
+        view_menu = mb.addMenu("&View")
+        view_menu.setToolTipsVisible(True)
+        theme_menu = view_menu.addMenu("Theme")
+        self._theme_group = QtWidgets.QActionGroup(self)
+        for label, mode in (("Dark", "dark"), ("Light", "light")):
+            act = QtWidgets.QAction(label, self, checkable=True)
+            act.setChecked(mode == self._theme)
+            act.triggered.connect(lambda _c, m=mode: self.set_theme(m))
+            self._theme_group.addAction(act)
+            theme_menu.addAction(act)
+        view_menu.addSeparator()
+        self._dock_action = QtWidgets.QAction(
+            "Datasets panel", self, checkable=True, checked=True
+        )
+        self._dock_action.setShortcut(QtGui.QKeySequence("Ctrl+D"))
+        self._dock_action.setToolTip("Show or hide the datasets sidebar.")
+        self._dock_action.triggered.connect(lambda c: self.datasets_dock.setVisible(c))
+        view_menu.addAction(self._dock_action)
+        self._shortcut_help.append(("Ctrl+D", "Show / hide the datasets panel"))
+
+        help_menu = mb.addMenu("&Help")
+        help_menu.setToolTipsVisible(True)
+        self._menu_action(
+            help_menu,
+            "Keyboard shortcuts",
+            self._show_shortcuts,
+            "F1",
+            "List the available keyboard shortcuts.",
+        )
+        help_menu.addAction("About", self._about)
+
+    def _menu_action(self, menu, label, handler, shortcut=None, tip=None):
+        """Add an action to ``menu``, wiring an optional shortcut and tooltip.
+
+        Args:
+            menu: The :class:`QtWidgets.QMenu` to add the action to.
+            label: Action text.
+            handler: Slot called when the action triggers.
+            shortcut: Optional shortcut string (e.g. ``"Ctrl+O"``). When given it
+                is also recorded in ``self._shortcut_help`` for the help dialog.
+            tip: Optional tooltip / status-tip text.
+
+        Returns:
+            QtWidgets.QAction: The created action.
+        """
+        act = menu.addAction(label, handler)
+        if shortcut:
+            act.setShortcut(QtGui.QKeySequence(shortcut))
+            self._shortcut_help.append((shortcut, label.rstrip("…")))
+        if tip:
+            act.setToolTip(tip)
+            act.setStatusTip(tip)
+        return act
+
+    def _show_shortcuts(self) -> None:
+        """Open the read-only keyboard-shortcuts reference dialog."""
+        KeyboardShortcutsDialog(self, self._shortcut_help).exec_()
+
+    def _about(self) -> None:
+        """Show the small 'About' message box."""
+        QtWidgets.QMessageBox.about(
+            self,
+            "About aerosoltools viewer",
+            "aerosoltools viewer\n\nInteractive viewer for aerosol instrument "
+            "data.\nLoad multiple datasets, mark shared tasks, and explore.",
+        )
 
     def _set_2d_controls_enabled(self, enabled: bool) -> None:
+        """Enable or disable the dtype + density controls (size-resolved data only)."""
         for w in (
             self.dtype_label,
             self.dtype_combo,
@@ -237,27 +368,43 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # -- loading -----------------------------------------------------------
     def _open_dialog(self) -> None:
-        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+        """Prompt for one or more data files and import them as datasets.
+
+        Uses a multi-select file dialog so several files can be imported in one
+        step; each file's instrument is guessed individually from its name.
+        """
+        paths, _ = QtWidgets.QFileDialog.getOpenFileNames(
             self,
-            "Open aerosol data file",
+            "Import aerosol data file(s)",
             "",
             "Data files (*.txt *.csv *.xlsx *.xls);;All files (*)",
         )
-        if not path:
-            return
-        guess = guess_instrument(os.path.basename(path))
-        if guess:
-            idx = self.instrument_combo.findText(guess)
-            if idx >= 0:
-                self.instrument_combo.setCurrentIndex(idx)
-        self.load_file(path, self.instrument_combo.currentText())
+        if paths:
+            self.load_files(paths)
 
     def _reload(self) -> None:
-        if self.source_path:
-            self.load_file(self.source_path, self.source_instrument)
+        """Reload the active dataset's file in place (keeps shared activities)."""
+        ds = self.project.active
+        if ds is None or not ds.source_path:
+            return
+        obj, instrument = self._load_obj(ds.source_path, ds.instrument_key)
+        if obj is None:
+            return
+        ds.obj = obj
+        ds.instrument_key = instrument
+        # Re-project the shared project activities onto the freshly loaded data.
+        self.project._apply_activities(ds)
+        self.adjust_box.sync_crop_fields()
+        self._build_tabs()
+        self.refresh_all(reset_view=True)
+        self._refresh_sidebar()
 
-    def load_file(self, path: str, instrument: Optional[str] = None) -> None:
-        """Load ``path`` using the named instrument loader and (re)build tabs."""
+    def _load_obj(self, path: str, instrument: Optional[str] = None):
+        """Resolve a loader and load ``path``; return ``(obj, instrument)``.
+
+        Returns ``(None, None)`` (after showing a message) if the instrument is
+        unknown or the file fails to load.
+        """
         if instrument is None:
             instrument = (
                 guess_instrument(os.path.basename(path))
@@ -267,7 +414,7 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.warning(
                 self, "Unknown instrument", f"No loader registered for '{instrument}'."
             )
-            return
+            return None, None
 
         idx = self.instrument_combo.findText(instrument)
         if idx >= 0:
@@ -288,39 +435,438 @@ class MainWindow(QtWidgets.QMainWindow):
                 f"Could not load:\n{path}\n\nas '{instrument}'.\n\n"
                 + traceback.format_exc(limit=2),
             )
-            return
+            return None, None
+        return obj, instrument
 
-        self.obj = obj
-        self.source_path = path
-        self.source_instrument = instrument
-        self.reload_btn.setEnabled(True)
-        self._set_crop_enabled(True)
-        self._set_processing_enabled(True)
-        self._sync_crop_fields()
+    def _ingest_file(self, path: str, instrument: Optional[str] = None):
+        """Load one file into a new dataset *without* touching the UI.
+
+        Args:
+            path: File to load.
+            instrument: Loader name, or None to guess from the file name.
+
+        Returns:
+            Dataset | None: The added dataset, or None if loading failed.
+        """
+        obj, instrument = self._load_obj(path, instrument)
+        if obj is None:
+            return None
+        ds = Dataset(obj=obj, source_path=path, instrument_key=instrument)
+        self.project.add_dataset(ds)
+        return ds
+
+    def _finalize_after_load(self) -> None:
+        """Refresh window state after one or more datasets were added."""
+        self.reload_btn.setEnabled(bool(self.source_path))
+        self.adjust_box.set_enabled(True)
+        self.adjust_box.sync_crop_fields()
         self._build_tabs()
         self.refresh_all(reset_view=True)
+        self._refresh_sidebar()
+
+    def load_file(self, path: str, instrument: Optional[str] = None) -> None:
+        """Load ``path`` as a new dataset, make it active, and (re)build tabs."""
+        ds = self._ingest_file(path, instrument)
+        if ds is None:
+            return
+        self.project.set_active(ds.id)
+        self._finalize_after_load()
+
+    def load_files(self, paths, instrument: Optional[str] = None) -> None:
+        """Import several files at once, refreshing the UI only once at the end.
+
+        Args:
+            paths: Iterable of file paths to import.
+            instrument: Optional loader name to force for *every* file. When None
+                (the usual case), each file's instrument is guessed from its name,
+                falling back to the instrument selector.
+        """
+        last = None
+        for path in paths:
+            # An explicit instrument overrides the per-file guess; otherwise let
+            # _load_obj guess from the name (and fall back to the combo).
+            inst = instrument or guess_instrument(os.path.basename(path))
+            ds = self._ingest_file(path, inst)
+            if ds is not None:
+                last = ds
+        if last is None:  # every file failed to load
+            return
+        self.project.set_active(last.id)
+        self._finalize_after_load()
+
+    # -- dataset / sidebar management --------------------------------------
+    def set_active_dataset(self, ds_id: int) -> None:
+        """Switch which dataset the single-view tabs follow."""
+        if ds_id == self.project.active_id or self.project.get(ds_id) is None:
+            return
+        self.project.set_active(ds_id)
+        self.reload_btn.setEnabled(bool(self.source_path))
+        self.adjust_box.sync_crop_fields()
+        self._ensure_tabs()
+        self.refresh_all(reset_view=True)
+        self._refresh_sidebar()
+
+    def _remove_dataset(self, ds_id: int) -> None:
+        """Remove a dataset, tearing the tabs down if it was the last one."""
+        self.project.remove_dataset(ds_id)
+        if self.project.active is None:
+            # Nothing left: detach the shared controls before clearing the tabs
+            # (otherwise they would be destroyed with the old Time series tab).
+            self.adjust_box.setParent(None)
+            self.tabs.clear()
+            self._tabs = []
+            self._tab_sig = None
+            self.reload_btn.setEnabled(False)
+            self.adjust_box.set_enabled(False)
+            self._set_2d_controls_enabled(False)
+            self.info.setText("No data loaded. Use 'Import data…' to begin.")
+        else:
+            self.adjust_box.sync_crop_fields()
+            self._build_tabs()
+            self.refresh_all(reset_view=True)
+        self._refresh_sidebar()
+
+    def _rename_dataset(self, ds_id: int) -> None:
+        """Prompt for and apply a new label for a dataset."""
+        ds = self.project.get(ds_id)
+        if ds is None:
+            return
+        name, ok = QtWidgets.QInputDialog.getText(
+            self, "Rename dataset", "Dataset name:", text=ds.label
+        )
+        if ok and name.strip():
+            ds.label = name.strip()
+            self._refresh_sidebar()
+            self._sync_header()
+
+    def _add_derived_dataset(
+        self, obj, instrument_key: str, label: str, remove_ids=(), source_files=()
+    ) -> Dataset:
+        """Add a combined/derived dataset, optionally replacing some sources.
+
+        Args:
+            obj: The derived aerosol object.
+            instrument_key: Instrument key for the result.
+            label: Display label.
+            remove_ids: Dataset ids to remove (e.g. the originals a join replaces).
+            source_files: Raw files behind the result (its constituents' files),
+                recorded so 'Save project' still archives them even though the
+                derived dataset itself has no single source file.
+
+        Returns:
+            Dataset: The newly added dataset.
+        """
+        for rid in remove_ids:
+            d = self.project.get(rid)
+            if d is not None:
+                self.project.datasets.remove(d)
+        ds = Dataset(
+            obj=obj, source_path=None, instrument_key=instrument_key, label=label
+        )
+        # De-duplicate while preserving order so the raw archive has each file once.
+        ds.contributing_files = list(dict.fromkeys(source_files))
+        self.project.datasets.append(ds)
+        self.project._apply_activities(ds)  # project the shared tasks onto it
+        self.project.active_id = ds.id
+        # Derived datasets have no source file, so Reload does not apply.
+        self.reload_btn.setEnabled(False)
+        self.adjust_box.set_enabled(True)
+        self.adjust_box.sync_crop_fields()
+        self._build_tabs()
+        self.refresh_all(reset_view=True)
+        self._refresh_sidebar()
+        return ds
+
+    def _join_same_instrument(self, ds_id: int) -> None:
+        """Concatenate all datasets sharing the selected one's instrument+serial."""
+        ds = self.project.get(ds_id)
+        if ds is None:
+            return
+        group = [
+            d
+            for d in self.project.datasets
+            if d.instrument_key == ds.instrument_key
+            and str(d.serial_number) == str(ds.serial_number)
+        ]
+        if len(group) < 2:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Join same instrument",
+                "Need at least two datasets with the same instrument and serial "
+                f"number to join.\n\nOnly one '{ds.instrument_key}' "
+                f"(serial {ds.serial_number}) dataset is loaded.",
+            )
+            return
+        names = "\n  • ".join(d.label for d in group)
+        ans = QtWidgets.QMessageBox.question(
+            self,
+            "Join same instrument",
+            f"Combine these {len(group)} '{ds.instrument_key}' datasets "
+            f"(serial {ds.serial_number}) into one continuous dataset?\n\n"
+            f"  • {names}\n\nThe originals will be replaced by the combined "
+            "dataset.",
+        )
+        if ans != QtWidgets.QMessageBox.Yes:
+            return
+        try:
+            combined = combine_measurements([d.obj for d in group])
+        except Exception:
+            QtWidgets.QMessageBox.critical(
+                self, "Join failed", traceback.format_exc(limit=2)
+            )
+            return
+        # Carry every constituent's raw files onto the combined dataset so the
+        # originals are still archived on save even though they're removed here.
+        raw_files = [f for d in group for f in d.contributing_files]
+        self._add_derived_dataset(
+            combined,
+            ds.instrument_key,
+            f"{ds.instrument_key} (combined)",
+            remove_ids=[d.id for d in group],
+            source_files=raw_files,
+        )
+
+    def _combine_ns_ops(self) -> None:
+        """Combine a NanoScan + an OPS dataset into one merged distribution."""
+        twod = [d for d in self.project.datasets if helpers.is_2d(d.obj)]
+        if len(twod) < 2:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Combine NS + OPS",
+                "Load at least two size-resolved (2D) datasets first "
+                "(e.g. a NanoScan and an OPS).",
+            )
+            return
+        dlg = CombineNSOPSDialog(self, twod)
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+        ns_ds, ops_ds, match = dlg.result()
+        if ns_ds is ops_ds:
+            QtWidgets.QMessageBox.warning(
+                self, "Combine NS + OPS", "Pick two different datasets."
+            )
+            return
+        try:
+            combined = Combine_NS_OPS(ns_ds.obj, ops_ds.obj, match=match)
+        except Exception:
+            QtWidgets.QMessageBox.critical(
+                self, "Combine failed", traceback.format_exc(limit=2)
+            )
+            return
+        # NS+OPS keeps the originals (they remain useful on their own); still
+        # record their raw files on the combined dataset for completeness.
+        self._add_derived_dataset(
+            combined,
+            "NS_OPS",
+            "NS + OPS (combined)",
+            source_files=ns_ds.contributing_files + ops_ds.contributing_files,
+        )
+
+    def _refresh_sidebar(self) -> None:
+        """Mirror the current datasets and active id into the sidebar."""
+        self.sidebar.set_datasets(self.project.datasets, self.project.active_id)
+
+    def _ensure_tabs(self) -> None:
+        """Rebuild tabs only when the active dataset's shape (1D/2D) changes."""
+        sig = "2d" if (self.obj is not None and helpers.is_2d(self.obj)) else "1d"
+        if sig != self._tab_sig:
+            self._build_tabs()
+
+    # -- project save / load ----------------------------------------------
+    def _new_project(self) -> None:
+        """Discard the current project and start an empty one."""
+        self.adjust_box.setParent(None)
+        self.tabs.clear()
+        self._tabs = []
+        self._tab_sig = None
+        self.project = Project()
+        self._project_path = None
+        self.reload_btn.setEnabled(False)
+        self.adjust_box.set_enabled(False)
+        self._set_2d_controls_enabled(False)
+        self.info.setText("No data loaded. Use 'Import data…' to begin.")
+        self._refresh_sidebar()
+        self._update_title()
+
+    def _open_project(self) -> None:
+        """Prompt for a saved project folder and load it."""
+        folder = QtWidgets.QFileDialog.getExistingDirectory(self, "Open project folder")
+        if not folder:
+            return
+        try:
+            project, mode = load_project(folder)
+        except Exception:
+            QtWidgets.QMessageBox.critical(
+                self, "Could not open project", traceback.format_exc(limit=2)
+            )
+            return
+        self.project = project
+        self._project_path = folder
+        if mode in ("dark", "light") and mode != self._theme:
+            self.set_theme(mode)
+        self._apply_loaded_project()
+
+    def _apply_loaded_project(self) -> None:
+        """Rebuild the UI to reflect ``self.project`` (after open/load)."""
+        has = self.project.active is not None
+        self.reload_btn.setEnabled(has)
+        self.adjust_box.set_enabled(has)
+        if has:
+            self.adjust_box.sync_crop_fields()
+            self._build_tabs()
+            self.refresh_all(reset_view=True)
+        else:
+            self.adjust_box.setParent(None)
+            self.tabs.clear()
+            self._tabs = []
+            self._tab_sig = None
+            self.info.setText("No data loaded. Use 'Import data…' to begin.")
+        self._refresh_sidebar()
+        self._update_title()
+
+    def _save_project(self) -> None:
+        """Save to the project's folder, or prompt for one if it was never saved."""
+        if not self.project.datasets:
+            QtWidgets.QMessageBox.information(
+                self, "Nothing to save", "Load at least one dataset first."
+            )
+            return
+        if self._project_path:
+            self._write_project(self._project_path)
+        else:
+            self._save_project_as()
+
+    def _save_project_as(self) -> None:
+        """Prompt for a parent folder + name and save the project there."""
+        if not self.project.datasets:
+            QtWidgets.QMessageBox.information(
+                self, "Nothing to save", "Load at least one dataset first."
+            )
+            return
+        # Step 1: choose the location (parent folder).
+        location = QtWidgets.QFileDialog.getExistingDirectory(
+            self, "Choose where to create the project folder"
+        )
+        if not location:
+            return
+        # Step 2: specify the project name -> a new sub-folder is created.
+        default = self.project.name if self.project.name != "Untitled project" else ""
+        name, ok = QtWidgets.QInputDialog.getText(
+            self, "Project name", "Project folder name:", text=default
+        )
+        if not ok or not name.strip():
+            return
+        safe = "".join(c for c in name.strip() if c not in '\\/:*?"<>|').strip()
+        if not safe:
+            QtWidgets.QMessageBox.warning(
+                self, "Invalid name", "Please enter a valid folder name."
+            )
+            return
+        target = os.path.join(location, safe)
+        if os.path.isdir(target) and os.listdir(target):
+            ans = QtWidgets.QMessageBox.question(
+                self,
+                "Folder exists",
+                f"'{safe}' already exists and is not empty.\nOverwrite its "
+                "project contents?",
+            )
+            if ans != QtWidgets.QMessageBox.Yes:
+                return
+        self.project.name = safe
+        self._write_project(target)
+
+    def _write_project(self, folder: str) -> None:
+        """Write the project to ``folder`` and update the title and status bar."""
+        try:
+            save_project(self.project, folder, theme=self._theme)
+        except Exception:
+            QtWidgets.QMessageBox.critical(
+                self, "Save failed", traceback.format_exc(limit=2)
+            )
+            return
+        self._project_path = folder
+        self.project.name = (
+            os.path.basename(os.path.normpath(folder)) or self.project.name
+        )
+        self._update_title()
+        self.statusBar().showMessage(f"Project saved to: {folder}", 5000)
+
+    def _update_title(self) -> None:
+        """Set the window title to reflect the saved-project path."""
+        suffix = f" — {self._project_path}" if self._project_path else ""
+        self.setWindowTitle(f"aerosoltools viewer{suffix}")
+
+    # -- theme -------------------------------------------------------------
+    def set_theme(self, mode: str) -> None:
+        """Switch between the 'dark' and 'light' themes at runtime."""
+        if mode not in ("dark", "light"):
+            return
+        self._theme = mode
+        app = QtWidgets.QApplication.instance()
+        if app is not None:
+            theme.apply_qt_theme(app, mode)
+        theme.apply_mpl_theme(mode)
+        # Update existing figures' face colours, then redraw their contents so
+        # the line colours pick up the new prop_cycle.
+        for tab in self._tabs:
+            fig = getattr(tab, "figure", None)
+            if fig is None:
+                continue
+            fig.set_facecolor(theme.fig_facecolor())
+            for ax in fig.axes:
+                ax.set_facecolor(theme.axes_facecolor())
+        if hasattr(self, "_topbar_shadow"):
+            self._topbar_shadow.setColor(QtGui.QColor(*theme.shadow_rgba()))
+        self.refresh_all(reset_view=False)
+        if hasattr(self, "_theme_group"):  # keep the View-menu radio in sync
+            for act in self._theme_group.actions():
+                act.setChecked(act.text().lower() == mode)
 
     # -- tab management ----------------------------------------------------
     def _build_tabs(self) -> None:
+        """(Re)create the tab set appropriate to the active dataset's shape.
+
+        The PSD and Summary tabs read the *whole project* (one or many datasets),
+        so they replace the former single-view PSD/Summary tabs and are always
+        shown. The 2D heatmap and PM-bands tabs stay single-view (they follow the
+        active dataset) and so are only built for a size-resolved active dataset.
+        """
+        # Detach the shared adjustments box before clearing the tabs, so
+        # deleting the old Time series tab does not destroy it.
+        self.adjust_box.setParent(None)
+
         self.tabs.clear()
         self._tabs = []
 
         raw = RawDataTab(self)
-        summ = SummaryTab(self)
         ts = TimeSeriesTab(self)
+        ts.attach_adjust_controls(self.adjust_box)
         self.tabs.addTab(raw, "Raw data")
-        self.tabs.addTab(summ, "Summary")
         self.tabs.addTab(ts, "Time series")
-        self._tabs += [raw, summ, ts]
+        self._tabs += [raw, ts]
 
+        # Single-view 2D plots that follow the active dataset.
         if helpers.is_2d(self.obj):
-            psd = PSDTab(self)
             heat = HeatmapTab(self)
             pm = PMBandsTab(self)
-            self.tabs.addTab(psd, "PSD")
             self.tabs.addTab(heat, "2D heatmap")
             self.tabs.addTab(pm, "PM bands")
-            self._tabs += [psd, heat, pm]
+            self._tabs += [heat, pm]
+
+        # Project-level tabs (work for a single dataset or compare several):
+        # PSD + Summary subsume the old single-view tabs; Overlay + Correlation
+        # are multi-dataset comparisons. All are always shown.
+        psd = PSDTab(self)
+        summ = SummaryTab(self)
+        overlay = OverlayTab(self)
+        correlation = CorrelationTab(self)
+        self.tabs.addTab(psd, "PSD")
+        self.tabs.addTab(summ, "Summary")
+        self.tabs.addTab(overlay, "Overlay")
+        self.tabs.addTab(correlation, "Correlation")
+        self._tabs += [psd, summ, overlay, correlation]
+
+        self._tab_sig = "2d" if helpers.is_2d(self.obj) else "1d"
 
     def refresh_all(self, reset_view: bool = False) -> None:
         """Update the info bar, dtype/density controls, and every tab.
@@ -340,6 +886,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 traceback.print_exc()
 
     def _sync_header(self) -> None:
+        """Refresh the status line and dtype/density controls for the active dataset."""
         if self.obj is None:
             return
         is2d = helpers.is_2d(self.obj)
@@ -347,10 +894,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         dtype, unit = helpers.describe(self.obj)
         rows = self.obj.data.shape[0]
+        ds = self.project.active
+        n = len(self.project.datasets)
+        pos = self.project.index_of(ds.id) + 1 if ds is not None else 0
+        label = ds.label if ds is not None else ""
         self.info.setText(
-            f"{self.source_instrument}  |  {type(self.obj).__name__}  |  "
-            f"dtype = {dtype}  |  unit = {unit}  |  {rows} time steps  |  "
-            f"file: {os.path.basename(self.source_path or '')}"
+            f"[{pos}/{n}] {label}  |  {self.source_instrument}  |  "
+            f"{type(self.obj).__name__}  |  dtype = {dtype}  |  unit = {unit}  |  "
+            f"{rows} time steps  |  file: {os.path.basename(self.source_path or '')}"
         )
 
         if is2d:
@@ -367,6 +918,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # -- dtype / density handlers -----------------------------------------
     def _on_dtype_change(self) -> None:
+        """Convert the active 2D dataset to the selected distribution basis."""
         if self.obj is None or not helpers.is_2d(self.obj):
             return
         target = self.dtype_combo.currentText()
@@ -381,6 +933,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.refresh_all(reset_view=True)
 
     def _on_density_change(self) -> None:
+        """Apply the selected particle density to the active 2D dataset."""
         if self.obj is None or not helpers.is_2d(self.obj):
             return
         try:
@@ -390,118 +943,4 @@ class MainWindow(QtWidgets.QMainWindow):
                 self, "set_density failed", traceback.format_exc(limit=1)
             )
             return
-        self.refresh_all(reset_view=True)
-
-    # -- cropping ----------------------------------------------------------
-    def _sync_crop_fields(self) -> None:
-        """Set the crop pickers to the current data time range.
-
-        The pickers are intentionally left *unconstrained* (no min/max range).
-        Enforcing a range makes the fields awkward to edit, because typing an
-        intermediate value outside the data span gets silently rejected.
-        Out-of-range crop values are harmless (they simply keep all data), so
-        validation happens on Apply instead.
-        """
-        if self.obj is None or len(self.obj.time) == 0:
-            return
-        tmin = pd.Timestamp(self.obj.time.min()).to_pydatetime()
-        tmax = pd.Timestamp(self.obj.time.max()).to_pydatetime()
-        for widget, value in ((self.crop_start, tmin), (self.crop_end, tmax)):
-            widget.blockSignals(True)
-            widget.setDateTime(QtCore.QDateTime(value))
-            widget.blockSignals(False)
-
-    def _do_crop(self, start, end) -> None:
-        """Crop the working object to ``[start, end]`` and refresh."""
-        if self.obj is None:
-            return
-        start = pd.Timestamp(start)
-        end = pd.Timestamp(end)
-        if end <= start:
-            QtWidgets.QMessageBox.warning(
-                self, "Invalid range", "The end time must be after the start time."
-            )
-            return
-        try:
-            self.obj.timecrop(start=start, end=end, focus=True)
-        except Exception:
-            QtWidgets.QMessageBox.warning(
-                self, "Crop failed", traceback.format_exc(limit=1)
-            )
-            return
-        if len(self.obj.time) == 0:
-            QtWidgets.QMessageBox.warning(
-                self, "Empty result", "Cropping removed all data; reload to recover."
-            )
-        self._sync_crop_fields()
-        self.refresh_all(reset_view=True)
-
-    def _apply_crop(self) -> None:
-        self._do_crop(
-            self.crop_start.dateTime().toPyDateTime(),
-            self.crop_end.dateTime().toPyDateTime(),
-        )
-
-    def _crop_to_view(self) -> None:
-        """Crop to the time window shown on the currently active time-based plot.
-
-        Uses the active tab's x-limits if it exposes a time axis (Time series,
-        2D heatmap, PM bands); otherwise falls back to the Time series tab.
-        """
-        import matplotlib.dates as mdates
-
-        xlim = None
-        active = self.tabs.currentWidget()
-        if hasattr(active, "current_time_xlim"):
-            xlim = active.current_time_xlim()
-        if xlim is None:
-            ts_tab = next((t for t in self._tabs if isinstance(t, TimeSeriesTab)), None)
-            if ts_tab is not None:
-                xlim = ts_tab.current_time_xlim()
-        if xlim is None:
-            QtWidgets.QMessageBox.information(
-                self,
-                "No time view",
-                "Open a time-based plot (Time series, 2D heatmap, or PM bands) "
-                "and zoom to the window you want before cropping to view.",
-            )
-            return
-
-        start = pd.Timestamp(mdates.num2date(xlim[0])).tz_localize(None)
-        end = pd.Timestamp(mdates.num2date(xlim[1])).tz_localize(None)
-        self._do_crop(start, end)
-
-    # -- smoothing / resampling -------------------------------------------
-    def _apply_smoothing(self) -> None:
-        if self.obj is None:
-            return
-        try:
-            self.obj.timesmooth(
-                window=int(self.smooth_window.value()),
-                method=self.smooth_method.currentText(),
-            )
-        except Exception:
-            QtWidgets.QMessageBox.warning(
-                self, "Smoothing failed", traceback.format_exc(limit=1)
-            )
-            return
-        self.refresh_all(reset_view=True)
-
-    def _apply_resampling(self) -> None:
-        if self.obj is None:
-            return
-        freq = self.resample_freq.text().strip()
-        if not freq:
-            QtWidgets.QMessageBox.warning(
-                self, "Resampling", "Enter a target time step, e.g. 30s, 1min, 5min."
-            )
-            return
-        try:
-            self.obj.timerebin(freq=freq, method=self.resample_method.currentText())
-        except Exception:
-            QtWidgets.QMessageBox.warning(
-                self, "Resampling failed", traceback.format_exc(limit=1)
-            )
-            return
-        self._sync_crop_fields()
         self.refresh_all(reset_view=True)
