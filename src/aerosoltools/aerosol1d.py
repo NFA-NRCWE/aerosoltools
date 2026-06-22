@@ -292,7 +292,29 @@ class Aerosol1D:
         med = float(np.nanmedian(dt)) if np.isfinite(np.nanmedian(dt)) else 60.0
         dt.iloc[-1] = med
         return dt / 60.0
+    
+    ###########################################################################
 
+
+    def _ensure_data_robustness(self,vals) -> pd.Series:
+        """Validity mask from the original object (keeps alignment with self.time)
+
+        This returns a cleaned serires, so that no new data is generated,
+        where before the total_conc was NaN.
+        Args:
+            vals (np.array):
+                array of data structured as a column of data from either data
+                extra data.
+        Returns:
+            pd.Series: Time series of the requested Pₓ metric, indexed by
+            :attr:`time`. Empty or invalid time steps (where
+            :attr:`total_concentration` is NaN) are returned as NaN.
+        """
+
+        valid_mask = self.total_concentration.notna()
+        series = pd.Series(vals, index=self.time)
+
+        return series.where(valid_mask, np.nan)
     ###########################################################################
 
     def _get_metric_series(self, metric_name: str) -> tuple[pd.Series, str]:
@@ -360,7 +382,12 @@ class Aerosol1D:
         None
 
         """
-        self._data['Total_conc']=self._data['Total_conc']*m + b
+        
+        # self._data['Total_conc']=self._data['Total_conc']*m + b
+
+        # self._meta['calibrated']={'m' : m, 'b' : b}
+        
+        self._data['Total_conc']=self._ensure_data_robustness(self._data['Total_conc']*m + b)
 
         self._meta['calibrated']={'m' : m, 'b' : b}
 
@@ -708,79 +735,168 @@ class Aerosol1D:
         self._activity_periods["Peak"] = periods
 
     ###########################################################################
-
     def plot_total_conc(
         self,
         ax: Axes | None = None,
         mark_activities: bool | Sequence[str] = False,
+        parameter: Union[int, str] = 0,
     ) -> tuple[Figure, Axes]:
         """Description:
-            Plot the time series of total aerosol concentration.
+            Plot a selected scalar channel versus time for an :class:`AerosolAlt`
+            object.
 
         Args:
-            ax (matplotlib.axes.Axes | None): Optional axis to draw the plot on.
-                If None, a new figure and axes are created.
-            mark_activities (bool | Sequence[str]): Controls highlighting
-                of activity periods:
+            ax (matplotlib.axes.Axes | None, optional):
+                Existing Matplotlib axes to draw on. If ``None``, a new figure
+                and axes are created. Defaults to ``None``.
+            mark_activities (bool | Sequence[str], optional):
+                Control highlighting of activity periods defined on the object:
 
-                    - False: no highlighting.
-                    - True: shade all activities except "All data".
-                    - sequence of str: shade only the named activities.
+                * ``False`` – no shading (default).
+                * ``True`` – shade all activities except ``"All data"``.
+                * sequence of str – shade only the named activities.
+
+            parameter (int | str, optional):
+                Index or column name of the signal to plot. If ``int``, it is
+                interpreted as a positional index into :attr:`data.columns`. If
+                ``str``, it is treated as a column label. Defaults to ``0``.
 
         Returns:
-            tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]: The
-                figure and axes containing the plot.
+            tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
+                The figure and axes containing the time-series plot.
 
         Raises:
-            None: Any errors usually stem from invalid Matplotlib axes or
-                malformed time indices.
+            LookupError:
+                If ``parameter`` does not correspond to a valid column index or
+                column label.
 
         Notes:
             Detailed description:
-                The method draws total_concentration versus time with a
-                grid and labels derived from dtype and unit. The x-axis is
-                formatted using Matplotlib's concise date formatter. If
-                mark_activities is enabled, each selected activity is drawn
-                as semi-transparent vertical spans covering its active
-                periods, with a legend entry per activity.
+                This method overrides :meth:`Aerosol1D.plot_total_conc` to allow
+                plotting of *any* scalar column stored in :attr:`data`, not only
+                ``"Total_conc"``. It is particularly useful when an instrument
+                logs multiple scalar metrics alongside time.
+
+                Internally, the method:
+
+                * Resolves ``parameter``:
+
+                  - if an integer, it is used as a positional index into
+                    :attr:`data.columns`,
+                  - if a string, it must match a column label.
+
+                * Creates or reuses a Matplotlib axes (depending on ``ax``).
+                * Plots the selected column against the object’s time index.
+                * Configures the x-axis with a concise datetime formatter via
+                  :mod:`matplotlib.dates`.
+                * Determines the appropriate ``dtype`` and ``unit``:
+
+                  - if global (scalar), they are used as-is;
+                  - if per-column mappings, the entry for the chosen
+                    ``parameter`` is used.
+
+                  The y-axis label is constructed from the base dtype
+                  (e.g. ``"dN"`` from ``"dN/dlogDp"`` when applicable)
+                  and the corresponding unit.
+
+                * Optionally shades activity periods defined by
+                  :meth:`Aerosol1D.mark_activities` when ``mark_activities`` is
+                  ``True`` or a list of activity names. Each activity receives
+                  a distinct colour, and overlapping shaded regions are clipped
+                  to the data’s time extent.
+
+                * Calls ``fig.tight_layout()`` when it creates the figure to
+                  ensure margins and labels do not overlap.
 
         Examples:
-            Inspect an instrument time series with highlighted tasks:
+            A typical use is to visualise one of several channels stored in
+            an :class:`AerosolAlt` object, optionally with activity periods
+            highlighted:
 
             .. code-block:: python
 
-                fig, ax = data.plot_total_conc(mark_activities=True)
-                fig.savefig("total_concentration.png", dpi=150)
+                import aerosoltools as at
+
+                # Suppose 'alt' is an AerosolAlt with columns: ["LDSA", "Flow", "Flag"]
+                alt = at.Load_Partector_file("data/Partector_log.txt")
+
+                # Plot LDSA with activity shading
+                fig, ax = alt.plot_total_conc(
+                    parameter="LDSA",
+                    mark_activities=True,
+                )
+
+                # Plot Flow on existing axes without activity shading
+                fig2, ax2 = plt.subplots()
+                alt.plot_total_conc(ax=ax2, parameter="Flow", mark_activities=False)
         """
+        # Resolve which column to use based on the requested parameter.
+        if isinstance(parameter, int):
+            if parameter >= len(self.data.columns):
+                raise LookupError("Chosen parameter is invalid")
+            parameter = self.data.columns[parameter]
+        elif isinstance(parameter, str):
+            if parameter not in self._data and parameter not in self._extra_data:
+                raise LookupError(f"Chosen parameter '{parameter}' is invalid")
+        else:
+            raise LookupError("Chosen parameter is invalid")
+        
+        
+        # if isinstance(parameter, int):
+        #     if parameter >= len(self._raw_data.columns):
+        #         raise LookupError("Chosen parameter is invalid")
+        #     parameter = self.data.columns[parameter]
+        # elif isinstance(parameter, str):
+        #     pass
+        # else:
+        #     raise LookupError("Chosen parameter is invalid")
 
         new_fig_created = False
 
+        # Create or reuse axes.
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 5))
             new_fig_created = True
         else:
             fig = ax.figure
 
-        # Plot main data
-        ax.plot(self.time, self.total_concentration, linestyle="-")
+        # Plot the selected data column against time.
+        if parameter in self._data:
+            ax.plot(self.time, self.data[parameter], linestyle="-")
+        elif parameter in self._extra_data:
+            ax.plot(self.time, self.extra_data[parameter], linestyle="-")
+        else:
+            raise KeyError(f"Parameter '{parameter}' not found in data or extra_data")
+        
 
-        # Format x-axis
+        # Format x-axis as dates.
         locator = mdates.AutoDateLocator()
         formatter = mdates.ConciseDateFormatter(locator)
         ax.xaxis.set_major_locator(locator)
         ax.xaxis.set_major_formatter(formatter)
 
         ax.set_xlabel("Time")
-        if "/" in self.dtype:
-            total_conc_dtype = self.dtype.split("/")[0]
-            ax.set_ylabel(f"{total_conc_dtype}, {self.unit}")
+
+        # Resolve dtype/unit for the chosen parameter (can be scalar or per-column).
+        if isinstance(self.dtype, str):
+            Dtype = self.dtype
         else:
-            ax.set_ylabel(f"{self.dtype}, {self.unit}")
+            Dtype = self.dtype[parameter]
+
+        if isinstance(self.unit, str):
+            Unit = self.unit
+        else:
+            Unit = self.unit[parameter]  # type: ignore[index]
+
+        if "/" in Dtype:
+            total_conc_dtype = Dtype.split("/")[0]
+            ax.set_ylabel(f"{total_conc_dtype}, {Unit}")
+        else:
+            ax.set_ylabel(f"{Dtype}, {Unit}")
         ax.grid(True)
 
-        # Highlight activities
+        # Optionally highlight activity periods as shaded regions.
         if mark_activities and hasattr(self, "_activity_periods"):
-            # Exclude "All data" unless explicitly requested
             all_activities = sorted(self._activity_periods.keys())
             color_map = plt.colormaps.get_cmap("gist_ncar")
             activity_colors = {
@@ -810,16 +926,129 @@ class Aerosol1D:
                         zorder=3,
                     )
                     first = False
-            # Clip x-axis to actual data range
+
+            # Clamp x-limits to the actual data range and show legend.
             left = float(mdates.date2num(self.time.min()))
             right = float(mdates.date2num(self.time.max()))
             ax.set_xlim(left, right)
             ax.legend()
 
         if new_fig_created:
-            fig.tight_layout()  # type: ignore
+            fig.tight_layout()  # type: ignore[call-arg]
 
-        return fig, ax  # type: ignore
+        return fig, ax  # type: ignore[return-value]
+
+    # def plot_total_conc(
+    #     self,
+    #     ax: Axes | None = None,
+    #     mark_activities: bool | Sequence[str] = False,
+    # ) -> tuple[Figure, Axes]:
+    #     """Description:
+    #         Plot the time series of total aerosol concentration.
+
+    #     Args:
+    #         ax (matplotlib.axes.Axes | None): Optional axis to draw the plot on.
+    #             If None, a new figure and axes are created.
+    #         mark_activities (bool | Sequence[str]): Controls highlighting
+    #             of activity periods:
+
+    #                 - False: no highlighting.
+    #                 - True: shade all activities except "All data".
+    #                 - sequence of str: shade only the named activities.
+
+    #     Returns:
+    #         tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]: The
+    #             figure and axes containing the plot.
+
+    #     Raises:
+    #         None: Any errors usually stem from invalid Matplotlib axes or
+    #             malformed time indices.
+
+    #     Notes:
+    #         Detailed description:
+    #             The method draws total_concentration versus time with a
+    #             grid and labels derived from dtype and unit. The x-axis is
+    #             formatted using Matplotlib's concise date formatter. If
+    #             mark_activities is enabled, each selected activity is drawn
+    #             as semi-transparent vertical spans covering its active
+    #             periods, with a legend entry per activity.
+
+    #     Examples:
+    #         Inspect an instrument time series with highlighted tasks:
+
+    #         .. code-block:: python
+
+    #             fig, ax = data.plot_total_conc(mark_activities=True)
+    #             fig.savefig("total_concentration.png", dpi=150)
+    #     """
+
+    #     new_fig_created = False
+
+    #     if ax is None:
+    #         fig, ax = plt.subplots(figsize=(10, 5))
+    #         new_fig_created = True
+    #     else:
+    #         fig = ax.figure
+
+    #     # Plot main data
+    #     ax.plot(self.time, self.total_concentration, linestyle="-")
+
+    #     # Format x-axis
+    #     locator = mdates.AutoDateLocator()
+    #     formatter = mdates.ConciseDateFormatter(locator)
+    #     ax.xaxis.set_major_locator(locator)
+    #     ax.xaxis.set_major_formatter(formatter)
+
+    #     ax.set_xlabel("Time")
+    #     if "/" in self.dtype:
+    #         total_conc_dtype = self.dtype.split("/")[0]
+    #         ax.set_ylabel(f"{total_conc_dtype}, {self.unit}")
+    #     else:
+    #         ax.set_ylabel(f"{self.dtype}, {self.unit}")
+    #     ax.grid(True)
+
+    #     # Highlight activities
+    #     if mark_activities and hasattr(self, "_activity_periods"):
+    #         # Exclude "All data" unless explicitly requested
+    #         all_activities = sorted(self._activity_periods.keys())
+    #         color_map = plt.colormaps.get_cmap("gist_ncar")
+    #         activity_colors = {
+    #             activity: color_map(i / max(1, len(all_activities)))
+    #             for i, activity in enumerate(all_activities)
+    #         }
+
+    #         if mark_activities is True:
+    #             selected_activities = [a for a in all_activities if a != "All data"]
+    #         elif isinstance(mark_activities, list):
+    #             selected_activities = [
+    #                 a for a in mark_activities if a in self._activity_periods
+    #             ]
+    #         else:
+    #             selected_activities = []
+
+    #         for activity in selected_activities:
+    #             color = activity_colors[activity]
+    #             first = True
+    #             for start, end in self._activity_periods[activity]:
+    #                 ax.axvspan(
+    #                     cast(float, mdates.date2num(pd.Timestamp(start))),
+    #                     cast(float, mdates.date2num(pd.Timestamp(end))),
+    #                     color=color,
+    #                     alpha=0.3,
+    #                     label=activity if first else None,
+    #                     zorder=3,
+    #                 )
+    #                 first = False
+    #         # Clip x-axis to actual data range
+    #         left = float(mdates.date2num(self.time.min()))
+    #         right = float(mdates.date2num(self.time.max()))
+    #         ax.set_xlim(left, right)
+    #         ax.legend()
+
+    #     if new_fig_created:
+    #         fig.tight_layout()  # type: ignore
+
+    #     return fig, ax  # type: ignore
 
     ###########################################################################
 
@@ -1437,7 +1666,119 @@ class Aerosol1D:
             )
 
         return result
+        
+    ###########################################################################
 
+    def Mark_threshold(
+        self,
+        Activity: str,
+        threshold: Union[int, float],
+        metric: str = None,
+        threshold_direction: str = 'above'
+    ):
+        """Description:
+            Detect periods of activity based on exceeding or being below a
+            threshold level and mark them as an activity labeled 'Peak'.
+
+        Args:
+            Activity (str): Name to be used for the marked activity.
+            threshold (int, float): Threshold value used to generate the marking
+                of activities.
+            metric (str): Optional column name to use for peak detection.
+                If empty, the total_concentration time series is used. 
+                Otherwise, the name is looked up first in self.data
+                (numeric columns) and then in extra_data.
+            threshold_direction (str): Optional argument to indicate the direction
+                of activity is logged in relation to the threshold limit.
+                Inputs are either 'above' or '>' if the activity is equal to exceeding the threshold.
+                Or 'below' or '<' if the activity is equal to the period below the threshold.
+
+        Returns:
+            None: The method adds/updates a boolean "Peak" column in
+                self.data and updates self.activity_periods["Peak"].
+
+        Raises:
+            ValueError: If metric is not found as a numeric column
+                in either self.data or extra_data. Check column names via
+                data.columns or extra_data.columns.
+            ValueError: If threshold_direction is not one of the supported names.
+                Choose one of 'above', 'below', '>' or '<'.
+                
+        Notes:
+            Detailed description:
+                The method compares the chosen metric to the chosen threshold value
+                Points where the value exceed or drops below the threshold will be
+                marked with the chosen activity name. Contiguous True
+                segments in this mask are converted to (start, end) time
+                intervals and stored as the Activity activity.
+
+            Theory:
+                This is a simple statistical peak detector based on local
+                outlier detection relative to a moving baseline and spread.
+                It highlights periods where the signal is unusually high
+                compared to its recent history.
+
+        Examples:
+            Automatically tag high-exposure episodes:
+
+            .. code-block:: python
+
+                data.Peak_finder(window=31, ratio=3.0)
+                data.plot_total_conc(mark_activities=["Peak"])
+                peak_df = data.get_activity_data("Peak")
+        """
+
+
+        Data_return = self.copy_self()
+        
+        if metric is None:
+            metric = Data_return.data.columns[0]
+        
+
+        if metric in self._data.select_dtypes(exclude="bool").columns:
+            Data_return = Data_return._data[metric]
+
+        elif (
+            metric in self._extra_data.select_dtypes(exclude="bool").columns
+        ):
+            Data_return = Data_return._extra_data[metric]
+        else:
+            raise ValueError(
+                f"Invalid data title. No column named {metric} can be found."
+            )
+
+        # Change Med array from median value to the difference between median and actual value.
+        if threshold_direction == 'above' or threshold_direction == '>':
+           mask = Data_return > threshold
+        elif threshold_direction == 'below' or threshold_direction == '<':
+           mask = Data_return < threshold
+        else:
+           raise ValueError(
+                "Invalid threshold_direction. Either chose 'above' or 'below'"
+            )
+        
+        peak_col = {Activity: mask}
+        
+        # Track metadata
+        if Activity not in self._activities:
+            self._activities.append(Activity)
+            self._data = pd.concat([self.data, pd.DataFrame(peak_col)], axis=1)
+        else:
+            self._data[Activity] = mask
+
+        periods = list(
+            zip(
+                mask.index[
+                    mask & ~mask.shift(fill_value=False)
+                ],  # starts: True preceded by False/NaN
+                mask.index[
+                    mask & ~mask.shift(-1, fill_value=False)
+                ],  # ends: True followed by False/NaN
+            )
+        )
+
+        self._activity_periods[Activity] = periods
+        
     ###########################################################################
 
     def timecrop(

@@ -18,6 +18,7 @@ from matplotlib.colors import LogNorm, Normalize
 from matplotlib.figure import Figure
 from numpy.typing import NDArray
 from tabulate import tabulate
+from scipy.optimize import curve_fit, least_squares
 
 from .aerosol1d import Aerosol1D
 
@@ -184,28 +185,7 @@ class Aerosol2D(Aerosol1D):
 
         return arr.astype(np.float64, copy=False), headers, was_norm
 
-    ###########################################################################
 
-
-    def _ensure_data_robustness(self,vals) -> pd.Series:
-        """Validity mask from the original object (keeps alignment with self.time)
-
-        This returns a cleaned serires, so that no new data is generated,
-        where before the total_conc was NaN.
-        Args:
-            vals (np.array):
-                array of data structured as a column of data from either data
-                extra data.
-        Returns:
-            pd.Series: Time series of the requested Pₓ metric, indexed by
-            :attr:`time`. Empty or invalid time steps (where
-            :attr:`total_concentration` is NaN) are returned as NaN.
-        """
-
-        valid_mask = self.total_concentration.notna()
-        series = pd.Series(vals, index=self.time)
-
-        return series.where(valid_mask, np.nan)
     ###########################################################################
 
     def _dlogdp(self) -> NDArray[np.float64]:
@@ -1030,7 +1010,11 @@ class Aerosol2D(Aerosol1D):
     """############################# Functions #############################"""
     ###########################################################################
     @override
-    def calibrate(self, parameter: str = 'bins' , m: Union[int, float, list] = 1, b: Union[int, float, list] = 0, inplace: bool = True):
+    def calibrate(self, parameter: str | int = 'bins',
+                  fit_function = None,
+                  Variables: dict = {'m': 1},
+                  inplace: bool = True):
+        #m: Union[int, float, list] = 1, b: Union[int, float, list] = 0, inplace: bool = True):
         """
         Apply a correction to the total conc and mark the data as calibrated
         by a linear function. The calibration value is applied to the size data.
@@ -1040,92 +1024,96 @@ class Aerosol2D(Aerosol1D):
                 Index or column name of the signal to plot. If ``int``, it is
                 interpreted as a positional index into :attr:`data.columns`. If
                 ``str``, it is treated as a column label. Defaults to ``0``.
-            m : float/int/list
+                If 'bin' is chosen, the calibration will go through each size bin,
+                and apply the calibration function.
+            fit_function (function):
+                A defined function to apply to the calibration.
+                If none is chosen, an assumed linear calibration is used using y = m*x +b
+            Variables (dict):
                 The calibration value to be multiplied to the data for correction.
                 If m is provided as a list, it should be of equal length to the number
                 of bins. The total concentration is then recalculated as the sum.
-            b : float
-                A constant offset to be removed. By default is zero and should be
-                used cautionsly.
+            inplace (bool): If ``True`` (default), modify the current instance and
+                return it. If ``False``, perform the conversion on a deep copy
+                and return the new instance.
 
         Returns:
             out (Aerosold2D):
-
+                If inplace ``True`` the calibration function applies the calibration
+                to the acted upon dataset, if inplace ``False`` a copy of the calibrated
+                dataset is returned. 
+                In addition to the data with the applied calibration, a 
         None
 
         """
-
+        if fit_function is None:
+            def fit_function(x,m,b=0):
+                #Calculates a first order equation.
+                return m*x + b
+        
+        values = list(Variables.values())
+        all_lists = all(isinstance(v, list) for v in values)
+        all_scalars = all(not isinstance(v, list) for v in values)
+        
+        if not (all_lists or all_scalars):
+            raise ValueError("Variables must contain either all lists or all scalars")
+        
         out = self if inplace else self.copy_self()
 
         # Resolve which column to use based on the requested parameter.
         if isinstance(parameter, int):
-            if parameter >= len(self._raw_data.columns):
+            if parameter >= len(self.data.columns):
                 raise LookupError("Chosen parameter is invalid")
             parameter = self.data.columns[parameter]
         elif isinstance(parameter, str):
-            pass
+            if parameter != 'bins' and parameter not in out._data and parameter not in out._extra_data:
+                raise LookupError(f"Chosen parameter '{parameter}' is invalid")
         else:
             raise LookupError("Chosen parameter is invalid")
 
         # Apply the correction to the chosen parameter
+        if parameter != 'bins' and all_lists:
+            raise ValueError("List-valued Variables are only supported when parameter='bins'")
+        
+        elif parameter == 'bins':
 
-        if parameter=='bins':
-            #Aerosol2D specfic parameter choise to correct the bins
-            if type(m) is list:
-                if len(m)==len(out._sizebin_headers):
-                    # mask=~np.isnan(out._data['Total_conc'])
-
-                    out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
-                    out._data['Total_conc']=out.data[out._sizebin_headers].sum(axis=1)
-                else:
-                    raise ValueError("Mismatch between number of bins and list of calibration values")
-            elif type(m) is float or type(m) is int:
-                out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
-                out._data['Total_conc']=out.data['Total_conc']*m
+            if all_lists:
+                lengths = [len(v) for v in values]
+                if len(set(lengths)) != 1:
+                    raise ValueError("All parameter lists must have same length")
+        
+                if lengths[0] != len(out._sizebin_headers):
+                    raise ValueError("Parameter length must match number of bins")
+        
+                for i, params in enumerate(zip(*values)):
+                    kwargs_i = dict(zip(Variables.keys(), params))
+                    header = out._sizebin_headers[i]
+                    out._data[header] = self._ensure_data_robustness(
+                        fit_function(out.data[header], **kwargs_i)
+                    )
             else:
-                raise ValueError("Mismatch between m and expected type")
+                for header in out._sizebin_headers:
+                    out._data[header] = self._ensure_data_robustness(
+                        fit_function(out.data[header], **Variables)
+                    )
+        
+            out_sum = out.data[out._sizebin_headers].sum(axis=1)
+            out._data['Total_conc'] = self._ensure_data_robustness(out_sum)
+        else: 
+            if parameter in out._data:
+                out._data[parameter]=self._ensure_data_robustness(fit_function(out.data[parameter],**Variables))
+            elif parameter in out._extra_data:
+                out._extra_data[parameter]=self._ensure_data_robustness(fit_function(out._extra_data[parameter],**Variables))
+            else:
+                raise KeyError(f"Parameter '{parameter}' not found in data or extra_data")
+        
+        if 'calibrated' not in out._meta:
+            out._meta['calibrated'] = {}
 
-        elif type(m) is float or type(m) is int:
-            try:
-                out._data[parameter]=out.data[parameter]*m + b
-            except:
-                out._extra_data[parameter]=out._extra_data[parameter]*m + b
-        else:
-            raise ValueError("Mismatch between m and expected type")
-
-        if 'calibrated' in out._meta:
-            pass
-        else:
-            out._meta['calibrated']={}
-
-        if b==0:
-
-            out._meta['calibrated'][parameter]=m
-        else:
-            out._meta['calibrated'][parameter]={'m' : m, 'b' : b}
+        out._meta['calibrated'][parameter]=Variables.copy()
 
         return out
-
-        ###
-        # out = self if inplace else self.copy_self()
-
-        # if type(m)==list:
-        #     if len(m)==len(out._sizebin_headers):
-        #         # mask=~np.isnan(out._data['Total_conc'])
-
-        #         out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
-        #         out._data['Total_conc']=out.data[out._sizebin_headers].sum(axis=1)
-        #     else:
-        #         raise ValueError("Mismatch between number of bins and list of calibration values")
-        # elif type(m)==float or type(m)==int:
-        #     out._data[out._sizebin_headers]=out.data[out._sizebin_headers]*m
-        #     out._data['Total_conc']=out.data['Total_conc']*m
-        # else:
-        #     raise ValueError("Mismatch between m and expected type")
-
-        # out._meta['calibrated']={'m' : m}
-        # return out
-
+    
     ###########################################################################
 
     def dtype_converter(self, dtype: str = "dN", inplace: bool = True):
@@ -1316,6 +1304,240 @@ class Aerosol2D(Aerosol1D):
         corrected._meta["diffusion_loss_corrected"] = True
 
         return corrected
+    
+    ###########################################################################
+
+    def fit_psd(self, period = 'All data',
+                      mu=[150],
+                      sigma=[2],
+                      factor=[1000],
+                      log_scaling=True,
+                      binding=None,
+                      tolerance=10.0):
+        """
+        A function to fit one or multiple peaks following lognormal distribution,
+        with the option for tethering values to set values. 
+        
+        An example would be an OPS dataset, with a pronounced shoulder from a mode 
+        below its diameter range. A guess for mu1 could then be 100nm,
+        which can be bound by providing the "binding" list of [True]
+        
+        Parameters
+        ----------
+        mu : list of floats, optinonal
+            If specified, acts as the initial guess of the particle modes, meaning
+            the size where the particle size distribution peaks.
+            The default is 150, but more modes can be added to the list.
+        sigma : list of floats, optional
+            Initial guess for the geometric standard deviation factor. A good guess
+            is the size at peak height divided by the size at 2/3 peak height in
+            the decending direction. E.g. the PSD peaks at 200 nm and is at 2/3 
+            height at 140 nm, so the sigma_guess parameter should be 200/140 = 1.4.
+            The default is 2, but more modes can be added to the list. 
+        factor : list of floats, optional
+            Initial guess for the parameter used to scale the lognormal distribution.
+            Getting a good estimate can be difficult, but a guess in the same order
+            of magnitude as the peak height, is a good start. 
+            The default is 1000, but more modes can be added to the list.
+        log_scaling: boolean, optional
+            Value to designate whether the fit should be done against log10 data, 
+            or the regular values. Using true values run the risk of larger modes
+            dominating the fit, potentially lossing structure for low populated 
+            modes. Default is True.
+        sort: str, optional
+            Value to designate whether the reported modes should be structured from
+            smallest to largest diameter or from most to least populated mode,
+            with the designations "Diameter" or "Number" respectively. Default is 
+            "Diameter" 
+        binding: bool list, optional
+            A boolean list for each parameter whether they must be bound or not.
+            If True the tolerance limit is put  on the bound value(s).
+            The list has the following association:
+            (mu1, sigma1, factor1, mu2, sigma2, factor2....factorN)
+            The list only needs to be filled up, to the last True value.
+            Default is 0 with no bound values.        
+        tolerance: float, optional
+            Percentage value around which the bound values can be fitted
+            
+        Returns
+        -------
+        popt : list
+            A list containing the sorted fitted parameters (mu1, sigma1, factor1, mu2...)
+            either sorted by mode diameter or from most to least populated mode
+        perr : list
+            Error estimates for the fitted parameters in the same order as the fit.
+        """
+        
+        
+        # Added functions for the fitting
+        """
+        The mathmatical expression of a lognormal distribution. The function can be
+        used to genereate a theoretical lognormal distribution and is also used by
+        the Fit_lognormal function. It assumes a minimum of 2 peaks, but can fit
+        additional peaks if given prompt.
+
+        Parameters
+        ----------
+        bin_mid : numpy.array
+            An array of size bin midpoints used as the x values of the lognormal fit.
+        *params: list
+            params is a list contaning the triplet of information making out a:
+            peak center: mu, peak spread: sigma, and population: factor
+            The list should be structured:
+                parameters=[mu1,sigma1,factor1,mu2,sigma2,factor2...]
+
+        Returns
+        -------
+        lognormal_function : numpy.array
+            Returns an array of the same size as bin_mid populated by the sum of
+            the desired peaks at diameter size in bin_mid.
+
+        """
+        def Lognormal(bin_mid, *params):
+
+            bin_mid = np.log10(bin_mid)
+            mu      = np.log10(np.array(params[0::3]))
+            sigma   = np.log10(np.array(params[1::3]))
+            factor  = np.array(params[2::3])
+            
+            population = 0
+            for i in range(0,len(mu)):
+                    
+                population+=((1/(np.sqrt(2*np.pi) * sigma[i])) *
+                        np.exp(-((bin_mid - mu[i])**2) /
+                        (2*sigma[i]**2)))*factor[i] 
+           
+            return np.log10(population)
+        
+        def Normal(bin_mid, *params):
+
+            bin_mid = np.log10(bin_mid)
+            mu      = np.log10(np.array(params[0::3]))
+            sigma   = np.log10(np.array(params[1::3]))
+            factor  = np.array(params[2::3])
+            
+            population = 0
+            for i in range(0,len(mu)):
+
+                population+=((1/(np.sqrt(2*np.pi) * sigma[i])) * 
+                             np.exp(-((bin_mid - mu[i])**2) /
+                             (2*sigma[i]**2)))*factor[i] 
+           
+            return population
+        ###
+        data=self.copy_self()
+        data.normalize_logdp()
+        # Specify x and y data to fit
+        xdata = np.array(data.bin_mids,dtype='float64')
+        if period in data.activities: 
+            
+            ydata = np.array(pd.DataFrame(data.get_activity_data(period),
+                    columns=data.bin_mids.astype(str)),dtype='float64')
+        elif type(period) == tuple:
+            ydata = np.array(pd.DataFrame(data.timecrop(start = period[0], end = period[1],
+                    inplace = False ).data,columns=data.bin_mids.astype(str)),dtype='float64')
+        else:
+            raise ValueError("Period chosen is neither an activity or a range of data")
+            
+
+        ymean = np.nanmean(ydata, axis=0)
+        
+        if len(xdata)!=len(ymean):
+            raise ValueError("Discrepency between number of bins and data")
+        
+        # Removes values of 0 or below from fitting
+        mask=ymean>0
+        
+        xdata=xdata[mask]
+        ymean=ymean[mask]
+        ydata_masked = ydata[:, mask]
+        
+        if len(ymean) == 0:
+            raise ValueError("Empty dataset")
+        
+        n = ydata_masked.shape[0]
+        
+        mu=mu.copy()
+        sigma=sigma.copy()
+        factor=factor.copy()
+        
+        peak_number=len(mu)
+        
+        if peak_number*3>=len(ymean):
+            raise ValueError("Peak number will lead to overfitting")
+        
+        if peak_number!=len(sigma):
+            raise ValueError("Missing input for initial guess")
+        
+        # Gather all the initial guesses for parameters to fit in a list
+        init_guess = []
+        for i in range(peak_number):
+            init_guess.extend([mu[i], sigma[i], factor[i]])
+            
+        # Generate bounds to reduce the risk of producing impossible or irrelevant modes
+        low_bounds=[0.1*min(xdata),1.15,0]*peak_number
+        up_bounds=[10*max(xdata),5,max(max(ymean),max(factor))*2.5]*peak_number
+
+        if tolerance>0:
+          tolerance=tolerance/100
+            
+        # binding=number_to_bool_list(binding,peak_number*3)
+        if binding is None:
+            binding = []
+            
+        for i in range(0,len(binding)):
+            if binding[i]==True:
+                low_bounds[i]=init_guess[i]*(1-tolerance)
+                up_bounds[i]=init_guess[i]*(1+tolerance)
+                
+        # Do the fit scaling by log 10 to give comparable fitting weight across different population sizes
+        if log_scaling==True:
+            # yerror=np.log10(ydata).std(axis=0)[mask]
+            sigma_y = np.nanstd(ydata_masked, axis=0, ddof=1) / np.sqrt(n)
+            sigma_fit = sigma_y / (ymean * np.log(10))
+            
+            # avoid zeros or non-finite sigmas
+            sigma_fit = np.where(np.isfinite(sigma_fit) & (sigma_fit > 0), sigma_fit, np.nan)
+            valid = np.isfinite(sigma_fit)
+            
+            popt, pcov   = curve_fit(Lognormal, 
+                                     xdata[valid],
+                                     np.log10(ymean)[valid],
+                                     p0 = init_guess,
+                                     bounds = (low_bounds,up_bounds),
+                                     sigma = sigma_fit[valid])
+            
+        elif log_scaling==False:    # Fit according to the true values to best fit the main mode
+            # yerror=ydata.std(axis=0)[mask]
+            # sigma_fit = ydata_masked.nanstd(axis=0, ddof=1) / np.sqrt(n)
+            # sigma_fit = np.where(np.isfinite(sigma_fit) & (sigma_fit > 0), sigma_fit, np.nan)
+            sigma_y = np.nanstd(ydata_masked, axis=0, ddof=1) / np.sqrt(n)
+            sigma_fit = np.where(np.isfinite(sigma_y) & (sigma_y > 0), sigma_y, np.nan)
+            valid = np.isfinite(sigma_fit)
+
+            popt, pcov   = curve_fit(Normal,
+                                     xdata[valid],
+                                     ymean[valid],
+                                     p0 = init_guess,
+                                     bounds = (low_bounds,up_bounds),
+                                     sigma = sigma_fit[valid])
+        else:
+            raise ValueError("log_scaling not set")
+        
+        # Get error estimates of the fits
+        perr = np.sqrt(np.diag(pcov))
+        
+        #The next line of code sorts the data according to the desired focus; mode or population
+        
+        Modes= {'mu':popt[0::3],
+                'sigma':popt[1::3],
+                'factor':popt[2::3]}
+        Error={'mu':perr[0::3],
+                'sigma':perr[1::3],
+                'factor':perr[2::3]}
+
+        # Returns the sorted fitted modes and their uncertainty.
+        return Modes, Error
 
     ###########################################################################
 
@@ -3009,3 +3231,126 @@ class Aerosol2D(Aerosol1D):
             )
 
         return result
+    
+    ###########################################################################
+    
+    def rebin_bin_edges(self, new_bin_edges, inplace: bool = True):
+        """Description:
+            Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).
+    
+        Args:
+            new_bin_edges (np.array): A list of 
+            inplace (bool): If True, normalize this object in place and
+                return it. If False, perform the normalization on a deep
+                copy and return the new instance.
+    
+        Returns:
+            Aerosol2D | None: The normalized object (self or a new copy)
+                when normalization is applied. If the dtype already
+                contains "/dlogDp", no changes are made and None is
+                returned.
+    
+        Raises:
+            ValueError: If the number of size-bin columns does not match
+                the number of Δlog₁₀(Dp) widths derived from bin_edges.
+                Check that bin_edges and the PSD columns are consistent.
+    
+        Notes:
+            Detailed description:
+                The method computes Δlog₁₀(Dp) from bin_edges and divides
+                each size-bin column by its corresponding width. The dtype
+                string is updated to append "/dlogDp" (for example
+                "dN" → "dN/dlogDp"). Only size-bin columns are modified;
+                other columns in data (including Total_conc and activity
+                masks) are left unchanged.
+    
+            Theory:
+                Plotting or comparing size distributions on a logarithmic
+                diameter axis is often done using dN/dlogDp, dM/dlogDp,
+                etc., so that equal logarithmic bin widths represent equal
+                contributions when integrating over logDp. This method
+                implements that per-bin normalization.
+    
+        Examples:
+            Prepare a PSD for log-diameter plotting:
+    
+            .. code-block:: python
+    
+                elpi.normalize_logdp()
+                elpi.plot_psd()
+        """
+        
+        out = self if inplace else self.copy_self()
+        
+        out.unnormalize_logdp()
+
+        # Convert inputs
+        bin_edges = np.asarray(out.bin_edges, dtype=float)
+        new_bin_edges = np.asarray(new_bin_edges, dtype=float)
+        
+        #Ensure compatibility of new_bind_edges
+        if new_bin_edges.ndim != 1:
+            raise ValueError("new_bin_edges must be 1D sequences.")
+    
+        if np.any(new_bin_edges <= 0):
+            raise ValueError("All bin edges must be > 0 for log-space rebinning.")
+    
+        if np.any(np.diff(new_bin_edges) <= 0):
+            raise ValueError("new_bin_edges must be strictly increasing.")
+        
+        if new_bin_edges[0]<bin_edges[0]:
+            raise ValueError("smallest new bin must be equal to or larger than the smallest old bin.")
+            
+        if new_bin_edges[-1]>bin_edges[-1]:
+            raise ValueError("largest new bin must be equal to or smaller than the largest old bin.")
+        
+        # Log10 edges and widths
+        log_edges = np.log10(bin_edges)
+        log_new_edges = np.log10(new_bin_edges)
+    
+        old_dlog = np.diff(log_edges)
+        new_dlog = np.diff(log_new_edges)
+    
+        n_old = len(old_dlog)
+        n_new = len(new_dlog)
+    
+        # Build transfer matrix T such that:
+        # new_totals = old_totals @ T
+        T = np.zeros((n_old, n_new), dtype=float)
+    
+        for i in range(n_old):
+            old_lo = log_edges[i]
+            old_hi = log_edges[i + 1]
+            old_width = old_hi - old_lo
+    
+            for j in range(n_new):
+                new_lo = log_new_edges[j]
+                new_hi = log_new_edges[j + 1]
+    
+                overlap = min(old_hi, new_hi) - max(old_lo, new_lo)
+                if overlap > 0:
+                    T[i, j] = overlap / old_width
+    
+        # Convert dataframe to numeric array
+        values = out.data[out.bin_mids.astype(str)].to_numpy(dtype=float)
+    
+        # Conservative rebinning
+        new_totals = values @ T
+
+        # Use geometric midpoints for new column labels
+        new_bin_mids = np.round(np.sqrt(new_bin_edges[:-1] * new_bin_edges[1:]),2)
+    
+        # --- assemble object -----------------------------------------------------
+        
+        
+        # Distribution block (positions may vary in different exports; adjust if needed)
+        total_conc = pd.DataFrame(out._ensure_data_robustness(np.nansum(new_totals, axis=1)), columns=["Total_conc"])
+        dist_df = pd.DataFrame(new_totals, columns=new_bin_mids.astype(str)).set_index([out.time])
+        final_df = pd.concat([ total_conc, dist_df], axis=1)
+        
+        out._data = final_df
+        out._meta["bin_edges"] = new_bin_edges
+        out._meta["bin_mids"] = new_bin_mids
+        out.mark_activities(out.activity_periods)
+
+        return out

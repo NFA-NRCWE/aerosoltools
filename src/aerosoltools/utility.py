@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ["Combine_NS_OPS", "Plot_correlation"]
+__all__ = ["Combine_NS_OPS", "fit_data", "Plot_correlation", "bland_altman_analysis"]
 
 import datetime as dt
 from typing import Callable, Optional, Tuple
@@ -657,6 +657,82 @@ def _r2(y_true: NDArray[np.float64], y_fit: NDArray[np.float64]) -> float:
     ss_tot = float(np.sum((y_true - float(np.mean(y_true))) ** 2))
     return round(1.0 - (ss_res / ss_tot if ss_tot != 0 else 0.0), 3)
 
+###############################################################################
+
+
+def fit_data(target_data,
+             ref_data,
+             parameter: str | int = 0,
+             fit_function = None,
+             variable_guess: dict = {'m': 1},
+             start_time: pd.Timestamp | str | None = None,
+             end_time: pd.Timestamp | str | None = None,
+             # inplace: bool = True
+             ):
+    #m: Union[int, float, list] = 1, b: Union[int, float, list] = 0, inplace: bool = True):
+    """
+    Apply a correction to the total conc and mark the data as calibrated
+    by a linear function. The calibration value is applied to the size data.
+
+    Args:
+        X: First aerosol-like object, typically :class:`Aerosol1D` or
+            :class:`Aerosol2D`.
+        Y: Second aerosol-like object.
+        parameter: Name of the variable or variables to extract from each object.
+            If tuple the parameters are read as (parameter_X, parameter_Y)
+        parameter (int | str, optional):
+            Index or column name of the signal to plot. If ``int``, it is
+            interpreted as a positional index into :attr:`data.columns`. If
+            ``str``, it is treated as a column label. Defaults to ``0``.
+            If 'bin' is chosen, the calibration will go through each size bin,
+            and apply the calibration function.
+        fit_function (function):
+            A defined function to apply to the calibration.
+            If none is chosen, an assumed linear calibration is used using y = m*x +b
+        Variables (dict):
+            The calibration value to be multiplied to the data for correction.
+            If m is provided as a list, it should be of equal length to the number
+            of bins. The total concentration is then recalculated as the sum.
+        start_time: Optional start of the analysis window (string or
+            :class:`pandas.Timestamp`).
+        end_time: Optional end of the analysis window (string or
+            :class:`pandas.Timestamp`).
+        inplace (bool): If ``True`` (default), modify the current instance and
+            return it. If ``False``, perform the conversion on a deep copy
+            and return the new instance.
+
+    Returns:
+        out (Aerosold2D):
+            If inplace ``True`` the calibration function applies the calibration
+            to the acted upon dataset, if inplace ``False`` a copy of the calibrated
+            dataset is returned. 
+            In addition to the data with the applied calibration, a 
+    None
+
+    """
+        
+    if fit_function is None:
+        fit_function = _linear
+        
+    #Cleaning up the data and removing rows where either value is nan
+    x,y=_align_series(target_data, ref_data, parameter,start_time,end_time)
+    
+    #Apply the fit using curve_fit for a function with or without an intercept.
+    parameters, covariance = curve_fit(fit_function,x,y,p0=[variable_guess[i] for i in variable_guess])
+    SE = np.sqrt(np.diag(covariance))
+
+
+    fit = fit_function(x,*parameters)
+    r2 = _r2(y,fit)
+    
+    Fit={}
+    Fit_error={}
+    variables=list(variable_guess.keys())
+    for i in range(0,len(variables)):
+        Fit[variables[i]]=parameters[i]
+        Fit_error[variables[i]]=SE[i]
+        
+    return Fit, Fit_error, r2
 
 ###############################################################################
 
