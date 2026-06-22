@@ -20,6 +20,8 @@ Loader functions
 ----------------
 Load_CPC_file
     Load data from condensation particle counters (CPC, TSI).
+Load_Devlabs_file
+    Load weather station data from DevLabs instrument.
 Load_DiSCmini_file
     Load data from DiSCmini personal dosimeters (Testo).
 Load_ELPI_file
@@ -72,6 +74,7 @@ from .loaders import (
     Load_Aethalometer_file,
     Load_CPC_file,
     Load_data_from_folder,
+    Load_Devlabs_file,
     Load_DiSCmini_file,
     Load_DustTrak_file,
     Load_ELPI_file,
@@ -84,7 +87,7 @@ from .loaders import (
     Load_Partector_file,
     Load_SMPS_file,
 )
-from .utility import Combine_NS_OPS, Plot_correlation, bland_altman_analysis
+from .utility import Combine_NS_OPS, fit_data, Plot_correlation, bland_altman_analysis
 
 __all__ = [
     "Aerosol1D",
@@ -92,9 +95,11 @@ __all__ = [
     "AerosolAlt",
     "bland_altman_analysis"
     "Combine_NS_OPS",
+    "fit_data",
     "Plot_correlation",
     "Load_Aethalometer_file",
     "Load_CPC_file",
+    "Load_Devlabs_file",
     "Load_DiSCmini_file",
     "Load_DustTrak_file",
     "Load_ELPI_file",

@@ -203,16 +203,28 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
 
     first_field = line.split(delimiter)[0].strip()
     datatype = first_field.split(" ")[0]
-    serial_number = str(
-        np.genfromtxt(
-            file,
-            delimiter=delimiter,
-            encoding=encoding,
-            skip_header=4,
-            max_rows=1,
-            dtype=str,
-        )[2]
-    )[-8:]
+    try:
+        serial_number = str(
+            np.genfromtxt(
+                file,
+                delimiter=delimiter,
+                encoding=encoding,
+                skip_header=4,
+                max_rows=1,
+                dtype=str,
+            )[2]
+        )[-8:]
+    except:
+        serial_number = str(
+            np.genfromtxt(
+                file,
+                delimiter=delimiter,
+                encoding=encoding,
+                skip_header=4,
+                max_rows=1,
+                dtype=str,
+            )[1]
+        ).split(",")[1][-8:]
 
     # Infer dtype and unit from the datatype marker
     dtype_dict = {"Co": "dN", "dN": "dN", "Su": "dS", "Vo": "dV", "Ma": "dM"}
@@ -366,7 +378,7 @@ def _parse_standard_datetime(
     # Read the main date/time tokens from the header
     fmps_date = np.genfromtxt(
         file, delimiter=delimiter, encoding=encoding, max_rows=1, dtype=str
-    )[2:]
+    )[1].split(",")[1:]#[2:]
     month_map = {
         k: v
         for v, k in enumerate(
@@ -422,3 +434,5 @@ def _parse_standard_datetime(
         return pd.DataFrame(
             [start_dt + i * step for i in range(len(times))], columns=["Datetime"]
         )
+
+

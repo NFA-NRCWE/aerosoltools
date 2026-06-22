@@ -32,6 +32,7 @@ from .Aethalometer import Load_Aethalometer_file
 from .Common import Load_data_from_folder
 from .CPC import Load_CPC_file
 from .Discmini import Load_DiSCmini_file
+from .Dev_weather import Load_Devlabs_file
 from .DustTrak import Load_DustTrak_file
 from .ELPI import Load_ELPI_file
 from .FMPS import Load_FMPS_file
@@ -58,4 +59,5 @@ __all__ = [
     "Load_Partector_file",
     "Load_SMPS_file",
     "Load_data_from_folder",
+    "Load_Devlabs_file"
 ]
