@@ -20,6 +20,9 @@
 
 The package includes loaders for common instrument exports, tools for activity segmentation, and convenience methods for **task-based statistics** and **exposure assessment** (e.g. 8 h TWA, short-term limits, peaks).
 
+Prefer a point-and-click workflow? An interactive **desktop GUI** is included —
+see [Desktop GUI](#-desktop-gui) below.
+
 For full documentation and usage examples, see:
 
 👉 [View the documentation](https://nfa-nrcwe.github.io/aerosoltools/)
@@ -94,6 +97,13 @@ Install from PyPI:
 pip install aerosoltools
 ```
 
+To also get the interactive desktop **GUI** (adds the PyQt5 dependency), install
+the `gui` extra:
+
+```bash
+pip install aerosoltools[gui]
+```
+
 ---
 
 ## Quickstart
@@ -141,6 +151,51 @@ exp = elpi.summarize_exposure(
 ```python
 folder_path = "data/cpc_campaign/"
 data_list = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file)
+```
+
+---
+
+## 🖥️ Desktop GUI
+
+`aerosoltools` ships with an interactive desktop app for loading multiple
+datasets, marking shared tasks, and exploring time series, size distributions,
+summaries, overlays and instrument correlations — no coding required.
+
+First install the GUI extra (adds PyQt5):
+
+```bash
+pip install aerosoltools[gui]
+```
+
+### Create a desktop shortcut (Windows — recommended)
+
+After installing, run this **once** in a terminal:
+
+```bash
+aerosoltools-gui-shortcut
+```
+
+This places an **AerosolTools** shortcut (with the app icon) on your **Desktop**
+and in the **Start Menu**. From then on, just double-click the desktop icon — or
+press the Windows key and type *AerosolTools* — to launch the app; no terminal or
+Python knowledge is needed afterwards. Re-running the command simply refreshes
+the shortcuts.
+
+### Launch from the command line or Python
+
+These work on any platform with the `gui` extra installed:
+
+```bash
+aerosoltools-gui                       # open the empty viewer
+aerosoltools-gui data/sample_ELPI.txt  # open a file on startup
+python -m aerosoltools.gui             # equivalent, via the module
+```
+
+```python
+from aerosoltools.gui import launch
+
+launch()                  # empty viewer
+launch("data/sample.txt") # or pre-load a file
 ```
 
 ---
