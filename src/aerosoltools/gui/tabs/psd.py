@@ -38,6 +38,10 @@ _SQRT_2PI = np.sqrt(2.0 * np.pi)
 _DEFAULT_SIGMA = 1.8
 #: Clamp range for σ (geometric SD) while shaping a mode by scroll/typing.
 _SIGMA_MIN, _SIGMA_MAX = 1.05, 5.0
+#: How far optimisation may move a mode's peak diameter from its placed value
+#: (μ ∈ [μ₀/f, μ₀·f]). Keeps "Fit" a local refinement of the user's manual
+#: modes so a redundant mode cannot flee far outside the measured range.
+_FIT_MU_FACTOR = 3.0
 
 
 def _peak_to_factor(peak: float, sigma: float) -> float:
@@ -111,6 +115,7 @@ class PSDTab(_PlotTab):
         self._target_obj = None
         self._target_color = None
         self._target_line = None
+        self._target_xy = None  # (bin_mids, mean) of the target, for fit/R²
         self._overlay_artists: list = []
 
         self.normalize = QtWidgets.QCheckBox("Normalize (dx/dlogDp)")
@@ -133,6 +138,16 @@ class PSDTab(_PlotTab):
         )
         self.band.stateChanged.connect(self._draw)
         self.controls.addWidget(self.band)
+
+        self.controls.addWidget(QtWidgets.QLabel("Display:"))
+        self.display_mode = QtWidgets.QComboBox()
+        self.display_mode.addItems(["Lines", "Bars"])
+        self.display_mode.setToolTip(
+            "Bars show each size bin's width (best for a single PSD); lines are "
+            "clearer when several curves are compared on the same axes."
+        )
+        self.display_mode.currentIndexChanged.connect(self._draw)
+        self.controls.addWidget(self.display_mode)
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
@@ -522,8 +537,8 @@ class PSDTab(_PlotTab):
         bm = np.asarray(target[0].obj.bin_mids, dtype=float)
         mu = float(np.sqrt(bm.min() * bm.max()))
         peak = 1.0
-        if self._target_line is not None:
-            ydata = np.asarray(self._target_line.get_ydata(), dtype=float)
+        if self._target_xy is not None:
+            ydata = np.asarray(self._target_xy[1], dtype=float)
             if np.isfinite(ydata).any():
                 peak = float(np.nanmax(ydata))
         self._modes.append({"mu": mu, "sigma": _DEFAULT_SIGMA, "peak": peak, "bound": False})
@@ -667,6 +682,7 @@ class PSDTab(_PlotTab):
                 log_scaling=self.log_scaling.isChecked(),
                 binding=binding,
                 tolerance=tol,
+                mu_factor=_FIT_MU_FACTOR,
             )
         except Exception as exc:
             self.fit_status.setText(f"Fit failed: {exc}")
@@ -697,13 +713,13 @@ class PSDTab(_PlotTab):
 
     def _report_fit_quality(self, n_modes: int) -> None:
         """Show an R² (in log space) of the total fit against the target curve."""
-        line = self._target_line
+        xy = self._target_xy
         triples = self._modes_as_triples()
-        if line is None or not triples:
+        if xy is None or not triples:
             self.fit_status.setText(f"Optimised {n_modes} mode(s).")
             return
-        x = np.asarray(line.get_xdata(), dtype=float)
-        y = np.asarray(line.get_ydata(), dtype=float)
+        x = np.asarray(xy[0], dtype=float)
+        y = np.asarray(xy[1], dtype=float)
         mask = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
         if mask.sum() < 3:
             self.fit_status.setText(f"Optimised {n_modes} mode(s).")
@@ -748,11 +764,13 @@ class PSDTab(_PlotTab):
         ax.clear()
         self._overlay_artists = []
         self._target_obj = self._target_color = self._target_line = None
+        self._target_xy = None
         datasets = [d for d in self._datasets_2d if d.psd_on]
         activities = self._selected_activities()
         colors = _active_color_cycle()
         normalize = self.normalize.isChecked()
         show_band = self.band.isChecked()
+        bars = self.display_mode.currentText() == "Bars"
         target = self.fit_target.currentData()
         isolate = self.isolate_chk.isChecked() and target is not None
         # Emphasise the target while there are modes or the user is editing, so a
@@ -789,13 +807,30 @@ class PSDTab(_PlotTab):
                     label = act
                 else:
                     label = f"{ds.label} – {act}"
+                # Capture the target's (bin_mids, mean) for the fit overlay/R²,
+                # independent of how the curve is drawn (line or bars).
+                main = new_lines[0]
+                xd = np.asarray(main.get_xdata(), dtype=float)
+                yd = np.asarray(main.get_ydata(), dtype=float)
+                if is_target:
+                    self._target_obj = ds.obj
+                    self._target_color = color
+                    self._target_xy = (xd, yd)
+
+                if bars:
+                    for ln in new_lines:  # replace plot_psd's line with bars
+                        ln.remove()
+                    for coll in new_coll:  # drop the ±σ band (cluttered behind bars)
+                        coll.remove()
+                    self._draw_bars(ax, ds.obj, xd, yd, color, label, is_target, emphasize)
+                    plotted += 1
+                    continue
+
                 for j, line in enumerate(new_lines):
                     line.set_color(color)
                     line.set_label(label if j == 0 else "_nolegend_")
                     if is_target and j == 0:
                         self._target_line = line
-                        self._target_obj = ds.obj
-                        self._target_color = color
                     if is_target and emphasize:
                         line.set_linewidth(3.0)
                         line.set_zorder(5)
@@ -844,6 +879,32 @@ class PSDTab(_PlotTab):
         if self.log_y.isChecked():
             ax.set_yscale("log")
         ax.legend(loc="upper right", fontsize=8)
+
+    def _draw_bars(self, ax, obj, bin_mids, heights, color, label, is_target, emphasize) -> None:
+        """Draw one PSD as edge-aligned bars, so each size bin's width is visible.
+
+        Bars are best for a single curve; when several are compared they overlap,
+        so non-target curves are drawn faintly while fitting.
+        """
+        edges = np.asarray(obj.bin_edges, dtype=float)
+        heights = np.asarray(heights, dtype=float)
+        if heights.size != edges.size - 1:
+            # bin_edges/levels mismatch — fall back to a plain line.
+            ax.plot(bin_mids, heights, color=color, lw=2.0, label=label)
+            return
+        alpha = 0.16 if (emphasize and not is_target) else 0.6
+        ax.bar(
+            edges[:-1],
+            heights,
+            width=np.diff(edges),
+            align="edge",
+            facecolor=color,
+            edgecolor=color,
+            linewidth=0.7,
+            alpha=alpha,
+            label=label,
+            zorder=5 if (is_target and emphasize) else 3,
+        )
 
     def _paint_overlay(self, ax, remove_existing: bool = False) -> None:
         """Draw the modes + total on the target; track the artists for reuse.

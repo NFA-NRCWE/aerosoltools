@@ -1400,7 +1400,8 @@ class Aerosol2D(Aerosol1D):
                       factor=[1000],
                       log_scaling=True,
                       binding=None,
-                      tolerance=10.0):
+                      tolerance=10.0,
+                      mu_factor=None):
         """
         A function to fit one or multiple peaks following lognormal distribution,
         with the option for tethering values to set values. 
@@ -1445,7 +1446,13 @@ class Aerosol2D(Aerosol1D):
             Default is 0 with no bound values.        
         tolerance: float, optional
             Percentage value around which the bound values can be fitted
-            
+        mu_factor: float, optional
+            If given (and > 1), constrain each fitted peak diameter to the
+            window ``[mu0 / mu_factor, mu0 * mu_factor]`` around its initial
+            guess ``mu0``. This refines the supplied modes locally instead of
+            allowing a redundant mode to drift far outside the measured size
+            range. Default is None (the original wide diameter bounds).
+
         Returns
         -------
         popt : list
@@ -1564,6 +1571,17 @@ class Aerosol2D(Aerosol1D):
         # Generate bounds to reduce the risk of producing impossible or irrelevant modes
         low_bounds=[0.1*min(xdata),1.15,0]*peak_number
         up_bounds=[10*max(xdata),5,max(max(ymean),max(factor))*2.5]*peak_number
+
+        # Optionally keep each mode's peak diameter within a multiplicative
+        # window of its initial guess (mu in [mu0/mu_factor, mu0*mu_factor]).
+        # This refines the supplied modes locally instead of letting a redundant
+        # mode flee far outside the measured range, where it stops contributing
+        # to the fit. Useful when the modes were placed deliberately (e.g. by
+        # eye in the GUI). Default (None) keeps the original wide bounds.
+        if mu_factor is not None and mu_factor > 1:
+            for k in range(peak_number):
+                low_bounds[3 * k] = init_guess[3 * k] / mu_factor
+                up_bounds[3 * k] = init_guess[3 * k] * mu_factor
 
         if tolerance>0:
           tolerance=tolerance/100
