@@ -683,6 +683,7 @@ class PSDTab(_PlotTab):
                 binding=binding,
                 tolerance=tol,
                 mu_factor=_FIT_MU_FACTOR,
+                weighting="uniform",  # fit the curve as shown (by-eye fitting)
             )
         except Exception as exc:
             self.fit_status.setText(f"Fit failed: {exc}")

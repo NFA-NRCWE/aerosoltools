@@ -1401,7 +1401,8 @@ class Aerosol2D(Aerosol1D):
                       log_scaling=True,
                       binding=None,
                       tolerance=10.0,
-                      mu_factor=None):
+                      mu_factor=None,
+                      weighting="variance"):
         """
         A function to fit one or multiple peaks following lognormal distribution,
         with the option for tethering values to set values. 
@@ -1452,6 +1453,12 @@ class Aerosol2D(Aerosol1D):
             guess ``mu0``. This refines the supplied modes locally instead of
             allowing a redundant mode to drift far outside the measured size
             range. Default is None (the original wide diameter bounds).
+        weighting: str, optional
+            Residual weighting used by the optimiser. ``"variance"`` (default)
+            weights each bin by the inverse of its temporal standard error;
+            ``"uniform"`` weights every bin equally, i.e. fits the mean curve as
+            plotted, so a fit started from a good visual guess cannot end up
+            worse than that guess. Use ``"uniform"`` for by-eye fitting.
 
         Returns
         -------
@@ -1595,39 +1602,42 @@ class Aerosol2D(Aerosol1D):
                 low_bounds[i]=init_guess[i]*(1-tolerance)
                 up_bounds[i]=init_guess[i]*(1+tolerance)
                 
-        # Do the fit scaling by log 10 to give comparable fitting weight across different population sizes
-        if log_scaling==True:
-            # yerror=np.log10(ydata).std(axis=0)[mask]
+        # Build the model and the (optional) per-bin weights. log_scaling fits
+        # log10(dx/dlogDp) so modes of very different population get comparable
+        # leverage; otherwise the raw values are fit.
+        if log_scaling == True:
+            model, yfit = Lognormal, np.log10(ymean)
             sigma_y = np.nanstd(ydata_masked, axis=0, ddof=1) / np.sqrt(n)
             sigma_fit = sigma_y / (ymean * np.log(10))
-            
-            # avoid zeros or non-finite sigmas
-            sigma_fit = np.where(np.isfinite(sigma_fit) & (sigma_fit > 0), sigma_fit, np.nan)
-            valid = np.isfinite(sigma_fit)
-            
-            popt, pcov   = curve_fit(Lognormal, 
-                                     xdata[valid],
-                                     np.log10(ymean)[valid],
-                                     p0 = init_guess,
-                                     bounds = (low_bounds,up_bounds),
-                                     sigma = sigma_fit[valid])
-            
-        elif log_scaling==False:    # Fit according to the true values to best fit the main mode
-            # yerror=ydata.std(axis=0)[mask]
-            # sigma_fit = ydata_masked.nanstd(axis=0, ddof=1) / np.sqrt(n)
-            # sigma_fit = np.where(np.isfinite(sigma_fit) & (sigma_fit > 0), sigma_fit, np.nan)
-            sigma_y = np.nanstd(ydata_masked, axis=0, ddof=1) / np.sqrt(n)
-            sigma_fit = np.where(np.isfinite(sigma_y) & (sigma_y > 0), sigma_y, np.nan)
-            valid = np.isfinite(sigma_fit)
-
-            popt, pcov   = curve_fit(Normal,
-                                     xdata[valid],
-                                     ymean[valid],
-                                     p0 = init_guess,
-                                     bounds = (low_bounds,up_bounds),
-                                     sigma = sigma_fit[valid])
+        elif log_scaling == False:
+            model, yfit = Normal, ymean
+            sigma_fit = np.nanstd(ydata_masked, axis=0, ddof=1) / np.sqrt(n)
         else:
             raise ValueError("log_scaling not set")
+
+        # weighting selects the residual that is minimised:
+        #   "variance" — weight each bin by 1/(temporal standard error). This is
+        #     statistically principled but lets temporally steady bins dominate,
+        #     so the fit can drift away from the visible mean curve (and flatten
+        #     a mode whose region happens to be noisy).
+        #   "uniform" — weight every bin equally, i.e. fit the mean curve as
+        #     plotted. An optimisation started from a good by-eye guess then
+        #     cannot land on a visibly worse result.
+        if weighting == "uniform":
+            valid = np.isfinite(yfit)
+            popt, pcov = curve_fit(
+                model, xdata[valid], yfit[valid],
+                p0=init_guess, bounds=(low_bounds, up_bounds),
+            )
+        elif weighting == "variance":
+            sigma_fit = np.where(np.isfinite(sigma_fit) & (sigma_fit > 0), sigma_fit, np.nan)
+            valid = np.isfinite(sigma_fit)
+            popt, pcov = curve_fit(
+                model, xdata[valid], yfit[valid],
+                p0=init_guess, bounds=(low_bounds, up_bounds), sigma=sigma_fit[valid],
+            )
+        else:
+            raise ValueError("weighting must be 'uniform' or 'variance'")
         
         # Get error estimates of the fits
         perr = np.sqrt(np.diag(pcov))
