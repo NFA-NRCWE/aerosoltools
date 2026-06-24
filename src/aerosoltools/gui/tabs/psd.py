@@ -6,9 +6,13 @@ single instrument behaves like the old single-view PSD tab while multiple
 instruments are compared on the same axes.
 
 On top of the comparison it offers **lognormal fitting** (via
-:meth:`Aerosol2D.fit_psd`): the user picks one of the plotted curves as the *fit
-target*, seeds one or more modes (by clicking the plot or typing μ/σ/peak), and
-fits them. Each mode plus the combined *total* fit is overlaid on the target.
+:meth:`Aerosol2D.fit_psd`): the user picks one plotted curve as the *fit target*
+(emphasised; the rest dim, or hidden via "Only target"), shapes one or more
+modes **by eye** — click sets a mode's peak (μ, height), scrolling sets its width
+(σ) — and may then press **Fit** to optimise those guesses. The hand-built
+("manual") and optimised states are drawn differently so it is always clear
+which is showing. Each fit is stored per (dataset × activity) on the dataset and
+saved with the project; editing or deleting a task drops its fits.
 """
 
 from __future__ import annotations
@@ -32,6 +36,8 @@ from ._base import _active_color_cycle, _PlotTab
 _SQRT_2PI = np.sqrt(2.0 * np.pi)
 #: Default geometric standard deviation for a freshly added/placed mode.
 _DEFAULT_SIGMA = 1.8
+#: Clamp range for σ (geometric SD) while shaping a mode by scroll/typing.
+_SIGMA_MIN, _SIGMA_MAX = 1.05, 5.0
 
 
 def _peak_to_factor(peak: float, sigma: float) -> float:
@@ -80,13 +86,12 @@ class PSDTab(_PlotTab):
     active one. The user ticks which datasets and which activities to compare;
     one mean-PSD curve is drawn per (dataset × activity) pair via the library's
     own :meth:`Aerosol2D.plot_psd` (``ax=`` shared), then relabelled/recoloured
-    so each combination is distinct. With a single dataset ticked it is just
-    that instrument's PSD per activity.
+    so each combination is distinct.
 
-    A "Lognormal fit" panel on top lets the user select one plotted curve as the
-    *fit target* (highlighted; the rest dim), seed modes by clicking the plot,
-    and fit them with :meth:`Aerosol2D.fit_psd`. Each mode and the combined
-    total fit are overlaid on the target.
+    The "Lognormal fit" side panel selects one plotted curve as the *fit target*
+    and shapes modes on it by eye (click = peak, scroll = width); :meth:`_run_fit`
+    optionally optimises them. Fits are kept per (dataset × activity) on the
+    dataset (:attr:`Dataset.psd_fits`) so they persist in the saved project.
     """
 
     export_tag = "psd"
@@ -95,14 +100,18 @@ class PSDTab(_PlotTab):
         """Build the PSD controls, fit panel, dataset/activity lists and plot."""
         super().__init__(main, nrows=1)
 
-        # Fitting state: the working list of modes (dicts with mu/sigma/peak/
-        # bound and optional *_err from the last fit), whether they represent a
-        # committed fit (vs an uncommitted guess), and the currently emphasised
-        # target line captured during the last draw.
+        # Fitting state. ``_modes`` mirrors the current target's stored fit (a
+        # list of {mu, sigma, peak, bound, *_err?} dicts); ``_fitted`` flags
+        # whether they came from an optimisation (vs a hand-built guess). The
+        # target object/colour/line are captured during the last full draw so
+        # the overlay can be repainted cheaply (without recomputing the PSDs).
         self._modes: list[dict] = []
         self._fitted = False
         self._building_table = False
+        self._target_obj = None
+        self._target_color = None
         self._target_line = None
+        self._overlay_artists: list = []
 
         self.normalize = QtWidgets.QCheckBox("Normalize (dx/dlogDp)")
         self.normalize.setChecked(True)
@@ -156,8 +165,10 @@ class PSDTab(_PlotTab):
         self._split_with_side(side_widget, sizes=(700, 380))
 
         self.ax = self.figure.add_subplot(111)
-        # Click-to-place seeds/moves a mode at the clicked diameter and height.
-        self.canvas.mpl_connect("button_press_event", self._on_click)
+        # Direct manipulation of modes (only while "Edit on plot" is active):
+        # click sets the selected mode's peak; scroll sets its width.
+        self.canvas.mpl_connect("button_press_event", self._on_press)
+        self.canvas.mpl_connect("scroll_event", self._on_scroll)
 
     # -- fit panel construction -------------------------------------------
     def _build_fit_panel(self) -> QtWidgets.QGroupBox:
@@ -176,20 +187,24 @@ class PSDTab(_PlotTab):
         outer.setSpacing(4)
         outer.setContentsMargins(6, 4, 6, 6)
 
-        # Row 1: which plotted curve to fit.
+        # Row 1: which plotted curve to fit + "show only that curve".
         row1 = QtWidgets.QHBoxLayout()
         row1.setSpacing(4)
         row1.addWidget(QtWidgets.QLabel("Target:"))
         self.fit_target = QtWidgets.QComboBox()
         self.fit_target.setToolTip(
-            "Which plotted curve the fit applies to. The target is drawn bold; "
-            "the other curves dim."
+            "Which plotted curve the fit applies to. It is drawn bold and named "
+            "on the plot; the other curves dim."
         )
         self.fit_target.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
         )
         self.fit_target.currentIndexChanged.connect(self._on_target_changed)
         row1.addWidget(self.fit_target, stretch=1)
+        self.isolate_chk = QtWidgets.QCheckBox("Only")
+        self.isolate_chk.setToolTip("Hide the other curves and show only the fit target.")
+        self.isolate_chk.stateChanged.connect(self._draw)
+        row1.addWidget(self.isolate_chk)
         outer.addLayout(row1)
 
         # Modes table: μ / σ / peak height (all editable) + a "bind μ" check.
@@ -209,27 +224,29 @@ class PSDTab(_PlotTab):
         self.modes_table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.modes_table.setMinimumHeight(58)
         self.modes_table.setMaximumHeight(110)
+        self.modes_table.itemSelectionChanged.connect(self._redraw_overlay)
         self.modes_table.itemChanged.connect(self._on_mode_edited)
         outer.addWidget(self.modes_table)
 
-        # Row 2: place-by-click toggle + add/remove mode (short labels).
+        # Row 2: edit-on-plot toggle + add/remove mode (short labels).
         row2 = QtWidgets.QHBoxLayout()
         row2.setSpacing(4)
-        self.place_btn = QtWidgets.QPushButton("Place")
-        self.place_btn.setObjectName("toggle")
-        self.place_btn.setCheckable(True)
-        self.place_btn.setToolTip(
-            "Toggle on, then click the plot to set the selected mode's peak "
-            "diameter and height (or add a new mode if none is selected)."
+        self.edit_btn = QtWidgets.QPushButton("Edit on plot")
+        self.edit_btn.setObjectName("toggle")
+        self.edit_btn.setCheckable(True)
+        self.edit_btn.setToolTip(
+            "Shape modes by eye: with a mode selected, click the plot to set its "
+            "peak (μ and height) and scroll over the plot to widen/narrow it (σ). "
+            "With no mode selected, a click adds one."
         )
-        self.place_btn.toggled.connect(self._toggle_place)
+        self.edit_btn.toggled.connect(self._toggle_edit)
         add_btn = QtWidgets.QPushButton("Add")
-        add_btn.setToolTip("Add a mode at the target's mid-range, then adjust.")
+        add_btn.setToolTip("Add a mode at the target's mid-range, then shape it.")
         add_btn.clicked.connect(self._add_mode)
         rem_btn = QtWidgets.QPushButton("Del")
         rem_btn.setToolTip("Remove the selected mode.")
         rem_btn.clicked.connect(self._remove_mode)
-        row2.addWidget(self.place_btn, stretch=1)
+        row2.addWidget(self.edit_btn, stretch=1)
         row2.addWidget(add_btn)
         row2.addWidget(rem_btn)
         outer.addLayout(row2)
@@ -239,6 +256,7 @@ class PSDTab(_PlotTab):
         row3.setSpacing(4)
         self.fit_btn = QtWidgets.QPushButton("Fit")
         self.fit_btn.setObjectName("primary")
+        self.fit_btn.setToolTip("Optimise the current modes to the target curve.")
         self.fit_btn.clicked.connect(self._run_fit)
         clear_btn = QtWidgets.QPushButton("Clear")
         clear_btn.setToolTip("Remove all modes and the fit overlay.")
@@ -262,7 +280,8 @@ class PSDTab(_PlotTab):
         outer.addLayout(row3)
 
         self.fit_status = QtWidgets.QLabel(
-            "Pick a target, click the plot to seed a mode, then Fit."
+            "Edit on plot: click sets a mode's peak, scroll sets its width. "
+            "Fit to optimise (optional)."
         )
         self.fit_status.setWordWrap(True)
         outer.addWidget(self.fit_status)
@@ -350,9 +369,57 @@ class PSDTab(_PlotTab):
                 self.fit_target.setCurrentIndex(idx)
         self.fit_target.blockSignals(False)
         has_target = self.fit_target.count() > 0
-        self.fit_target.setEnabled(has_target)
-        self.fit_btn.setEnabled(has_target)
-        self.place_btn.setEnabled(has_target)
+        for w in (self.fit_target, self.fit_btn, self.edit_btn, self.isolate_chk):
+            w.setEnabled(has_target)
+
+    # -- target fit load / store (persisted on the dataset) ----------------
+    def _load_target_fit(self) -> None:
+        """Load the current target's stored modes into the working state."""
+        target = self._current_target()
+        if target is None:
+            self._modes = []
+            self._fitted = False
+            self._write_modes_to_table()
+            return
+        ds, act = target
+        rec = ds.psd_fits.get(act)
+        if rec and rec.get("modes"):
+            self._modes = [
+                {
+                    "mu": float(m["mu"]),
+                    "sigma": float(m["sigma"]),
+                    "peak": float(m["peak"]),
+                    "bound": bool(m.get("bound")),
+                }
+                for m in rec["modes"]
+            ]
+            self._fitted = bool(rec.get("optimized"))
+        else:
+            self._modes = []
+            self._fitted = False
+        self._write_modes_to_table()
+
+    def _store_target_fit(self) -> None:
+        """Persist the working modes onto the current target's dataset."""
+        target = self._current_target()
+        if target is None:
+            return
+        ds, act = target
+        if self._modes:
+            ds.psd_fits[act] = {
+                "modes": [
+                    {
+                        "mu": float(m["mu"]),
+                        "sigma": float(m["sigma"]),
+                        "peak": float(m["peak"]),
+                        "bound": bool(m.get("bound")),
+                    }
+                    for m in self._modes
+                ],
+                "optimized": bool(self._fitted),
+            }
+        else:
+            ds.psd_fits.pop(act, None)
 
     # -- interaction -------------------------------------------------------
     def _on_ds_changed(self, item) -> None:
@@ -365,37 +432,45 @@ class PSDTab(_PlotTab):
             self._on_targets_changed()
 
     def _on_targets_changed(self) -> None:
-        """Re-sync the fit-target dropdown then redraw (dataset/activity change)."""
+        """Dataset/activity selection changed: re-sync target, reload fit, draw."""
         self._sync_fit_target()
+        self._load_target_fit()
         self._draw()
 
     def _on_target_changed(self, _index: int = 0) -> None:
-        """The fit target changed: the modes are now a guess for the new curve."""
-        self._fitted = False
+        """Fit target changed: load that curve's stored modes and redraw."""
+        self._load_target_fit()
         self._draw()
 
-    def _toggle_place(self) -> None:
-        """Enter/leave click-to-place mode (and drop any active pan/zoom)."""
-        active = self.place_btn.isChecked()
-        self.place_btn.setText("Placing…" if active else "Place")
+    def _toggle_edit(self) -> None:
+        """Enter/leave on-plot editing (and drop any active pan/zoom)."""
+        active = self.edit_btn.isChecked()
+        self.edit_btn.setText("Editing…" if active else "Edit on plot")
         if active and self.toolbar.mode:
             mode = str(self.toolbar.mode)
             if "pan" in mode:
                 self.toolbar.pan()
             elif "zoom" in mode:
                 self.toolbar.zoom()
+        # Emphasis depends on edit mode, so reflect the change immediately.
+        self._draw()
 
-    def _on_click(self, event) -> None:
-        """Seed or move a mode at the clicked (diameter, height)."""
-        if not self.place_btn.isChecked() or event.inaxes is not self.ax:
+    def _selected_row(self) -> int:
+        """Index of the selected mode, or -1."""
+        row = self.modes_table.currentRow()
+        return row if 0 <= row < len(self._modes) else -1
+
+    def _on_press(self, event) -> None:
+        """Click on the plot: set the selected mode's peak, or add a new mode."""
+        if not self.edit_btn.isChecked() or event.inaxes is not self.ax:
             return
         if event.button != 1 or self.toolbar.mode:
             return
         x, y = event.xdata, event.ydata
         if x is None or y is None or x <= 0 or y <= 0:
             return
-        row = self.modes_table.currentRow()
-        if 0 <= row < len(self._modes):
+        row = self._selected_row()
+        if row >= 0:
             self._modes[row]["mu"] = float(x)
             self._modes[row]["peak"] = float(y)
             self._modes[row].pop("mu_err", None)
@@ -403,18 +478,50 @@ class PSDTab(_PlotTab):
             self._modes.append(
                 {"mu": float(x), "sigma": _DEFAULT_SIGMA, "peak": float(y), "bound": False}
             )
+            row = len(self._modes) - 1
         self._fitted = False
         self._ensure_normalized()
+        self._store_target_fit()
         self._write_modes_to_table()
+        self.modes_table.selectRow(row)
         self._draw()
+
+    def _on_scroll(self, event) -> None:
+        """Scroll over the plot: widen/narrow the selected mode (σ)."""
+        if not self.edit_btn.isChecked() or event.inaxes is not self.ax:
+            return
+        if self.toolbar.mode:
+            return
+        row = self._selected_row()
+        if row < 0:
+            return
+        m = self._modes[row]
+        # Scroll up → narrower, scroll down → wider.
+        sigma = float(m["sigma"]) * (1.12 ** (-event.step))
+        m["sigma"] = float(min(_SIGMA_MAX, max(_SIGMA_MIN, sigma)))
+        m.pop("sigma_err", None)
+        self._fitted = False
+        self._ensure_normalized()
+        self._store_target_fit()
+        # Update just the σ cell (keeping the row selected) and repaint only the
+        # overlay, so rapid scrolling stays smooth.
+        self._building_table = True
+        self.modes_table.blockSignals(True)
+        cell = self.modes_table.item(row, _COL_SIGMA)
+        if cell is not None:
+            cell.setText(f"{m['sigma']:.2f}")
+        self.modes_table.blockSignals(False)
+        self._building_table = False
+        self._redraw_overlay()
 
     def _add_mode(self) -> None:
         """Append a default mode centred on the target's size range."""
         target = self._current_target()
-        mu, peak = 100.0, 1.0
-        if target is not None:
-            bm = np.asarray(target[0].obj.bin_mids, dtype=float)
-            mu = float(np.sqrt(bm.min() * bm.max()))
+        if target is None:
+            return
+        bm = np.asarray(target[0].obj.bin_mids, dtype=float)
+        mu = float(np.sqrt(bm.min() * bm.max()))
+        peak = 1.0
         if self._target_line is not None:
             ydata = np.asarray(self._target_line.get_ydata(), dtype=float)
             if np.isfinite(ydata).any():
@@ -422,23 +529,26 @@ class PSDTab(_PlotTab):
         self._modes.append({"mu": mu, "sigma": _DEFAULT_SIGMA, "peak": peak, "bound": False})
         self._fitted = False
         self._ensure_normalized()
+        self._store_target_fit()
         self._write_modes_to_table()
         self.modes_table.selectRow(len(self._modes) - 1)
         self._draw()
 
     def _remove_mode(self) -> None:
         """Remove the selected mode."""
-        row = self.modes_table.currentRow()
-        if 0 <= row < len(self._modes):
+        row = self._selected_row()
+        if row >= 0:
             del self._modes[row]
             self._fitted = False
+            self._store_target_fit()
             self._write_modes_to_table()
             self._draw()
 
     def _clear_fit(self) -> None:
-        """Drop all modes and any fit overlay."""
+        """Drop all modes and any fit overlay (for the current target)."""
         self._modes = []
         self._fitted = False
+        self._store_target_fit()
         self._write_modes_to_table()
         self.fit_status.setText("Fit cleared.")
         self._draw()
@@ -482,11 +592,12 @@ class PSDTab(_PlotTab):
         self.modes_table.setItem(row, col, item)
 
     def _on_mode_edited(self, item) -> None:
-        """A typed/checked edit invalidates the committed fit; re-preview."""
+        """A typed/checked edit invalidates the optimised state; re-preview."""
         if self._building_table:
             return
         self._read_table_into_modes()
         self._fitted = False
+        self._store_target_fit()
         self._draw()
 
     def _read_table_into_modes(self) -> None:
@@ -505,24 +616,27 @@ class PSDTab(_PlotTab):
         self._modes = modes
 
     def _valid_modes(self) -> list:
-        """Modes with sane values as ``(mu, sigma, peak, bound)`` tuples."""
+        """Modes with sane values as ``(index, mu, sigma, peak, bound)`` tuples."""
         out = []
-        for m in self._modes:
+        for i, m in enumerate(self._modes):
             try:
                 mu, sigma, peak = float(m["mu"]), float(m["sigma"]), float(m["peak"])
             except (TypeError, ValueError):
                 continue
             if mu > 0 and sigma > 1.0 and peak > 0:
-                out.append((mu, sigma, peak, bool(m.get("bound"))))
+                out.append((i, mu, sigma, peak, bool(m.get("bound"))))
         return out
 
     def _modes_as_triples(self) -> list:
         """Valid modes as ``(mu, sigma, factor)`` for plotting/evaluation."""
-        return [(mu, sigma, _peak_to_factor(peak, sigma)) for mu, sigma, peak, _ in self._valid_modes()]
+        return [
+            (mu, sigma, _peak_to_factor(peak, sigma))
+            for _, mu, sigma, peak, _ in self._valid_modes()
+        ]
 
     # -- fitting -----------------------------------------------------------
     def _run_fit(self) -> None:
-        """Fit the seeded modes to the active target via ``Aerosol2D.fit_psd``."""
+        """Optimise the seeded modes on the active target via ``fit_psd``."""
         target = self._current_target()
         if target is None:
             self.fit_status.setText("No fit target selected.")
@@ -530,15 +644,15 @@ class PSDTab(_PlotTab):
         ds, act = target
         valid = self._valid_modes()
         if not valid:
-            self.fit_status.setText("Add at least one mode first (click the plot or 'Add mode').")
+            self.fit_status.setText("Add at least one mode first (click the plot or 'Add').")
             return
 
-        mu = [v[0] for v in valid]
-        sigma = [v[1] for v in valid]
-        factor = [_peak_to_factor(v[2], v[1]) for v in valid]
+        mu = [v[1] for v in valid]
+        sigma = [v[2] for v in valid]
+        factor = [_peak_to_factor(v[3], v[2]) for v in valid]
         binding = []
         for v in valid:
-            binding += [v[3], False, False]  # bind μ only
+            binding += [v[4], False, False]  # bind μ only
         try:
             tol = float(self.tolerance.text())
         except ValueError:
@@ -567,7 +681,7 @@ class PSDTab(_PlotTab):
                     "mu": float(modes["mu"][i]),
                     "sigma": ss,
                     "peak": _factor_to_peak(ff, ss),
-                    "bound": valid[i][3] if i < len(valid) else False,
+                    "bound": valid[i][4] if i < len(valid) else False,
                     "mu_err": float(err["mu"][i]),
                     "sigma_err": float(err["sigma"][i]),
                     "factor_err": float(err["factor"][i]),
@@ -576,6 +690,7 @@ class PSDTab(_PlotTab):
         self._modes = new
         self._fitted = True
         self._ensure_normalized()
+        self._store_target_fit()
         self._write_modes_to_table()
         self._draw()
         self._report_fit_quality(len(new))
@@ -585,13 +700,13 @@ class PSDTab(_PlotTab):
         line = self._target_line
         triples = self._modes_as_triples()
         if line is None or not triples:
-            self.fit_status.setText(f"Fitted {n_modes} mode(s).")
+            self.fit_status.setText(f"Optimised {n_modes} mode(s).")
             return
         x = np.asarray(line.get_xdata(), dtype=float)
         y = np.asarray(line.get_ydata(), dtype=float)
         mask = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
         if mask.sum() < 3:
-            self.fit_status.setText(f"Fitted {n_modes} mode(s).")
+            self.fit_status.setText(f"Optimised {n_modes} mode(s).")
             return
         yhat, _ = _lognormal_modes(x[mask], triples)
         yt = np.log10(y[mask])
@@ -601,52 +716,58 @@ class PSDTab(_PlotTab):
         r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
 
         # Flag degenerate modes so a poor fit is obvious: a σ pinned near the
-        # solver's ceiling (≈5) or a peak that landed outside the measured size
-        # range usually means the data needs another mode (or a bound μ).
+        # solver's ceiling or a peak that landed outside the measured size range
+        # usually means the data needs another mode (or a bound μ).
         lo, hi = float(np.min(x[mask])), float(np.max(x[mask]))
-        flagged = []
-        for i, m in enumerate(self._modes, start=1):
-            if m["sigma"] >= 4.5 or m["mu"] < 0.9 * lo or m["mu"] > 1.1 * hi:
-                flagged.append(str(i))
-        msg = f"Fitted {n_modes} mode(s) — R²(log) = {r2:.3f}"
+        flagged = [
+            str(i + 1)
+            for i, m in enumerate(self._modes)
+            if m["sigma"] >= 4.5 or m["mu"] < 0.9 * lo or m["mu"] > 1.1 * hi
+        ]
+        msg = f"Optimised {n_modes} mode(s) — R²(log) = {r2:.3f}"
         if flagged:
             msg += f" — mode {', '.join(flagged)} degenerate; add a mode or bind μ."
         self.fit_status.setText(msg)
 
     # -- rendering ---------------------------------------------------------
     def refresh(self) -> None:
-        """Re-sync the dataset/activity/target lists and redraw."""
+        """Re-sync the dataset/activity/target lists, reload the fit and redraw."""
         self._sync_datasets()
         self._sync_activities()
         self._sync_fit_target()
+        self._load_target_fit()
         self._draw()
 
     def _draw_on(self, ax) -> None:
-        """Draw one mean-PSD curve per (dataset x activity) onto ``ax``.
+        """Draw one mean-PSD curve per (dataset × activity), plus the fit overlay.
 
-        The current fit target (if any) is emphasised and its lognormal modes +
-        total fit overlaid; the other curves are dimmed.
+        While fitting, the target curve is drawn bold and named, the others dim
+        (or are hidden when "Only" is ticked), and the target's lognormal modes
+        and combined total are overlaid.
         """
         ax.clear()
-        self._target_line = None
+        self._overlay_artists = []
+        self._target_obj = self._target_color = self._target_line = None
         datasets = [d for d in self._datasets_2d if d.psd_on]
         activities = self._selected_activities()
         colors = _active_color_cycle()
         normalize = self.normalize.isChecked()
         show_band = self.band.isChecked()
         target = self.fit_target.currentData()
+        isolate = self.isolate_chk.isChecked() and target is not None
+        # Emphasise the target while there are modes or the user is editing, so a
+        # plain comparison (nothing being fitted) looks unchanged.
+        emphasize = target is not None and (bool(self._modes) or self.edit_btn.isChecked())
 
         plotted = 0
         ci = 0
         single = len(datasets) == 1 or len(activities) == 1
-        target_obj = None
-        target_color = None
-        # Only emphasise the target / dim the rest while the user is fitting, so
-        # a plain comparison (no modes seeded) looks unchanged.
-        emphasize = bool(self._modes) and target is not None
         for ds in datasets:
             for act in activities:
                 if act not in ds.obj.activities:
+                    continue
+                is_target = target is not None and ds.id == target[0] and act == target[1]
+                if isolate and not is_target:
                     continue
                 n_lines = len(list(ax.lines))
                 n_coll = len(list(ax.collections))
@@ -668,23 +789,22 @@ class PSDTab(_PlotTab):
                     label = act
                 else:
                     label = f"{ds.label} – {act}"
-                is_target = target is not None and ds.id == target[0] and act == target[1]
                 for j, line in enumerate(new_lines):
                     line.set_color(color)
                     line.set_label(label if j == 0 else "_nolegend_")
+                    if is_target and j == 0:
+                        self._target_line = line
+                        self._target_obj = ds.obj
+                        self._target_color = color
                     if is_target and emphasize:
-                        line.set_linewidth(2.6)
+                        line.set_linewidth(3.0)
                         line.set_zorder(5)
-                        if j == 0:
-                            self._target_line = line
-                            target_obj = ds.obj
-                            target_color = color
                     elif emphasize:
-                        line.set_alpha(0.35)
+                        line.set_alpha(0.28)
                 for coll in new_coll:  # fill_between ±1σ envelope
                     if show_band:
                         coll.set_color(color)
-                        coll.set_alpha(0.18 if is_target or not emphasize else 0.10)
+                        coll.set_alpha(0.18 if is_target or not emphasize else 0.08)
                     else:
                         coll.remove()
                 plotted += 1
@@ -700,45 +820,106 @@ class PSDTab(_PlotTab):
             ax.set_axis_off()
             return
 
-        if target_obj is not None and self._modes:
-            self._draw_fit_overlay(ax, target_obj, target_color, normalize)
+        # Name the curve being fitted, so it is unambiguous among several.
+        if emphasize and self._target_obj is not None:
+            ax.text(
+                0.015,
+                0.97,
+                f"Fitting: {self.fit_target.currentText()}",
+                transform=ax.transAxes,
+                va="top",
+                ha="left",
+                fontsize=8.5,
+                color=self._target_color,
+                bbox=dict(
+                    boxstyle="round,pad=0.3",
+                    fc=ax.get_facecolor(),
+                    ec=self._target_color,
+                    alpha=0.85,
+                ),
+            )
+
+        self._paint_overlay(ax, remove_existing=False)
 
         if self.log_y.isChecked():
             ax.set_yscale("log")
         ax.legend(loc="upper right", fontsize=8)
 
-    def _draw_fit_overlay(self, ax, obj, color, normalize: bool) -> None:
-        """Overlay each lognormal mode and the combined total on the target."""
-        triples = self._modes_as_triples()
-        if not triples:
+    def _paint_overlay(self, ax, remove_existing: bool = False) -> None:
+        """Draw the modes + total on the target; track the artists for reuse.
+
+        Manual (hand-built) fits are drawn dashed in orange; optimised fits solid
+        in crimson — so the two states are never confused. The selected mode's
+        peak gets a hollow handle.
+        """
+        if remove_existing:
+            for artist in self._overlay_artists:
+                try:
+                    artist.remove()
+                except Exception:
+                    pass
+        self._overlay_artists = []
+        obj = self._target_obj
+        if obj is None or not self._modes:
             return
-        if not normalize:
-            ax.text(
-                0.02,
-                0.98,
-                "Enable Normalize (dx/dlogDp) to overlay the fit.",
+        if not self.normalize.isChecked():
+            txt = ax.text(
+                0.015,
+                0.88,
+                "Enable Normalize to overlay the fit.",
                 transform=ax.transAxes,
                 va="top",
-                ha="left",
                 fontsize=8,
                 color="crimson",
             )
+            self._overlay_artists.append(txt)
             return
+        valid = self._valid_modes()
+        if not valid:
+            return
+        triples = [(mu, sigma, _peak_to_factor(peak, sigma)) for _, mu, sigma, peak, _ in valid]
         bm = np.asarray(obj.bin_mids, dtype=float)
         dp = np.logspace(np.log10(bm.min()), np.log10(bm.max()), 300)
         total, per_mode = _lognormal_modes(dp, triples)
+        optimized = self._fitted
+        col = "crimson" if optimized else "darkorange"
+        sel = self.modes_table.currentRow()
+
         for comp in per_mode:
-            ax.plot(dp, comp, ls="--", lw=1.1, color=color or "0.5", alpha=0.6)
-        committed = self._fitted
-        ax.plot(
+            (ln,) = ax.plot(dp, comp, ls=":", lw=1.0, color=col, alpha=0.55, zorder=6)
+            self._overlay_artists.append(ln)
+        for idx, mu, _sigma, peak, _bound in valid:
+            is_sel = idx == sel
+            (mk,) = ax.plot(
+                [mu],
+                [peak],
+                marker="o",
+                ms=9 if is_sel else 6,
+                mfc="white" if is_sel else col,
+                mec=col,
+                mew=1.6,
+                ls="None",
+                zorder=9,
+            )
+            self._overlay_artists.append(mk)
+        (total_ln,) = ax.plot(
             dp,
             total,
-            ls="-" if committed else ":",
-            lw=2.4,
-            color="crimson",
-            zorder=6,
-            label="Total fit" if committed else "Total fit (guess)",
+            ls="-" if optimized else "--",
+            lw=2.6,
+            color=col,
+            zorder=8,
+            label="Optimised fit" if optimized else "Manual fit (not optimised)",
         )
+        self._overlay_artists.append(total_ln)
+
+    def _redraw_overlay(self) -> None:
+        """Repaint only the fit overlay (modes unchanged → PSD curves kept)."""
+        if self._target_obj is None or self._building_table:
+            return
+        self._paint_overlay(self.ax, remove_existing=True)
+        self.ax.legend(loc="upper right", fontsize=8)
+        self.canvas.draw_idle()
 
     def _draw(self) -> None:
         """Redraw onto the embedded axis, reporting any error in the figure."""

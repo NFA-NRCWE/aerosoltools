@@ -67,6 +67,12 @@ class Dataset:
         self.overlay_on: bool = True
         self.psd_on: bool = True
         self.summary_on: bool = True
+        # Lognormal PSD fits, keyed by activity name (e.g. "All data", "Task 1").
+        # Each value is ``{"modes": [{mu, sigma, peak, bound}, ...],
+        # "optimized": bool}``. Stored per dataset because a fit describes that
+        # instrument's PSD for one activity; persisted in the project file and
+        # dropped when the activity is edited or removed (see Project).
+        self.psd_fits: Dict[str, dict] = {}
 
     @property
     def instrument(self) -> str:
@@ -165,14 +171,20 @@ class Project:
         self.set_activity_periods(name, periods)
 
     def set_activity_periods(self, name: str, periods) -> None:
-        """Replace a task's full period list and sync it across all datasets."""
+        """Replace a task's full period list and sync it across all datasets.
+
+        Editing a task changes which samples it covers, so any stored PSD fit
+        for it is now stale and is dropped (the user re-fits the new data).
+        """
         norm: List[Period] = [(pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods]
         self.activities[name] = norm
         for ds in self.datasets:
             ds.obj.mark_activities({name: norm}, mode="replace")
+            ds.psd_fits.pop(name, None)
 
     def delete_activity(self, name: str) -> None:
-        """Remove a task from the registry and from every dataset."""
+        """Remove a task from the registry, every dataset, and its PSD fits."""
         self.activities.pop(name, None)
         for ds in self.datasets:
             helpers.delete_activity(ds.obj, name)
+            ds.psd_fits.pop(name, None)
