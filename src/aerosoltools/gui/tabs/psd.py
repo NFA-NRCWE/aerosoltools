@@ -741,7 +741,14 @@ class PSDTab(_PlotTab):
         self._report_fit_quality(len(new))
 
     def _report_fit_quality(self, n_modes: int) -> None:
-        """Show an R² (in log space) of the total fit against the target curve."""
+        """Show a linear-space R² of the total fit over the local fit window.
+
+        Scored in the plot's own (linear) units, and only over the bins the fit
+        used (the modes' local windows), so the number matches what the eye sees
+        on the curve: a fit that sits on its modes is not dragged down by the
+        intentionally-unfit background or by the lognormal tails (where a
+        log-space score would explode as the model decays toward zero).
+        """
         xy = self._target_xy
         triples = self._modes_as_triples()
         if xy is None or not triples:
@@ -750,18 +757,14 @@ class PSDTab(_PlotTab):
         x = np.asarray(xy[0], dtype=float)
         y = np.asarray(xy[1], dtype=float)
         mask = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
-        # Score the fit over the same local window it was fit on, so a local fit
-        # is not penalised for the (intentionally unfit) background far from any
-        # mode.
         mask &= self._local_mask(x)
         if mask.sum() < 3:
             self.fit_status.setText(f"Optimised {n_modes} mode(s).")
             return
         yhat, _ = _lognormal_modes(x[mask], triples)
-        yt = np.log10(y[mask])
-        yp = np.log10(np.clip(yhat, 1e-30, None))
-        ss_res = np.nansum((yt - yp) ** 2)
-        ss_tot = np.nansum((yt - np.nanmean(yt)) ** 2)
+        yv = y[mask]
+        ss_res = np.nansum((yv - yhat) ** 2)
+        ss_tot = np.nansum((yv - np.nanmean(yv)) ** 2)
         r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
 
         # Flag degenerate modes so a poor fit is obvious: a σ pinned near the
@@ -773,7 +776,8 @@ class PSDTab(_PlotTab):
             for i, m in enumerate(self._modes)
             if m["sigma"] >= 4.5 or m["mu"] < 0.9 * lo or m["mu"] > 1.1 * hi
         ]
-        msg = f"Optimised {n_modes} mode(s) — R²(log) = {r2:.3f}"
+        scope = "in-window" if self.local_chk.isChecked() else "full range"
+        msg = f"Optimised {n_modes} mode(s) — R² ({scope}) = {r2:.3f}"
         if flagged:
             msg += f" — mode {', '.join(flagged)} degenerate; add a mode or bind μ."
         self.fit_status.setText(msg)
