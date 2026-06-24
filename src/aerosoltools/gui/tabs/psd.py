@@ -136,25 +136,24 @@ class PSDTab(_PlotTab):
         self.act_list.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.act_list.itemSelectionChanged.connect(self._on_targets_changed)
 
+        self.ds_list.setToolTip(
+            "Tick the 2D datasets and activities to compare. One mean-PSD curve "
+            "is drawn per dataset × activity."
+        )
         side = QtWidgets.QVBoxLayout()
         side.addWidget(QtWidgets.QLabel("Datasets to compare:"))
         side.addWidget(self.ds_list, stretch=1)
         side.addWidget(QtWidgets.QLabel("Activities:"))
         side.addWidget(self.act_list, stretch=1)
-        hint = QtWidgets.QLabel(
-            "Tick the 2D datasets and the activities to compare. One mean-PSD "
-            "curve is drawn per dataset × activity."
-        )
-        hint.setWordWrap(True)
-        side.addWidget(hint)
+        # The fitting controls live in the side panel (horizontal space) rather
+        # than above the plot, so the canvas keeps its full height — a PSD drawn
+        # on a short, wide canvas looks misleadingly flat.
+        side.addWidget(self._build_fit_panel(), stretch=0)
 
         # Plot on the left of a resizable divider, side panel on the right.
         side_widget = QtWidgets.QWidget()
         side_widget.setLayout(side)
-        self._split_with_side(side_widget)
-
-        # Fitting top panel, above the view controls in the left column.
-        self._left_col.insertWidget(0, self._build_fit_panel())
+        self._split_with_side(side_widget, sizes=(700, 380))
 
         self.ax = self.figure.add_subplot(111)
         # Click-to-place seeds/moves a mode at the clicked diameter and height.
@@ -162,14 +161,25 @@ class PSDTab(_PlotTab):
 
     # -- fit panel construction -------------------------------------------
     def _build_fit_panel(self) -> QtWidgets.QGroupBox:
-        """Construct the "Lognormal fit" control box (target + modes + actions)."""
+        """Construct the compact "Lognormal fit" box (target + modes + actions).
+
+        Kept deliberately tight (short labels, a few-row scrolling modes table,
+        merged option rows) so it occupies little of the side panel.
+        """
         box = QtWidgets.QGroupBox("Lognormal fit")
+        # Take only the height it needs, so the dataset/activity lists above keep
+        # the side panel's spare vertical space.
+        box.setSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Maximum
+        )
         outer = QtWidgets.QVBoxLayout(box)
-        outer.setSpacing(6)
+        outer.setSpacing(4)
+        outer.setContentsMargins(6, 4, 6, 6)
 
         # Row 1: which plotted curve to fit.
         row1 = QtWidgets.QHBoxLayout()
-        row1.addWidget(QtWidgets.QLabel("Fit target:"))
+        row1.setSpacing(4)
+        row1.addWidget(QtWidgets.QLabel("Target:"))
         self.fit_target = QtWidgets.QComboBox()
         self.fit_target.setToolTip(
             "Which plotted curve the fit applies to. The target is drawn bold; "
@@ -183,24 +193,29 @@ class PSDTab(_PlotTab):
         outer.addLayout(row1)
 
         # Modes table: μ / σ / peak height (all editable) + a "bind μ" check.
+        # Compact rows; extra modes scroll rather than grow the panel.
         self.modes_table = QtWidgets.QTableWidget(0, 4)
-        self.modes_table.setHorizontalHeaderLabels(
-            ["μ peak (nm)", "σ (GSD)", "Peak height", "Bind μ"]
+        self.modes_table.setHorizontalHeaderLabels(["μ (nm)", "σ", "Peak", "Bind"])
+        self.modes_table.setToolTip(
+            "Peak diameter μ, geometric SD σ, and peak height (dx/dlogDp). "
+            "Tick Bind to hold a mode's μ near its value during the fit."
         )
         self.modes_table.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.Stretch
         )
         self.modes_table.verticalHeader().setVisible(False)
+        self.modes_table.verticalHeader().setDefaultSectionSize(22)
         self.modes_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.modes_table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-        self.modes_table.setMinimumHeight(96)
-        self.modes_table.setMaximumHeight(160)
+        self.modes_table.setMinimumHeight(58)
+        self.modes_table.setMaximumHeight(110)
         self.modes_table.itemChanged.connect(self._on_mode_edited)
         outer.addWidget(self.modes_table)
 
-        # Row 2: place-by-click toggle + add/remove mode.
+        # Row 2: place-by-click toggle + add/remove mode (short labels).
         row2 = QtWidgets.QHBoxLayout()
-        self.place_btn = QtWidgets.QPushButton("Place mode (click plot)")
+        row2.setSpacing(4)
+        self.place_btn = QtWidgets.QPushButton("Place")
         self.place_btn.setObjectName("toggle")
         self.place_btn.setCheckable(True)
         self.place_btn.setToolTip(
@@ -208,47 +223,46 @@ class PSDTab(_PlotTab):
             "diameter and height (or add a new mode if none is selected)."
         )
         self.place_btn.toggled.connect(self._toggle_place)
-        add_btn = QtWidgets.QPushButton("Add mode")
+        add_btn = QtWidgets.QPushButton("Add")
+        add_btn.setToolTip("Add a mode at the target's mid-range, then adjust.")
         add_btn.clicked.connect(self._add_mode)
-        rem_btn = QtWidgets.QPushButton("Remove")
+        rem_btn = QtWidgets.QPushButton("Del")
+        rem_btn.setToolTip("Remove the selected mode.")
         rem_btn.clicked.connect(self._remove_mode)
         row2.addWidget(self.place_btn, stretch=1)
         row2.addWidget(add_btn)
         row2.addWidget(rem_btn)
         outer.addLayout(row2)
 
-        # Row 3: fitting options.
+        # Row 3: fit / clear + options, all on one line.
         row3 = QtWidgets.QHBoxLayout()
-        self.log_scaling = QtWidgets.QCheckBox("Log-scaled fit")
+        row3.setSpacing(4)
+        self.fit_btn = QtWidgets.QPushButton("Fit")
+        self.fit_btn.setObjectName("primary")
+        self.fit_btn.clicked.connect(self._run_fit)
+        clear_btn = QtWidgets.QPushButton("Clear")
+        clear_btn.setToolTip("Remove all modes and the fit overlay.")
+        clear_btn.clicked.connect(self._clear_fit)
+        self.log_scaling = QtWidgets.QCheckBox("Log")
         self.log_scaling.setChecked(True)
         self.log_scaling.setToolTip(
             "Fit against log10(dx/dlogDp) so weakly populated modes are not "
             "swamped by the dominant mode (recommended)."
         )
-        row3.addWidget(self.log_scaling)
-        row3.addWidget(QtWidgets.QLabel("Bind tol. %:"))
         self.tolerance = QtWidgets.QLineEdit("10")
-        self.tolerance.setFixedWidth(48)
+        self.tolerance.setFixedWidth(36)
         self.tolerance.setToolTip(
             "Percent window a bound μ may move within during the fit."
         )
+        row3.addWidget(self.fit_btn, stretch=1)
+        row3.addWidget(clear_btn)
+        row3.addWidget(self.log_scaling)
+        row3.addWidget(QtWidgets.QLabel("tol%"))
         row3.addWidget(self.tolerance)
-        row3.addStretch(1)
         outer.addLayout(row3)
 
-        # Row 4: fit / clear.
-        row4 = QtWidgets.QHBoxLayout()
-        self.fit_btn = QtWidgets.QPushButton("Fit")
-        self.fit_btn.setObjectName("primary")
-        self.fit_btn.clicked.connect(self._run_fit)
-        clear_btn = QtWidgets.QPushButton("Clear fit")
-        clear_btn.clicked.connect(self._clear_fit)
-        row4.addWidget(self.fit_btn, stretch=1)
-        row4.addWidget(clear_btn)
-        outer.addLayout(row4)
-
         self.fit_status = QtWidgets.QLabel(
-            "Pick a fit target, then click the plot to seed a mode and press Fit."
+            "Pick a target, click the plot to seed a mode, then Fit."
         )
         self.fit_status.setWordWrap(True)
         outer.addWidget(self.fit_status)
@@ -363,7 +377,7 @@ class PSDTab(_PlotTab):
     def _toggle_place(self) -> None:
         """Enter/leave click-to-place mode (and drop any active pan/zoom)."""
         active = self.place_btn.isChecked()
-        self.place_btn.setText("Placing… (click plot)" if active else "Place mode (click plot)")
+        self.place_btn.setText("Placing…" if active else "Place")
         if active and self.toolbar.mode:
             mode = str(self.toolbar.mode)
             if "pan" in mode:
@@ -590,15 +604,13 @@ class PSDTab(_PlotTab):
         # solver's ceiling (≈5) or a peak that landed outside the measured size
         # range usually means the data needs another mode (or a bound μ).
         lo, hi = float(np.min(x[mask])), float(np.max(x[mask]))
-        warns = []
+        flagged = []
         for i, m in enumerate(self._modes, start=1):
-            if m["sigma"] >= 4.5:
-                warns.append(f"mode {i} σ≈{m['sigma']:.1f} (very broad)")
-            if m["mu"] < 0.9 * lo or m["mu"] > 1.1 * hi:
-                warns.append(f"mode {i} μ={m['mu']:.0f} nm off-range")
-        msg = f"Fitted {n_modes} mode(s) — R² (log) = {r2:.3f}"
-        if warns:
-            msg += " — check: " + "; ".join(warns) + ". Try another mode or bind μ."
+            if m["sigma"] >= 4.5 or m["mu"] < 0.9 * lo or m["mu"] > 1.1 * hi:
+                flagged.append(str(i))
+        msg = f"Fitted {n_modes} mode(s) — R²(log) = {r2:.3f}"
+        if flagged:
+            msg += f" — mode {', '.join(flagged)} degenerate; add a mode or bind μ."
         self.fit_status.setText(msg)
 
     # -- rendering ---------------------------------------------------------
