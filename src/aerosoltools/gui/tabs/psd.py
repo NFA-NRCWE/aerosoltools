@@ -42,6 +42,10 @@ _SIGMA_MIN, _SIGMA_MAX = 1.05, 5.0
 #: (μ ∈ [μ₀/f, μ₀·f]). Keeps "Fit" a local refinement of the user's manual
 #: modes so a redundant mode cannot flee far outside the measured range.
 _FIT_MU_FACTOR = 3.0
+#: When "Local" fitting is on, only size bins within this many geometric SDs of
+#: a mode are fit/scored — so modes follow the peaks instead of one broad
+#: lognormal trying to span the whole spectrum (which never physically exists).
+_FIT_LOCAL_SIGMAS = 3.0
 
 
 def _peak_to_factor(peak: float, sigma: float) -> float:
@@ -276,6 +280,13 @@ class PSDTab(_PlotTab):
         clear_btn = QtWidgets.QPushButton("Clear")
         clear_btn.setToolTip("Remove all modes and the fit overlay.")
         clear_btn.clicked.connect(self._clear_fit)
+        self.local_chk = QtWidgets.QCheckBox("Local")
+        self.local_chk.setChecked(True)
+        self.local_chk.setToolTip(
+            "Fit each mode only to the bins near it (a window scaled by its "
+            "width), so modes follow the peaks instead of one broad lognormal "
+            "stretching across the whole size range. Turn off to fit globally."
+        )
         self.log_scaling = QtWidgets.QCheckBox("Log")
         self.log_scaling.setChecked(True)
         self.log_scaling.setToolTip(
@@ -289,6 +300,7 @@ class PSDTab(_PlotTab):
         )
         row3.addWidget(self.fit_btn, stretch=1)
         row3.addWidget(clear_btn)
+        row3.addWidget(self.local_chk)
         row3.addWidget(self.log_scaling)
         row3.addWidget(QtWidgets.QLabel("tol%"))
         row3.addWidget(self.tolerance)
@@ -642,6 +654,21 @@ class PSDTab(_PlotTab):
                 out.append((i, mu, sigma, peak, bool(m.get("bound"))))
         return out
 
+    def _local_mask(self, x):
+        """Boolean mask of bins within the local fit window of any mode.
+
+        Mirrors ``fit_psd``'s ``local_sigmas`` windowing so the reported R² is
+        scored on the same bins the fit used. All-True when local fitting is off.
+        """
+        x = np.asarray(x, dtype=float)
+        if not self.local_chk.isChecked():
+            return np.ones(x.shape, dtype=bool)
+        logx = np.log10(x)
+        keep = np.zeros(x.shape, dtype=bool)
+        for _, mu, sigma, _peak, _bound in self._valid_modes():
+            keep |= np.abs(logx - np.log10(mu)) <= _FIT_LOCAL_SIGMAS * np.log10(sigma)
+        return keep if keep.any() else np.ones(x.shape, dtype=bool)
+
     def _modes_as_triples(self) -> list:
         """Valid modes as ``(mu, sigma, factor)`` for plotting/evaluation."""
         return [
@@ -684,6 +711,7 @@ class PSDTab(_PlotTab):
                 tolerance=tol,
                 mu_factor=_FIT_MU_FACTOR,
                 weighting="uniform",  # fit the curve as shown (by-eye fitting)
+                local_sigmas=_FIT_LOCAL_SIGMAS if self.local_chk.isChecked() else None,
             )
         except Exception as exc:
             self.fit_status.setText(f"Fit failed: {exc}")
@@ -722,6 +750,10 @@ class PSDTab(_PlotTab):
         x = np.asarray(xy[0], dtype=float)
         y = np.asarray(xy[1], dtype=float)
         mask = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
+        # Score the fit over the same local window it was fit on, so a local fit
+        # is not penalised for the (intentionally unfit) background far from any
+        # mode.
+        mask &= self._local_mask(x)
         if mask.sum() < 3:
             self.fit_status.setText(f"Optimised {n_modes} mode(s).")
             return

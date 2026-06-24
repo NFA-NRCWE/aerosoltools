@@ -1402,7 +1402,8 @@ class Aerosol2D(Aerosol1D):
                       binding=None,
                       tolerance=10.0,
                       mu_factor=None,
-                      weighting="variance"):
+                      weighting="variance",
+                      local_sigmas=None):
         """
         A function to fit one or multiple peaks following lognormal distribution,
         with the option for tethering values to set values. 
@@ -1459,6 +1460,13 @@ class Aerosol2D(Aerosol1D):
             ``"uniform"`` weights every bin equally, i.e. fits the mean curve as
             plotted, so a fit started from a good visual guess cannot end up
             worse than that guess. Use ``"uniform"`` for by-eye fitting.
+        local_sigmas: float, optional
+            If given (and > 0), restrict the fit to size bins lying within
+            ``local_sigmas`` geometric standard deviations of any mode's initial
+            guess (in log10-diameter space). This fits each mode locally to the
+            region where it responds, rather than forcing the lognormals to also
+            describe non-modal background far from any peak. Default is None
+            (use the full measured range).
 
         Returns
         -------
@@ -1569,7 +1577,27 @@ class Aerosol2D(Aerosol1D):
         
         if peak_number!=len(sigma):
             raise ValueError("Missing input for initial guess")
-        
+
+        # Optional local fit: keep only the size bins within a window of each
+        # mode (|log10(Dp) - log10(mu0)| <= local_sigmas * log10(sigma0)). This
+        # makes the fit follow the placed modes instead of trying to also span
+        # the non-modal background with one broad, unphysical lognormal — the
+        # window scales with each mode's (geometric) width, so a narrower mode
+        # is fit more locally.
+        if local_sigmas is not None and local_sigmas > 0:
+            logx = np.log10(xdata)
+            keep = np.zeros(len(xdata), dtype=bool)
+            for i in range(peak_number):
+                keep |= np.abs(logx - np.log10(mu[i])) <= local_sigmas * np.log10(sigma[i])
+            if keep.sum() < peak_number * 3:
+                raise ValueError(
+                    "Local fit window covers too few size bins; widen the "
+                    "mode(s) or reduce the number of modes."
+                )
+            xdata = xdata[keep]
+            ymean = ymean[keep]
+            ydata_masked = ydata_masked[:, keep]
+
         # Gather all the initial guesses for parameters to fit in a list
         init_guess = []
         for i in range(peak_number):
