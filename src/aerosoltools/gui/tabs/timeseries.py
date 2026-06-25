@@ -377,14 +377,6 @@ class TimeSeriesTab(_PlotTab):
         self._has_drawn = True
         self.canvas.draw_idle()
 
-    def _render_export(self, fig) -> None:
-        """Draw the current series (matching the on-screen view) for export."""
-        ax = fig.add_subplot(111)
-        self._plot_on(ax)
-        # Match the on-screen view (zoom/crop and any Y caps already applied).
-        ax.set_xlim(self.ax.get_xlim())
-        ax.set_ylim(self.ax.get_ylim())
-
     def current_time_xlim(self):
         """Time-axis limits as date numbers, or None."""
         if self._has_drawn and self.ax.has_data():

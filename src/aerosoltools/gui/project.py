@@ -107,6 +107,12 @@ class Project:
         # name -> list of (start, end). "All data" is intentionally NOT stored
         # here; each dataset manages its own "All data" span over its own range.
         self.activities: Dict[str, List[Period]] = {}
+        # Cached Summary-tab results so reopening a project shows the computed
+        # values (and the STEL/OEL/window inputs) directly, without recomputing.
+        # ``cache`` is keyed by summary kind; each entry holds the table plus an
+        # input ``signature`` used to flag the values stale when tasks/data/
+        # settings change. See gui/tabs/summary.py and projectio.py.
+        self.summary_state: Dict = {"active_kind": None, "cache": {}}
 
     # -- dataset access ----------------------------------------------------
     @property

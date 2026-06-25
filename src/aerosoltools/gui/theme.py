@@ -500,9 +500,9 @@ def shadow_rgba() -> tuple:
 # ---------------------------------------------------------------------------
 # Export profile (always light — report/publication friendly)
 # ---------------------------------------------------------------------------
-EXPORT_DPI = 200
-EXPORT_FIGSIZE = (11.0, 6.5)  # single-panel plots
-EXPORT_FIGSIZE_TALL = (11.0, 8.5)  # two-panel heatmap (total + size/time)
+# "Save plot…" saves the live on-screen figure as displayed, just at this DPI,
+# so publication exports are high-resolution while keeping the screen layout.
+EXPORT_DPI = 300
 
 
 def export_rc() -> dict:

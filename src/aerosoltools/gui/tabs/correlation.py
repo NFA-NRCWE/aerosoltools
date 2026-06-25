@@ -128,11 +128,19 @@ class CorrelationTab(_PlotTab):
         )
         self.compute_btn.clicked.connect(self._draw)
 
+        self.calibrate_btn = QtWidgets.QPushButton("Calibrate…")
+        self.calibrate_btn.setToolTip(
+            "Calibrate one instrument to match the other, using this comparison "
+            "(total concentration or bin-by-bin). Affects only that one dataset."
+        )
+        self.calibrate_btn.clicked.connect(self._open_calibration)
+
         side = QtWidgets.QVBoxLayout()
         side.addWidget(align)
         side.addWidget(self.corr_box)
         side.addWidget(self.ba_box)
         side.addWidget(self.compute_btn)
+        side.addWidget(self.calibrate_btn)
         hint = QtWidgets.QLabel(
             "Pick two datasets and a shared parameter, then click Compute. Use "
             "'nearest'/'rebin' match when the two instruments log on different "
@@ -242,6 +250,43 @@ class CorrelationTab(_PlotTab):
         """Re-sync the parameter list when X or Y changes."""
         self._sync_params()
 
+    def _align_kwargs(self) -> dict:
+        """Time-alignment settings shared by the plot and the calibration.
+
+        Mirrors how :meth:`_draw_on` aligns the two datasets (match mode,
+        tolerance, activity restriction and the rebin options) so a calibration
+        is fitted on exactly the points the correlation plot shows.
+        """
+        mode = self.match.currentText()
+        activity = self.activity.currentText() or "All data"
+        kwargs = dict(
+            match=mode,
+            tolerance=self.tolerance.text().strip() or "30s",
+            activity=None if activity == "All data" else activity,
+        )
+        if mode == "rebin":
+            kwargs["rebin_freq"] = self.rebin_freq.text().strip() or None
+            kwargs["rebin_method"] = self.rebin_method.currentText()
+        return kwargs
+
+    def _open_calibration(self) -> None:
+        """Open the per-instrument calibration dialog for the current X/Y pair."""
+        from ..calibration import CalibrationDialog
+
+        xds = self._dataset(self.x_combo.currentData())
+        yds = self._dataset(self.y_combo.currentData())
+        if xds is None or yds is None:
+            QtWidgets.QMessageBox.information(
+                self, "Calibrate", "Load at least two datasets first."
+            )
+            return
+        if xds is yds:
+            QtWidgets.QMessageBox.information(
+                self, "Calibrate", "Pick two different datasets for X and Y."
+            )
+            return
+        CalibrationDialog(self, xds, yds, self._align_kwargs()).exec_()
+
     def refresh(self) -> None:
         """Re-sync selectors only; the plot is (re)built on Compute."""
         self._sync_pair()
@@ -261,17 +306,7 @@ class CorrelationTab(_PlotTab):
             raise ValueError("The two datasets share no common parameter to correlate.")
 
         parameter = self.param.currentText().strip() or None
-        mode = self.match.currentText()
-        activity = self.activity.currentText() or "All data"
-        kwargs = dict(
-            parameter=parameter,
-            match=mode,
-            tolerance=self.tolerance.text().strip() or "30s",
-            activity=None if activity == "All data" else activity,
-        )
-        if mode == "rebin":
-            kwargs["rebin_freq"] = self.rebin_freq.text().strip() or None
-            kwargs["rebin_method"] = self.rebin_method.currentText()
+        kwargs = dict(parameter=parameter, **self._align_kwargs())
 
         # The core draws here but also prints a summary line containing a "µ"
         # glyph, which crashes on a non-UTF-8 console — swallow that stdout (the
@@ -304,8 +339,9 @@ class CorrelationTab(_PlotTab):
             ax = self.figure.add_subplot(111)
             self._draw_on(ax)
             # The core draws the scatter / reference lines in black, which is
-            # invisible on the dark theme. Brighten them on the screen only;
-            # exports stay light (so black is fine there).
+            # invisible on the dark theme, so brighten them when the dark theme
+            # is active. Saved figures capture the on-screen plot, so for a
+            # black-on-white publication figure, export from the light theme.
             if theme.is_dark():
                 self._brighten_for_dark(ax)
             self.ax = ax
@@ -337,7 +373,3 @@ class CorrelationTab(_PlotTab):
         for line in ax.get_lines():
             if _is_black(line.get_color()):
                 line.set_color("#9bb0c9")
-
-    def _render_export(self, fig) -> None:
-        """Draw the comparison onto a fresh export figure."""
-        self._draw_on(fig.add_subplot(111))

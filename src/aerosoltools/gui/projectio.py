@@ -97,6 +97,11 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
             ]
             for name, periods in project.activities.items()
         },
+        # Cached Summary-tab results (table + inputs + staleness signature).
+        # Already built from JSON-safe primitives by the Summary tab.
+        "summary_state": getattr(
+            project, "summary_state", {"active_kind": None, "cache": {}}
+        ),
         "datasets": [],
     }
 
@@ -152,6 +157,10 @@ def load_project(folder: str) -> tuple[Project, str]:
         name: [(pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods]
         for name, periods in manifest.get("activities", {}).items()
     }
+    # Restore cached summaries (older projects simply have none).
+    state = manifest.get("summary_state")
+    if isinstance(state, dict) and isinstance(state.get("cache"), dict):
+        project.summary_state = state
 
     for entry in manifest.get("datasets", []):
         pkl_path = os.path.join(folder, entry["pickle"])

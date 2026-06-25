@@ -128,11 +128,16 @@ class PSDTab(_PlotTab):
             "Plot dx/dlogDp. Lognormal fits are defined in this space, so it is "
             "enabled automatically while fitting."
         )
-        self.normalize.stateChanged.connect(self._draw)
+        # NB: wrap _draw in a lambda for the signals that carry a value (an int
+        # state/index). _draw now takes a ``preserve`` flag, and PyQt5 would
+        # otherwise pass that int straight into it — a scale/normalize change
+        # must rescale, so swallow the argument and call _draw() with no view
+        # preservation.
+        self.normalize.stateChanged.connect(lambda *_: self._draw())
         self.controls.addWidget(self.normalize)
 
         self.log_y = QtWidgets.QCheckBox("Log Y")
-        self.log_y.stateChanged.connect(self._draw)
+        self.log_y.stateChanged.connect(lambda *_: self._draw())
         self.controls.addWidget(self.log_y)
 
         self.band = QtWidgets.QCheckBox("±σ band")
@@ -140,7 +145,7 @@ class PSDTab(_PlotTab):
             "Shade each curve's ±1σ spread. Off by default, since the bands "
             "overlap heavily when several curves are compared."
         )
-        self.band.stateChanged.connect(self._draw)
+        self.band.stateChanged.connect(lambda *_: self._draw())
         self.controls.addWidget(self.band)
 
         self.controls.addWidget(QtWidgets.QLabel("Display:"))
@@ -150,7 +155,7 @@ class PSDTab(_PlotTab):
             "Bars show each size bin's width (best for a single PSD); lines are "
             "clearer when several curves are compared on the same axes."
         )
-        self.display_mode.currentIndexChanged.connect(self._draw)
+        self.display_mode.currentIndexChanged.connect(lambda *_: self._draw())
         self.controls.addWidget(self.display_mode)
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
@@ -222,7 +227,7 @@ class PSDTab(_PlotTab):
         row1.addWidget(self.fit_target, stretch=1)
         self.isolate_chk = QtWidgets.QCheckBox("Only")
         self.isolate_chk.setToolTip("Hide the other curves and show only the fit target.")
-        self.isolate_chk.stateChanged.connect(self._draw)
+        self.isolate_chk.stateChanged.connect(lambda *_: self._draw())
         row1.addWidget(self.isolate_chk)
         outer.addLayout(row1)
 
@@ -479,8 +484,10 @@ class PSDTab(_PlotTab):
                 self.toolbar.pan()
             elif "zoom" in mode:
                 self.toolbar.zoom()
-        # Emphasis depends on edit mode, so reflect the change immediately.
-        self._draw()
+        # Emphasis depends on edit mode, so reflect the change immediately — but
+        # keep the user's current zoom: they may have zoomed in to place modes,
+        # and flipping editing on/off should not throw that away.
+        self._draw(preserve=True)
 
     def _selected_row(self) -> int:
         """Index of the selected mode, or -1."""
@@ -911,10 +918,19 @@ class PSDTab(_PlotTab):
                 ),
             )
 
+        # Measure the y-range from the *data* artists (mean curves, bars and the
+        # ±σ band when shown) before the fit overlay is painted, so the lognormal
+        # fit's near-zero tails never drive the limits. This keeps the view tight
+        # around the data even when the σ spread is huge or a log scale would
+        # otherwise reach the fit's tiny values (see _apply_data_ylim).
+        data_ylim = self._data_ylim(ax)
+
         self._paint_overlay(ax, remove_existing=False)
 
         if self.log_y.isChecked():
             ax.set_yscale("log")
+        if data_ylim is not None:
+            ax.set_ylim(*data_ylim)
         ax.legend(loc="upper right", fontsize=8)
 
     def _draw_bars(self, ax, obj, bin_mids, heights, color, label, is_target, emphasize) -> None:
@@ -1019,8 +1035,60 @@ class PSDTab(_PlotTab):
         self.ax.legend(loc="upper right", fontsize=8)
         self.canvas.draw_idle()
 
-    def _draw(self) -> None:
-        """Redraw onto the embedded axis, reporting any error in the figure."""
+    def _data_ylim(self, ax):
+        """Compute y-limits from the data artists currently on ``ax``.
+
+        Called from :meth:`_draw_on` *before* the fit overlay is painted, so it
+        sees only the data: the mean-PSD lines, the bars, and the ±σ band when
+        it is shown. This is what fixes the "huge σ blows up the y-axis" and
+        "log scale dives to 1e-24 to reach the fit's tail" problems — the limits
+        track the plotted data plus a small margin, never the lognormal tails.
+
+        Returns ``(bottom, top)`` or ``None`` when there is nothing to measure.
+        """
+        vals = []
+        for line in ax.lines:
+            vals.append(np.asarray(line.get_ydata(), dtype=float))
+        for patch in ax.patches:  # bars: base .. base+height
+            base = float(patch.get_y())
+            vals.append(np.array([base, base + float(patch.get_height())]))
+        for coll in ax.collections:  # ±σ fill_between envelopes
+            for path in coll.get_paths():
+                vals.append(np.asarray(path.vertices[:, 1], dtype=float))
+        if not vals:
+            return None
+        allv = np.concatenate(vals)
+        allv = allv[np.isfinite(allv)]
+        if allv.size == 0:
+            return None
+        ymax = float(allv.max())
+        if self.log_y.isChecked():
+            pos = allv[allv > 0]
+            if pos.size == 0 or ymax <= 0:
+                return None
+            # A little headroom each side, in log space.
+            return float(pos.min()) * 0.8, ymax * 1.25
+        ymin = float(allv.min())
+        # Linear: anchor at 0 for the usual non-negative PSD, but follow the data
+        # down if the ±σ band dips negative. Margin is ~5% of the visible span.
+        span = ymax - min(0.0, ymin)
+        margin = 0.05 * span if span > 0 else (0.05 * abs(ymax) or 1.0)
+        bottom = 0.0 if ymin >= 0 else ymin - margin
+        return bottom, ymax + margin
+
+    def _draw(self, preserve: bool = False) -> None:
+        """Redraw onto the embedded axis, reporting any error in the figure.
+
+        Args:
+            preserve: Keep the current zoom/pan across the redraw instead of
+                letting the data-driven limits take over. Always on while editing
+                a fit (so placing/typing modes never snaps the view back), and
+                requested explicitly when toggling editing on/off.
+        """
+        preserve = preserve or self.edit_btn.isChecked()
+        prev = None
+        if preserve and self.ax.has_data():
+            prev = (self.ax.get_xlim(), self.ax.get_ylim())
         try:
             self._draw_on(self.ax)
         except Exception:
@@ -1028,8 +1096,7 @@ class PSDTab(_PlotTab):
                 "Could not draw combined PSD:\n" + traceback.format_exc(limit=1)
             )
             return
+        if prev is not None:
+            self.ax.set_xlim(prev[0])
+            self.ax.set_ylim(prev[1])
         self.canvas.draw_idle()
-
-    def _render_export(self, fig) -> None:
-        """Draw the comparison (and any fit overlay) onto a fresh export figure."""
-        self._draw_on(fig.add_subplot(111))

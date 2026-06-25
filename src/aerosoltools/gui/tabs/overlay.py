@@ -275,10 +275,6 @@ class OverlayTab(_PlotTab):
             self.ax.set_ylim(prev[1])
         self.canvas.draw_idle()
 
-    def _render_export(self, fig) -> None:
-        """Draw the overlay onto a fresh export figure."""
-        self._draw_on(fig.add_subplot(111))
-
     def current_time_xlim(self):
         """Time-axis limits as date numbers, or None."""
         if self.ax.has_data():

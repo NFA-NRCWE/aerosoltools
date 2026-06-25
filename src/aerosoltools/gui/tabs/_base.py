@@ -8,10 +8,13 @@ tab colours stay theme-correct on screen and in exports.
 
 from __future__ import annotations
 
+import io
 import os
+import pickle
 import traceback
 
 import matplotlib as mpl
+import matplotlib.colors as mcolors
 import pandas as pd
 
 from .. import theme
@@ -73,8 +76,6 @@ def _tune_table(view: "QtWidgets.QTableView") -> None:
 class _PlotTab(QtWidgets.QWidget):
     """Base class providing an embedded Matplotlib figure + navigation toolbar."""
 
-    #: Figure size (inches) used when exporting; subclasses may override.
-    export_figsize = theme.EXPORT_FIGSIZE
     #: Short tag used in the suggested export file name.
     export_tag = "plot"
 
@@ -170,11 +171,15 @@ class _PlotTab(QtWidgets.QWidget):
         return f"{base}_{self.export_tag}"
 
     def save_figure(self) -> None:
-        """Render the current view into a fresh, high-quality figure and save it.
+        """Save the plot exactly as displayed, at publication resolution.
 
-        The export figure is built under a fixed rcParams profile (see
-        :func:`theme.export_rc`) with a deliberate size + font sizes, so the
-        output is well proportioned regardless of the on-screen layout.
+        Saves the *live* on-screen figure — so any interactive edits (relabelled
+        axes, recoloured curves) and the current zoom are kept — just rendered at
+        a higher DPI (so it looks like the screen, only sharper). The save runs
+        on a detached copy that is restyled to a light, print-friendly look
+        (white background, dark frame/labels) so figures read well on paper even
+        when the app is in the dark theme; data-artist colours are left as shown
+        and the on-screen figure is never modified.
         """
         if self.obj is None:
             return
@@ -186,14 +191,10 @@ class _PlotTab(QtWidgets.QWidget):
         )
         if not path:
             return
-        from matplotlib.backends.backend_agg import FigureCanvasAgg
-
         try:
-            with mpl.rc_context(theme.export_rc()):
-                fig = Figure(figsize=self.export_figsize, layout="constrained")
-                FigureCanvasAgg(fig)  # attach a canvas so savefig works
-                self._render_export(fig)
-                fig.savefig(path, dpi=theme.EXPORT_DPI)
+            fig = _detached_copy(self.figure)
+            _lighten_for_export(fig)
+            fig.savefig(path, dpi=theme.EXPORT_DPI, facecolor=fig.get_facecolor())
         except Exception:
             QtWidgets.QMessageBox.warning(
                 self, "Save failed", traceback.format_exc(limit=2)
@@ -205,19 +206,83 @@ class _PlotTab(QtWidgets.QWidget):
         """Redraw the tab from the current object (overridden by subclasses)."""
         raise NotImplementedError
 
-    def _render_export(self, fig) -> None:  # pragma: no cover - overridden
-        """Draw the current view onto ``fig`` for export. Overridden per tab."""
-        raise NotImplementedError
-
 
 def _active_color_cycle() -> list:
     """Return the colour cycle of the *currently active* rcParams profile.
 
-    Reading the live ``axes.prop_cycle`` keeps colours theme-correct on both
-    paths automatically: the dark/light screen cycle on the embedded canvas, and
-    the light export cycle while ``_render_export`` runs under
-    :func:`theme.export_rc`. This is why this tab does not need the screen-only
-    brighten hack that :class:`PSDTab` uses.
+    Reading the live ``axes.prop_cycle`` keeps colours theme-correct on the
+    embedded canvas (dark or light). Exports save the live figure as-is (see
+    :meth:`_PlotTab.save_figure`), so these on-screen colours carry straight
+    through to the saved image.
     """
     cycle = mpl.rcParams["axes.prop_cycle"].by_key().get("color")
     return list(cycle) if cycle else theme.mpl_cycle()
+
+
+def _detached_copy(fig):
+    """Return an independent copy of ``fig`` (via pickle) with an Agg canvas.
+
+    Restyling a copy means the export pipeline can never alter the live,
+    on-screen figure — a failure mid-restyle leaves the canvas untouched.
+    """
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+    buf = io.BytesIO()
+    pickle.dump(fig, buf)
+    buf.seek(0)
+    copy = pickle.load(buf)
+    FigureCanvasAgg(copy)  # attach a canvas so savefig works
+    return copy
+
+
+def _is_light(color) -> bool:
+    """True for near-white / pale colours (which vanish on a white export)."""
+    try:
+        r, g, b = mcolors.to_rgb(color)
+    except (ValueError, TypeError):
+        return False
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 0.7
+
+
+def _darken_texts(texts, dark: str) -> None:
+    """Darken pale text (and pale text boxes) so they read on a white export."""
+    for t in texts:
+        if _is_light(t.get_color()):
+            t.set_color(dark)
+        box = t.get_bbox_patch()
+        if box is not None and not _is_light(box.get_facecolor()):
+            box.set_facecolor("white")
+
+
+def _lighten_for_export(fig) -> None:
+    """Recolour a figure's *structural* elements to the light export palette.
+
+    Only the frame, ticks, labels, grid, legend and pale annotation text are
+    touched — data artists (lines, bars, scatter, meshes) keep their on-screen
+    colours, so interactive recolouring and the displayed look survive the
+    export. Reuses :func:`theme.export_rc` so exports match the light theme.
+    """
+    rc = theme.export_rc()
+    txt = rc["text.color"]
+    fig.set_facecolor(rc["figure.facecolor"])
+    fig.set_edgecolor(rc["figure.facecolor"])
+    for ax in fig.axes:
+        ax.set_facecolor(rc["axes.facecolor"])
+        for spine in ax.spines.values():
+            spine.set_edgecolor(rc["axes.edgecolor"])
+        ax.tick_params(axis="both", which="both", colors=rc["xtick.color"])
+        ax.xaxis.label.set_color(txt)
+        ax.yaxis.label.set_color(txt)
+        if ax.get_title():
+            ax.title.set_color(txt)
+        for gl in (*ax.get_xgridlines(), *ax.get_ygridlines()):
+            gl.set_color(rc["grid.color"])
+        _darken_texts(ax.texts, txt)
+        leg = ax.get_legend()
+        if leg is not None:
+            frame = leg.get_frame()
+            frame.set_facecolor(rc["legend.facecolor"])
+            frame.set_edgecolor(rc["legend.edgecolor"])
+            for t in leg.get_texts():
+                t.set_color(rc["legend.labelcolor"])
+    _darken_texts(fig.texts, txt)

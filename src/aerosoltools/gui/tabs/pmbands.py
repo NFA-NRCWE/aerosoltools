@@ -11,6 +11,20 @@ from .. import helpers
 from ..qt import QtWidgets
 from ._base import _PlotTab
 
+#: A categorical, high-contrast palette (Okabe–Ito, colour-blind safe) so the
+#: bands stay easy to tell apart — unlike the old pale diverging scheme whose
+#: middle colours (and the first band's edge) looked alike.
+_BAND_COLORS = [
+    "#0072B2",  # blue
+    "#E69F00",  # orange
+    "#009E73",  # green
+    "#CC79A7",  # pink
+    "#56B4E9",  # sky blue
+    "#D55E00",  # vermilion
+    "#F0E442",  # yellow
+    "#666666",  # grey
+]
+
 
 class PMBandsTab(_PlotTab):
     """Stacked size-selective Pₓ bands over time.
@@ -93,23 +107,26 @@ class PMBandsTab(_PlotTab):
         ax.clear()
         x = pm_data.index
         labels = [f"P{dchar}{v:g}" for v in values]
-        cmap = ["#5e3c99", "#998ec3", "#d8daeb", "#fee0b6", "#f1a340", "#b35806"]
+        cmap = _BAND_COLORS
         present = [(i, lab) for i, lab in enumerate(labels) if lab in pm_data.columns]
 
         if self.cumulative.isChecked():
             # Stacked cumulative areas: 0→Pₓ₀, Pₓ₀→Pₓ₁, …  (top of stack = total).
+            # Each layer also gets a crisp top outline in its own colour so the
+            # boundaries between stacked bands read clearly.
             prev = None
             for i, label in present:
                 series = pm_data[label]
                 lower = 0 if prev is None else prev
-                ax.fill_between(
-                    x, lower, series, label=label, color=cmap[i % len(cmap)], alpha=0.9
-                )
+                color = cmap[i % len(cmap)]
+                ax.fill_between(x, lower, series, label=label, color=color, alpha=0.85)
+                ax.plot(x, series, color=color, lw=1.4, alpha=0.95)
                 prev = series
         else:
-            # Differential bands, each drawn from zero, so the concentration in
-            # each size range is shown independently (largest first so the
-            # smaller ranges stay visible on top).
+            # Differential bands, each drawn from zero so the concentration in
+            # each size range is shown independently. Tallest band first (drawn
+            # at the back); every band also gets a full-opacity outline so a
+            # large-particle curve is never lost behind a dominant smaller one.
             bands = []
             prev_label = None
             for i, label in present:
@@ -123,14 +140,9 @@ class PMBandsTab(_PlotTab):
                 prev_label = label
             for i, rng, band in sorted(bands, key=lambda t: -float(np.nanmean(t[2]))):
                 avg = float(np.nanmean(band))
-                ax.fill_between(
-                    x,
-                    0,
-                    band,
-                    label=f"{rng} (μ={avg:.2g})",
-                    color=cmap[i % len(cmap)],
-                    alpha=0.6,
-                )
+                color = cmap[i % len(cmap)]
+                ax.fill_between(x, 0, band, color=color, alpha=0.30)
+                ax.plot(x, band, color=color, lw=1.8, label=f"{rng} (μ={avg:.2g})")
 
         ax.set_ylabel(f"P{dchar}, {unit}")
         ax.set_xlabel("Time")
@@ -155,11 +167,6 @@ class PMBandsTab(_PlotTab):
             self._show_message(
                 "Could not compute PM bands:\n" + traceback.format_exc(limit=1)
             )
-
-    def _render_export(self, fig) -> None:
-        """Draw the bands onto a fresh export figure."""
-        ax = fig.add_subplot(111)
-        self._plot_on(ax)
 
     def current_time_xlim(self):
         """Time-axis limits as date numbers, or None."""
