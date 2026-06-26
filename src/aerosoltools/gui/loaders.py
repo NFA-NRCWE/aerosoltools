@@ -209,15 +209,28 @@ def is_NS_file(path: str | Path) -> bool:
 
 
 def is_OPS_file(path: str | Path) -> bool:
-    """Detect TSI OPS exports."""
+    """Detect TSI OPS exports.
+
+    The first cell is "Sample File" or "Instrument Name" (the two branches
+    :func:`Load_OPS_file` expects). TSI **CPC** exports *also* start with
+    "Sample File", so an OPS-specific marker (the "Optical Particle Sizer" name
+    or an instrument-model line) is additionally required to avoid grabbing CPC
+    files (which are model 3007, with no such marker).
+    """
     first = _split_first_line(path)
     if not first:
         return False
 
     first_cell = first[0].strip().lower()
+    if first_cell not in {"sample file", "instrument name"}:
+        return False
 
-    # These are the two branches expected by Load_OPS_file.
-    return first_cell in {"sample file", "instrument name"}
+    text = _head_text(path, max_lines=20)
+    return (
+        "optical particle sizer" in text
+        or "instrument model" in text
+        or "model number" in text
+    )
 
 
 def is_Grimm_file(path: str | Path) -> bool:
@@ -247,12 +260,7 @@ def is_Partector_file(path: str | Path) -> bool:
     """Detect Partector LDSA exports."""
     text = _head_text(path, max_lines=50)
 
-    return (
-        "start:" in text
-        and "ldsa" in text
-        and "tem" in text
-        and "flow" in text
-    )
+    return "start:" in text and "ldsa" in text and "tem" in text and "flow" in text
 
 
 def is_DiSCmini_file(path: str | Path) -> bool:
@@ -284,12 +292,10 @@ def is_FMPS_file(path: str | Path) -> bool:
     possible_time_line = lines[14].lower() if len(lines) > 14 else ""
 
     has_dtype = any(
-        token in possible_type_line
-        for token in ("dn", "co", "su", "vo", "ma", "raw")
+        token in possible_type_line for token in ("dn", "co", "su", "vo", "ma", "raw")
     )
     has_bins = any(
-        size in possible_bin_line
-        for size in ("5.6", "10", "15", "20", "30")
+        size in possible_bin_line for size in ("5.6", "10", "15", "20", "30")
     )
     has_time = "elapsed" in possible_time_line or "time" in possible_time_line
 
@@ -323,10 +329,11 @@ def is_OPCN3_file(path: str | Path) -> bool:
         return True
 
     has_bins = any(col.startswith("bin") for col in lower_first)
-    has_pm = any(col in lower_first for col in ("pm1", "pm2.5", "pm10"))
+    # PM columns carry units, e.g. "PM1(ug/m3)" / "PM2.5(ug/m3)", so match by
+    # prefix rather than exact name.
+    has_pm = any(col.startswith(("pm1", "pm2.5", "pm10")) for col in lower_first)
     has_env = any(
-        col in lower_first
-        for col in ("temp (c)", "rh (%)", "period (s)", "flowrate")
+        col.startswith(("temp", "rh", "period", "flowrate")) for col in lower_first
     )
 
     return (has_bins and has_pm and has_env) or "opc-n3" in text or "opcn3" in text
@@ -354,7 +361,13 @@ def is_CPC_file(path: str | Path) -> bool:
         and ("concentration" in text or "conc" in text)
     )
 
-    return full_format or focused_format
+    # "Direct" CPC export: starts like a TSI "Sample File" report but has the
+    # single count-concentration channel column ("Concentration (#/cm3)").
+    direct_format = (
+        "concentration (#/cm" in text and "sample #" in text and "start time" in text
+    )
+
+    return full_format or focused_format or direct_format
 
 
 # Display name -> content sniffer.

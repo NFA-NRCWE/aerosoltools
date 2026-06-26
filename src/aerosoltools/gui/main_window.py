@@ -938,15 +938,59 @@ class MainWindow(QtWidgets.QMainWindow):
         # Units changed: rescale the axes rather than keeping stale limits.
         self.refresh_all(reset_view=True)
 
+    @staticmethod
+    def _is_elpi(obj) -> bool:
+        """True if ``obj`` is an ELPI dataset (whose sizes are density-dependent)."""
+        return str(getattr(obj, "metadata", {}).get("instrument", "")).upper() == "ELPI"
+
     def _on_density_change(self) -> None:
-        """Apply the selected particle density to the active 2D dataset."""
+        """Apply the selected density to the active dataset and recalc ELPI data.
+
+        The active 2D dataset always takes the new density. In addition, the
+        project is scanned for ELPI datasets: because the ELPI reports
+        density-dependent particle sizes, each is recalculated (diameters, and
+        number for raw-current files) so it never shows fictitious diameters.
+        """
         if self.obj is None or not helpers.is_2d(self.obj):
             return
+        new_density = self.density_spin.value()
+
+        # Targets: the active dataset plus every ELPI dataset in the project.
+        targets = []
+        active = self.project.active
+        if active is not None:
+            targets.append(active)
+        for ds in self.project.datasets:
+            if ds not in targets and self._is_elpi(ds.obj):
+                targets.append(ds)
+
+        n_elpi = 0
         try:
-            self.obj.set_density(self.density_spin.value())
+            for ds in targets:
+                if not helpers.is_2d(ds.obj):
+                    continue
+                ds.obj.set_density(new_density)
+                if self._is_elpi(ds.obj):
+                    n_elpi += 1
         except Exception:
             QtWidgets.QMessageBox.warning(
                 self, "set_density failed", traceback.format_exc(limit=1)
             )
             return
         self.refresh_all(reset_view=True)
+        if n_elpi:
+            self._warn_elpi_recalc(n_elpi)
+
+    def _warn_elpi_recalc(self, n: int) -> None:
+        """Non-blocking 'speech bubble' noting ELPI data were recalculated."""
+        pos = self.density_spin.mapToGlobal(
+            QtCore.QPoint(0, self.density_spin.height())
+        )
+        word = "dataset" if n == 1 else "datasets"
+        QtWidgets.QToolTip.showText(
+            pos,
+            f"ELPI sizes are density-dependent — recalculated {n} ELPI {word} for "
+            "the new density (particle diameters, and number for raw-current "
+            "files).",
+            self.density_spin,
+        )

@@ -806,6 +806,22 @@ class SizeConversionMixin:
         density = float(density)
         old = float(self.density)
 
+        # ELPI: the particle size it reports is density-dependent, so a density
+        # change recomputes the diameters (and, for raw-current data, the number
+        # concentration) instead of only rescaling mass. This works the same
+        # whether called from the GUI or a plain script.
+        if str(self._meta.get("instrument", "")).upper() == "ELPI":
+            from ..loaders.ELPI import recalculate_ELPI_density
+
+            if recalculate_ELPI_density(self, density):
+                # Mass still also scales with density (M ∝ ρ·V) when mass-based.
+                if "dM" in str(self.dtype) and old > 0:
+                    factor = density / old
+                    self._data[self._sizebin_headers] *= factor
+                    if "Total_conc" in self._data.columns:
+                        self._data["Total_conc"] *= factor
+                return self
+
         if "dM" in str(self.dtype):
             if old <= 0:
                 raise ValueError(

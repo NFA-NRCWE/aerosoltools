@@ -1,7 +1,7 @@
-from pathlib import Path
-from typing import Optional, Union
 import re
 import warnings
+from pathlib import Path
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -163,7 +163,9 @@ def _parse_ELPI_datetime(values: pd.Series) -> pd.Series:
         parsed = pd.to_datetime(values, errors="coerce")
 
     if parsed.isna().mean() > 0.2:
-        raise ValueError("Datetime parsing failed for many rows; check the first column.")
+        raise ValueError(
+            "Datetime parsing failed for many rows; check the first column."
+        )
 
     return parsed
 
@@ -330,6 +332,140 @@ def _convert_ELPI_current_to_number(
         number = np.where(number < 0, 0.0, number)
 
     return pd.DataFrame(number, columns=current_fa.columns, index=current_fa.index)
+
+
+###############################################################################
+# Density recalculation
+
+# Air mean free path (µm) and Allen–Raabe Cunningham-slip coefficients used to
+# convert the ELPI's fixed aerodynamic stage diameters to the geometric
+# (volume-equivalent) particle diameter at an assumed density. The slip
+# coefficients match those used in :mod:`aerosoltools._core.corrections`.
+_AIR_MEAN_FREE_PATH_UM = 0.0664
+
+
+def _cunningham(dp_um) -> np.ndarray:
+    """Cunningham slip correction for particle diameters given in micrometres."""
+    dp_um = np.asarray(dp_um, dtype=float)
+    kn = 2.0 * _AIR_MEAN_FREE_PATH_UM / dp_um
+    return 1.0 + kn * (1.142 + 0.558 * np.exp(-0.999 / kn))
+
+
+def _geometric_diameter_at_density(d_geo_um, rho_old: float, rho_new: float):
+    """Convert geometric particle diameters between two assumed densities.
+
+    The ELPI classifies by aerodynamic behaviour, so each stage's aerodynamic
+    diameter is fixed and the geometric (volume-equivalent) diameter obeys
+    ``D² · Cc(D) · ρ = const``. Given the geometric diameter at ``rho_old`` this
+    solves — iteratively, because the slip correction depends on the unknown
+    diameter — for the geometric diameter at ``rho_new``. In the slip-free limit
+    it reduces to the familiar ``D ∝ ρ^(-1/2)``.
+    """
+    d_geo_um = np.asarray(d_geo_um, dtype=float)
+    target = d_geo_um**2 * _cunningham(d_geo_um) * (rho_old / rho_new)
+    d = d_geo_um * np.sqrt(rho_old / rho_new)  # slip-free first guess
+    for _ in range(50):
+        d = np.sqrt(target / _cunningham(d))
+    return d
+
+
+def recalculate_ELPI_density(elpi, new_density: float) -> bool:
+    """Recompute an ELPI dataset's diameters and number for a new density.
+
+    The ELPI reports a *geometric* particle diameter that depends on the assumed
+    particle density (it actually classifies by aerodynamic behaviour). Changing
+    the density therefore must (1) move the size axis to the diameters the
+    particles would have at the new density — otherwise the reported diameters
+    are fictitious — and (2) re-attribute the per-bin number concentration,
+    because the charger efficiency (which turned current into number) is a
+    function of that diameter.
+
+    Diameters are converted with the slip-corrected Stokes relation
+    (:func:`_geometric_diameter_at_density`); the very smallest stage uses the
+    slip-free ``ρ^(-1/2)`` limit, matching the ELPI software (the full inversion
+    overshoots there). Number is re-attributed through the charger efficiency
+    (:func:`_ELPI_charger_efficiency`). All inputs are already on the object's
+    metadata (``bin_mids``, charger ``Efficiency`` coefficients and the current
+    ``density``), so no separate copy of the header is needed.
+
+    This reproduces the Dekati software's density-dependent exports closely over
+    the bulk of the size range; the finest one or two stages, where the software
+    applies proprietary handling, may differ by a few percent.
+
+    Args:
+        elpi: An :class:`~aerosoltools.Aerosol2D` produced by an ELPI loader.
+        new_density: The new assumed particle density in g/cm³.
+
+    Returns:
+        bool: ``True`` if a recalculation was performed (the object is a
+        recognised ELPI), otherwise ``False`` so the caller can fall back to the
+        generic density behaviour.
+
+    Notes:
+        Operates in place; number is re-attributed only while the data are plain
+        (unnormalized) number (``dN``) — the state right after loading. Set the
+        density before converting the dtype (e.g. to ``dM``) for the most
+        consistent result.
+    """
+    meta = elpi._meta
+    if str(meta.get("instrument", "")).upper() != "ELPI":
+        return False
+    if "bin_mids" not in meta:
+        return False
+
+    rho_old = float(meta.get("density", np.nan))
+    rho_new = float(new_density)
+    if not (np.isfinite(rho_old) and rho_old > 0 and rho_new > 0):
+        meta["density"] = rho_new  # nothing to rescale from; just store
+        return True
+    if np.isclose(rho_new, rho_old):
+        meta["density"] = rho_new
+        return True
+
+    bin_mids_old = np.asarray(meta["bin_mids"], dtype=float)
+
+    # New geometric diameters at the new density (slip-corrected Stokes); the
+    # smallest stage uses the slip-free limit, as the ELPI software does.
+    mids_um = _geometric_diameter_at_density(bin_mids_old / 1000.0, rho_old, rho_new)
+    mids_um[0] = (bin_mids_old[0] / 1000.0) * np.sqrt(rho_old / rho_new)
+    bin_mids_new = np.round(mids_um * 1000.0, 1)
+
+    # Bin edges: geometric means of the new mids, with the two ends extrapolated
+    # (matching the loader's behaviour for non-unit density).
+    bin_edges_new = np.empty(bin_mids_new.size + 1)
+    bin_edges_new[1:-1] = np.sqrt(bin_mids_new[1:] * bin_mids_new[:-1])
+    bin_edges_new[0] = bin_edges_new[1] ** 2 / bin_edges_new[2]
+    bin_edges_new[-1] = bin_edges_new[-2] ** 2 / bin_edges_new[-3]
+    bin_edges_new = np.round(bin_edges_new, 1)
+
+    old_headers = [str(x) for x in bin_mids_old]
+    new_headers = [str(x) for x in bin_mids_new]
+    present = [h for h in old_headers if h in elpi._data.columns]
+
+    # Re-attribute the per-bin number: the charger efficiency depends on the
+    # (now density-corrected) diameter, so the same current implies a different
+    # number. Applied to both raw-current and converted-export data while the
+    # data are plain (unnormalized) number.
+    dtype = str(elpi.dtype)
+    is_plain_number = ("dN" in dtype) and ("dlogDp" not in dtype)
+    if is_plain_number and len(present) == len(old_headers):
+        eff_params = meta.get("Efficiency(Dp/mult/exp)")
+        eff_old = _ELPI_charger_efficiency(bin_mids_old / 1000.0, params=eff_params)
+        eff_new = _ELPI_charger_efficiency(bin_mids_new / 1000.0, params=eff_params)
+        factor = np.where(eff_new > 0, eff_old / eff_new, 1.0)
+        vals = elpi._data[old_headers].to_numpy(dtype=float) * factor[np.newaxis, :]
+        elpi._data[old_headers] = vals
+        if "Total_conc" in elpi._data.columns:
+            elpi._data["Total_conc"] = np.nansum(vals, axis=1)
+
+    # Relabel the size-bin columns with the new diameters; update the metadata.
+    rename = {o: n for o, n in zip(old_headers, new_headers) if o in elpi._data.columns}
+    if rename:
+        elpi._data.rename(columns=rename, inplace=True)
+    meta["bin_mids"] = bin_mids_new
+    meta["bin_edges"] = bin_edges_new
+    meta["density"] = rho_new
+    return True
 
 
 ###############################################################################
