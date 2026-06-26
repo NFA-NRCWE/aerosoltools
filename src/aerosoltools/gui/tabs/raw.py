@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 
+from .. import helpers
 from ..models import PandasTableModel
 from ..qt import QtWidgets
 from ._base import _export_table, _tune_table
@@ -48,18 +49,38 @@ class RawDataTab(QtWidgets.QWidget):
         return self.main.obj
 
     def refresh(self) -> None:
-        """Show the active object's main or extra data table."""
+        """Show the active object's main or extra data table.
+
+        For the main table the dtype/unit is shown and, for size-resolved (2D)
+        data, the otherwise-cryptic numeric column headers are annotated as
+        size-bin midpoint diameters (in nm) — both in the info line and as
+        per-column header tooltips — so it is clear what the numbers mean.
+        """
         if self.obj is None:
             return
-        if self.source.currentText() == "Extra data":
-            df = self.obj.extra_data
-        else:
-            df = self.obj.data
+        extra = self.source.currentText() == "Extra data"
+        df = self.obj.extra_data if extra else self.obj.data
         self.model.set_dataframe(df)
+
         if df.shape[1] == 0:
+            self.model.set_header_tooltips({})
             self.info.setText("   (no extra data in this file)")
-        else:
-            self.info.setText(f"   {df.shape[0]} rows × {df.shape[1]} columns")
+            return
+
+        parts = [f"{df.shape[0]} rows × {df.shape[1]} columns"]
+        tooltips: dict = {}
+        if not extra:
+            dtype, unit = helpers.describe(self.obj)
+            parts.append(f"values: {dtype} [{unit}]")
+            if helpers.is_2d(self.obj):
+                parts.append("numeric headers = size-bin midpoint Ø (nm)")
+                for name in self.obj._sizebin_headers:
+                    tooltips[name] = (
+                        f"Size-bin midpoint diameter: {name} nm — "
+                        f"values in {dtype} [{unit}]"
+                    )
+        self.model.set_header_tooltips(tooltips)
+        self.info.setText("   " + "   |   ".join(parts))
 
     def _export(self) -> None:
         """Save the displayed table (keeping timestamps) to a file."""

@@ -135,23 +135,3 @@ class Aerosol2D(
             :meth:`convert_to_mass_concentration`, and plotting utilities.
         """
         return [str(x) for x in self.bin_mids]
-
-    def _ensure_data_robustness(self, vals) -> pd.Series:
-        """Validity mask from the original object (keeps alignment with self.time)
-
-        This returns a cleaned series, so that no new data is generated,
-        where before the total_conc was NaN.
-        Args:
-            vals (np.array):
-                array of data structured as a column of data from either data
-                extra data.
-        Returns:
-            pd.Series: Time series of the requested Pₓ metric, indexed by
-            :attr:`time`. Empty or invalid time steps (where
-            :attr:`total_concentration` is NaN) are returned as NaN.
-        """
-
-        valid_mask = self.total_concentration.notna()
-        series = pd.Series(vals, index=self.time)
-
-        return series.where(valid_mask, np.nan)

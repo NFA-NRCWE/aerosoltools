@@ -102,6 +102,8 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
         "summary_state": getattr(
             project, "summary_state", {"active_kind": None, "cache": {}}
         ),
+        # Per-plot concentration-threshold (OEL) overlays, keyed by tab tag.
+        "plot_thresholds": getattr(project, "plot_thresholds", {}),
         "datasets": [],
     }
 
@@ -161,6 +163,10 @@ def load_project(folder: str) -> tuple[Project, str]:
     state = manifest.get("summary_state")
     if isinstance(state, dict) and isinstance(state.get("cache"), dict):
         project.summary_state = state
+    # Restore per-plot threshold overlays (older projects simply have none).
+    thresholds = manifest.get("plot_thresholds")
+    if isinstance(thresholds, dict):
+        project.plot_thresholds = thresholds
 
     for entry in manifest.get("datasets", []):
         pkl_path = os.path.join(folder, entry["pickle"])

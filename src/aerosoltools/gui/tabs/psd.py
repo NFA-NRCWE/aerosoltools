@@ -23,65 +23,8 @@ import numpy as np
 
 from .. import helpers
 from ..qt import QtCore, QtWidgets
+from . import _psdfit as fit
 from ._base import _active_color_cycle, _PlotTab
-
-# A lognormal mode is parameterised here by its peak diameter ``mu`` (nm), its
-# geometric standard deviation ``sigma`` (dimensionless), and the *peak height*
-# of the dx/dlogDp curve. :meth:`Aerosol2D.fit_psd` instead works with a
-# ``factor`` scaling parameter; the two are related by the value of the
-# lognormal at its peak, ``peak = factor / (sqrt(2π) · log10(sigma))``. Storing
-# the peak height (rather than ``factor``) lets the user read and click a value
-# that matches the curve, and lets a single click seed a mode that visually
-# peaks where the user clicked.
-_SQRT_2PI = np.sqrt(2.0 * np.pi)
-#: Default geometric standard deviation for a freshly added/placed mode.
-_DEFAULT_SIGMA = 1.8
-#: Clamp range for σ (geometric SD) while shaping a mode by scroll/typing.
-_SIGMA_MIN, _SIGMA_MAX = 1.05, 5.0
-#: How far optimisation may move a mode's peak diameter from its placed value
-#: (μ ∈ [μ₀/f, μ₀·f]). Keeps "Fit" a local refinement of the user's manual
-#: modes so a redundant mode cannot flee far outside the measured range.
-_FIT_MU_FACTOR = 3.0
-#: When "Local" fitting is on, only size bins within this many geometric SDs of
-#: a mode are fit/scored — so modes follow the peaks instead of one broad
-#: lognormal trying to span the whole spectrum (which never physically exists).
-_FIT_LOCAL_SIGMAS = 3.0
-
-
-def _peak_to_factor(peak: float, sigma: float) -> float:
-    """Convert a desired dx/dlogDp peak height to ``fit_psd``'s ``factor``."""
-    return float(peak) * _SQRT_2PI * np.log10(sigma)
-
-
-def _factor_to_peak(factor: float, sigma: float) -> float:
-    """Convert ``fit_psd``'s ``factor`` back to a dx/dlogDp peak height."""
-    return float(factor) / (_SQRT_2PI * np.log10(sigma))
-
-
-def _lognormal_modes(dp_nm, modes):
-    """Evaluate a sum of lognormal modes (dx/dlogDp) at diameters ``dp_nm``.
-
-    Mirrors the lognormal used inside :meth:`Aerosol2D.fit_psd` so the overlay
-    matches the fit exactly.
-
-    Args:
-        dp_nm: Diameters in nm to evaluate at.
-        modes: Iterable of ``(mu, sigma, factor)`` triples.
-
-    Returns:
-        ``(total, per_mode)`` where ``total`` is the summed curve and
-        ``per_mode`` is the list of each mode's individual curve.
-    """
-    x = np.log10(np.asarray(dp_nm, dtype=float))
-    total = np.zeros_like(x)
-    per_mode = []
-    for mu, sigma, factor in modes:
-        s = np.log10(sigma)
-        comp = factor * (1.0 / (_SQRT_2PI * s)) * np.exp(-((x - np.log10(mu)) ** 2) / (2.0 * s**2))
-        per_mode.append(comp)
-        total = total + comp
-    return total, per_mode
-
 
 # Modes table columns.
 _COL_MU, _COL_SIGMA, _COL_PEAK, _COL_BIND = range(4)
@@ -416,15 +359,7 @@ class PSDTab(_PlotTab):
         ds, act = target
         rec = ds.psd_fits.get(act)
         if rec and rec.get("modes"):
-            self._modes = [
-                {
-                    "mu": float(m["mu"]),
-                    "sigma": float(m["sigma"]),
-                    "peak": float(m["peak"]),
-                    "bound": bool(m.get("bound")),
-                }
-                for m in rec["modes"]
-            ]
+            self._modes = fit.clean_modes(rec["modes"])
             self._fitted = bool(rec.get("optimized"))
         else:
             self._modes = []
@@ -439,15 +374,7 @@ class PSDTab(_PlotTab):
         ds, act = target
         if self._modes:
             ds.psd_fits[act] = {
-                "modes": [
-                    {
-                        "mu": float(m["mu"]),
-                        "sigma": float(m["sigma"]),
-                        "peak": float(m["peak"]),
-                        "bound": bool(m.get("bound")),
-                    }
-                    for m in self._modes
-                ],
+                "modes": fit.clean_modes(self._modes),
                 "optimized": bool(self._fitted),
             }
         else:
@@ -510,7 +437,7 @@ class PSDTab(_PlotTab):
             self._modes[row].pop("mu_err", None)
         else:
             self._modes.append(
-                {"mu": float(x), "sigma": _DEFAULT_SIGMA, "peak": float(y), "bound": False}
+                {"mu": float(x), "sigma": fit.DEFAULT_SIGMA, "peak": float(y), "bound": False}
             )
             row = len(self._modes) - 1
         self._fitted = False
@@ -532,7 +459,7 @@ class PSDTab(_PlotTab):
         m = self._modes[row]
         # Scroll up → narrower, scroll down → wider.
         sigma = float(m["sigma"]) * (1.12 ** (-event.step))
-        m["sigma"] = float(min(_SIGMA_MAX, max(_SIGMA_MIN, sigma)))
+        m["sigma"] = float(min(fit.SIGMA_MAX, max(fit.SIGMA_MIN, sigma)))
         m.pop("sigma_err", None)
         self._fitted = False
         self._ensure_normalized()
@@ -560,7 +487,7 @@ class PSDTab(_PlotTab):
             ydata = np.asarray(self._target_xy[1], dtype=float)
             if np.isfinite(ydata).any():
                 peak = float(np.nanmax(ydata))
-        self._modes.append({"mu": mu, "sigma": _DEFAULT_SIGMA, "peak": peak, "bound": False})
+        self._modes.append({"mu": mu, "sigma": fit.DEFAULT_SIGMA, "peak": peak, "bound": False})
         self._fitted = False
         self._ensure_normalized()
         self._store_target_fit()
@@ -651,94 +578,37 @@ class PSDTab(_PlotTab):
 
     def _valid_modes(self) -> list:
         """Modes with sane values as ``(index, mu, sigma, peak, bound)`` tuples."""
-        out = []
-        for i, m in enumerate(self._modes):
-            try:
-                mu, sigma, peak = float(m["mu"]), float(m["sigma"]), float(m["peak"])
-            except (TypeError, ValueError):
-                continue
-            if mu > 0 and sigma > 1.0 and peak > 0:
-                out.append((i, mu, sigma, peak, bool(m.get("bound"))))
-        return out
-
-    def _local_mask(self, x):
-        """Boolean mask of bins within the local fit window of any mode.
-
-        Mirrors ``fit_psd``'s ``local_sigmas`` windowing so the reported R² is
-        scored on the same bins the fit used. All-True when local fitting is off.
-        """
-        x = np.asarray(x, dtype=float)
-        if not self.local_chk.isChecked():
-            return np.ones(x.shape, dtype=bool)
-        logx = np.log10(x)
-        keep = np.zeros(x.shape, dtype=bool)
-        for _, mu, sigma, _peak, _bound in self._valid_modes():
-            keep |= np.abs(logx - np.log10(mu)) <= _FIT_LOCAL_SIGMAS * np.log10(sigma)
-        return keep if keep.any() else np.ones(x.shape, dtype=bool)
+        return fit.valid_modes(self._modes)
 
     def _modes_as_triples(self) -> list:
         """Valid modes as ``(mu, sigma, factor)`` for plotting/evaluation."""
-        return [
-            (mu, sigma, _peak_to_factor(peak, sigma))
-            for _, mu, sigma, peak, _ in self._valid_modes()
-        ]
+        return fit.modes_as_triples(self._modes)
 
     # -- fitting -----------------------------------------------------------
     def _run_fit(self) -> None:
-        """Optimise the seeded modes on the active target via ``fit_psd``."""
+        """Optimise the seeded modes on the active target via ``_psdfit.run_fit``."""
         target = self._current_target()
         if target is None:
             self.fit_status.setText("No fit target selected.")
             return
         ds, act = target
-        valid = self._valid_modes()
-        if not valid:
-            self.fit_status.setText("Add at least one mode first (click the plot or 'Add').")
-            return
-
-        mu = [v[1] for v in valid]
-        sigma = [v[2] for v in valid]
-        factor = [_peak_to_factor(v[3], v[2]) for v in valid]
-        binding = []
-        for v in valid:
-            binding += [v[4], False, False]  # bind μ only
         try:
             tol = float(self.tolerance.text())
         except ValueError:
             tol = 10.0
 
-        try:
-            modes, err = ds.obj.fit_psd(
-                period=act,
-                mu=mu,
-                sigma=sigma,
-                factor=factor,
-                log_scaling=self.log_scaling.isChecked(),
-                binding=binding,
-                tolerance=tol,
-                mu_factor=_FIT_MU_FACTOR,
-                weighting="uniform",  # fit the curve as shown (by-eye fitting)
-                local_sigmas=_FIT_LOCAL_SIGMAS if self.local_chk.isChecked() else None,
-            )
-        except Exception as exc:
-            self.fit_status.setText(f"Fit failed: {exc}")
+        new, message = fit.run_fit(
+            ds.obj,
+            act,
+            self._modes,
+            log_scaling=self.log_scaling.isChecked(),
+            tolerance=tol,
+            local=self.local_chk.isChecked(),
+        )
+        if message is not None:  # nothing to fit, or the optimisation failed
+            self.fit_status.setText(message)
             return
 
-        new = []
-        for i in range(len(modes["mu"])):
-            ss = float(modes["sigma"][i])
-            ff = float(modes["factor"][i])
-            new.append(
-                {
-                    "mu": float(modes["mu"][i]),
-                    "sigma": ss,
-                    "peak": _factor_to_peak(ff, ss),
-                    "bound": valid[i][4] if i < len(valid) else False,
-                    "mu_err": float(err["mu"][i]),
-                    "sigma_err": float(err["sigma"][i]),
-                    "factor_err": float(err["factor"][i]),
-                }
-            )
         self._modes = new
         self._fitted = True
         self._ensure_normalized()
@@ -748,42 +618,18 @@ class PSDTab(_PlotTab):
         self._report_fit_quality(len(new))
 
     def _report_fit_quality(self, n_modes: int) -> None:
-        """Show a linear-space R² of the total fit over the local fit window.
-
-        Scored in the plot's own (linear) units, and only over the bins the fit
-        used (the modes' local windows), so the number matches what the eye sees
-        on the curve: a fit that sits on its modes is not dragged down by the
-        intentionally-unfit background or by the lognormal tails (where a
-        log-space score would explode as the model decays toward zero).
-        """
+        """Show the in-window R² and any degenerate-mode warning for the fit."""
         xy = self._target_xy
-        triples = self._modes_as_triples()
-        if xy is None or not triples:
+        if xy is None:
             self.fit_status.setText(f"Optimised {n_modes} mode(s).")
             return
-        x = np.asarray(xy[0], dtype=float)
-        y = np.asarray(xy[1], dtype=float)
-        mask = np.isfinite(x) & np.isfinite(y) & (x > 0) & (y > 0)
-        mask &= self._local_mask(x)
-        if mask.sum() < 3:
+        result = fit.fit_quality(
+            xy[0], xy[1], self._modes, local=self.local_chk.isChecked()
+        )
+        if result is None:
             self.fit_status.setText(f"Optimised {n_modes} mode(s).")
             return
-        yhat, _ = _lognormal_modes(x[mask], triples)
-        yv = y[mask]
-        ss_res = np.nansum((yv - yhat) ** 2)
-        ss_tot = np.nansum((yv - np.nanmean(yv)) ** 2)
-        r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
-
-        # Flag degenerate modes so a poor fit is obvious: a σ pinned near the
-        # solver's ceiling or a peak that landed outside the measured size range
-        # usually means the data needs another mode (or a bound μ).
-        lo, hi = float(np.min(x[mask])), float(np.max(x[mask]))
-        flagged = [
-            str(i + 1)
-            for i, m in enumerate(self._modes)
-            if m["sigma"] >= 4.5 or m["mu"] < 0.9 * lo or m["mu"] > 1.1 * hi
-        ]
-        scope = "in-window" if self.local_chk.isChecked() else "full range"
+        r2, scope, flagged = result
         msg = f"Optimised {n_modes} mode(s) — R² ({scope}) = {r2:.3f}"
         if flagged:
             msg += f" — mode {', '.join(flagged)} degenerate; add a mode or bind μ."
@@ -991,10 +837,10 @@ class PSDTab(_PlotTab):
         valid = self._valid_modes()
         if not valid:
             return
-        triples = [(mu, sigma, _peak_to_factor(peak, sigma)) for _, mu, sigma, peak, _ in valid]
+        triples = self._modes_as_triples()
         bm = np.asarray(obj.bin_mids, dtype=float)
         dp = np.logspace(np.log10(bm.min()), np.log10(bm.max()), 300)
-        total, per_mode = _lognormal_modes(dp, triples)
+        total, per_mode = fit.lognormal_modes(dp, triples)
         optimized = self._fitted
         col = "crimson" if optimized else "darkorange"
         sel = self.modes_table.currentRow()

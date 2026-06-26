@@ -8,6 +8,7 @@ from matplotlib.widgets import SpanSelector
 
 from .. import helpers
 from ..qt import QtCore, QtWidgets
+from ..widgets import ThresholdControls
 from ._base import _PlotTab
 
 
@@ -140,6 +141,14 @@ class TimeSeriesTab(_PlotTab):
         self.show_acts.setChecked(True)
         self.show_acts.stateChanged.connect(lambda: self.refresh(reset_view=False))
         self.controls.addWidget(self.show_acts)
+
+        # Concentration-threshold (e.g. OEL) overlay. State lives on the project
+        # so it survives tab rebuilds and is saved with the project.
+        self.threshold = ThresholdControls()
+        self.threshold.set_state(self.main.project.plot_thresholds.get(self.export_tag))
+        self.threshold.changed.connect(self._on_threshold_changed)
+        self.controls.addWidget(self.threshold)
+
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
@@ -256,6 +265,11 @@ class TimeSeriesTab(_PlotTab):
         # Keep the current zoom/pan so the view does not snap back after marking.
         self.main.refresh_all(reset_view=False)
 
+    def _on_threshold_changed(self) -> None:
+        """Persist the threshold overlay state and redraw (keeping the view)."""
+        self.main.project.plot_thresholds[self.export_tag] = self.threshold.state()
+        self.refresh(reset_view=False)
+
     def _delete_selected(self) -> None:
         """Delete the selected activity across every dataset."""
         item = self.act_list.currentItem()
@@ -321,9 +335,8 @@ class TimeSeriesTab(_PlotTab):
 
         col_for_units = None if kind == "total" else name
         dtype, unit = helpers.describe(self.obj, col_for_units)
-        base_dtype = dtype.split("/")[0] if "/" in dtype else dtype
         ax.set_xlabel("Time")
-        ax.set_ylabel(f"{base_dtype}, {unit}".strip(", "))
+        ax.set_ylabel(f"{helpers.base_dtype(dtype)}, {unit}".strip(", "))
         ax.grid(True, alpha=0.3)
         ax.xaxis.set_major_formatter(
             mdates.ConciseDateFormatter(mdates.AutoDateLocator())
@@ -332,6 +345,10 @@ class TimeSeriesTab(_PlotTab):
             ax.set_yscale("log")
         if self.show_acts.isChecked():
             helpers.shade_activities(ax, self.obj)
+        # Threshold line drawn last so it sits on top of the data/shading.
+        helpers.draw_threshold(
+            ax, self.threshold.threshold_value(), self.threshold.legend_text()
+        )
 
     def refresh(self, reset_view: bool | None = None) -> None:
         """Redraw the selected series and re-sync the selectors.

@@ -113,6 +113,12 @@ class Project:
         # input ``signature`` used to flag the values stale when tasks/data/
         # settings change. See gui/tabs/summary.py and projectio.py.
         self.summary_state: Dict = {"active_kind": None, "cache": {}}
+        # Concentration-threshold (e.g. OEL) overlays, keyed by a plot tab's
+        # ``export_tag`` ("timeseries"/"overlay"/"heatmap"). Each value is a
+        # ``{"on": bool, "value": str, "label": str}`` state. Held on the project
+        # (not the tab) so the line survives tab rebuilds and is saved with the
+        # project. See gui/widgets.ThresholdControls and projectio.py.
+        self.plot_thresholds: Dict[str, dict] = {}
 
     # -- dataset access ----------------------------------------------------
     @property
@@ -163,7 +169,7 @@ class Project:
     def _apply_activities(self, ds: Dataset) -> None:
         """(Re)apply every shared activity onto a single dataset's time axis."""
         for name, periods in self.activities.items():
-            ds.obj.mark_activities({name: periods}, mode="replace")
+            helpers.set_activity_periods(ds.obj, name, periods)
 
     def reapply_all(self) -> None:
         """Re-project the whole shared registry onto every dataset."""
@@ -185,7 +191,7 @@ class Project:
         norm: List[Period] = [(pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods]
         self.activities[name] = norm
         for ds in self.datasets:
-            ds.obj.mark_activities({name: norm}, mode="replace")
+            helpers.set_activity_periods(ds.obj, name, norm)
             ds.psd_fits.pop(name, None)
 
     def delete_activity(self, name: str) -> None:

@@ -79,6 +79,11 @@ class SummaryTab(QtWidgets.QWidget):
         self.metric_label = QtWidgets.QLabel("Metric:")
         bar.addWidget(self.metric_label)
         self.metric_kind = QtWidgets.QComboBox()
+        self.metric_kind.setToolTip(
+            "Quantity to summarise exposure for: total number (PNC), total mass "
+            "(MASS), a size-selective fraction (PM/PN/PS/PV at the chosen cut-off), "
+            "or any extra channel the datasets carry."
+        )
         self.metric_kind.currentTextChanged.connect(self._on_metric_kind_change)
         bar.addWidget(self.metric_kind)
         self.metric_cut = QtWidgets.QComboBox()
@@ -104,10 +109,25 @@ class SummaryTab(QtWidgets.QWidget):
 
         # Second row: exposure-limit parameters (only shown for exposure).
         self.exp_bar = QtWidgets.QHBoxLayout()
-        self.short_limit = self._add_field("STEL (short-term limit):", "1.0", width=80)
-        self.short_window = self._add_field("over", "15min", width=70)
-        self.long_limit = self._add_field("OEL (8h limit):", "1.0", width=80)
-        self.twa_window = self._add_field("TWA window", "8h", width=70)
+        self.short_limit = self._add_field(
+            "STEL (short-term limit):", "1.0", width=80,
+            tip="Short-term exposure limit. The highest short-window average is "
+            "compared against this value (same unit as the chosen metric).",
+        )
+        self.short_window = self._add_field(
+            "over", "15min", width=70,
+            tip="Averaging window for the short-term (STEL) check, as a pandas "
+            "offset, e.g. 15min.",
+        )
+        self.long_limit = self._add_field(
+            "OEL (8h limit):", "1.0", width=80,
+            tip="Occupational exposure limit. The time-weighted average is "
+            "compared against this value (same unit as the chosen metric).",
+        )
+        self.twa_window = self._add_field(
+            "TWA window", "8h", width=70,
+            tip="Averaging window for the time-weighted average (TWA), e.g. 8h.",
+        )
         self.exp_bar.addStretch(1)
         right.addLayout(self.exp_bar)
 
@@ -150,11 +170,23 @@ class SummaryTab(QtWidgets.QWidget):
         self._on_kind_change()
 
     # -- small helpers -----------------------------------------------------
-    def _add_field(self, label: str, default: str, width: int) -> QtWidgets.QLineEdit:
-        """Add a labelled line-edit to the exposure-parameter row and return it."""
+    def _add_field(
+        self, label: str, default: str, width: int, tip: str | None = None
+    ) -> QtWidgets.QLineEdit:
+        """Add a labelled line-edit to the exposure-parameter row and return it.
+
+        Args:
+            label: Caption shown to the left of the field.
+            default: Initial text.
+            width: Fixed field width in pixels.
+            tip: Optional tooltip applied to both the label and the field.
+        """
         lbl = QtWidgets.QLabel(label)
         edit = QtWidgets.QLineEdit(default)
         edit.setFixedWidth(width)
+        if tip:
+            lbl.setToolTip(tip)
+            edit.setToolTip(tip)
         self.exp_bar.addWidget(lbl)
         self.exp_bar.addWidget(edit)
         edit._label = lbl  # type: ignore[attr-defined]

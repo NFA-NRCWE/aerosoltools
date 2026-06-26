@@ -7,9 +7,88 @@ a NanoScan + OPS combine, and the read-only keyboard-shortcut reference.
 
 from __future__ import annotations
 
-from typing import Iterable, Tuple
+from typing import Iterable, Optional, Tuple
 
-from .qt import QtWidgets
+from .qt import QtCore, QtWidgets
+
+
+class ThresholdControls(QtWidgets.QWidget):
+    """Inline controls for overlaying a concentration threshold (e.g. an OEL).
+
+    A check-box switches a horizontal limit line on/off; the value field sets
+    where it sits (in the plot's *current* y-units) and the label field sets its
+    legend text. :attr:`changed` fires whenever any of the three is edited, so
+    the owning tab can persist the state and redraw. Kept presentation-only —
+    the actual line is drawn by :func:`helpers.draw_threshold`.
+    """
+
+    #: Emitted when the enable box, value or label changes.
+    changed = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        """Build the enable check-box plus value and legend-text fields."""
+        super().__init__(parent)
+        lay = QtWidgets.QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+
+        self.enable = QtWidgets.QCheckBox("Threshold")
+        self.enable.setToolTip(
+            "Overlay a horizontal limit line — e.g. an occupational exposure "
+            "limit (OEL) — so it is clear at which times the concentration rose "
+            "above it."
+        )
+        self.value = QtWidgets.QLineEdit()
+        self.value.setPlaceholderText("value")
+        self.value.setFixedWidth(70)
+        self.value.setToolTip(
+            "Threshold level, in the units currently shown on the y-axis."
+        )
+        self.label = QtWidgets.QLineEdit()
+        self.label.setPlaceholderText("legend, e.g. OEL")
+        self.label.setFixedWidth(120)
+        self.label.setToolTip("Legend text shown next to the threshold line.")
+
+        lay.addWidget(self.enable)
+        lay.addWidget(self.value)
+        lay.addWidget(self.label)
+
+        self.enable.stateChanged.connect(lambda _state: self.changed.emit())
+        self.value.editingFinished.connect(self.changed.emit)
+        self.label.editingFinished.connect(self.changed.emit)
+
+    def state(self) -> dict:
+        """Return the current ``{"on", "value", "label"}`` state (JSON-safe)."""
+        return {
+            "on": self.enable.isChecked(),
+            "value": self.value.text().strip(),
+            "label": self.label.text().strip(),
+        }
+
+    def set_state(self, state: Optional[dict]) -> None:
+        """Restore a previously saved state without emitting :attr:`changed`."""
+        if not state:
+            return
+        widgets = (self.enable, self.value, self.label)
+        for w in widgets:
+            w.blockSignals(True)
+        self.enable.setChecked(bool(state.get("on")))
+        self.value.setText(str(state.get("value", "")))
+        self.label.setText(str(state.get("label", "")))
+        for w in widgets:
+            w.blockSignals(False)
+
+    def threshold_value(self) -> Optional[float]:
+        """The float threshold when enabled and parseable, else ``None``."""
+        if not self.enable.isChecked():
+            return None
+        try:
+            return float(self.value.text().strip())
+        except ValueError:
+            return None
+
+    def legend_text(self) -> str:
+        """The user's legend text (may be empty)."""
+        return self.label.text().strip()
 
 
 class SlackTabBar(QtWidgets.QTabBar):

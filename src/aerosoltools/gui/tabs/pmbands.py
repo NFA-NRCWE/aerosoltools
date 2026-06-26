@@ -41,17 +41,29 @@ class PMBandsTab(_PlotTab):
 
         self.dtype = QtWidgets.QComboBox()
         self.dtype.addItems(["dM", "dN", "dS", "dV"])
+        self.dtype.setToolTip(
+            "Distribution basis the Pₓ bands are computed on: mass (dM), number "
+            "(dN), surface (dS) or volume (dV)."
+        )
         self.dtype.currentIndexChanged.connect(self.refresh)
         self.controls.addWidget(QtWidgets.QLabel("Basis:"))
         self.controls.addWidget(self.dtype)
 
         self.values = QtWidgets.QLineEdit("0.5, 2.5, 10")
         self.values.setFixedWidth(140)
+        self.values.setToolTip(
+            "Comma-separated cut diameters in µm (e.g. 0.5, 2.5, 10). Each gives a "
+            "size-selective fraction such as PM2.5 = mass below 2.5 µm."
+        )
         self.values.editingFinished.connect(self.refresh)
         self.controls.addWidget(QtWidgets.QLabel("Cut-offs (µm):"))
         self.controls.addWidget(self.values)
 
         self.cumulative = QtWidgets.QCheckBox("Cumulative")
+        self.cumulative.setToolTip(
+            "Stack cumulative fractions (each band is everything below its cut-off) "
+            "instead of independent size bands between successive cut-offs."
+        )
         self.cumulative.stateChanged.connect(self.refresh)
         self.controls.addWidget(self.cumulative)
 

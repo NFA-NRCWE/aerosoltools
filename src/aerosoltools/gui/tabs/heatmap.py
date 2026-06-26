@@ -6,6 +6,7 @@ import traceback
 
 from .. import helpers
 from ..qt import QtCore, QtWidgets
+from ..widgets import ThresholdControls
 from ._base import _PlotTab
 
 #: Lower color-scale limit forced when a log scale is requested but the data
@@ -24,10 +25,19 @@ class HeatmapTab(_PlotTab):
         super().__init__(main, nrows=2)
 
         self.normalize = QtWidgets.QCheckBox("Normalize (dx/dlogDp)")
+        self.normalize.setToolTip(
+            "Divide each size bin by Δlog₁₀(Dp) so colours are comparable across "
+            "unequal bin widths (e.g. dN/dlogDp). Leave off to show the raw "
+            "per-bin concentration."
+        )
         self.normalize.stateChanged.connect(self.refresh)
         self.controls.addWidget(self.normalize)
 
         self.log = QtWidgets.QCheckBox("Log color scale")
+        self.log.setToolTip(
+            "Use a logarithmic colour scale so several decades of concentration "
+            "are visible at once. Requires positive values (zeros are floored)."
+        )
         self.log.setChecked(True)
         self.log.stateChanged.connect(self.refresh)
         self.controls.addWidget(self.log)
@@ -36,6 +46,7 @@ class HeatmapTab(_PlotTab):
         self.cmin = QtWidgets.QLineEdit()
         self.cmin.setPlaceholderText("auto")
         self.cmin.setFixedWidth(70)
+        self.cmin.setToolTip("Lower colour-scale limit; blank = automatic.")
         self.cmin.editingFinished.connect(self.refresh)
         self.controls.addWidget(self.cmin)
 
@@ -43,6 +54,7 @@ class HeatmapTab(_PlotTab):
         self.cmax = QtWidgets.QLineEdit()
         self.cmax.setPlaceholderText("auto")
         self.cmax.setFixedWidth(70)
+        self.cmax.setToolTip("Upper colour-scale limit; blank = automatic.")
         self.cmax.editingFinished.connect(self.refresh)
         self.controls.addWidget(self.cmax)
 
@@ -50,6 +62,14 @@ class HeatmapTab(_PlotTab):
         self.show_acts.setChecked(True)
         self.show_acts.stateChanged.connect(self.refresh)
         self.controls.addWidget(self.show_acts)
+
+        # Concentration-threshold (e.g. OEL) overlay on the top (total-conc)
+        # panel; state persists on the project across tab rebuilds and saves.
+        self.threshold = ThresholdControls()
+        self.threshold.set_state(self.main.project.plot_thresholds.get(self.export_tag))
+        self.threshold.changed.connect(self._on_threshold_changed)
+        self.controls.addWidget(self.threshold)
+
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
@@ -105,6 +125,10 @@ class HeatmapTab(_PlotTab):
             ax2=ax2,
             mark_activities=self.show_acts.isChecked(),
         )
+        # Threshold line (e.g. OEL) on the top total-concentration panel.
+        helpers.draw_threshold(
+            ax1, self.threshold.threshold_value(), self.threshold.legend_text()
+        )
         return floored
 
     def _warn_floor(self) -> None:
@@ -117,6 +141,11 @@ class HeatmapTab(_PlotTab):
             "'Color min' (or untick 'Log color scale') to override.",
             self.cmin,
         )
+
+    def _on_threshold_changed(self) -> None:
+        """Persist the threshold overlay state and redraw."""
+        self.main.project.plot_thresholds[self.export_tag] = self.threshold.state()
+        self.refresh()
 
     def refresh(self) -> None:
         """Redraw the total-concentration + heatmap panels."""

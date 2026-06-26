@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -318,61 +318,65 @@ class ActivityMixin:
 
     def Mark_threshold(
         self,
-        Activity: str,
+        activity: str,
         threshold: Union[int, float],
-        metric: str = None,
+        metric: Optional[str] = None,
         threshold_direction: str = "above",
     ):
         """Description:
-            Detect periods of activity based on exceeding or being below a
-            threshold level and mark them as an activity labeled 'Peak'.
+            Mark every time step whose value lies on the requested side of a
+            fixed threshold as an activity, and store the contiguous runs as
+            its periods.
+
+            This is a threshold-based segmenter: unlike :meth:`Peak_finder`
+            (which compares each point to a moving baseline), it tags samples
+            purely by whether they exceed — or fall below — a single, constant
+            limit. It is the natural way to flag exposures above an
+            occupational exposure limit (OEL) or any other fixed concentration
+            cut-off.
 
         Args:
-            Activity (str): Name to be used for the marked activity.
-            threshold (int, float): Threshold value used to generate the marking
-                of activities.
-            metric (str): Optional column name to use for peak detection.
-                If empty, the total_concentration time series is used.
-                Otherwise, the name is looked up first in self.data
-                (numeric columns) and then in extra_data.
-            threshold_direction (str): Optional argument to indicate the direction
-                of activity is logged in relation to the threshold limit.
-                Inputs are either 'above' or '>' if the activity is equal to exceeding the threshold.
-                Or 'below' or '<' if the activity is equal to the period below the threshold.
+            activity (str): Name to give the marked activity (e.g. ``"OEL"``).
+            threshold (int, float): The fixed limit each sample is compared to.
+            metric (str, optional): Column to compare against the threshold. If
+                ``None`` (default), the first column of ``self.data`` (the total
+                concentration) is used. Otherwise the name is looked up first
+                among the numeric columns of ``self.data`` and then of
+                ``extra_data``.
+            threshold_direction (str): Which side of the threshold counts as the
+                activity. ``"above"`` or ``">"`` flags samples strictly greater
+                than ``threshold``; ``"below"`` or ``"<"`` flags samples strictly
+                less than it. Defaults to ``"above"``.
 
         Returns:
-            None: The method adds/updates a boolean "Peak" column in
-                self.data and updates self.activity_periods["Peak"].
+            None: The method adds/updates a boolean column named ``activity`` in
+                ``self.data`` and stores its contiguous runs in
+                ``self.activity_periods[activity]``.
 
         Raises:
-            ValueError: If metric is not found as a numeric column
-                in either self.data or extra_data. Check column names via
-                data.columns or extra_data.columns.
-            ValueError: If threshold_direction is not one of the supported names.
-                Choose one of 'above', 'below', '>' or '<'.
+            ValueError: If ``metric`` is not found as a numeric column in either
+                ``self.data`` or ``extra_data``. Check column names via
+                ``data.columns`` or ``extra_data.columns``.
+            ValueError: If ``threshold_direction`` is not one of the supported
+                names. Choose one of ``"above"``, ``"below"``, ``">"`` or ``"<"``.
 
         Notes:
             Detailed description:
-                The method compares the chosen metric to the chosen threshold value
-                Points where the value exceed or drops below the threshold will be
-                marked with the chosen activity name. Contiguous True
-                segments in this mask are converted to (start, end) time
-                intervals and stored as the Activity activity.
-
-            Theory:
-                This is a simple statistical peak detector based on local
-                outlier detection relative to a moving baseline and spread.
-                It highlights periods where the signal is unusually high
-                compared to its recent history.
+                The chosen metric is compared element-wise to ``threshold`` to
+                build a boolean mask (NaN samples compare False and are never
+                flagged). The mask is stored as the ``activity`` column, and its
+                contiguous True segments are converted to ``(start, end)`` time
+                intervals and stored as the activity's periods.
 
         Examples:
-            Automatically tag high-exposure episodes:
+            Flag the periods where the total concentration exceeds an OEL and
+            shade them on the time series:
 
             .. code-block:: python
 
-                data.Peak_finder(window=31, ratio=3.0)
-                data.plot_total_conc(mark_activities=["Peak"])
-                peak_df = data.get_activity_data("Peak")
+                data.Mark_threshold("OEL", threshold=1e4)
+                data.plot_total_conc(mark_activities=["OEL"])
+                oel_df = data.get_activity_data("OEL")
         """
 
         Data_return = self.copy_self()
@@ -390,7 +394,7 @@ class ActivityMixin:
                 f"Invalid data title. No column named {metric} can be found."
             )
 
-        # Change Med array from median value to the difference between median and actual value.
+        # Build the boolean mask for the requested side of the threshold.
         if threshold_direction == "above" or threshold_direction == ">":
             mask = Data_return > threshold
         elif threshold_direction == "below" or threshold_direction == "<":
@@ -400,14 +404,14 @@ class ActivityMixin:
                 "Invalid threshold_direction. Either chose 'above' or 'below'"
             )
 
-        peak_col = {Activity: mask}
+        peak_col = {activity: mask}
 
         # Track metadata
-        if Activity not in self._activities:
-            self._activities.append(Activity)
+        if activity not in self._activities:
+            self._activities.append(activity)
             self._data = pd.concat([self.data, pd.DataFrame(peak_col)], axis=1)
         else:
-            self._data[Activity] = mask
+            self._data[activity] = mask
 
         periods = list(
             zip(
@@ -420,7 +424,8 @@ class ActivityMixin:
             )
         )
 
-        self._activity_periods[Activity] = periods
+        self._activity_periods[activity] = periods
 
-    # snake_case alias for PEP 8 consistency
+    # snake_case aliases for PEP 8 consistency
     peak_finder = Peak_finder
+    mark_threshold = Mark_threshold

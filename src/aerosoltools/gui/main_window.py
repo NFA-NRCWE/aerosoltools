@@ -911,7 +911,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
         if is2d:
-            base = dtype.split("/")[0]
+            base = helpers.base_dtype(dtype)
             self.dtype_combo.blockSignals(True)
             di = self.dtype_combo.findText(base)
             if di >= 0:

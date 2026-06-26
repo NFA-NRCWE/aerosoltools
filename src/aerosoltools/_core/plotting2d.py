@@ -12,6 +12,8 @@ from matplotlib.colors import LogNorm, Normalize
 from matplotlib.figure import Figure
 from numpy.typing import NDArray
 
+from . import _shading
+
 
 class Plot2DMixin:
     """Plot size distributions, PM time series and time-size heatmaps."""
@@ -164,7 +166,7 @@ class Plot2DMixin:
         dtype: str = "dM",
         activity: str = "All data",
         fraction: bool = False,
-        cummulative: bool = False,
+        cumulative: bool = False,
         mark_activities: bool | Sequence[str] = False,
     ):
         """Description:
@@ -181,7 +183,7 @@ class Plot2DMixin:
                 units and stack bands between successive PM_values. If
                 True, plot the largest Pₓ on the primary axis and the
                 fractional contributions of each Pₓ on a secondary axis.
-            cummulative (bool): Controls how bands/legend values are
+            cumulative (bool): Controls how bands/legend values are
                 interpreted:
 
                     * False: legend reports band-wise contributions between
@@ -263,48 +265,21 @@ class Plot2DMixin:
         mask = self.data[activity]
         PM_data = data_copy.extra_data.loc[mask]
 
-        # Create figure/axes and set font sizes
+        # Create figure/axes. Tick and legend font sizes come from the shared
+        # rcParams set on import (see aerosoltools.aerosol1d), so this figure
+        # matches the rest of the library instead of hardcoding sizes.
         figure, ax = plt.subplots()
-        plt.xticks(fontsize=25)
-        plt.yticks(fontsize=25)
 
-        # Highlight activities
+        # Highlight activities (shared helper; "All data" excluded unless asked).
         if mark_activities and hasattr(self, "_activity_periods"):
-            # Exclude "All data" unless explicitly requested
-            all_activities = sorted(self._activity_periods.keys())
-            color_map = plt.colormaps.get_cmap("gist_ncar")
-            activity_colors = {
-                activity: color_map(i / max(1, len(all_activities)))
-                for i, activity in enumerate(all_activities)
-            }
-
-            if mark_activities is True:
-                selected_activities = [a for a in all_activities if a != "All data"]
-            elif isinstance(mark_activities, list):
-                selected_activities = [
-                    a for a in mark_activities if a in self._activity_periods
-                ]
-            else:
-                selected_activities = []
-
-            for activity in selected_activities:
-                color = activity_colors[activity]
-                first = True
-                for start, end in self._activity_periods[activity]:
-                    ax.axvspan(
-                        cast(float, mdates.date2num(pd.Timestamp(start))),
-                        cast(float, mdates.date2num(pd.Timestamp(end))),
-                        color=color,
-                        alpha=0.3,
-                        label=activity if first else None,
-                        zorder=3,
-                    )
-                    first = False
+            selected = _shading.resolve_activities(
+                self._activity_periods, mark_activities
+            )
+            _shading.shade_activities(ax, self._activity_periods, selected, zorder=3)
             # Clip x-axis to actual data range
             left = float(mdates.date2num(self.time.min()))
             right = float(mdates.date2num(self.time.max()))
             ax.set_xlim(left, right)
-            ax.legend()
 
         # Fractional mode: total on primary axis, fractions on secondary axis
         if fraction:
@@ -331,7 +306,7 @@ class Plot2DMixin:
                     )
                 else:
                     pm_1 = f"P{dtype[-1]}{PM_values[i-1]}"
-                    if cummulative:
+                    if cumulative:
                         avg, sd = float(PM_data[pm].mean()), float(PM_data[pm].std())
                         ax2.fill_between(
                             self.time[mask],
@@ -361,8 +336,6 @@ class Plot2DMixin:
             ax2.legend(
                 loc="best",
                 title=f"Average values ({data_copy.unit})",
-                fontsize=25,
-                title_fontsize=25,
             )
         else:
             for i, pmv in enumerate(PM_values):
@@ -378,7 +351,7 @@ class Plot2DMixin:
                     )
                 else:
                     pm_1 = f"P{dtype[-1]}{PM_values[i-1]}"
-                    if cummulative:
+                    if cumulative:
                         avg, sd = float(PM_data[pm].mean()), float(PM_data[pm].std())
                         ax.fill_between(
                             self.time[mask],
@@ -400,8 +373,6 @@ class Plot2DMixin:
             ax.legend(
                 loc="best",
                 title=f"Average values ({data_copy.unit})",
-                fontsize=25,
-                title_fontsize=25,
             )
 
         ax.set_ylim(0)

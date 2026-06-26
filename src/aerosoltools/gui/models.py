@@ -20,6 +20,13 @@ class PandasTableModel(QtCore.QAbstractTableModel):
         super().__init__()
         self._df = df if df is not None else pd.DataFrame()
         self._float_format = float_format
+        # Optional per-column header tooltips (column name -> hover text), used
+        # to explain otherwise-cryptic headers such as size-bin midpoints (nm).
+        self._header_tooltips: dict = {}
+
+    def set_header_tooltips(self, tooltips: dict | None) -> None:
+        """Set hover text for column headers (column name -> tooltip string)."""
+        self._header_tooltips = dict(tooltips or {})
 
     # -- data management ---------------------------------------------------
     def set_dataframe(self, df: pd.DataFrame) -> None:
@@ -56,11 +63,16 @@ class PandasTableModel(QtCore.QAbstractTableModel):
     def headerData(
         self, section, orientation, role=QtCore.Qt.DisplayRole
     ):  # noqa: N802
-        """Return the column name, or the (timestamp) row label, for a header."""
+        """Return the column name / row label (or a header tooltip) for a header."""
+        if orientation == QtCore.Qt.Horizontal:
+            name = str(self._df.columns[section])
+            if role == QtCore.Qt.ToolTipRole:
+                return self._header_tooltips.get(name)
+            if role == QtCore.Qt.DisplayRole:
+                return name
+            return None
         if role != QtCore.Qt.DisplayRole:
             return None
-        if orientation == QtCore.Qt.Horizontal:
-            return str(self._df.columns[section])
         # Show timestamps (or whatever the index is) on the row header.
         label = self._df.index[section]
         if isinstance(label, pd.Timestamp):

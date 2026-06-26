@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Sequence, Union, cast
+from typing import Sequence, Union
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+
+from . import _shading
+from ._labels import base_dtype
 
 
 class Plot1DMixin:
@@ -120,15 +122,6 @@ class Plot1DMixin:
         else:
             raise LookupError("Chosen parameter is invalid")
 
-        # if isinstance(parameter, int):
-        #     if parameter >= len(self._raw_data.columns):
-        #         raise LookupError("Chosen parameter is invalid")
-        #     parameter = self.data.columns[parameter]
-        # elif isinstance(parameter, str):
-        #     pass
-        # else:
-        #     raise LookupError("Chosen parameter is invalid")
-
         new_fig_created = False
 
         # Create or reuse axes.
@@ -165,50 +158,21 @@ class Plot1DMixin:
         else:
             Unit = self.unit[parameter]  # type: ignore[index]
 
-        if "/" in Dtype:
-            total_conc_dtype = Dtype.split("/")[0]
-            ax.set_ylabel(f"{total_conc_dtype}, {Unit}")
-        else:
-            ax.set_ylabel(f"{Dtype}, {Unit}")
+        ax.set_ylabel(f"{base_dtype(Dtype)}, {Unit}")
         ax.grid(True)
 
-        # Optionally highlight activity periods as shaded regions.
+        # Optionally highlight activity periods as shaded regions (shared helper
+        # so the 1D/2D plots and the GUI shade identically).
         if mark_activities and hasattr(self, "_activity_periods"):
-            all_activities = sorted(self._activity_periods.keys())
-            color_map = plt.colormaps.get_cmap("gist_ncar")
-            activity_colors = {
-                activity: color_map(i / max(1, len(all_activities)))
-                for i, activity in enumerate(all_activities)
-            }
+            selected = _shading.resolve_activities(
+                self._activity_periods, mark_activities
+            )
+            _shading.shade_activities(ax, self._activity_periods, selected, zorder=3)
 
-            if mark_activities is True:
-                selected_activities = [a for a in all_activities if a != "All data"]
-            elif isinstance(mark_activities, list):
-                selected_activities = [
-                    a for a in mark_activities if a in self._activity_periods
-                ]
-            else:
-                selected_activities = []
-
-            for activity in selected_activities:
-                color = activity_colors[activity]
-                first = True
-                for start, end in self._activity_periods[activity]:
-                    ax.axvspan(
-                        cast(float, mdates.date2num(pd.Timestamp(start))),
-                        cast(float, mdates.date2num(pd.Timestamp(end))),
-                        color=color,
-                        alpha=0.3,
-                        label=activity if first else None,
-                        zorder=3,
-                    )
-                    first = False
-
-            # Clamp x-limits to the actual data range and show legend.
+            # Clamp x-limits to the actual data range.
             left = float(mdates.date2num(self.time.min()))
             right = float(mdates.date2num(self.time.max()))
             ax.set_xlim(left, right)
-            ax.legend()
 
         if new_fig_created:
             fig.tight_layout()  # type: ignore[call-arg]
