@@ -10,15 +10,64 @@ from __future__ import annotations
 
 from typing import List, Tuple
 
-import matplotlib as mpl
-import matplotlib.dates as mdates
 import pandas as pd
 
+from .._core import _shading
+from .._core._labels import base_dtype  # re-exported for GUI use
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
 
+__all__ = [
+    "TOTAL",
+    "THRESHOLD_COLOR",
+    "base_dtype",
+    "is_2d",
+    "describe",
+    "plottable_columns",
+    "series_for",
+    "user_activities",
+    "shade_activities",
+    "draw_threshold",
+    "delete_activity",
+    "set_activity_periods",
+]
+
 # Sentinel used by plottable_columns to mark the canonical "total" series.
 TOTAL = "<total>"
+
+# Colour used for the concentration-threshold (e.g. OEL) marker line. A strong
+# red reads as a "limit" and stays distinct from the data and activity shading.
+THRESHOLD_COLOR = "#d62728"
+
+
+def draw_threshold(ax, value, label: str | None = None) -> None:
+    """Draw a horizontal threshold line (e.g. an OEL) across ``ax``.
+
+    Used by the time-series-style plots so it is visually obvious at which times
+    the concentration rose above (or fell below) a user-defined limit such as an
+    occupational exposure limit. The line is added with a legend entry and the
+    legend is (re)drawn so the label shows alongside any activity/series labels
+    already present.
+
+    Args:
+        ax: Axis to draw on.
+        value: Threshold value in the axis' current y-units. Ignored when
+            ``None`` or not finite.
+        label: Legend text; defaults to ``"Threshold (<value>)"``.
+    """
+    if value is None:
+        return
+    try:
+        y = float(value)
+    except (TypeError, ValueError):
+        return
+    if not pd.notna(y):
+        return
+    text = label.strip() if (label and label.strip()) else f"Threshold ({y:g})"
+    ax.axhline(y, color=THRESHOLD_COLOR, linestyle="--", linewidth=1.6, zorder=5,
+               label=text)
+    # Rebuild the legend so the threshold appears next to any existing labels.
+    ax.legend(loc="upper right", fontsize=8)
 
 
 def is_2d(obj) -> bool:
@@ -103,56 +152,35 @@ def user_activities(obj: Aerosol1D) -> List[str]:
 def shade_activities(ax, obj: Aerosol1D, include_all_data: bool = False) -> None:
     """Shade each activity period on ``ax`` as a translucent vertical span.
 
-    Mirrors the styling used by the core plotting methods (the ``gist_ncar``
-    colormap, alpha 0.3) so the interactive view matches library output.
+    Thin wrapper over :func:`aerosoltools._core._shading.shade_activities` so the
+    interactive view matches the library's own plots exactly (same colormap,
+    alpha and per-activity colours). Uses the GUI's draw order (behind the data)
+    and compact legend.
     """
     periods = getattr(obj, "_activity_periods", {})
-    all_names = sorted(periods.keys())
-    if not all_names:
-        return
-
-    cmap = mpl.colormaps["gist_ncar"]
-    colors = {
-        name: cmap(i / max(1, len(all_names))) for i, name in enumerate(all_names)
-    }
-
-    selected = (
-        all_names if include_all_data else [a for a in all_names if a != "All data"]
+    selected = _shading.resolve_activities(
+        periods, True, include_all_data=include_all_data
     )
-    drew_label = False
-    for name in selected:
-        first = True
-        for start, end in periods[name]:
-            ax.axvspan(
-                mdates.date2num(pd.Timestamp(start)),
-                mdates.date2num(pd.Timestamp(end)),
-                color=colors[name],
-                alpha=0.3,
-                label=name if first else None,
-                zorder=1,
-            )
-            first = False
-            drew_label = True
-    if drew_label:
-        ax.legend(loc="upper right", fontsize=8)
+    _shading.shade_activities(
+        ax, periods, selected, zorder=1, legend_kw={"loc": "upper right", "fontsize": 8}
+    )
 
 
-def add_activity(obj: Aerosol1D, name: str, start, end) -> None:
-    """Append a period to an activity, keeping any periods already defined.
+# -- per-object activity mutation -----------------------------------------
+# These are the single place where the GUI mutates an aerosol object's activity
+# bookkeeping. The project layer (gui/project.py) owns the shared registry and
+# loops over datasets, delegating each per-object change to one of these — so the
+# "how to change one object" policy lives here, not spread across both layers.
 
-    A task can occur several times, so this accumulates the new ``(start, end)``
-    onto the existing list before calling ``mark_activities``. (``mark_activities``
-    unions the boolean mask but *replaces* ``activity_periods`` with whatever list
-    it is given, so the full list must be passed for the shading to show every
-    occurrence.)
-    """
-    periods = list(obj._activity_periods.get(name, []))
-    periods.append((pd.Timestamp(start), pd.Timestamp(end)))
-    obj.mark_activities({name: periods}, mode="union")
+
+def set_activity_periods(obj: Aerosol1D, name: str, periods) -> None:
+    """Replace one activity's periods on a single object (``replace`` mode)."""
+    norm = [(pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods]
+    obj.mark_activities({name: norm}, mode="replace")
 
 
 def delete_activity(obj: Aerosol1D, name: str) -> None:
-    """Remove an activity and its mask column.
+    """Remove an activity and its mask column from a single object.
 
     The aerosoltools classes have no public delete method, so this manipulates
     the (package-internal) activity bookkeeping directly. It is a no-op for the

@@ -30,6 +30,8 @@ Each loader is available as both ``Load_<Instrument>_file`` and
 
 load_cpc_file / Load_CPC_file
     Load data from condensation particle counters (CPC, TSI).
+load_devlabs_file / Load_Devlabs_file
+    Load weather station data from DevLabs instrument.
 load_discmini_file / Load_DiSCmini_file
     Load data from DiSCmini personal dosimeters (Testo).
 load_elpi_file / Load_ELPI_file
@@ -82,6 +84,7 @@ from .loaders import (
     Load_Aethalometer_file,
     Load_CPC_file,
     Load_data_from_folder,
+    Load_Devlabs_file,
     Load_DiSCmini_file,
     Load_DustTrak_file,
     Load_ELPI_file,
@@ -99,6 +102,7 @@ from .utility import (
     Plot_correlation,
     bland_altman_analysis,
     combine_measurements,
+    fit_data,
 )
 
 # snake_case aliases for PEP 8 consistency
@@ -107,6 +111,7 @@ plot_correlation = Plot_correlation
 Combine_measurements = combine_measurements  # PascalCase alias
 load_aethalometer_file = Load_Aethalometer_file
 load_cpc_file = Load_CPC_file
+load_devlabs_file = Load_Devlabs_file
 load_discmini_file = Load_DiSCmini_file
 load_dusttrak_file = Load_DustTrak_file
 load_elpi_file = Load_ELPI_file
@@ -128,6 +133,7 @@ __all__ = [
     # Utilities
     "bland_altman_analysis",
     "Combine_NS_OPS",
+    "fit_data",
     "Plot_correlation",
     "combine_ns_ops",
     "plot_correlation",
@@ -136,6 +142,7 @@ __all__ = [
     # Loaders (original names)
     "Load_Aethalometer_file",
     "Load_CPC_file",
+    "Load_Devlabs_file",
     "Load_DiSCmini_file",
     "Load_DustTrak_file",
     "Load_ELPI_file",

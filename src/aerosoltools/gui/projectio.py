@@ -33,6 +33,25 @@ FORMAT = "aerosoltools-project"
 VERSION = 1
 
 
+def _clean_psd_fits(psd_fits: dict) -> dict:
+    """Coerce stored lognormal fits to plain JSON types for serialization."""
+    out: dict = {}
+    for activity, rec in (psd_fits or {}).items():
+        modes = []
+        for m in rec.get("modes", []):
+            modes.append(
+                {
+                    "mu": float(m["mu"]),
+                    "sigma": float(m["sigma"]),
+                    "peak": float(m["peak"]),
+                    "bound": bool(m.get("bound", False)),
+                }
+            )
+        if modes:
+            out[activity] = {"modes": modes, "optimized": bool(rec.get("optimized"))}
+    return out
+
+
 def save_project(project: Project, folder: str, theme: str = "dark") -> None:
     """Write ``project`` into ``folder`` (created if needed).
 
@@ -78,6 +97,13 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
             ]
             for name, periods in project.activities.items()
         },
+        # Cached Summary-tab results (table + inputs + staleness signature).
+        # Already built from JSON-safe primitives by the Summary tab.
+        "summary_state": getattr(
+            project, "summary_state", {"active_kind": None, "cache": {}}
+        ),
+        # Per-plot concentration-threshold (OEL) overlays, keyed by tab tag.
+        "plot_thresholds": getattr(project, "plot_thresholds", {}),
         "datasets": [],
     }
 
@@ -102,6 +128,7 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
                 "raw": raw_rel,
                 "contributing": contributing,
                 "pickle": pkl_rel,
+                "psd_fits": _clean_psd_fits(ds.psd_fits),
             }
         )
 
@@ -132,6 +159,14 @@ def load_project(folder: str) -> tuple[Project, str]:
         name: [(pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods]
         for name, periods in manifest.get("activities", {}).items()
     }
+    # Restore cached summaries (older projects simply have none).
+    state = manifest.get("summary_state")
+    if isinstance(state, dict) and isinstance(state.get("cache"), dict):
+        project.summary_state = state
+    # Restore per-plot threshold overlays (older projects simply have none).
+    thresholds = manifest.get("plot_thresholds")
+    if isinstance(thresholds, dict):
+        project.plot_thresholds = thresholds
 
     for entry in manifest.get("datasets", []):
         pkl_path = os.path.join(folder, entry["pickle"])
@@ -153,6 +188,7 @@ def load_project(folder: str) -> tuple[Project, str]:
         contributing = entry.get("contributing")
         if contributing:
             ds.contributing_files = [os.path.join(folder, r) for r in contributing]
+        ds.psd_fits = _clean_psd_fits(entry.get("psd_fits", {}))
         project.datasets.append(ds)
 
     # Restore the active dataset, then re-project the shared activities so every

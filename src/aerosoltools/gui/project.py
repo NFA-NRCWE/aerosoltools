@@ -67,6 +67,12 @@ class Dataset:
         self.overlay_on: bool = True
         self.psd_on: bool = True
         self.summary_on: bool = True
+        # Lognormal PSD fits, keyed by activity name (e.g. "All data", "Task 1").
+        # Each value is ``{"modes": [{mu, sigma, peak, bound}, ...],
+        # "optimized": bool}``. Stored per dataset because a fit describes that
+        # instrument's PSD for one activity; persisted in the project file and
+        # dropped when the activity is edited or removed (see Project).
+        self.psd_fits: Dict[str, dict] = {}
 
     @property
     def instrument(self) -> str:
@@ -101,6 +107,18 @@ class Project:
         # name -> list of (start, end). "All data" is intentionally NOT stored
         # here; each dataset manages its own "All data" span over its own range.
         self.activities: Dict[str, List[Period]] = {}
+        # Cached Summary-tab results so reopening a project shows the computed
+        # values (and the STEL/OEL/window inputs) directly, without recomputing.
+        # ``cache`` is keyed by summary kind; each entry holds the table plus an
+        # input ``signature`` used to flag the values stale when tasks/data/
+        # settings change. See gui/tabs/summary.py and projectio.py.
+        self.summary_state: Dict = {"active_kind": None, "cache": {}}
+        # Concentration-threshold (e.g. OEL) overlays, keyed by a plot tab's
+        # ``export_tag`` ("timeseries"/"overlay"/"heatmap"). Each value is a
+        # ``{"on": bool, "value": str, "label": str}`` state. Held on the project
+        # (not the tab) so the line survives tab rebuilds and is saved with the
+        # project. See gui/widgets.ThresholdControls and projectio.py.
+        self.plot_thresholds: Dict[str, dict] = {}
 
     # -- dataset access ----------------------------------------------------
     @property
@@ -151,7 +169,7 @@ class Project:
     def _apply_activities(self, ds: Dataset) -> None:
         """(Re)apply every shared activity onto a single dataset's time axis."""
         for name, periods in self.activities.items():
-            ds.obj.mark_activities({name: periods}, mode="replace")
+            helpers.set_activity_periods(ds.obj, name, periods)
 
     def reapply_all(self) -> None:
         """Re-project the whole shared registry onto every dataset."""
@@ -165,14 +183,20 @@ class Project:
         self.set_activity_periods(name, periods)
 
     def set_activity_periods(self, name: str, periods) -> None:
-        """Replace a task's full period list and sync it across all datasets."""
+        """Replace a task's full period list and sync it across all datasets.
+
+        Editing a task changes which samples it covers, so any stored PSD fit
+        for it is now stale and is dropped (the user re-fits the new data).
+        """
         norm: List[Period] = [(pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods]
         self.activities[name] = norm
         for ds in self.datasets:
-            ds.obj.mark_activities({name: norm}, mode="replace")
+            helpers.set_activity_periods(ds.obj, name, norm)
+            ds.psd_fits.pop(name, None)
 
     def delete_activity(self, name: str) -> None:
-        """Remove a task from the registry and from every dataset."""
+        """Remove a task from the registry, every dataset, and its PSD fits."""
         self.activities.pop(name, None)
         for ds in self.datasets:
             helpers.delete_activity(ds.obj, name)
+            ds.psd_fits.pop(name, None)

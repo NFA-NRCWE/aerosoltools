@@ -10,6 +10,7 @@ import pandas as pd
 
 from .. import helpers
 from ..qt import QtCore, QtWidgets
+from ..widgets import ThresholdControls
 from ._base import _PlotTab
 
 
@@ -45,6 +46,13 @@ class OverlayTab(_PlotTab):
         )
         self.normalize.stateChanged.connect(lambda: self._draw())
         self.controls.addWidget(self.normalize)
+
+        # Concentration-threshold (e.g. OEL) overlay; state persists on the project.
+        self.threshold = ThresholdControls()
+        self.threshold.set_state(self.main.project.plot_thresholds.get(self.export_tag))
+        self.threshold.changed.connect(self._on_threshold_changed)
+        self.controls.addWidget(self.threshold)
+
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
@@ -196,6 +204,11 @@ class OverlayTab(_PlotTab):
         self.main.refresh_all(reset_view=True)
         self.main._refresh_sidebar()
 
+    def _on_threshold_changed(self) -> None:
+        """Persist the threshold overlay state and redraw (keeping the view)."""
+        self.main.project.plot_thresholds[self.export_tag] = self.threshold.state()
+        self._draw(preserve=True)
+
     # -- rendering ---------------------------------------------------------
     def refresh(self) -> None:
         """Re-sync the metric combo and table, then redraw."""
@@ -209,12 +222,15 @@ class OverlayTab(_PlotTab):
         """Draw each included dataset's (optionally normalized, shifted) series."""
         ax.clear()
         plotted = 0
+        unit = ""  # unit of the first plotted dataset (for the total-conc label)
         for ds in self._datasets:
             if not ds.overlay_on:
                 continue
             s = self._series_for(ds)
             if s is None or s.empty:
                 continue
+            if not plotted:
+                _, unit = helpers.describe(ds.obj)
             x = s.index + ds.view_shift  # view-only shift
             y = s.to_numpy(dtype=float)
             if self.normalize.isChecked():
@@ -229,11 +245,17 @@ class OverlayTab(_PlotTab):
             plotted += 1
 
         ax.set_xlabel("Time")
-        ax.set_ylabel(
-            "Normalized (0–1)"
-            if self.normalize.isChecked()
-            else self.metric.currentText()
-        )
+        # Units are only reliably known for the total-concentration metric (the
+        # object's own unit); extra/data columns carry no per-column unit, so
+        # those are labelled by name only.
+        metric = self.metric.currentText()
+        if self.normalize.isChecked():
+            ylabel = "Normalized (0–1)"
+        elif metric == "Total concentration" and unit:
+            ylabel = f"{metric} [{unit}]"
+        else:
+            ylabel = metric
+        ax.set_ylabel(ylabel)
         ax.grid(True, alpha=0.3)
         ax.xaxis.set_major_formatter(
             mdates.ConciseDateFormatter(mdates.AutoDateLocator())
@@ -251,6 +273,10 @@ class OverlayTab(_PlotTab):
                 va="center",
                 transform=ax.transAxes,
             )
+        # Threshold line (e.g. OEL) on top of the overlaid series.
+        helpers.draw_threshold(
+            ax, self.threshold.threshold_value(), self.threshold.legend_text()
+        )
 
     def _draw(self, preserve: bool = False) -> None:
         """Redraw onto the embedded axis, reporting any error inline.
@@ -274,10 +300,6 @@ class OverlayTab(_PlotTab):
             self.ax.set_xlim(prev[0])
             self.ax.set_ylim(prev[1])
         self.canvas.draw_idle()
-
-    def _render_export(self, fig) -> None:
-        """Draw the overlay onto a fresh export figure."""
-        self._draw_on(fig.add_subplot(111))
 
     def current_time_xlim(self):
         """Time-axis limits as date numbers, or None."""

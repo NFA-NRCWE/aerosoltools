@@ -11,7 +11,7 @@ from ..utility import Combine_NS_OPS, combine_measurements
 from . import helpers, theme
 from .adjustments import AdjustmentsBox
 from .assets import icon_path
-from .loaders import LOADERS, guess_instrument
+from .loaders import LOADERS, UnrecognizedInstrumentError, require_identified_instrument
 from .project import Dataset, Project
 from .projectio import load_project, save_project
 from .qt import QtCore, QtGui, QtWidgets
@@ -377,7 +377,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self,
             "Import aerosol data file(s)",
             "",
-            "Data files (*.txt *.csv *.xlsx *.xls);;All files (*)",
+            "Data files (*.txt *.csv *.dat *.xlsx *.xls);;All files (*)",
         )
         if paths:
             self.load_files(paths)
@@ -406,10 +406,16 @@ class MainWindow(QtWidgets.QMainWindow):
         unknown or the file fails to load.
         """
         if instrument is None:
-            instrument = (
-                guess_instrument(os.path.basename(path))
-                or self.instrument_combo.currentText()
-            )
+            try:
+                instrument = require_identified_instrument(path)
+            except UnrecognizedInstrumentError as e:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Unknown instrument",
+                    str(e),
+                )
+                return None, None
+
         if instrument not in LOADERS:
             QtWidgets.QMessageBox.warning(
                 self, "Unknown instrument", f"No loader registered for '{instrument}'."
@@ -483,10 +489,10 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         last = None
         for path in paths:
-            # An explicit instrument overrides the per-file guess; otherwise let
-            # _load_obj guess from the name (and fall back to the combo).
-            inst = instrument or guess_instrument(os.path.basename(path))
-            ds = self._ingest_file(path, inst)
+            # If an instrument was explicitly provided, force that loader.
+            # Otherwise, let _load_obj identify the file by:
+            # content sniffer -> filename convention -> user-facing error.
+            ds = self._ingest_file(path, instrument)
             if ds is not None:
                 last = ds
         if last is None:  # every file failed to load
@@ -905,7 +911,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
         if is2d:
-            base = dtype.split("/")[0]
+            base = helpers.base_dtype(dtype)
             self.dtype_combo.blockSignals(True)
             di = self.dtype_combo.findText(base)
             if di >= 0:
@@ -932,15 +938,59 @@ class MainWindow(QtWidgets.QMainWindow):
         # Units changed: rescale the axes rather than keeping stale limits.
         self.refresh_all(reset_view=True)
 
+    @staticmethod
+    def _is_elpi(obj) -> bool:
+        """True if ``obj`` is an ELPI dataset (whose sizes are density-dependent)."""
+        return str(getattr(obj, "metadata", {}).get("instrument", "")).upper() == "ELPI"
+
     def _on_density_change(self) -> None:
-        """Apply the selected particle density to the active 2D dataset."""
+        """Apply the selected density to the active dataset and recalc ELPI data.
+
+        The active 2D dataset always takes the new density. In addition, the
+        project is scanned for ELPI datasets: because the ELPI reports
+        density-dependent particle sizes, each is recalculated (diameters, and
+        number for raw-current files) so it never shows fictitious diameters.
+        """
         if self.obj is None or not helpers.is_2d(self.obj):
             return
+        new_density = self.density_spin.value()
+
+        # Targets: the active dataset plus every ELPI dataset in the project.
+        targets = []
+        active = self.project.active
+        if active is not None:
+            targets.append(active)
+        for ds in self.project.datasets:
+            if ds not in targets and self._is_elpi(ds.obj):
+                targets.append(ds)
+
+        n_elpi = 0
         try:
-            self.obj.set_density(self.density_spin.value())
+            for ds in targets:
+                if not helpers.is_2d(ds.obj):
+                    continue
+                ds.obj.set_density(new_density)
+                if self._is_elpi(ds.obj):
+                    n_elpi += 1
         except Exception:
             QtWidgets.QMessageBox.warning(
                 self, "set_density failed", traceback.format_exc(limit=1)
             )
             return
         self.refresh_all(reset_view=True)
+        if n_elpi:
+            self._warn_elpi_recalc(n_elpi)
+
+    def _warn_elpi_recalc(self, n: int) -> None:
+        """Non-blocking 'speech bubble' noting ELPI data were recalculated."""
+        pos = self.density_spin.mapToGlobal(
+            QtCore.QPoint(0, self.density_spin.height())
+        )
+        word = "dataset" if n == 1 else "datasets"
+        QtWidgets.QToolTip.showText(
+            pos,
+            f"ELPI sizes are density-dependent — recalculated {n} ELPI {word} for "
+            "the new density (particle diameters, and number for raw-current "
+            "files).",
+            self.density_spin,
+        )

@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import io
 
+import numpy as np
 import pandas as pd
 
 from .. import helpers
@@ -78,6 +79,11 @@ class SummaryTab(QtWidgets.QWidget):
         self.metric_label = QtWidgets.QLabel("Metric:")
         bar.addWidget(self.metric_label)
         self.metric_kind = QtWidgets.QComboBox()
+        self.metric_kind.setToolTip(
+            "Quantity to summarise exposure for: total number (PNC), total mass "
+            "(MASS), a size-selective fraction (PM/PN/PS/PV at the chosen cut-off), "
+            "or any extra channel the datasets carry."
+        )
         self.metric_kind.currentTextChanged.connect(self._on_metric_kind_change)
         bar.addWidget(self.metric_kind)
         self.metric_cut = QtWidgets.QComboBox()
@@ -103,12 +109,48 @@ class SummaryTab(QtWidgets.QWidget):
 
         # Second row: exposure-limit parameters (only shown for exposure).
         self.exp_bar = QtWidgets.QHBoxLayout()
-        self.short_limit = self._add_field("STEL (short-term limit):", "1.0", width=80)
-        self.short_window = self._add_field("over", "15min", width=70)
-        self.long_limit = self._add_field("OEL (8h limit):", "1.0", width=80)
-        self.twa_window = self._add_field("TWA window", "8h", width=70)
+        self.short_limit = self._add_field(
+            "STEL (short-term limit):", "1.0", width=80,
+            tip="Short-term exposure limit. The highest short-window average is "
+            "compared against this value (same unit as the chosen metric).",
+        )
+        self.short_window = self._add_field(
+            "over", "15min", width=70,
+            tip="Averaging window for the short-term (STEL) check, as a pandas "
+            "offset, e.g. 15min.",
+        )
+        self.long_limit = self._add_field(
+            "OEL (8h limit):", "1.0", width=80,
+            tip="Occupational exposure limit. The time-weighted average is "
+            "compared against this value (same unit as the chosen metric).",
+        )
+        self.twa_window = self._add_field(
+            "TWA window", "8h", width=70,
+            tip="Averaging window for the time-weighted average (TWA), e.g. 8h.",
+        )
         self.exp_bar.addStretch(1)
         right.addLayout(self.exp_bar)
+
+        # Editing any limit/metric makes the shown (cached) table no longer match
+        # the inputs, so re-evaluate staleness as the user types.
+        for field in self._limit_fields():
+            field.editingFinished.connect(self._recheck_stale)
+        self.metric_kind.currentTextChanged.connect(self._recheck_stale)
+        self.metric_cut.currentTextChanged.connect(self._recheck_stale)
+
+        # Stale banner: shown when the displayed values were computed from inputs
+        # (tasks, data, or settings) that have since changed.
+        self.stale_banner = QtWidgets.QLabel(
+            "⚠ These values may be out of date — tasks, data, or settings changed "
+            "since they were computed. Click Compute to refresh."
+        )
+        self.stale_banner.setWordWrap(True)
+        self.stale_banner.setStyleSheet(
+            "background:#7a4a00; color:#ffe8c2; border:1px solid #b3791f;"
+            "border-radius:6px; padding:6px;"
+        )
+        self.stale_banner.setVisible(False)
+        right.addWidget(self.stale_banner)
 
         self.model = PandasTableModel()
         self.view = QtWidgets.QTableView()
@@ -122,14 +164,29 @@ class SummaryTab(QtWidgets.QWidget):
         )
         self.status.setWordWrap(True)
         right.addWidget(self.status)
+        # Tracks the project a kind/params restore was last done for, so a
+        # project load restores the saved kind exactly once.
+        self._restored_proj_id = None
         self._on_kind_change()
 
     # -- small helpers -----------------------------------------------------
-    def _add_field(self, label: str, default: str, width: int) -> QtWidgets.QLineEdit:
-        """Add a labelled line-edit to the exposure-parameter row and return it."""
+    def _add_field(
+        self, label: str, default: str, width: int, tip: str | None = None
+    ) -> QtWidgets.QLineEdit:
+        """Add a labelled line-edit to the exposure-parameter row and return it.
+
+        Args:
+            label: Caption shown to the left of the field.
+            default: Initial text.
+            width: Fixed field width in pixels.
+            tip: Optional tooltip applied to both the label and the field.
+        """
         lbl = QtWidgets.QLabel(label)
         edit = QtWidgets.QLineEdit(default)
         edit.setFixedWidth(width)
+        if tip:
+            lbl.setToolTip(tip)
+            edit.setToolTip(tip)
         self.exp_bar.addWidget(lbl)
         self.exp_bar.addWidget(edit)
         edit._label = lbl  # type: ignore[attr-defined]
@@ -206,15 +263,28 @@ class SummaryTab(QtWidgets.QWidget):
             return f"{kind}{self.metric_cut.currentText().strip()}"
         return kind
 
-    def _on_kind_change(self) -> None:
-        """Toggle the exposure-only widgets for the chosen summary type."""
+    def _apply_kind_visibility(self) -> None:
+        """Show the exposure-only widgets only for the Exposure summary kind."""
         exposure = self.kind.currentText() == "Exposure summary"
-        if exposure:
-            self._ensure_metric_options()
         for widget in self._exposure_widgets():
             widget.setVisible(exposure)
         if exposure:
             self._on_metric_kind_change()
+
+    def _on_kind_change(self) -> None:
+        """Rebuild options for the chosen kind, then show its cached table.
+
+        Restores that kind's saved inputs and table (so switching back to a
+        previously-computed kind shows it without recomputing) and re-checks
+        whether the shown values are now stale.
+        """
+        exposure = self.kind.currentText() == "Exposure summary"
+        if exposure:
+            self._ensure_metric_options()
+        self._apply_kind_visibility()
+        if exposure:
+            self._restore_params_from_cache("Exposure summary")
+        self._show_cache()
 
     @staticmethod
     def _to_float(text: str, default: float) -> float:
@@ -252,12 +322,29 @@ class SummaryTab(QtWidgets.QWidget):
         # dataset added/removed), so keep the metric drop-downs in step.
         if self.kind.currentText() == "Exposure summary":
             self._ensure_metric_options()
+        # A different dataset selection means the shown table no longer matches.
+        self._recheck_stale()
 
     def refresh(self) -> None:
-        """Re-sync the dataset list; the table itself is built on Compute."""
+        """Re-sync the dataset list and show any cached summary for this kind.
+
+        On the first refresh after a project load, restore the kind that was
+        last computed (and its saved inputs); thereafter just re-display the
+        cached table and re-evaluate staleness.
+        """
         self._sync_datasets()
+        proj = self.main.project
+        if self._restored_proj_id != id(proj):
+            self._restored_proj_id = id(proj)
+            active = (proj.summary_state or {}).get("active_kind")
+            if active and self.kind.findText(active) >= 0 and active != self.kind.currentText():
+                # Switching kind triggers _on_kind_change, which restores that
+                # kind's params + table and checks staleness.
+                self.kind.setCurrentText(active)
+                return
         if self.kind.currentText() == "Exposure summary":
             self._ensure_metric_options()
+        self._show_cache()
 
     # -- compute -----------------------------------------------------------
     def _compute(self) -> None:
@@ -301,6 +388,9 @@ class SummaryTab(QtWidgets.QWidget):
 
         if not frames:
             self.model.set_dataframe(pd.DataFrame())
+            # Nothing to show: drop any stale cache for this kind.
+            self._cache().pop(self.kind.currentText(), None)
+            self._set_stale(False)
             msg = "No data to summarize for the current selection."
             if skipped:
                 msg += "  Skipped — " + "; ".join(skipped)
@@ -309,10 +399,180 @@ class SummaryTab(QtWidgets.QWidget):
 
         combined = pd.concat(frames, ignore_index=True, sort=False)
         self.model.set_dataframe(combined)
+        # Persist the result + inputs on the project so reopening shows it
+        # directly, and record the input signature for staleness detection.
+        self._store_cache(combined)
         note = f"{len(frames)} dataset(s) combined, {len(combined)} rows."
         if skipped:
             note += "  Skipped — " + "; ".join(skipped)
         self.status.setText(note)
+
+    # -- persistence / staleness ------------------------------------------
+    def _cache(self) -> dict:
+        """The project's per-kind summary cache (created on first use)."""
+        state = self.main.project.summary_state
+        if "cache" not in state:
+            state["cache"] = {}
+        return state["cache"]
+
+    def _set_stale(self, stale: bool) -> None:
+        """Show/hide the 'values out of date' banner."""
+        self.stale_banner.setVisible(bool(stale))
+
+    def _recheck_stale(self, *_a) -> None:
+        """Re-flag the shown table stale if the inputs no longer match it."""
+        entry = self._cache().get(self.kind.currentText())
+        if entry is not None:
+            self._set_stale(self._current_signature() != entry.get("signature"))
+
+    def _fingerprint(self, ds) -> dict:
+        """A cheap, stable summary of a dataset's state for staleness checks.
+
+        Captures size/shape, time span, dtype, density and a numeric checksum of
+        the total concentration, so cropping, rebinning, a density change or a
+        calibration all change the fingerprint and mark the summary stale.
+        """
+        obj = ds.obj
+        span = ds.time_span()
+        try:
+            checksum = round(
+                float(np.nansum(np.asarray(obj.total_concentration, dtype=float))), 3
+            )
+        except Exception:
+            checksum = None
+        return {
+            "label": ds.label,
+            "instrument": ds.instrument,
+            "n": ds.n_points(),
+            "start": span[0].isoformat() if span else None,
+            "end": span[1].isoformat() if span else None,
+            "dtype": str(getattr(obj, "dtype", "")),
+            "density": round(float(getattr(obj, "density", 0) or 0), 6),
+            "checksum": checksum,
+        }
+
+    def _exposure_params(self) -> dict:
+        """Current exposure-limit inputs (stored so they restore on reload)."""
+        return {
+            "metric": self._build_metric(),
+            "metric_kind": self.metric_kind.currentText(),
+            "metric_cut": self.metric_cut.currentText(),
+            "short_limit": self.short_limit.text().strip(),
+            "short_window": self.short_window.text().strip(),
+            "long_limit": self.long_limit.text().strip(),
+            "twa_window": self.twa_window.text().strip(),
+        }
+
+    def _current_signature(self) -> dict:
+        """Signature of everything that affects the result, for staleness checks."""
+        proj = self.main.project
+        kind = self.kind.currentText()
+        sig = {
+            "kind": kind,
+            "datasets": [self._fingerprint(d) for d in self._selected_datasets()],
+            "activities": {
+                name: [
+                    [pd.Timestamp(s).isoformat(), pd.Timestamp(e).isoformat()]
+                    for s, e in periods
+                ]
+                for name, periods in sorted(proj.activities.items())
+            },
+        }
+        if kind == "Exposure summary":
+            p = self._exposure_params()
+            sig["params"] = {
+                k: p[k]
+                for k in (
+                    "metric",
+                    "short_limit",
+                    "short_window",
+                    "long_limit",
+                    "twa_window",
+                )
+            }
+        return sig
+
+    def _table_payload(self, df: pd.DataFrame):
+        """Convert a table to JSON-safe ``(columns, records)`` for the project file."""
+        cols = [str(c) for c in df.columns]
+        records = []
+        for row in df.itertuples(index=False, name=None):
+            rec = []
+            for v in row:
+                if isinstance(v, (np.integer,)):
+                    rec.append(int(v))
+                elif isinstance(v, (np.bool_, bool)):
+                    rec.append(bool(v))
+                elif isinstance(v, (float, np.floating)):
+                    f = float(v)
+                    rec.append(f if np.isfinite(f) else None)
+                elif v is None or isinstance(v, (int, str)):
+                    rec.append(v)
+                else:  # timestamps and the like
+                    rec.append(str(v))
+            records.append(rec)
+        return cols, records
+
+    def _store_cache(self, df: pd.DataFrame) -> None:
+        """Persist the computed table + inputs + signature on the project."""
+        kind = self.kind.currentText()
+        cols, records = self._table_payload(df)
+        self._cache()[kind] = {
+            "signature": self._current_signature(),
+            "params": self._exposure_params() if kind == "Exposure summary" else {},
+            "columns": cols,
+            "records": records,
+        }
+        self.main.project.summary_state["active_kind"] = kind
+        self._set_stale(False)
+
+    def _show_cache(self) -> None:
+        """Display the cached table for the current kind and re-check staleness."""
+        kind = self.kind.currentText()
+        entry = self._cache().get(kind)
+        if not entry:
+            self.model.set_dataframe(pd.DataFrame())
+            self._set_stale(False)
+            self.status.setText(
+                "Tick datasets and click Compute to build the combined summary."
+            )
+            return
+        df = pd.DataFrame.from_records(
+            entry.get("records", []), columns=entry.get("columns", [])
+        )
+        self.model.set_dataframe(df)
+        self.status.setText(f"Stored summary — {len(df)} row(s). Recompute to refresh.")
+        self._set_stale(self._current_signature() != entry.get("signature"))
+
+    def _restore_params_from_cache(self, kind: str) -> None:
+        """Restore the saved exposure inputs for ``kind`` into the fields."""
+        entry = self._cache().get(kind)
+        params = entry.get("params") if entry else None
+        if not params:
+            return
+        for widget, value in (
+            (self.short_limit, params.get("short_limit")),
+            (self.short_window, params.get("short_window")),
+            (self.long_limit, params.get("long_limit")),
+            (self.twa_window, params.get("twa_window")),
+        ):
+            if value is not None:
+                widget.blockSignals(True)
+                widget.setText(str(value))
+                widget.blockSignals(False)
+        mk = params.get("metric_kind")
+        if mk:
+            self.metric_kind.blockSignals(True)
+            idx = self.metric_kind.findText(mk)
+            if idx >= 0:
+                self.metric_kind.setCurrentIndex(idx)
+            self.metric_kind.blockSignals(False)
+        mc = params.get("metric_cut")
+        if mc is not None:
+            self.metric_cut.blockSignals(True)
+            self.metric_cut.setCurrentText(str(mc))
+            self.metric_cut.blockSignals(False)
+        self._on_metric_kind_change()
 
     def _export(self) -> None:
         """Save the combined table to an .xlsx or .csv file."""
