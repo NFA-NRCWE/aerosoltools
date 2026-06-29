@@ -500,13 +500,27 @@ def shadow_rgba() -> tuple:
 # ---------------------------------------------------------------------------
 # Export profile (always light — report/publication friendly)
 # ---------------------------------------------------------------------------
-# "Save plot…" saves the live on-screen figure as displayed, just at this DPI,
-# so publication exports are high-resolution while keeping the screen layout.
+# "Save plot…" saves the live on-screen figure at this DPI, recoloured to the
+# light profile and with text/lines enlarged to the sizes below so the figure
+# stays legible once it is placed (and usually shrunk) on a page. The embedded
+# canvas keeps the compact on-screen sizes; only the saved copy is enlarged.
+# See gui/tabs/_base._enlarge_for_export.
 EXPORT_DPI = 300
+
+#: Minimum marker size on export, derived from the export line width so markers
+#: scale with the thicker export lines.
+EXPORT_MARKER_SCALE = 3.0
 
 
 def export_rc() -> dict:
-    """Return the rcParams overrides used when rendering a figure for export."""
+    """Return the rcParams overrides used when rendering a figure for export.
+
+    The font-size and line-width entries are deliberately generous: an 8×5-inch
+    figure is typically shrunk into a one- or two-column page, so sizes that look
+    large here render as a comfortable 7–10 pt at print scale. They are applied
+    to the saved figure's artists by :func:`gui.tabs._base._enlarge_for_export`
+    (rcParams alone do not resize an already-built figure).
+    """
     from cycler import cycler
 
     return {
@@ -517,21 +531,21 @@ def export_rc() -> dict:
         "axes.labelcolor": "#1f2933",
         "axes.titlecolor": "#1f2933",
         "text.color": "#1f2933",
-        "axes.titlesize": 16,
+        "axes.titlesize": 20,
         "axes.titleweight": "600",
-        "axes.labelsize": 14,
+        "axes.labelsize": 18,
         "axes.grid": True,
         "axes.axisbelow": True,
         "axes.prop_cycle": cycler(color=_CYCLE["light"]),
-        "axes.linewidth": 1.1,
+        "axes.linewidth": 1.2,
         "grid.color": "#dde3ea",
         "grid.linewidth": 0.8,
-        "lines.linewidth": 2.0,
-        "xtick.labelsize": 12,
-        "ytick.labelsize": 12,
+        "lines.linewidth": 2.5,
+        "xtick.labelsize": 14,
+        "ytick.labelsize": 14,
         "xtick.color": "#333333",
         "ytick.color": "#333333",
-        "legend.fontsize": 12,
+        "legend.fontsize": 14,
         "legend.frameon": True,
         "legend.framealpha": 0.9,
         # Pin the legend box light too: otherwise it inherits the dark theme's
@@ -540,5 +554,5 @@ def export_rc() -> dict:
         "legend.facecolor": "white",
         "legend.edgecolor": "#cccccc",
         "legend.labelcolor": "#1f2933",
-        "font.size": 12,
+        "font.size": 14,
     }

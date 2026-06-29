@@ -171,15 +171,15 @@ class _PlotTab(QtWidgets.QWidget):
         return f"{base}_{self.export_tag}"
 
     def save_figure(self) -> None:
-        """Save the plot exactly as displayed, at publication resolution.
+        """Save the plot for publication: high-DPI, light, with enlarged text.
 
         Saves the *live* on-screen figure — so any interactive edits (relabelled
-        axes, recoloured curves) and the current zoom are kept — just rendered at
-        a higher DPI (so it looks like the screen, only sharper). The save runs
-        on a detached copy that is restyled to a light, print-friendly look
-        (white background, dark frame/labels) so figures read well on paper even
-        when the app is in the dark theme; data-artist colours are left as shown
-        and the on-screen figure is never modified.
+        axes, recoloured curves) and the current zoom are kept. The save runs on
+        a detached copy that is restyled to a light, print-friendly look (white
+        background, dark frame/labels) **and** has its text and line widths
+        enlarged to publication sizes, so the figure stays legible once it is
+        placed (and usually shrunk) on a page. Data-artist colours are left as
+        shown and the on-screen figure is never modified.
         """
         if self.obj is None:
             return
@@ -192,8 +192,10 @@ class _PlotTab(QtWidgets.QWidget):
         if not path:
             return
         try:
+            rc = theme.export_rc()
             fig = _detached_copy(self.figure)
-            _lighten_for_export(fig)
+            _lighten_for_export(fig, rc)
+            _enlarge_for_export(fig, rc)
             fig.savefig(path, dpi=theme.EXPORT_DPI, facecolor=fig.get_facecolor())
         except Exception:
             QtWidgets.QMessageBox.warning(
@@ -254,15 +256,15 @@ def _darken_texts(texts, dark: str) -> None:
             box.set_facecolor("white")
 
 
-def _lighten_for_export(fig) -> None:
+def _lighten_for_export(fig, rc: dict) -> None:
     """Recolour a figure's *structural* elements to the light export palette.
 
     Only the frame, ticks, labels, grid, legend and pale annotation text are
     touched — data artists (lines, bars, scatter, meshes) keep their on-screen
     colours, so interactive recolouring and the displayed look survive the
-    export. Reuses :func:`theme.export_rc` so exports match the light theme.
+    export. ``rc`` is the :func:`theme.export_rc` profile (passed in so the
+    caller can share it with :func:`_enlarge_for_export`).
     """
-    rc = theme.export_rc()
     txt = rc["text.color"]
     fig.set_facecolor(rc["figure.facecolor"])
     fig.set_edgecolor(rc["figure.facecolor"])
@@ -286,3 +288,59 @@ def _lighten_for_export(fig) -> None:
             for t in leg.get_texts():
                 t.set_color(rc["legend.labelcolor"])
     _darken_texts(fig.texts, txt)
+
+
+def _enlarge_for_export(fig, rc: dict) -> None:
+    """Resize a figure's text and lines to the export profile's print sizes.
+
+    The embedded figure carries the compact *on-screen* sizes (small axis
+    labels, ticks, legends and thin lines); saved as-is they become unreadable
+    once the figure is shrunk onto a page. This sets the structural text (axis
+    labels, ticks, title, offset/exponent text, legend and annotations) to the
+    larger :func:`theme.export_rc` sizes and thickens every data line to at
+    least the profile's line width, so a saved figure reads well at print scale.
+    Colours are handled separately by :func:`_lighten_for_export`.
+
+    Notes:
+        Tick-label sizes are set via :meth:`Axes.tick_params` rather than by
+        resizing the existing tick-label artists: a ``savefig`` triggers a
+        redraw in which the formatter regenerates the tick labels, which would
+        otherwise reset any directly-set size back to the rcParams default.
+    """
+    label = rc["axes.labelsize"]
+    title = rc["axes.titlesize"]
+    tick = rc["xtick.labelsize"]
+    legend = rc["legend.fontsize"]
+    min_lw = rc["lines.linewidth"]
+    min_ms = min_lw * theme.EXPORT_MARKER_SCALE
+
+    for ax in fig.axes:
+        ax.xaxis.label.set_fontsize(label)
+        ax.yaxis.label.set_fontsize(label)
+        if ax.get_title():
+            ax.title.set_fontsize(title)
+        ax.tick_params(axis="both", which="major", labelsize=tick)
+        ax.tick_params(axis="both", which="minor", labelsize=tick)
+        # The scientific-notation exponent ("1e3") sits apart from the ticks.
+        ax.xaxis.get_offset_text().set_fontsize(tick)
+        ax.yaxis.get_offset_text().set_fontsize(tick)
+        # Free-standing annotations (placeholders, the PSD "Fitting:" note): one
+        # notch below the axis labels so they stay readable but not dominant.
+        for t in ax.texts:
+            t.set_fontsize(tick)
+        leg = ax.get_legend()
+        if leg is not None:
+            for t in leg.get_texts():
+                t.set_fontsize(legend)
+            leg_title = leg.get_title()
+            if leg_title is not None and leg_title.get_text():
+                leg_title.set_fontsize(legend)
+        for line in ax.get_lines():
+            if line.get_linewidth() < min_lw:
+                line.set_linewidth(min_lw)
+            marker = line.get_marker()
+            if marker not in (None, "None", "", " ") and line.get_markersize() < min_ms:
+                line.set_markersize(min_ms)
+
+    for t in fig.texts:
+        t.set_fontsize(label)
