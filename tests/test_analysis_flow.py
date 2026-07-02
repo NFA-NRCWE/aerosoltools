@@ -1,8 +1,11 @@
 import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
+from aerosoltools import Aerosol1D
+from aerosoltools._core import decay as _decay
 from aerosoltools.loaders import Load_CPC_file, Load_ELPI_file
 
 
@@ -283,3 +286,60 @@ def test_aerosol1d_summarize_and_exposure_pnc():
     # Peaks count non-negative
     peaks_col = next(c for c in cols if "Peaks" in c)
     assert row[peaks_col] >= 0
+
+
+def _make_peak_dataset(model, popt, seed=0, n=200, step_s=10):
+    """Build a 1D dataset from a known emission+decay model, plus noise."""
+    times = pd.date_range("2024-01-01 00:00", periods=n, freq=f"{step_s}s")
+    t = np.arange(n) * float(step_s)
+    y = _decay.decay_curve(model, t, popt)
+    y = y + np.random.default_rng(seed).normal(0, 0.01 * float(np.max(y)), n)
+    df = pd.DataFrame({"time": times, "Total_conc": y})
+    obj = Aerosol1D(df)
+    obj._meta["unit"] = "cm⁻³"
+    obj.mark_activities({"Peak": [(times[0], times[-1])]})
+    return obj
+
+
+def test_fit_decay_recovers_first_order_and_source_strength():
+    """A first-order emission+decay peak fit recovers k, E and source strength."""
+    # Truth: k = 1/300 /s (=12 /h), E = 50 cm-3/s, background 100, emit 100..500 s.
+    obj = _make_peak_dataset("first_order", [1 / 300.0, 100.0, 50.0, 100.0, 400.0])
+    res = obj.fit_decay("Peak", model="first_order", volume=20.0, air_exchange_rate=2.0)
+
+    assert res["model"] == "first_order"
+    assert res["r_squared"] > 0.99
+    # Loss rate ~ 12 /h (1/300 s^-1 * 3600).
+    assert abs(res["loss_rate_per_hour"] - 12.0) < 1.0
+    # Emission rate ~ 50 cm-3/s.
+    assert abs(res["emission_rate"] - 50.0) < 5.0
+    # Wall loss = loss - known ACH.
+    assert res["wall_loss_rate_per_hour"] == res["loss_rate_per_hour"] - 2.0
+    # Source strength = E * 1e6 (cm3/m3) * volume; unit is a per-second rate.
+    assert res["source_strength"] > 0
+    assert res["source_strength_unit"].endswith("/s")
+    assert res["half_life_hours"] > 0
+
+
+def test_fit_decay_auto_selects_and_supports_tuple_window():
+    """Auto mode picks a good model and a (start, end) window works."""
+    obj = _make_peak_dataset(
+        "first_order", [1 / 250.0, 80.0, 40.0, 120.0, 350.0], seed=1
+    )
+    span = (obj.time.min(), obj.time.max())
+    res = obj.fit_decay(span, model="auto")
+    assert res["model"] in {"first_order", "second_order", "combined"}
+    assert res["r_squared"] > 0.98
+    # Model params are echoed with a P0/E and the timing fields.
+    for key in ("P0", "E", "t0", "tp"):
+        assert key in res["params"]
+
+
+def test_fit_decay_second_order_recovers_rate():
+    """A second-order (coagulation) peak fit recovers the C rate constant."""
+    obj = _make_peak_dataset("second_order", [2e-5, 100.0, 50.0, 100.0, 400.0], seed=2)
+    res = obj.fit_decay("Peak", model="second_order")
+    assert res["r_squared"] > 0.99
+    assert abs(res["second_order_rate"] - 2e-5) < 1e-5
+    # A pure second-order model reports no first-order loss term.
+    assert "loss_rate_per_hour" not in res

@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 from ._core.activities import ActivityMixin
+from ._core.decay import DecayFitMixin
 from ._core.plotting import Plot1DMixin
 from ._core.statistics import SummaryMixin
 from ._core.time_ops import TimeOpsMixin
@@ -35,7 +36,7 @@ params = {
 plt.rcParams.update(params)
 
 
-class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin):
+class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFitMixin):
     """Handle 1D aerosol time-series measurements.
 
     This class manages time-indexed aerosol concentration data (for example

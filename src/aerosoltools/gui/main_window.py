@@ -18,6 +18,7 @@ from .qt import QtCore, QtGui, QtWidgets
 from .sidebar import DatasetSidebar
 from .tabs import (
     CorrelationTab,
+    DecayTab,
     HeatmapTab,
     OverlayTab,
     PMBandsTab,
@@ -847,9 +848,11 @@ class MainWindow(QtWidgets.QMainWindow):
         raw = RawDataTab(self)
         ts = TimeSeriesTab(self)
         ts.attach_adjust_controls(self.adjust_box)
+        decay = DecayTab(self)
         self.tabs.addTab(raw, "Raw data")
         self.tabs.addTab(ts, "Time series")
-        self._tabs += [raw, ts]
+        self.tabs.addTab(decay, "Decay / Source")
+        self._tabs += [raw, ts, decay]
 
         # Single-view 2D plots that follow the active dataset.
         if helpers.is_2d(self.obj):
