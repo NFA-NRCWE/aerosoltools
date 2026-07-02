@@ -1,12 +1,90 @@
 from __future__ import annotations
 
 import datetime as dt
+import re
 
-import numpy as np
 import pandas as pd
 
 from ..aerosolalt import AerosolAlt
 from .Common import _detect_delimiter
+
+###############################################################################
+
+
+def _normalize_serial(raw: str | None) -> str | None:
+    """Normalize a DiSCmini serial number so it matches across export formats.
+
+    DiSCmini files write the serial inconsistently across firmware / software
+    versions — sometimes with an ``"SN"`` prefix (``"SN101923"``) and sometimes
+    as bare digits (``"101670"``). Combining datasets keys on the serial, so a
+    prefix mismatch makes two files from the *same* instrument look like
+    different instruments. This strips a leading ``SN`` (case-insensitive) and
+    any surrounding punctuation/whitespace so the stored serial is just the
+    identifier itself.
+
+    Args:
+        raw: The serial token as read from the file, or ``None``.
+
+    Returns:
+        The normalized serial (e.g. ``"101923"``), or ``None`` when ``raw`` is
+        empty/``None``.
+    """
+    if raw is None:
+        return None
+    s = str(raw).strip().strip("[](){}").strip()
+    # Drop a leading "SN" (optionally followed by a separator), case-insensitive.
+    s = re.sub(r"^[sS][nN][\s:_-]*", "", s).strip()
+    return s or None
+
+
+def _extract_serial_and_firmware(
+    header_lines: list[str],
+) -> tuple[str | None, str | None]:
+    """Pull the (normalized) serial number and firmware/software version.
+
+    Handles the header variants seen across DiSCmini exports:
+
+    * Vendor-processed files:
+      ``[Data recorded with testo DiSCmini SN101923 running firmware 3,42]``
+    * Raw instrument files: a ``CalData:`` line whose first token is the serial,
+      e.g. ``CalData: SN101923   0.28 ...`` or ``CalData: 101670   6.02 ...``.
+    * Older exports: any line containing ``"serial"``.
+
+    Args:
+        header_lines: The first handful of lines of the file.
+
+    Returns:
+        A ``(serial, firmware)`` tuple; either element may be ``None`` when it
+        cannot be found. ``serial`` is normalized via :func:`_normalize_serial`.
+    """
+    serial = None
+    firmware = None
+    for ln in header_lines:
+        low = ln.lower()
+        # Processed header: "...DiSCmini <serial> running firmware <ver>..."
+        m = re.search(
+            r"disc[m]?ini\s+(\S+)\s+running\s+firmware\s+([\d.,]+)", ln, re.IGNORECASE
+        )
+        if m:
+            serial = serial or m.group(1)
+            firmware = firmware or m.group(2).replace(",", ".")
+            continue
+        # Raw calibration line: "CalData: <serial>  <cal values...>"
+        m = re.search(r"caldata:\s*(\S+)", ln, re.IGNORECASE)
+        if m and serial is None:
+            serial = m.group(1)
+            continue
+        # Software/firmware version on the first raw line ("... SW-Ver 3.42").
+        m = re.search(r"sw-?ver\s*([\d.,]+)", low)
+        if m and firmware is None:
+            firmware = m.group(1).replace(",", ".")
+        # Legacy fallback: an explicit "serial" line.
+        if serial is None and "serial" in low:
+            toks = ln.strip().replace(",", " ").split()
+            if toks:
+                serial = toks[-1]
+    return _normalize_serial(serial), firmware
+
 
 ###############################################################################
 
@@ -89,9 +167,11 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
               - Removing extraneous whitespace.
               - Coercing invalid entries to ``NaN``.
 
-            - Extracts the serial number by scanning the early header lines
-              for text containing ``"serial"`` and, if needed, falling back
-              to a small :func:`numpy.genfromtxt` read.
+            - Extracts and **normalizes** the serial number (and firmware
+              version) from the header via
+              :func:`_extract_serial_and_firmware`, stripping any ``"SN"``
+              prefix so files from the same instrument match regardless of the
+              export's serial-format convention.
 
             - Builds the core :class:`AerosolAlt` object from the subset of
               columns that includes
@@ -242,25 +322,12 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
         if col in df.columns:
             df[col] = _to_num(df[col])
 
-    # Extract serial number (robustly read a small header block)
+    # Extract the serial number + firmware from the header. The serial is
+    # normalized (leading "SN" stripped) so files from the same instrument match
+    # regardless of the export's prefix convention (see _extract_serial_and_firmware).
     with open(file, "r", encoding=enc) as fh:
-        meta_line = next(fh)  # line 0
-        # Often serial appears on early lines; scan a few
-        first_lines = [meta_line] + [next(fh) for _ in range(6)]
-    serial_number = None
-    for ln in first_lines:
-        if "serial" in ln.lower():
-            # naive grab: last space-separated token or adjust to your actual pattern
-            toks = ln.strip().replace(",", " ").split()
-            serial_number = toks[-1]
-            break
-    if serial_number is None:
-        # fallback to numpy reader if needed
-        with open(file, "r", encoding=enc) as fh2:
-            arr = np.genfromtxt(
-                fh2, delimiter=delim, skip_header=1, max_rows=1, dtype=str
-            )
-        serial_number = str(arr).split(" ")[-1]
+        first_lines = [ln for _, ln in zip(range(10), fh)]
+    serial_number, firmware = _extract_serial_and_firmware(first_lines)
 
     # Build AerosolAlt on the core four columns (order: Datetime, Total_conc, Size, LDSA)
     needed = ["Datetime", "Total_conc", "Size", "LDSA"]
@@ -272,6 +339,8 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
     # Metadata
     DM._meta["instrument"] = "DiSCmini"
     DM._meta["serial_number"] = serial_number
+    if firmware is not None:
+        DM._meta["firmware"] = firmware
     DM._meta["unit"] = {
         "Total_conc": "cm⁻³",
         "Size": "nm",
