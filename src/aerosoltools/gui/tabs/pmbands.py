@@ -154,7 +154,15 @@ class PMBandsTab(_PlotTab):
                 avg = float(np.nanmean(band))
                 color = cmap[i % len(cmap)]
                 ax.fill_between(x, 0, band, color=color, alpha=0.30)
-                ax.plot(x, band, color=color, lw=1.8, label=f"{rng} (μ={avg:.2g})")
+                # Spell out "mean" (rather than "μ") so it isn't mistaken for the
+                # µ in µg/m³ already shown on the y-axis.
+                ax.plot(
+                    x,
+                    band,
+                    color=color,
+                    lw=1.8,
+                    label=f"{rng} (mean {avg:.2g} {unit})",
+                )
 
         ax.set_ylabel(f"P{dchar}, {unit}")
         ax.set_xlabel("Time")
@@ -172,6 +180,7 @@ class PMBandsTab(_PlotTab):
         self._sync_activities()
         try:
             self._plot_on(self.ax)
+            self._sync_toolbar_home()
             self.canvas.draw_idle()
         except ValueError as exc:
             self._show_message(str(exc))

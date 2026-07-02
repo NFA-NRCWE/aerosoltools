@@ -299,6 +299,8 @@ class OverlayTab(_PlotTab):
         if prev is not None:
             self.ax.set_xlim(prev[0])
             self.ax.set_ylim(prev[1])
+        else:
+            self._sync_toolbar_home()
         self.canvas.draw_idle()
 
     def current_time_xlim(self):

@@ -173,6 +173,8 @@ class TimeSeriesTab(_PlotTab):
         self.act_list.itemDoubleClicked.connect(lambda _item: self._edit_selected())
         self.edit_btn = QtWidgets.QPushButton("Edit selected activity")
         self.edit_btn.clicked.connect(self._edit_selected)
+        self.rename_btn = QtWidgets.QPushButton("Rename selected activity")
+        self.rename_btn.clicked.connect(self._rename_selected)
         self.del_btn = QtWidgets.QPushButton("Delete selected activity")
         self.del_btn.clicked.connect(self._delete_selected)
         side = QtWidgets.QVBoxLayout()
@@ -180,6 +182,7 @@ class TimeSeriesTab(_PlotTab):
         side.addWidget(self.act_list, stretch=1)
         side.addWidget(self.mark_mode)
         side.addWidget(self.edit_btn)
+        side.addWidget(self.rename_btn)
         side.addWidget(self.del_btn)
         hint = QtWidgets.QLabel(
             "Tip: click 'Mark activities', then drag across the plot to add a "
@@ -277,6 +280,25 @@ class TimeSeriesTab(_PlotTab):
             return
         # Deleting a task removes it from every dataset in the project.
         self.main.project.delete_activity(item.text())
+        self.main.refresh_all(reset_view=False)
+
+    def _rename_selected(self) -> None:
+        """Prompt for a new name and rename the selected activity/task."""
+        item = self.act_list.currentItem()
+        if item is None or self.obj is None:
+            return
+        old_name = item.text()
+        new_name, ok = QtWidgets.QInputDialog.getText(
+            self, "Rename task", "New name:", QtWidgets.QLineEdit.Normal, old_name
+        )
+        new_name = new_name.strip()
+        if not ok or not new_name or new_name == old_name:
+            return
+        try:
+            self.main.project.rename_activity(old_name, new_name)
+        except ValueError as exc:
+            QtWidgets.QMessageBox.warning(self, "Rename failed", str(exc))
+            return
         self.main.refresh_all(reset_view=False)
 
     def _edit_selected(self) -> None:
@@ -386,6 +408,8 @@ class TimeSeriesTab(_PlotTab):
         if preserve and prev_xlim is not None:
             self.ax.set_xlim(prev_xlim)
             self.ax.set_ylim(prev_ylim)
+        else:
+            self._sync_toolbar_home()
         ymin, ymax = self._cap(self.ymin), self._cap(self.ymax)
         if ymin is not None or ymax is not None:
             self.ax.set_ylim(bottom=ymin, top=ymax)

@@ -346,6 +346,7 @@ class CorrelationTab(_PlotTab):
                 self._brighten_for_dark(ax)
             self.ax = ax
             self._has_drawn = True
+            self._sync_toolbar_home()
             self.canvas.draw_idle()
         except Exception as exc:
             self._show_message(f"Could not compute: {exc}")

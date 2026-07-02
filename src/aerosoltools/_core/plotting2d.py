@@ -18,6 +18,52 @@ from . import _shading
 class Plot2DMixin:
     """Plot size distributions, PM time series and time-size heatmaps."""
 
+    def _activity_psd_stats(self, activity: str, normalize: bool = True):
+        """Mean and std of the (already dtype-resolved) PSD for one activity.
+
+        Internal helper factored out of :meth:`plot_psd` so other code (the
+        GUI's PSD tab, which needs the per-bin σ to draw error bars on top of
+        bars) can reuse the exact same mean/std computation instead of
+        duplicating the normalization logic.
+
+        Args:
+            activity: Activity name; must be a boolean column in ``self.data``.
+            normalize: Whether to return the log-diameter-normalized
+                (dx/dlogDp) form, matching the ``normalize`` flag of
+                :meth:`plot_psd`.
+
+        Returns:
+            tuple[NDArray, NDArray, NDArray]: ``(bin_mids, mean, std)``, each
+                a float array over the size bins. ``mean``/``std`` are all-NaN
+                when the activity has no samples.
+        """
+        is_already_normalized = "/dlogDp" in self.dtype
+        bin_columns = self._sizebin_headers
+        bin_mids = np.asarray(self.bin_mids, dtype=float)
+        log_bin_edges = np.log10(self.bin_edges)
+        dlog_dp = np.diff(log_bin_edges)
+        factor_series = pd.Series(dlog_dp, index=bin_columns)
+
+        subset = self.data[self.data[activity]]
+        if subset.empty:
+            nan = np.full(bin_mids.shape, np.nan)
+            return bin_mids, nan, nan
+
+        if normalize:
+            if not is_already_normalized:
+                act_data = subset[bin_columns].copy().div(factor_series, axis=1)
+            else:
+                act_data = subset[bin_columns].copy()
+        else:
+            if is_already_normalized:
+                act_data = subset[bin_columns].copy().mul(factor_series, axis=1)
+            else:
+                act_data = subset[bin_columns].copy()
+
+        avg_act = act_data.mean().to_numpy(dtype=float)
+        std_act = act_data.std().to_numpy(dtype=float)
+        return bin_mids, avg_act, std_act
+
     def plot_psd(
         self,
         activities: Optional[list[str]] = None,
@@ -91,13 +137,9 @@ class Plot2DMixin:
         ax.set_xlabel("Particle diameter (nm)")
         ax.grid(True, which="both", linestyle="--", linewidth=0.5)
 
-        # Determine current normalization state and Δlog₁₀(Dp)
+        # Determine current normalization state
         is_already_normalized = "/dlogDp" in clas.dtype
-        bin_columns = clas._sizebin_headers
         bin_mids = clas.bin_mids
-        log_bin_edges = np.log10(clas.bin_edges)
-        dlog_dp = np.diff(log_bin_edges)
-        factor_series = pd.Series(dlog_dp, index=bin_columns)
 
         # Choose y-label based on requested vs. current normalization
         if normalize and not is_already_normalized:
@@ -124,25 +166,11 @@ class Plot2DMixin:
                 print(f"Activity '{activity}' not found. Skipping.")
                 continue
 
-            subset = clas.data[clas.data[activity]]
-            if subset.empty:
+            _, avg_act, std_act = clas._activity_psd_stats(
+                activity, normalize=normalize
+            )
+            if np.all(np.isnan(avg_act)):
                 continue
-
-            # Adjust normalization form if requested
-            if normalize:
-                if not is_already_normalized:
-                    act_data = subset[bin_columns].copy().div(factor_series, axis=1)
-                else:
-                    act_data = subset[bin_columns].copy()
-            else:
-                if is_already_normalized:
-                    act_data = subset[bin_columns].copy().mul(factor_series, axis=1)
-                else:
-                    act_data = subset[bin_columns].copy()
-
-            # Average and spread across time for the current activity
-            avg_act = act_data.mean()
-            std_act = act_data.std()
             color = activity_colors.get(activity, None)
 
             ax.plot(bin_mids, avg_act, label=activity, color=color or "black")
@@ -481,12 +509,10 @@ class Plot2DMixin:
 
         # Create figure/axes if not provided
         if ax1 is None and ax2 is None:
-            newplot = True
             fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(10, 6))
         else:
             assert ax1 is not None and ax2 is not None
             fig: Figure = ax1.get_figure()  # type: ignore
-            newplot = False
         ax1 = cast(Axes, ax1)
         ax2 = cast(Axes, ax2)
 
@@ -561,8 +587,10 @@ class Plot2DMixin:
         ax2.set_yscale("log")
         ax2.set_ylabel("Dp, nm")
         ax2.set_xlabel("Time")
-        if newplot:
-            ax1.set_xlabel("")
+        # The panels share the time x-axis, so the top one's "Time" label would
+        # just mirror the bottom one — clear it regardless of whether the axes
+        # were created here or passed in by the caller.
+        ax1.set_xlabel("")
         ax2.xaxis.set_major_formatter(
             mdates.ConciseDateFormatter(mdates.AutoDateLocator())
         )

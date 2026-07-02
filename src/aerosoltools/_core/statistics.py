@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
+from . import _stats
+
 
 class SummaryMixin:
     """Per-activity and exposure (STEL/TWA) summaries."""
@@ -98,6 +100,7 @@ class SummaryMixin:
         filename: Optional[str] = None,
         sheet_name: Optional[str] = None,
         metrics: Optional[list[str]] = None,
+        stats: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
         """Description:
             Summarize 1D aerosol metrics per activity.
@@ -113,6 +116,10 @@ class SummaryMixin:
                 * "PNC" refers to total_concentration.
                 * Any other name is looked up in data or extra_data
                   (numeric columns only).
+            stats (Sequence[str] | None): Which per-activity statistics to
+                report for each metric. If None, defaults to
+                ``["mean", "std"]`` (the historical behaviour). Each entry
+                must be one of "mean", "std", "min", "max", "median".
 
         Returns:
             pandas.DataFrame: Summary table with one row per activity and
@@ -120,27 +127,31 @@ class SummaryMixin:
 
                 * "Segment"
                 * "Duration (HH:MM)"
-                * For each metric M: "M [unit] mean" and "M [unit] std".
+                * For each metric M and requested stat S: "M [unit] S".
 
         Raises:
             ValueError: If a requested metric (other than "PNC") cannot
-                be found in data or extra_data.
+                be found in data or extra_data, or if ``stats`` contains an
+                unrecognised name.
 
         Notes:
-            The per-activity means and standard deviations are simple
-            sample statistics over the selected time steps. Durations are
-            based on the actual sampling intervals (via _dt_minutes).
+            The per-activity statistics are simple sample statistics over
+            the selected time steps. Durations are based on the actual
+            sampling intervals (via _dt_minutes).
 
         Examples:
 
             .. code-block:: python
 
                 data.summarize_activities()
+                data.summarize_activities(stats=["mean", "min", "max"])
         """
 
         # Defaults: only PNC if nothing else is specified
         if metrics is None:
             metrics = ["PNC"]
+        if stats is None:
+            stats = ["mean", "std"]
 
         # Precompute dt in minutes for the whole series
         dt_mins = self._dt_minutes()
@@ -168,13 +179,8 @@ class SummaryMixin:
 
             for name in metrics:
                 s = metric_series[name].loc[mask]
-                if s.empty or not np.isfinite(s).any():
-                    mean_val = float("nan")
-                    std_val = float("nan")
-                else:
-                    mean_val = float(s.mean())
-                    std_val = float(s.std())
-                row += [round(mean_val, 3), round(std_val, 3)]
+                values = _stats.compute_stats(s, stats)
+                row += [round(values[stat], 3) for stat in stats]
 
             rows.append(row)
 
@@ -183,7 +189,7 @@ class SummaryMixin:
         for name in metrics:
             unit = metric_units[name]
             label = f"{name} [{unit}]"
-            columns += [f"{label} mean", f"{label} std"]
+            columns += [f"{label} {stat}" for stat in stats]
 
         summary = pd.DataFrame(rows, columns=columns)
 

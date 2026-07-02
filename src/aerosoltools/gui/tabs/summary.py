@@ -15,6 +15,7 @@ import io
 import numpy as np
 import pandas as pd
 
+from ..._core import _stats
 from .. import helpers
 from ..models import PandasTableModel
 from ..qt import QtCore, QtWidgets
@@ -107,7 +108,38 @@ class SummaryTab(QtWidgets.QWidget):
         bar.addWidget(self.export_btn)
         right.addLayout(bar)
 
-        # Second row: exposure-limit parameters (only shown for exposure).
+        # Second row (activity-only): which metrics and stats to report,
+        # instead of being locked to a fixed PM1/2.5/4/10 mean+std set.
+        self.act_bar = QtWidgets.QHBoxLayout()
+        self.act_metrics_label = QtWidgets.QLabel("Metrics:")
+        self.act_bar.addWidget(self.act_metrics_label)
+        self.act_metrics = QtWidgets.QLineEdit()
+        self.act_metrics.setPlaceholderText(
+            "PNC, PM1, PM2.5, PM4, PM10, MASS, MODE, MEDIAN, GMD (blank = default)"
+        )
+        self.act_metrics.setToolTip(
+            "Comma-separated metrics to summarize, e.g. 'PNC, PM2.5, PM7'. Any "
+            "cut-off works for PM/PN/PS/PV, not just 1/2.5/4/10. Leave blank to "
+            "use each dataset's own default set."
+        )
+        self.act_bar.addWidget(self.act_metrics, stretch=1)
+        self.act_stats_label = QtWidgets.QLabel("Stats:")
+        self.act_bar.addWidget(self.act_stats_label)
+        self.act_stat_boxes: dict[str, QtWidgets.QCheckBox] = {}
+        for stat, checked in (
+            ("mean", True),
+            ("std", True),
+            ("min", False),
+            ("max", False),
+            ("median", False),
+        ):
+            box = QtWidgets.QCheckBox(stat.capitalize())
+            box.setChecked(checked)
+            self.act_stat_boxes[stat] = box
+            self.act_bar.addWidget(box)
+        right.addLayout(self.act_bar)
+
+        # Third row: exposure-limit parameters (only shown for exposure).
         self.exp_bar = QtWidgets.QHBoxLayout()
         self.short_limit = self._add_field(
             "STEL (short-term limit):", "1.0", width=80,
@@ -137,6 +169,9 @@ class SummaryTab(QtWidgets.QWidget):
             field.editingFinished.connect(self._recheck_stale)
         self.metric_kind.currentTextChanged.connect(self._recheck_stale)
         self.metric_cut.currentTextChanged.connect(self._recheck_stale)
+        self.act_metrics.editingFinished.connect(self._recheck_stale)
+        for box in self.act_stat_boxes.values():
+            box.stateChanged.connect(self._recheck_stale)
 
         # Stale banner: shown when the displayed values were computed from inputs
         # (tasks, data, or settings) that have since changed.
@@ -215,6 +250,28 @@ class SummaryTab(QtWidgets.QWidget):
                 widgets.append(label)
         return widgets
 
+    def _activity_widgets(self):
+        """Widgets shown only in Activity summary mode."""
+        return [
+            self.act_metrics_label,
+            self.act_metrics,
+            self.act_stats_label,
+            *self.act_stat_boxes.values(),
+        ]
+
+    def _selected_stats(self) -> list[str]:
+        """Ticked stat names, in a fixed order; falls back to ["mean"]."""
+        order = ("mean", "std", "min", "max", "median")
+        stats = [s for s in order if self.act_stat_boxes[s].isChecked()]
+        return stats or ["mean"]
+
+    def _parsed_metrics(self) -> list[str] | None:
+        """Metrics from the comma-separated field, or None to use the default."""
+        text = self.act_metrics.text().strip()
+        if not text:
+            return None
+        return [m.strip() for m in text.split(",") if m.strip()]
+
     # -- metric options ----------------------------------------------------
     def _ensure_metric_options(self) -> None:
         """Populate the metric drop-downs from the union of selected datasets."""
@@ -263,11 +320,34 @@ class SummaryTab(QtWidgets.QWidget):
             return f"{kind}{self.metric_cut.currentText().strip()}"
         return kind
 
+    @staticmethod
+    def _clarify_activity_columns(df: pd.DataFrame) -> pd.DataFrame:
+        """Append " mean" to activity-summary value columns that lack it.
+
+        ``summarize_activities`` reports the "mean" stat as an unlabeled
+        column (e.g. a "PNC [cm⁻³]" column next to "PNC [cm⁻³] std"), for
+        backward compatibility with callers that already expect that name.
+        In the GUI table that reads as ambiguous — is it the mean, the min,
+        the max? Renaming here (rather than in the core function) keeps
+        ``summarize_activities``'s return value unchanged for other callers;
+        this only affects what the GUI displays/exports.
+        """
+        skip = {"Segment", "Duration (HH:MM)"}
+        known_suffixes = tuple(f" {stat}" for stat in _stats.VALID_STATS)
+        rename = {
+            col: f"{col} mean"
+            for col in df.columns
+            if col not in skip and not col.endswith(known_suffixes)
+        }
+        return df.rename(columns=rename) if rename else df
+
     def _apply_kind_visibility(self) -> None:
-        """Show the exposure-only widgets only for the Exposure summary kind."""
+        """Show only the widgets relevant to the current summary kind."""
         exposure = self.kind.currentText() == "Exposure summary"
         for widget in self._exposure_widgets():
             widget.setVisible(exposure)
+        for widget in self._activity_widgets():
+            widget.setVisible(not exposure)
         if exposure:
             self._on_metric_kind_change()
 
@@ -278,12 +358,12 @@ class SummaryTab(QtWidgets.QWidget):
         previously-computed kind shows it without recomputing) and re-checks
         whether the shown values are now stale.
         """
-        exposure = self.kind.currentText() == "Exposure summary"
+        kind = self.kind.currentText()
+        exposure = kind == "Exposure summary"
         if exposure:
             self._ensure_metric_options()
         self._apply_kind_visibility()
-        if exposure:
-            self._restore_params_from_cache("Exposure summary")
+        self._restore_params_from_cache(kind)
         self._show_cache()
 
     @staticmethod
@@ -356,6 +436,8 @@ class SummaryTab(QtWidgets.QWidget):
             return
         exposure = self.kind.currentText() == "Exposure summary"
         metric = self._build_metric() if exposure else None
+        act_metrics = self._parsed_metrics()
+        act_stats = self._selected_stats()
 
         frames: list[pd.DataFrame] = []
         skipped: list[str] = []
@@ -375,7 +457,11 @@ class SummaryTab(QtWidgets.QWidget):
                             twa_window=self.twa_window.text().strip() or "8h",
                         )
                     else:
-                        df = ds.obj.summarize_activities()
+                        kwargs = {"stats": act_stats}
+                        if act_metrics is not None:
+                            kwargs["metrics"] = act_metrics
+                        df = ds.obj.summarize_activities(**kwargs)
+                        df = self._clarify_activity_columns(df)
                 except Exception as exc:  # e.g. a PM metric on a 1D instrument
                     skipped.append(f"{ds.label} ({exc})")
                     continue
@@ -463,6 +549,13 @@ class SummaryTab(QtWidgets.QWidget):
             "twa_window": self.twa_window.text().strip(),
         }
 
+    def _activity_params(self) -> dict:
+        """Current activity-summary inputs (stored so they restore on reload)."""
+        return {
+            "metrics_text": self.act_metrics.text().strip(),
+            "stats": self._selected_stats(),
+        }
+
     def _current_signature(self) -> dict:
         """Signature of everything that affects the result, for staleness checks."""
         proj = self.main.project
@@ -490,6 +583,8 @@ class SummaryTab(QtWidgets.QWidget):
                     "twa_window",
                 )
             }
+        elif kind == "Activity summary":
+            sig["params"] = self._activity_params()
         return sig
 
     def _table_payload(self, df: pd.DataFrame):
@@ -516,10 +611,16 @@ class SummaryTab(QtWidgets.QWidget):
     def _store_cache(self, df: pd.DataFrame) -> None:
         """Persist the computed table + inputs + signature on the project."""
         kind = self.kind.currentText()
+        if kind == "Exposure summary":
+            params = self._exposure_params()
+        elif kind == "Activity summary":
+            params = self._activity_params()
+        else:
+            params = {}
         cols, records = self._table_payload(df)
         self._cache()[kind] = {
             "signature": self._current_signature(),
-            "params": self._exposure_params() if kind == "Exposure summary" else {},
+            "params": params,
             "columns": cols,
             "records": records,
         }
@@ -545,10 +646,20 @@ class SummaryTab(QtWidgets.QWidget):
         self._set_stale(self._current_signature() != entry.get("signature"))
 
     def _restore_params_from_cache(self, kind: str) -> None:
-        """Restore the saved exposure inputs for ``kind`` into the fields."""
+        """Restore the saved inputs for ``kind`` into the fields."""
         entry = self._cache().get(kind)
         params = entry.get("params") if entry else None
         if not params:
+            return
+        if kind == "Activity summary":
+            self.act_metrics.blockSignals(True)
+            self.act_metrics.setText(str(params.get("metrics_text") or ""))
+            self.act_metrics.blockSignals(False)
+            wanted = set(params.get("stats") or ["mean", "std"])
+            for stat, box in self.act_stat_boxes.items():
+                box.blockSignals(True)
+                box.setChecked(stat in wanted)
+                box.blockSignals(False)
             return
         for widget, value in (
             (self.short_limit, params.get("short_limit")),

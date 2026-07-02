@@ -710,9 +710,21 @@ class PSDTab(_PlotTab):
                 if bars:
                     for ln in new_lines:  # replace plot_psd's line with bars
                         ln.remove()
-                    for coll in new_coll:  # drop the ±σ band (cluttered behind bars)
+                    for coll in new_coll:  # fill_between reads poorly behind bars
                         coll.remove()
-                    self._draw_bars(ax, ds.obj, xd, yd, color, label, is_target, emphasize)
+                    sigma = None
+                    if show_band:
+                        # Same mean/std computation as the ±σ band in line mode,
+                        # shown here as error bars on top of each bar instead.
+                        try:
+                            _, _, sigma = ds.obj._activity_psd_stats(
+                                act, normalize=normalize
+                            )
+                        except Exception:
+                            sigma = None
+                    self._draw_bars(
+                        ax, ds.obj, xd, yd, color, label, is_target, emphasize, sigma
+                    )
                     plotted += 1
                     continue
 
@@ -779,11 +791,19 @@ class PSDTab(_PlotTab):
             ax.set_ylim(*data_ylim)
         ax.legend(loc="upper right", fontsize=8)
 
-    def _draw_bars(self, ax, obj, bin_mids, heights, color, label, is_target, emphasize) -> None:
+    def _draw_bars(
+        self, ax, obj, bin_mids, heights, color, label, is_target, emphasize, sigma=None
+    ) -> None:
         """Draw one PSD as edge-aligned bars, so each size bin's width is visible.
 
         Bars are best for a single curve; when several are compared they overlap,
         so non-target curves are drawn faintly while fitting.
+
+        Args:
+            sigma: Per-bin standard deviation, or None. When given, drawn as an
+                error bar anchored at the top of each bar (the ±σ band's
+                equivalent in bar mode, where a fill_between would be hidden
+                behind the bars).
         """
         edges = np.asarray(obj.bin_edges, dtype=float)
         heights = np.asarray(heights, dtype=float)
@@ -804,6 +824,22 @@ class PSDTab(_PlotTab):
             label=label,
             zorder=5 if (is_target and emphasize) else 3,
         )
+        if sigma is not None:
+            sigma = np.asarray(sigma, dtype=float)
+            centers = edges[:-1] + np.diff(edges) / 2
+            finite = np.isfinite(heights) & np.isfinite(sigma)
+            if finite.any():
+                ax.errorbar(
+                    centers[finite],
+                    heights[finite],
+                    yerr=sigma[finite],
+                    fmt="none",
+                    ecolor=color,
+                    elinewidth=1.0,
+                    capsize=3,
+                    alpha=0.8 if (is_target or not emphasize) else 0.3,
+                    zorder=6 if (is_target and emphasize) else 4,
+                )
 
     def _paint_overlay(self, ax, remove_existing: bool = False) -> None:
         """Draw the modes + total on the target; track the artists for reuse.
@@ -945,4 +981,6 @@ class PSDTab(_PlotTab):
         if prev is not None:
             self.ax.set_xlim(prev[0])
             self.ax.set_ylim(prev[1])
+        else:
+            self._sync_toolbar_home()
         self.canvas.draw_idle()

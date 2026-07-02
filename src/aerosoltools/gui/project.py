@@ -200,3 +200,26 @@ class Project:
         for ds in self.datasets:
             helpers.delete_activity(ds.obj, name)
             ds.psd_fits.pop(name, None)
+
+    def rename_activity(self, old_name: str, new_name: str) -> None:
+        """Rename a shared task across the registry, every dataset, and PSD fits.
+
+        Args:
+            old_name: Current task name.
+            new_name: New task name; must not already be in use.
+
+        Raises:
+            ValueError: If ``old_name`` is unknown or ``new_name`` collides
+                with an existing task.
+        """
+        if old_name == new_name:
+            return
+        if old_name not in self.activities:
+            raise ValueError(f"No task named {old_name!r} to rename.")
+        if new_name in self.activities:
+            raise ValueError(f"A task named {new_name!r} already exists.")
+        self.activities[new_name] = self.activities.pop(old_name)
+        for ds in self.datasets:
+            helpers.rename_activity(ds.obj, old_name, new_name)
+            if old_name in ds.psd_fits:
+                ds.psd_fits[new_name] = ds.psd_fits.pop(old_name)

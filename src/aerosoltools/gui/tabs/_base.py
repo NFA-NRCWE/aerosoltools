@@ -149,6 +149,20 @@ class _PlotTab(QtWidgets.QWidget):
         self._layout.addWidget(splitter, stretch=1)
         return splitter
 
+    def _sync_toolbar_home(self) -> None:
+        """Reset the nav toolbar's "home" view to the axes' current limits.
+
+        The Matplotlib toolbar caches the view it should return to on
+        "Reset original view" the first time the user zooms/pans, and
+        otherwise keeps whatever was pushed earlier. If the data changes
+        (e.g. cropping the dataset) and the axes autoscale to a new range,
+        that cached home view is now stale — clicking "Reset original view"
+        would jump back to the pre-crop limits instead of the fresh ones.
+        Clearing the stack and pushing the just-drawn view fixes that.
+        """
+        self.toolbar.update()
+        self.toolbar.push_current()
+
     def current_time_xlim(self):
         """Return the (xmin, xmax) of the time axis as Matplotlib date numbers.
 

@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
+from . import _stats
+
 try:
     from typing import override  # Python 3.12+
 except ImportError:  # pragma: no cover - typing_extensions fallback
@@ -22,6 +24,7 @@ class Summary2DMixin:
         filename: Optional[str] = None,
         sheet_name: Optional[str] = None,
         metrics: Optional[list[str]] = None,
+        stats: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
         """Description:
             Summarize size-resolved aerosol metrics per activity.
@@ -36,19 +39,26 @@ class Summary2DMixin:
             metrics (list[str] | None): List of metric names to compute.
                 If None, a default set is used: ["PNC", "PM1", "PM2.5",
                 "PM4", "PM10", "MASS", "MODE", "MEDIAN", "GMD"].
+            stats (Sequence[str] | None): Which per-activity statistics to
+                report for each metric. If None, defaults to
+                ``["mean", "std"]`` (the historical behaviour). Each entry
+                must be one of "mean", "std", "min", "max", "median". The
+                "mean" column keeps its unsuffixed name for backward
+                compatibility; any other stat is suffixed, e.g. "... min".
 
         Returns:
             pandas.DataFrame: Summary table with:
                 * "Segment"
                 * "Duration (HH:MM)"
-                * For each metric M: "M mean [unit]" and "M std [unit]".
+                * For each metric M and requested stat S: "M [unit]" (for
+                  S="mean") or "M [unit] S" (otherwise).
 
         Raises:
             ValueError: If a metric name cannot be interpreted (for
                 example malformed PMx string) or is unsupported.
             ValueError: If internal preparation for a Pₓ metric fails
                 (for example missing PSD columns or inconsistent bin
-                metadata).
+                metadata), or if ``stats`` contains an unrecognised name.
 
         Notes:
             Detailed description:
@@ -94,6 +104,8 @@ class Summary2DMixin:
                 "MEDIAN",
                 "GMD",
             ]
+        if stats is None:
+            stats = ["mean", "std"]
 
         # --- helper: duration in minutes per time step (shared helper) -------
         dt_mins = self._dt_minutes()
@@ -185,23 +197,24 @@ class Summary2DMixin:
             duration_hhmm = self._format_hhmm(duration_minutes)
 
             # Initialize with NaNs
-            pnc = pnc_std = float("nan")
-            total_mass = total_mass_std = float("nan")
-            mode_d = mode_d_std = float("nan")
-            median_d = median_d_std = float("nan")
-            gmd = gmd_std = float("nan")
+            nan_stats = {stat: float("nan") for stat in stats}
+            pnc_stats = dict(nan_stats)
+            mass_stats = dict(nan_stats)
+            mode_stats = dict(nan_stats)
+            median_stats = dict(nan_stats)
+            gmd_stats = dict(nan_stats)
 
             # PNC (from number_df)
             if want_pnc and number_df is not None:
                 num_act = number_df.loc[mask]
                 s = self._ensure_data_robustness(num_act.sum(axis=1))
-                pnc, pnc_std = float(s.mean()), float(s.std())
+                pnc_stats = _stats.compute_stats(s, stats)
 
             # Total mass (from mass_df)
             if want_mass and mass_df is not None:
                 mass_act = mass_df.loc[mask]
                 s = self._ensure_data_robustness(mass_act.sum(axis=1))
-                total_mass, total_mass_std = float(s.mean()), float(s.std())
+                mass_stats = _stats.compute_stats(s, stats)
 
             # Size metrics (mode/median/GMD) on number distribution
             if want_any_size_metric and number_df is not None:
@@ -237,18 +250,14 @@ class Summary2DMixin:
                         gmd_list.append(gval)
 
                 if want_mode and mode_list:
-                    mode_d, mode_d_std = float(np.mean(mode_list)), float(
-                        np.std(mode_list)
-                    )
+                    mode_stats = _stats.compute_stats(pd.Series(mode_list), stats)
                 if want_median and med_list:
-                    median_d, median_d_std = float(np.mean(med_list)), float(
-                        np.std(med_list)
-                    )
+                    median_stats = _stats.compute_stats(pd.Series(med_list), stats)
                 if want_gmd and gmd_list:
-                    gmd, gmd_std = float(np.mean(gmd_list)), float(np.std(gmd_list))
+                    gmd_stats = _stats.compute_stats(pd.Series(gmd_list), stats)
 
             # Pₓ metrics collected in requested order
-            px_values: dict[str, tuple[float, float]] = {}
+            px_values: dict[str, dict[str, float]] = {}
             for name, name_upper in zip(metrics, metrics_upper):
                 parsed = self._parse_px_metric_scalar(name_upper)
                 if not parsed:
@@ -263,29 +272,29 @@ class Summary2DMixin:
                 if label not in dchar_dict:
                     raise ValueError(f"Internal error: PX column '{label}' not found.")
                 ser = dchar_dict[label].loc[mask]
-                px_values[label] = (float(ser.mean()), float(ser.std()))
+                px_values[label] = _stats.compute_stats(ser, stats)
 
             # Assemble row
             row: list[float | str] = [activity, duration_hhmm]
             for name, name_upper in zip(metrics, metrics_upper):
                 if name_upper == "PNC":
-                    row += [round(pnc, 2), round(pnc_std, 2)]
+                    row += [round(pnc_stats[stat], 2) for stat in stats]
                 elif name_upper == "MASS":
-                    row += [round(total_mass, 2), round(total_mass_std, 2)]
+                    row += [round(mass_stats[stat], 2) for stat in stats]
                 elif name_upper == "MODE":
-                    row += [round(mode_d, 1), round(mode_d_std, 1)]
+                    row += [round(mode_stats[stat], 1) for stat in stats]
                 elif name_upper == "MEDIAN":
-                    row += [round(median_d, 1), round(median_d_std, 1)]
+                    row += [round(median_stats[stat], 1) for stat in stats]
                 elif name_upper == "GMD":
-                    row += [round(gmd, 1), round(gmd_std, 1)]
+                    row += [round(gmd_stats[stat], 1) for stat in stats]
                 else:
                     parsed = self._parse_px_metric_scalar(name_upper)
                     if not parsed:
                         raise ValueError(f"Unsupported metric '{name}'.")
                     dchar, cutoff, lower_lim = parsed
                     label = _px_label(dchar, cutoff, lower_lim)
-                    mean_val, std_val = px_values[label]
-                    row += [round(mean_val, 2), round(std_val, 2)]
+                    vals = px_values[label]
+                    row += [round(vals[stat], 2) for stat in stats]
             rows.append(row)
 
         # --- column headers with explicit units ---------------------------------
@@ -316,7 +325,11 @@ class Summary2DMixin:
                 label = "GMD [nm]"
             else:
                 label = name
-            columns += [label, f"{label} std"]
+            # "mean" keeps the bare label (historical default columns are
+            # unchanged); any other stat gets an explicit suffix.
+            columns += [
+                label if stat == "mean" else f"{label} {stat}" for stat in stats
+            ]
 
         summary = pd.DataFrame(rows, columns=columns)
         # --- append to file if requested ---------------------------------------

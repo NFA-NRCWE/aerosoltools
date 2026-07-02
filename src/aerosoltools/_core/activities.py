@@ -119,6 +119,34 @@ class ActivityMixin:
                 self._activities.append(activity)
             self._activity_periods[activity] = periods
 
+    def rename_activity(self, old_name: str, new_name: str) -> None:
+        """Description:
+            Rename an existing activity, keeping its periods and mask intact.
+
+        Args:
+            old_name (str): Current activity name.
+            new_name (str): New name for the activity.
+
+        Returns:
+            None: The object is modified in place: the boolean mask column
+                in self.data and the entries in self.activities and
+                self.activity_periods are renamed.
+
+        Raises:
+            ValueError: If old_name is not a known activity, or new_name is
+                already used by a different activity.
+        """
+        if old_name not in self._activities:
+            raise ValueError(f"No activity named {old_name!r} to rename.")
+        if new_name == old_name:
+            return
+        if new_name in self._activities:
+            raise ValueError(f"An activity named {new_name!r} already exists.")
+
+        self._data.rename(columns={old_name: new_name}, inplace=True)
+        self._activities[self._activities.index(old_name)] = new_name
+        self._activity_periods[new_name] = self._activity_periods.pop(old_name)
+
     def get_activity_data(self, activity_name):
         """Return main data restricted to one or more activity periods.
 

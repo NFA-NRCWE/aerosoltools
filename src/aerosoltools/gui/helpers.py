@@ -193,3 +193,10 @@ def delete_activity(obj: Aerosol1D, name: str) -> None:
     if name in obj._activities:
         obj._activities.remove(name)
     obj._activity_periods.pop(name, None)
+
+
+def rename_activity(obj: Aerosol1D, old_name: str, new_name: str) -> None:
+    """Rename an activity on a single object; a no-op for ``"All data"``."""
+    if old_name == "All data" or old_name == new_name:
+        return
+    obj.rename_activity(old_name, new_name)

@@ -153,6 +153,7 @@ class HeatmapTab(_PlotTab):
             return
         try:
             floored = self._plot_on(self.figure)
+            self._sync_toolbar_home()
             self.canvas.draw_idle()
         except Exception:
             self._show_message(
