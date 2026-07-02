@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 
+import numpy as np
 import pandas as pd
 
 from ..aerosolalt import AerosolAlt
@@ -355,5 +356,286 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
         extra_df = df[["Datetime", *extra_cols]].set_index("Datetime")
         DM._extra_data = extra_df
         DM._raw_extra_data = extra_df.copy()
+
+    return DM
+
+
+###############################################################################
+# Raw-file loading (reproduce the vendor "java tool" processing from raw data)
+###############################################################################
+
+#: Column layout of the raw DiSCmini data table (after the header block).
+_RAW_COLUMNS = [
+    "Time",
+    "Diffusion",
+    "Filter",
+    "Temp",
+    "Idiff",
+    "Ucor",
+    "Flow",
+    "Batt",
+    "Status",
+]
+
+
+def _parse_raw_header(header_lines: list[str]) -> dict:
+    """Parse the metadata block at the top of a raw DiSCmini ``.TXT`` file.
+
+    The raw header (before the ``Time  Diffusion  Filter ...`` column row)
+    carries the software version, start date/time, the per-instrument
+    calibration constants and electrometer offsets, e.g.::
+
+        nw PERSONAL AEROSOL MONITOR Data written with SW-Ver 3.42
+        Filename: 6605G55D.TXT
+        Averaging Period: 1 sec
+        Date and Time: 2026.06.05 06:55:26
+        CalData: SN101923    0.28   30.73   -6.45    1.28    1.1319808.76    0.68
+         NaCl 2017_02_03
+            0.28    30.73    -6.45    1.28    1.13    19808.76    0.68
+        Offsets:    -0.75    -0.69
+        Sampled:   149393 pC   C:     395   W:      41
+
+    The ``CalData:`` line itself is unreliable for the constants (adjacent
+    values can run together, e.g. ``1.1319808.76``); the clean, tab-separated
+    copy on the line just above ``Offsets:`` is used instead.
+
+    Args:
+        header_lines: Lines of the file up to (and including) the column-header
+            row.
+
+    Returns:
+        dict: With keys ``serial``, ``firmware``, ``start`` (a
+        :class:`datetime.datetime` or ``None``), ``cal`` (list of 7 floats or
+        ``None``), ``offsets`` (list of 2 floats or ``None``) and
+        ``header_rows`` (number of lines to skip before the data table).
+
+    Raises:
+        ValueError: If the seven calibration constants cannot be located.
+    """
+    serial, firmware = _extract_serial_and_firmware(header_lines)
+
+    start = None
+    offsets = None
+    cal = None
+    data_header_idx = None
+    for i, ln in enumerate(header_lines):
+        low = ln.lower()
+        if "date and time:" in low and start is None:
+            token = ln.split(":", 1)[1].strip()
+            for fmt in ("%Y.%m.%d %H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+                try:
+                    start = dt.datetime.strptime(token, fmt)
+                    break
+                except ValueError:
+                    continue
+        elif low.startswith("offsets:"):
+            offsets = [float(x) for x in re.findall(r"-?\d+\.?\d*", ln)]
+            # The clean calibration-constant row is the line directly above.
+            if i >= 1:
+                nums = re.findall(r"-?\d+\.\d+", header_lines[i - 1])
+                if len(nums) >= 7:
+                    cal = [float(x) for x in nums[:7]]
+        elif low.startswith("time") and "diffusion" in low:
+            data_header_idx = i
+            break
+
+    if cal is None:
+        raise ValueError(
+            "Could not read the 7 DiSCmini calibration constants from the raw "
+            "header. Verify the file is an unmodified raw instrument export."
+        )
+    return {
+        "serial": serial,
+        "firmware": firmware,
+        "start": start,
+        "cal": cal,
+        "offsets": offsets,
+        "header_rows": (data_header_idx + 1) if data_header_idx is not None else 10,
+    }
+
+
+def _disc_size_from_ratio(ratio: np.ndarray, cal: list[float]) -> np.ndarray:
+    """Mean particle diameter (nm) from the filter/diffusion current ratio.
+
+    .. warning::
+
+        **Provisional.** The exact testo DiSCmini diameter inversion (the
+        diffusion-charging model relating the two stage currents to particle
+        size) is proprietary and could not be reproduced exactly from the small
+        set of calibration files available. This is a best-effort linear
+        approximation using the two calibration constants that clearly act as
+        the size scale and offset (``cal[1]`` and ``cal[2]``); it is accurate to
+        only a few nm and is expected to be replaced once the true inversion is
+        confirmed. Because :func:`Load_DiSCmini_raw_file` derives ``Number``
+        from ``Size``, the number concentration inherits this approximation.
+
+    Args:
+        ratio: Filter/diffusion current ratio (``I_filter / I_diffusion``).
+        cal: The 7 calibration constants from the file header.
+
+    Returns:
+        numpy.ndarray: Estimated mean diameter in nm, clipped to ``[1, 300]``.
+    """
+    size = cal[1] * ratio + cal[2]
+    return np.clip(size, 1.0, 300.0)
+
+
+def Load_DiSCmini_raw_file(
+    file: str,
+    extra_data: bool = False,
+    period: int = 10,
+) -> AerosolAlt:
+    """Description:
+        Load a **raw** DiSCmini ``.TXT`` file and reproduce the vendor
+        software's processed output (total number concentration, mean size
+        and LDSA) directly, without the intermediate commercial conversion.
+
+    Args:
+        file (str):
+            Path to a raw DiSCmini ``.TXT`` file (the file written by the
+            instrument, with the ``CalData:``/``Offsets:`` header and the
+            ``Time  Diffusion  Filter ...`` data table).
+        extra_data (bool, optional):
+            If ``True``, the averaged diagnostic channels (diffusion/filter
+            currents, temperature, flow, battery, …) are stored in
+            ``.extra_data``. Defaults to ``False``.
+        period (int, optional):
+            Averaging period in seconds. The vendor tool averages the raw
+            1 Hz data into 10 s windows; this reproduces that with
+            ``period=10`` (the default).
+
+    Returns:
+        AerosolAlt:
+            An :class:`~aerosoltools.aerosolalt.AerosolAlt` with
+            ``Total_conc`` (cm⁻³), ``Size`` (nm) and ``LDSA`` (nm²/cm³) at the
+            chosen averaging period, indexed by **real** timestamps (unlike the
+            vendor output, which renumbers time contiguously across gaps).
+
+    Raises:
+        ValueError:
+            If the calibration constants cannot be parsed from the header (see
+            :func:`_parse_raw_header`).
+
+    Notes:
+        Detailed description:
+            The reproduction was reverse-engineered from paired raw/processed
+            DiSCmini files:
+
+            - **Row selection.** Only rows whose ``Status`` byte marks an active
+              measurement (low nibble ``B``, e.g. ``"8B"``) are kept; idle /
+              pump-off rows (``"88"``/``"89"``, flow ≈ 0.37) are dropped.
+            - **Averaging.** Kept rows are grouped into ``period``-second windows
+              (``floor(Time / period)``) and averaged; empty windows are dropped.
+            - **LDSA** ``= cal[6] · (I_diffusion + I_filter)`` — reproduces the
+              vendor value essentially exactly.
+            - **Size** — from the filter/diffusion current ratio via
+              :func:`_disc_size_from_ratio` (**provisional**, see its warning).
+            - **Number** ``= cal[5] · (I_diffusion + I_filter) / Size**cal[4]`` —
+              exact given ``Size``, so it inherits the provisional ``Size``
+              approximation.
+
+            ``cal[4]`` is the size exponent, ``cal[5]`` the number-calibration
+            factor and ``cal[6]`` the LDSA-per-current factor; all three were
+            confirmed against the vendor output. The metadata records
+            ``size_inversion = "provisional"`` as a reminder that ``Size`` (and
+            hence ``Number``) is approximate pending the exact algorithm.
+
+    Examples:
+        .. code-block:: python
+
+            import aerosoltools as at
+
+            dm = at.Load_DiSCmini_raw_file("data/6605G55D.TXT")
+            print(dm.data[["Total_conc", "Size", "LDSA"]])
+    """
+    enc, _ = _detect_delimiter(file, sample_lines=25)
+
+    # Read the header block (enough lines to reach the data-table header row).
+    with open(file, "r", encoding=enc) as fh:
+        header_lines = [ln for _, ln in zip(range(15), fh)]
+    meta = _parse_raw_header(header_lines)
+    cal = meta["cal"]
+
+    # Read the data table.
+    raw = pd.read_csv(
+        file,
+        sep="\t",
+        skiprows=meta["header_rows"],
+        header=None,
+        engine="python",
+        names=_RAW_COLUMNS + ["_extra"],
+        usecols=range(len(_RAW_COLUMNS)),
+    )
+    for col in ["Time", "Diffusion", "Filter", "Temp", "Idiff", "Ucor", "Flow", "Batt"]:
+        raw[col] = pd.to_numeric(raw[col], errors="coerce")
+    raw["Status"] = raw["Status"].astype("string").str.strip()
+
+    # Keep only active-measurement rows (Status low nibble "B", e.g. "8B").
+    valid = raw[raw["Status"].str.lower().str.endswith("b", na=False)].copy()
+    valid = valid.dropna(subset=["Time", "Diffusion", "Filter"]).reset_index(drop=True)
+    if valid.empty:
+        raise ValueError("No valid measurement rows found in the raw DiSCmini file.")
+
+    # Average every `period` consecutive valid rows into one output row — this
+    # reproduces the vendor tool's block structure exactly (its row count is
+    # ``floor(valid_rows / period)``). Any trailing partial block is dropped.
+    n_blocks = len(valid) // period
+    valid = valid.iloc[: n_blocks * period]
+    block = np.arange(len(valid)) // period
+    avg = (
+        valid[["Time", "Diffusion", "Filter", "Temp", "Idiff", "Ucor", "Flow", "Batt"]]
+        .groupby(block)
+        .mean()
+        .reset_index(drop=True)
+    )
+
+    diff = avg["Diffusion"].to_numpy()
+    filt = avg["Filter"].to_numpy()
+    itot = diff + filt
+
+    # LDSA (exact) and Size (provisional) -> Number (from cal + Size).
+    ldsa = cal[6] * itot
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ratio = np.where(diff != 0, filt / diff, np.nan)
+    size = _disc_size_from_ratio(ratio, cal)
+    number = cal[5] * itot / np.power(size, cal[4])
+
+    # Real timestamps: start datetime + each window's mean elapsed second.
+    start = meta["start"] or dt.datetime(1970, 1, 1)
+    times = pd.to_datetime(start) + pd.to_timedelta(avg["Time"].to_numpy(), unit="s")
+
+    out = pd.DataFrame(
+        {
+            "Datetime": times,
+            "Total_conc": np.round(number).astype(float),
+            "Size": np.round(size, 1),
+            "LDSA": np.round(ldsa, 2),
+        }
+    )
+
+    DM = AerosolAlt(out)
+    DM._meta["instrument"] = "DiSCmini"
+    DM._meta["serial_number"] = meta["serial"]
+    if meta["firmware"] is not None:
+        DM._meta["firmware"] = meta["firmware"]
+    DM._meta["calibration"] = cal
+    DM._meta["offsets"] = meta["offsets"]
+    DM._meta["averaging_period_s"] = period
+    # Flag that Size (and the Number derived from it) use the provisional
+    # inversion, so downstream code / users know these are approximate.
+    DM._meta["size_inversion"] = "provisional"
+    DM._meta["unit"] = {
+        "Total_conc": "cm⁻³",
+        "Size": "nm",
+        "LDSA": "nm²/cm³",
+    }
+    DM._meta["dtype"] = {"Total_conc": "dN", "Size": "l", "LDSA": "dS"}
+
+    if extra_data:
+        extra = avg.drop(columns=["Time"]).copy()
+        extra.insert(0, "Datetime", times)
+        extra = extra.set_index("Datetime")
+        DM._extra_data = extra
+        DM._raw_extra_data = extra.copy()
 
     return DM

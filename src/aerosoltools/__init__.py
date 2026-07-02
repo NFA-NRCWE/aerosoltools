@@ -86,6 +86,7 @@ from .loaders import (
     Load_data_from_folder,
     Load_Devlabs_file,
     Load_DiSCmini_file,
+    Load_DiSCmini_raw_file,
     Load_DustTrak_file,
     Load_ELPI_file,
     Load_FMPS_file,
@@ -113,6 +114,7 @@ load_aethalometer_file = Load_Aethalometer_file
 load_cpc_file = Load_CPC_file
 load_devlabs_file = Load_Devlabs_file
 load_discmini_file = Load_DiSCmini_file
+load_discmini_raw_file = Load_DiSCmini_raw_file
 load_dusttrak_file = Load_DustTrak_file
 load_elpi_file = Load_ELPI_file
 load_fmps_file = Load_FMPS_file
@@ -144,6 +146,7 @@ __all__ = [
     "Load_CPC_file",
     "Load_Devlabs_file",
     "Load_DiSCmini_file",
+    "Load_DiSCmini_raw_file",
     "Load_DustTrak_file",
     "Load_ELPI_file",
     "Load_FMPS_file",
@@ -159,6 +162,7 @@ __all__ = [
     "load_aethalometer_file",
     "load_cpc_file",
     "load_discmini_file",
+    "load_discmini_raw_file",
     "load_dusttrak_file",
     "load_elpi_file",
     "load_fmps_file",
