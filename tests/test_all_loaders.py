@@ -124,6 +124,41 @@ def test_discmini_raw_loader_pipeline(tmp_path):
     assert dm.total_concentration.iloc[0] > 0
 
 
+def test_discmini_raw_window_gap_handling(tmp_path):
+    """Windows with < 8 valid rows are dropped; real time is preserved across gaps."""
+    import numpy as np
+
+    header = [
+        "nw PERSONAL AEROSOL MONITOR Data written with SW-Ver 3.42",
+        "Filename: TEST.TXT",
+        "Averaging Period: 1 sec",
+        "Date and Time: 2024.01.01 00:00:00",
+        "CalData: SN1    0.28   30.73   -6.45    1.28    1.1319808.76    0.68",
+        " NaCl",
+        "    0.28\t30.73\t-6.45\t1.28\t1.13\t19808.76\t0.68\t",
+        "Offsets:  -0.75\t-0.69\t",
+        "Sampled: 1 pC\tC: 1\tW: 1",
+        "Time\tDiffusion\tFilter\tTemp\tIdiff\tUcor\tFlow\tBatt\tStatus",
+    ]
+    rows = []
+    for t in range(40):
+        # Window 2 (t=20..29): only t=20..24 valid (5 rows) -> below the >=8
+        # threshold, so it must be dropped. All other windows are full.
+        idle = 20 <= t <= 29 and t >= 25
+        status = "88" if idle else "8B"
+        rows.append(f"{t}\t10.00\t35.00\t27.6\t9.82\t4.19\t1.00\t7.90\t{status}")
+    raw = tmp_path / "GAP.TXT"
+    with open(raw, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(header + rows) + "\n")
+
+    dm = Load_DiSCmini_raw_file(str(raw), period=10)
+    # Windows 0, 1, 3 kept (window 2 has only 5 valid rows -> dropped).
+    assert dm.data.shape[0] == 3
+    elapsed = (dm.time - dm.time[0]).total_seconds().to_numpy()
+    # Centres at 4.5, 14.5, 34.5 s — the 24.5 window is skipped (70 s jump).
+    assert np.allclose(elapsed, [0.0, 10.0, 30.0])
+
+
 def _data_path(name):
     return os.path.join(os.path.dirname(__file__), "data", name)
 

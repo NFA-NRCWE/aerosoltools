@@ -614,12 +614,22 @@ def Load_DiSCmini_raw_file(
     # Average the valid rows into fixed ``period``-second wall-clock windows,
     # grouping on the elapsed-time column (``floor(Time / period)``) exactly as
     # the vendor tool does. Grouping on time — rather than on every N-th valid
-    # row — keeps the windows aligned even when idle rows are interspersed
-    # through the record (otherwise dropped rows accumulate a growing offset).
-    # Empty windows (fully idle) simply drop out.
-    cols = ["Time", "Diffusion", "Filter", "Temp", "Idiff", "Ucor", "Flow", "Batt"]
+    # row — keeps windows aligned even when idle rows are interspersed through
+    # the record. A window is only emitted when at least ``min_valid`` of its
+    # ``period`` seconds are valid (the vendor keeps windows with >= 8 of 10
+    # valid samples); this drops fully/partly idle windows at gap edges so the
+    # output row sequence matches the vendor's — otherwise a spurious partial
+    # window at each gap would shift every later row and accumulate a drift.
+    cols = ["Diffusion", "Filter", "Temp", "Idiff", "Ucor", "Flow", "Batt"]
+    min_valid = int(np.ceil(0.8 * period))
     window = (valid["Time"] // period).astype("int64")
-    avg = valid[cols].groupby(window).mean().reset_index(drop=True)
+    grp = valid.groupby(window)
+    counts = grp.size()
+    avg = grp[cols].mean()
+    keep = counts.index[counts >= min_valid]
+    avg = avg.loc[keep]
+    win_index = avg.index.to_numpy()
+    avg = avg.reset_index(drop=True)
 
     diff = avg["Diffusion"].to_numpy()
     filt = avg["Filter"].to_numpy()
@@ -633,9 +643,11 @@ def Load_DiSCmini_raw_file(
     size = _disc_size_from_ratio(ratio, cal)
     number = cal[5] * itot / np.power(size, cal[4])
 
-    # Real timestamps: start datetime + each window's mean elapsed second.
+    # Real timestamps at each window's centre (start + win*period + (period-1)/2),
+    # matching the vendor's time labelling and preserving real elapsed time.
     start = meta["start"] or dt.datetime(1970, 1, 1)
-    times = pd.to_datetime(start) + pd.to_timedelta(avg["Time"].to_numpy(), unit="s")
+    centre_s = win_index * period + (period - 1) / 2.0
+    times = pd.to_datetime(start) + pd.to_timedelta(centre_s, unit="s")
 
     out = pd.DataFrame(
         {
@@ -665,7 +677,7 @@ def Load_DiSCmini_raw_file(
     DM._meta["dtype"] = {"Total_conc": "dN", "Size": "l", "LDSA": "dS"}
 
     if extra_data:
-        extra = avg.drop(columns=["Time"]).copy()
+        extra = avg.copy()
         extra.insert(0, "Datetime", times)
         extra = extra.set_index("Datetime")
         DM._extra_data = extra
