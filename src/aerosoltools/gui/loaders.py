@@ -19,6 +19,7 @@ from ..loaders import (
     Load_Aethalometer_file,
     Load_CPC_file,
     Load_DiSCmini_file,
+    Load_DiSCmini_raw_file,
     Load_DustTrak_file,
     Load_ELPI_file,
     Load_FMPS_file,
@@ -41,6 +42,7 @@ class UnrecognizedInstrumentError(ValueError):
 LOADERS: dict[str, Callable] = {
     "CPC": Load_CPC_file,
     "DiSCmini": Load_DiSCmini_file,
+    "DiSCmini (raw)": Load_DiSCmini_raw_file,
     "ELPI": Load_ELPI_file,
     "FMPS": Load_FMPS_file,
     "Fourtec": Load_Fourtec_file,
@@ -264,13 +266,26 @@ def is_Partector_file(path: str | Path) -> bool:
 
 
 def is_DiSCmini_file(path: str | Path) -> bool:
-    """Detect DiSCmini converted exports."""
+    """Detect DiSCmini converted (vendor-processed) exports."""
     text = _head_text(path, max_lines=50)
 
     has_time = "timestamp" in text or "\ntime" in text or "\ttime" in text
     has_core = "number" in text and ("ldsa" in text or "diameter" in text)
 
     return has_time and has_core
+
+
+def is_DiSCmini_raw_file(path: str | Path) -> bool:
+    """Detect **raw** DiSCmini instrument files (pre vendor conversion).
+
+    Raw files carry the calibration/offset header block and a data table of
+    electrometer currents (``Diffusion``/``Filter``) rather than the processed
+    ``Number``/``Size``/``LDSA`` columns, so the processed-export sniffer
+    (:func:`is_DiSCmini_file`) does not match them.
+    """
+    text = _head_text(path, max_lines=15)
+
+    return "caldata" in text and "diffusion" in text and "filter" in text
 
 
 def is_FMPS_file(path: str | Path) -> bool:
@@ -384,6 +399,7 @@ SNIFFERS: dict[str, Callable[[str | Path], bool]] = {
     "Grimm": is_Grimm_file,
     "DustTrak": is_DustTrak_file,
     "Partector": is_Partector_file,
+    "DiSCmini (raw)": is_DiSCmini_raw_file,
     "DiSCmini": is_DiSCmini_file,
     "FMPS": is_FMPS_file,
     "Fourtec": is_Fourtec_file,

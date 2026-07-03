@@ -120,3 +120,61 @@ def test_discmini_raw_loader_pipeline(tmp_path):
     # Idle rows would have dragged the currents toward zero if not excluded.
     assert dm.extra_data["Diffusion"].iloc[0] == pytest.approx(10.0, abs=1e-6)
     assert dm.total_concentration.iloc[0] > 0
+
+
+def _data_path(name):
+    return os.path.join(os.path.dirname(__file__), "data", name)
+
+
+def test_discmini_raw_loader_on_sample_file():
+    """Load a real (truncated) raw DiSCmini file and sanity-check the output."""
+    dm = Load_DiSCmini_raw_file(_data_path("Sample_Discmini_raw.txt"), extra_data=True)
+    assert dm.serial_number == "101923"  # "SN101923" in the CalData line
+    assert dm._meta.get("firmware") == "3.42"
+    assert dm._meta.get("size_inversion") == "provisional"
+    # 300 valid rows / 10 = 30 averaged output rows.
+    assert dm.data.shape[0] == 30
+    for col in ("Total_conc", "Size", "LDSA"):
+        assert col in dm.data.columns
+        assert (dm.data[col] > 0).all()
+
+
+def test_discmini_raw_matches_processed_ldsa():
+    """Raw-loader LDSA reproduces the vendor-processed LDSA (charger physics)."""
+    import numpy as np
+
+    dm = Load_DiSCmini_raw_file(_data_path("Sample_Discmini_raw.txt"))
+    proc = pd.read_csv(
+        _data_path("Sample_Discmini_raw_output.txt"),
+        sep="\t",
+        skiprows=6,
+        header=None,
+        decimal=",",
+        engine="python",
+        names=["Time", "Number", "Size", "LDSA", "Filter", "Diff", "z"],
+    )
+    proc_ldsa = pd.to_numeric(proc["LDSA"], errors="coerce").to_numpy()
+    n = min(len(dm.data), len(proc_ldsa))
+    mine = dm.data["LDSA"].to_numpy()[:n]
+    ven = proc_ldsa[:n]
+    rel = np.abs(mine - ven) / ven
+    # LDSA = cal6 * total current reproduces the vendor value to < 1.5%.
+    assert np.median(rel) < 0.015
+
+
+def test_discmini_sniffer_distinguishes_raw_and_processed():
+    """The content sniffer routes raw vs processed DiSCmini to the right loader."""
+    from aerosoltools.gui.loaders import (
+        identify_instrument,
+        is_DiSCmini_file,
+        is_DiSCmini_raw_file,
+    )
+
+    raw = _data_path("Sample_Discmini_raw.txt")
+    processed = _data_path("Sample_Discmini.txt")
+
+    assert is_DiSCmini_raw_file(raw) is True
+    assert is_DiSCmini_raw_file(processed) is False
+    assert is_DiSCmini_file(processed) is True
+    assert identify_instrument(raw) == "DiSCmini (raw)"
+    assert identify_instrument(processed) == "DiSCmini"

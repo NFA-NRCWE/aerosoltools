@@ -524,21 +524,28 @@ def Load_DiSCmini_raw_file(
             - **Row selection.** Only rows whose ``Status`` byte marks an active
               measurement (low nibble ``B``, e.g. ``"8B"``) are kept; idle /
               pump-off rows (``"88"``/``"89"``, flow ≈ 0.37) are dropped.
-            - **Averaging.** Kept rows are grouped into ``period``-second windows
-              (``floor(Time / period)``) and averaged; empty windows are dropped.
+            - **Averaging.** Every ``period`` consecutive kept rows are averaged
+              into one output row (a trailing partial block is dropped), which
+              matches the vendor tool's block count (``floor(valid / period)``).
             - **LDSA** ``= cal[6] · (I_diffusion + I_filter)`` — reproduces the
-              vendor value essentially exactly.
+              vendor value essentially exactly. This follows from the diffusion
+              charger physics (miniDiSC application note #8): the charger signal,
+              i.e. the total current, is directly proportional to LDSA.
+            - **Number** ``= cal[5] · (I_diffusion + I_filter) / Size**cal[4]``.
+              The average charge per particle scales as ``q ∝ d**1.1`` (note #8),
+              so the total current is ``N · q``; inverting gives this expression
+              with ``cal[4] ≈ 1.1``. Exact given ``Size``.
             - **Size** — from the filter/diffusion current ratio via
               :func:`_disc_size_from_ratio` (**provisional**, see its warning).
-            - **Number** ``= cal[5] · (I_diffusion + I_filter) / Size**cal[4]`` —
-              exact given ``Size``, so it inherits the provisional ``Size``
-              approximation.
 
-            ``cal[4]`` is the size exponent, ``cal[5]`` the number-calibration
-            factor and ``cal[6]`` the LDSA-per-current factor; all three were
-            confirmed against the vendor output. The metadata records
-            ``size_inversion = "provisional"`` as a reminder that ``Size`` (and
-            hence ``Number``) is approximate pending the exact algorithm.
+            ``cal[4]`` (the charge/size exponent, ≈ 1.1), ``cal[5]`` (the
+            number-calibration factor) and ``cal[6]`` (the LDSA-per-current
+            factor) were confirmed against the vendor output and are consistent
+            with the miniDiSC application notes. The diameter inversion (the
+            DiSC diffusion-stage deposition calibration) is *not* described by
+            those notes, so the metadata records ``size_inversion =
+            "provisional"`` as a reminder that ``Size`` (and hence ``Number``)
+            is approximate pending the exact algorithm.
 
     Examples:
         .. code-block:: python
