@@ -233,6 +233,15 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
         na_values=["", "NA", "N/A", "-", "--"],
     )
 
+    # Drop phantom columns produced by a trailing delimiter in the export header
+    # (e.g. "…Filter\tDiff\t" yields an unnamed, all-empty 7th column). Left in,
+    # such a column would show up as an empty "Unnamed: N" series in the GUI.
+    phantom = [
+        c for c in df.columns if str(c).startswith("Unnamed") or df[c].isna().all()
+    ]
+    if phantom:
+        df.drop(columns=phantom, inplace=True)
+
     # Normalize expected column names
     # Some files use "TimeStamp" (with a separate "Time" column); others use "Time"
     if "TimeStamp" in df.columns:
@@ -349,11 +358,17 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
     }
     DM._meta["dtype"] = {"Total_conc": "dN", "Size": "l", "LDSA": "dS"}
 
-    # Optional extra data (everything except the main 3 numeric cols) indexed by time
+    # Optional extra data (everything except the main 3 numeric cols) indexed by
+    # time. Columns are read as strings; coerce the numeric ones (e.g. the
+    # Filter/Diff currents) so they are proper numbers for downstream use/plots.
     if extra_data:
         keep = set(["Datetime", "Total_conc", "Size", "LDSA"])
         extra_cols = [c for c in df.columns if c not in keep]
         extra_df = df[["Datetime", *extra_cols]].set_index("Datetime")
+        for col in extra_df.columns:
+            coerced = pd.to_numeric(extra_df[col], errors="coerce")
+            if coerced.notna().any():
+                extra_df[col] = coerced
         DM._extra_data = extra_df
         DM._raw_extra_data = extra_df.copy()
 

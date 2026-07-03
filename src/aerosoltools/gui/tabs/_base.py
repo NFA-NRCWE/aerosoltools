@@ -172,11 +172,35 @@ class _PlotTab(QtWidgets.QWidget):
         return None
 
     def _show_message(self, msg: str) -> None:
-        """Clear the figure and print a centered message (used for errors)."""
-        self.figure.clear()
-        ax = self.figure.add_subplot(111)
+        """Print a centered message (used for errors), leaving the tab redrawable.
+
+        Tabs that keep a persistent ``self.ax`` (created once and reused every
+        redraw) must not have it detached here: if the whole figure were cleared
+        and a *new* axis added, ``self.ax`` would be orphaned and every later
+        redraw would paint onto an axis no longer in the figure — the canvas
+        would appear frozen on this message. So when a live ``self.ax`` exists,
+        the message is drawn on it (``clear`` alone keeps it attached); the next
+        redraw's ``ax.clear()`` then restores a normal plotting axis. Tabs that
+        rebuild the figure each redraw (no persistent ``self.ax``) fall back to
+        clearing the figure.
+        """
+        ax = getattr(self, "ax", None)
+        if ax is not None and ax in self.figure.axes:
+            ax.clear()
+        else:
+            self.figure.clear()
+            ax = self.figure.add_subplot(111)
         ax.axis("off")
-        ax.text(0.5, 0.5, msg, ha="center", va="center", wrap=True, fontsize=10)
+        ax.text(
+            0.5,
+            0.5,
+            msg,
+            ha="center",
+            va="center",
+            wrap=True,
+            fontsize=10,
+            transform=ax.transAxes,
+        )
         self.canvas.draw_idle()
 
     def _export_stem(self) -> str:

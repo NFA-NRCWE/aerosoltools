@@ -198,6 +198,23 @@ def test_discmini_raw_matches_processed_size_and_number():
         assert np.median(rel) < 0.03, f"{mine_col} median rel err too high"
 
 
+def test_discmini_processed_has_no_phantom_column_and_only_numeric_series():
+    """The trailing-tab 'Unnamed' column is dropped and never offered as a series."""
+    from aerosoltools.gui.helpers import plottable_columns
+
+    dm = Load_DiSCmini_file(_data_path("Sample_Discmini.txt"), extra_data=True)
+    # No phantom/empty column survives the loader.
+    assert not any(str(c).startswith("Unnamed") for c in dm.extra_data.columns)
+    # Extra currents are coerced to numbers, and the series picker offers them.
+    labels = [label for label, _, _ in plottable_columns(dm)]
+    assert any("Filter" in x for x in labels)
+
+    # An all-NA column is never offered (would otherwise crash on float(NA)).
+    dm.extra_data["Blank"] = pd.array([pd.NA] * len(dm.time), dtype="string")
+    labels = [label for label, _, _ in plottable_columns(dm)]
+    assert not any("Blank" in x for x in labels)
+
+
 def test_discmini_raw_matches_processed_ldsa():
     """Raw-loader LDSA reproduces the vendor-processed LDSA (charger physics)."""
     import numpy as np

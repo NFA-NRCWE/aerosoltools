@@ -400,8 +400,16 @@ class TimeSeriesTab(_PlotTab):
 
         try:
             self._plot_on(self.ax)
-        except Exception as exc:
-            self._show_message(f"Could not read series: {exc}")
+        except Exception:
+            # Recover cleanly: show a plain-language note and reset the draw
+            # state so switching series/dataset redraws normally (the message is
+            # painted on self.ax, which stays attached — see _show_message).
+            self._has_drawn = False
+            self._key = None
+            self._show_message(
+                "This series can't be plotted — it has no numeric values to "
+                "show. Pick another series."
+            )
             return
 
         # Restore the previous view, then apply any explicit Y caps on top.

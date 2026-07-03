@@ -64,8 +64,9 @@ def draw_threshold(ax, value, label: str | None = None) -> None:
     if not pd.notna(y):
         return
     text = label.strip() if (label and label.strip()) else f"Threshold ({y:g})"
-    ax.axhline(y, color=THRESHOLD_COLOR, linestyle="--", linewidth=1.6, zorder=5,
-               label=text)
+    ax.axhline(
+        y, color=THRESHOLD_COLOR, linestyle="--", linewidth=1.6, zorder=5, label=text
+    )
     # Rebuild the legend so the threshold appears next to any existing labels.
     ax.legend(loc="upper right", fontsize=8)
 
@@ -119,29 +120,42 @@ def plottable_columns(obj: Aerosol1D) -> List[Tuple[str, str, str]]:
     activities = set(getattr(obj, "activities", []))
     size_headers = set(getattr(obj, "_sizebin_headers", [])) if is_2d(obj) else set()
 
-    numeric = obj.data.select_dtypes(exclude="bool")
-    for name in numeric.columns:
+    def _plottable(series: pd.Series) -> bool:
+        """A column is plottable only if it holds some finite numeric value.
+
+        Restricting to numeric, non-empty columns keeps text/all-blank columns
+        (e.g. a stray empty column from a trailing delimiter in an export) out of
+        the series picker, so selecting one can never crash the plot.
+        """
+        numeric = pd.to_numeric(series, errors="coerce")
+        return bool(numeric.notna().any())
+
+    for name in obj.data.select_dtypes(exclude="bool").columns:
         if name in activities or name in size_headers:
             continue
         if name == "Total_conc":
             continue  # already represented by the canonical "total" entry
-        cols.append((f"{name} (data)", "data", name))
+        if _plottable(obj.data[name]):
+            cols.append((f"{name} (data)", "data", name))
 
     if obj.extra_data is not None and not obj.extra_data.empty:
-        extra_numeric = obj.extra_data.select_dtypes(exclude="bool")
-        for name in extra_numeric.columns:
-            cols.append((f"{name} (extra)", "extra", name))
+        for name in obj.extra_data.select_dtypes(exclude="bool").columns:
+            if _plottable(obj.extra_data[name]):
+                cols.append((f"{name} (extra)", "extra", name))
 
     return cols
 
 
 def series_for(obj: Aerosol1D, kind: str, name: str) -> pd.Series:
-    """Return the pandas Series for a ``(kind, name)`` selection."""
+    """Return the pandas Series for a ``(kind, name)`` selection.
+
+    Non-total series are coerced to numeric (invalid entries become ``NaN``) so
+    a column stored as text still plots and can never raise on conversion.
+    """
     if kind == "total":
         return obj.total_concentration
-    if kind == "extra":
-        return obj.extra_data[name]
-    return obj.data[name]
+    series = obj.extra_data[name] if kind == "extra" else obj.data[name]
+    return pd.to_numeric(series, errors="coerce")
 
 
 def user_activities(obj: Aerosol1D) -> List[str]:
