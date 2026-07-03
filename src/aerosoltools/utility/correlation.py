@@ -45,6 +45,29 @@ def _select_column_from_obj(obj, parameter: str) -> pd.Series:
     raise KeyError(f"Column '{parameter}' not found in obj.data or obj.extra_data.")
 
 
+def _resolve_unit(obj, parameter: str | None = None) -> str:
+    """Return the display unit for ``parameter`` as a plain string.
+
+    ``obj.unit`` is a single string for :class:`Aerosol1D`/:class:`Aerosol2D`
+    but a ``{column: unit}`` dict for :class:`AerosolAlt` (e.g. DiSCmini). This
+    resolves the per-parameter unit so axis labels never render a whole dict.
+
+    Args:
+        obj: Aerosol object exposing a ``unit`` attribute.
+        parameter: Column name to look up when ``unit`` is a dict; when it is
+            missing/``None`` the first entry is used.
+
+    Returns:
+        The unit string (empty when unavailable).
+    """
+    unit = getattr(obj, "unit", "")
+    if isinstance(unit, dict):
+        if parameter is not None and parameter in unit:
+            return str(unit[parameter])
+        return str(next(iter(unit.values()), "")) if unit else ""
+    return str(unit)
+
+
 def _extract_series(
     obj,
     parameter: str,
@@ -836,19 +859,24 @@ def bland_altman_analysis(
     if method == "Eu":
         diffs = x - y
 
+    # Per-parameter unit strings (X.unit may be a dict on AerosolAlt).
+    unit_x = _resolve_unit(X, p_X)
+    diff_label = f"Difference ({unit_x})" if unit_x else "Difference"
+
     # Dict
     Diff = {
-        "BA": f"Difference ({X.unit})",
+        "BA": diff_label,
         "Gi": "Difference (%)",
-        "Eu": f"Difference ({X.unit})",
-    }  #'Log10 of difference'}
+        "Eu": diff_label,
+    }
 
     # --- Plot ----------------------------------------------------------------
     ax.scatter(means, diffs, c="k", s=20, alpha=0.6, marker="o")
 
     # Labels
-    ax.set_title(f"Bland-Altman Plot for {p_X} vz {p_Y}")
-    ax.set_xlabel(f"Mean ({X.unit})")
+    title_param = p_X if p_X == p_Y else f"{p_X} vs {p_Y}"
+    ax.set_title(f"Bland-Altman Plot for {title_param}")
+    ax.set_xlabel(f"Mean ({unit_x})" if unit_x else "Mean")
     ax.set_ylabel(Diff[method])
     # Get axis limits
     left, right = ax.get_xlim()
@@ -861,17 +889,12 @@ def bland_altman_analysis(
     ax.set_xlim(left, left + domain * 1.1)
     # Plot the zero line
     ax.axhline(y=0, c="k", lw=0.5)
-    # Plot the bias and the limits of agreement
-    fs = 15
-    ax.axhline(y=bias, c="grey", ls="--")
-    ax.annotate("Bias", (right, bias), (0, 7), textcoords="offset pixels", fontsize=fs)
-    ax.annotate(
-        f"{bias:+4.2f}",
-        (right, bias),
-        (0, -12),
-        textcoords="offset pixels",
-        fontsize=fs,
-    )
+    # Plot the bias and the limits of agreement. The bias / LOA values are shown
+    # in the legend (not annotated on the plot) so labels never overlap when the
+    # lines lie close together.
+    unit_suffix = f" {unit_x}" if (unit_x and method != "Gi") else ""
+    conf_pct = f"{C * 100:g}%"
+    ax.axhline(y=bias, c="grey", ls="--", label=f"Bias = {bias:+.2f}{unit_suffix}")
 
     # --- Plot the limits of the agreement--------------------------------------
     if method == "Eu":
@@ -879,66 +902,42 @@ def bland_altman_analysis(
         # diagonal lines in the native space
         lower_loa_m = 2 * (10 ** (loas[0] - bias) - 1) / (10 ** (loas[0] - bias) + 1)
         upper_loa_m = 2 * (10 ** (loas[1] - bias) - 1) / (10 ** (loas[1] - bias) + 1)
-        # Plot the limits of agreement
+        # Plot the limits of agreement (values shown in the legend).
         x = np.array([left, right])
         y = upper_loa_m * x + bias
-        ax.plot(x, y, c="grey", ls="--")
-        ax.annotate(
-            "Upper LOA", (right, y[1]), (0, 6), textcoords="offset pixels", fontsize=fs
-        )
-        ax.annotate(
-            f"{upper_loa_m:+4.2f} × Mean + Bias",
-            (right, y[1]),
-            (0, -15),
-            textcoords="offset pixels",
-            fontsize=fs,
+        ax.plot(
+            x,
+            y,
+            c="grey",
+            ls="--",
+            label=f"Upper LOA ({conf_pct}) = {upper_loa_m:+.2f} × Mean + Bias",
         )
         y = lower_loa_m * x + bias
-        ax.plot(x, y, c="grey", ls="--")
-        ax.annotate(
-            "Lower LOA", (right, y[1]), (0, 6), textcoords="offset pixels", fontsize=fs
+        ax.plot(
+            x,
+            y,
+            c="grey",
+            ls="--",
+            label=f"Lower LOA ({conf_pct}) = {lower_loa_m:+.2f} × Mean + Bias",
         )
-        ax.annotate(
-            f"{lower_loa_m:+4.2f} × Mean + Bias",
-            (right, y[1]),
-            (0, -15),
-            textcoords="offset pixels",
-            fontsize=fs,
-        )
+        ax.legend(loc="upper right", fontsize=9)
+        print(f"For the differences, μ = {bias:.2f} {unit_x} and s = {s:.2f} {unit_x}")
         return fig, ax, loas
     else:
-        ax.axhline(y=loas[1], c="grey", ls="--")
-        ax.axhline(y=loas[0], c="grey", ls="--")
-        # Annotations
-        ax.annotate(
-            "Upper LOA",
-            (right, loas[1]),
-            (0, 6),
-            textcoords="offset pixels",
-            fontsize=fs,
+        ax.axhline(
+            y=loas[1],
+            c="grey",
+            ls="--",
+            label=f"Upper LOA ({conf_pct}) = {loas[1]:+.2f}{unit_suffix}",
         )
-        ax.annotate(
-            f"{loas[1]:+4.2f}",
-            (right, loas[1]),
-            (0, -15),
-            textcoords="offset pixels",
-            fontsize=fs,
-        )
-        ax.annotate(
-            "Lower LOA",
-            (right, loas[0]),
-            (0, 6),
-            textcoords="offset pixels",
-            fontsize=fs,
-        )
-        ax.annotate(
-            f"{loas[0]:+4.2f}",
-            (right, loas[0]),
-            (0, -15),
-            textcoords="offset pixels",
-            fontsize=fs,
+        ax.axhline(
+            y=loas[0],
+            c="grey",
+            ls="--",
+            label=f"Lower LOA ({conf_pct}) = {loas[0]:+.2f}{unit_suffix}",
         )
 
-    print(f"For the differences, μ = {bias:.2f} {X.unit} and s = {s:.2f} {X.unit}")
+    ax.legend(loc="upper right", fontsize=9)
+    print(f"For the differences, μ = {bias:.2f} {unit_x} and s = {s:.2f} {unit_x}")
 
     return fig, ax
