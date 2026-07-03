@@ -342,34 +342,39 @@ def _convert_ELPI_current_to_number(
 ###############################################################################
 # Density recalculation
 
-# Air mean free path (µm) and Allen–Raabe Cunningham-slip coefficients used to
-# convert the ELPI's fixed aerodynamic stage diameters to the geometric
-# (volume-equivalent) particle diameter at an assumed density. The slip
-# coefficients match those used in :mod:`aerosoltools._core.corrections`.
-_AIR_MEAN_FREE_PATH_UM = 0.0664
+# Cunningham slip-correction constants for the ELPI's aerodynamic↔Stokes
+# diameter conversion. These reproduce Dekati's own published slip-correction
+# vector (ELPI+ User Manual, App. A.2 — the ``Cca`` table for the calibrated
+# cutpoints) to < 0.1 %. They are specific to this conversion and intentionally
+# differ from the generic Allen–Raabe values in
+# :mod:`aerosoltools._core.corrections`.
+_ELPI_MEAN_FREE_PATH_UM = 0.07305
+_ELPI_SLIP_A = 1.1384
+_ELPI_SLIP_B = 0.3621
+_ELPI_SLIP_C = 1.2157
 
 
 def _cunningham(dp_um) -> np.ndarray:
-    """Cunningham slip correction for particle diameters given in micrometres."""
+    """Cunningham slip correction (Dekati ELPI constants) for diameters in µm."""
     dp_um = np.asarray(dp_um, dtype=float)
-    kn = 2.0 * _AIR_MEAN_FREE_PATH_UM / dp_um
-    return 1.0 + kn * (1.142 + 0.558 * np.exp(-0.999 / kn))
+    kn = 2.0 * _ELPI_MEAN_FREE_PATH_UM / dp_um
+    return 1.0 + kn * (_ELPI_SLIP_A + _ELPI_SLIP_B * np.exp(-_ELPI_SLIP_C / kn))
 
 
-def _geometric_diameter_at_density(d_geo_um, rho_old: float, rho_new: float):
-    """Convert geometric particle diameters between two assumed densities.
+def _stokes_from_aerodynamic(dpa_um, density: float) -> np.ndarray:
+    """Convert aerodynamic diameters (µm) to Stokes diameters at a density.
 
     The ELPI classifies by aerodynamic behaviour, so each stage's aerodynamic
-    diameter is fixed and the geometric (volume-equivalent) diameter obeys
-    ``D² · Cc(D) · ρ = const``. Given the geometric diameter at ``rho_old`` this
-    solves — iteratively, because the slip correction depends on the unknown
-    diameter — for the geometric diameter at ``rho_new``. In the slip-free limit
-    it reduces to the familiar ``D ∝ ρ^(-1/2)``.
+    diameter is fixed; the geometric (volume-equivalent / Stokes) diameter that
+    the size axis reports obeys ``Dpa² · Cc(Dpa) = Dps² · Cc(Dps) · ρ``
+    (ELPI+ User Manual, App. A.2). Solved iteratively because the slip
+    correction depends on the unknown diameter. In the slip-free limit it
+    reduces to the familiar ``D ∝ ρ^(-1/2)``.
     """
-    d_geo_um = np.asarray(d_geo_um, dtype=float)
-    target = d_geo_um**2 * _cunningham(d_geo_um) * (rho_old / rho_new)
-    d = d_geo_um * np.sqrt(rho_old / rho_new)  # slip-free first guess
-    for _ in range(50):
+    dpa_um = np.asarray(dpa_um, dtype=float)
+    target = dpa_um**2 * _cunningham(dpa_um) / density
+    d = dpa_um / np.sqrt(density)  # slip-free first guess
+    for _ in range(60):
         d = np.sqrt(target / _cunningham(d))
     return d
 
@@ -385,21 +390,24 @@ def recalculate_ELPI_density(elpi, new_density: float) -> bool:
     because the charger efficiency (which turned current into number) is a
     function of that diameter.
 
-    Diameters are converted with the slip-corrected Stokes relation
-    (:func:`_geometric_diameter_at_density`); the very smallest stage uses the
-    slip-free ``ρ^(-1/2)`` limit, matching the ELPI software (the full inversion
-    overshoots there). Number is re-attributed through the charger efficiency
-    (:func:`_ELPI_charger_efficiency`). All inputs are already on the object's
-    metadata (``bin_mids``, charger ``Efficiency`` coefficients and the current
-    ``density``), so no separate copy of the header is needed.
+    The diameters are rebuilt the way the Dekati software does it, from the
+    *fixed aerodynamic cutpoints* (``D50values``, which never change with
+    density) rather than by nudging the current midpoints: each aerodynamic
+    cutpoint is converted to its Stokes diameter at the new density
+    (:func:`_stokes_from_aerodynamic`), the lowest cutpoint is pinned at the
+    fixed 6 nm filter cutpoint (``FilterLow``, which the ELPI does not rescale),
+    and the stage midpoints are the geometric means of the resulting cutpoints.
+    Because everything is derived from the density-independent cutpoints, the
+    size axis is path-independent — changing 0.16 → 1.0 lands exactly on the
+    diameters a fresh unit-density load would give. Number is re-attributed
+    through the charger efficiency (:func:`_ELPI_charger_efficiency`), which
+    depends on that diameter.
 
-    This reproduces the Dekati software's density-dependent exports closely over
-    the concentration-carrying part of the size range (validated against unit-,
-    0.16- and 2.1-g/cm³ ELPI+VI exports: signal stages within ~1 %, total number
-    within a few percent). The finest one or two stages differ more, because the
-    software pins the stage-1 lower cut at the fixed 6 nm filter cutpoint and
-    handles diffusion charging with a proprietary sub-model that the header's
-    single small-diameter power-law branch cannot reproduce exactly.
+    This reproduces the Dekati software's density-dependent size axis to < 0.5 %
+    on every stage bar the filter-boundary bin (stage 1 at very low density,
+    ~5 %). All inputs are already on the object's metadata (``D50values``,
+    ``FilterLow``, ``bin_mids``, charger ``Efficiency`` coefficients and the
+    current ``density``), so no separate copy of the header is needed.
 
     Args:
         elpi: An :class:`~aerosoltools.Aerosol2D` produced by an ELPI loader.
@@ -419,33 +427,37 @@ def recalculate_ELPI_density(elpi, new_density: float) -> bool:
     meta = elpi._meta
     if str(meta.get("instrument", "")).upper() != "ELPI":
         return False
-    if "bin_mids" not in meta:
+    if "bin_mids" not in meta or "D50values(um)" not in meta:
         return False
 
     rho_old = float(meta.get("density", np.nan))
     rho_new = float(new_density)
-    if not (np.isfinite(rho_old) and rho_old > 0 and rho_new > 0):
-        meta["density"] = rho_new  # nothing to rescale from; just store
-        return True
-    if np.isclose(rho_new, rho_old):
+    if not (rho_new > 0):
+        return False
+    if np.isfinite(rho_old) and np.isclose(rho_new, rho_old):
         meta["density"] = rho_new
         return True
 
     bin_mids_old = np.asarray(meta["bin_mids"], dtype=float)
 
-    # New geometric diameters at the new density (slip-corrected Stokes); the
-    # smallest stage uses the slip-free limit, as the ELPI software does.
-    mids_um = _geometric_diameter_at_density(bin_mids_old / 1000.0, rho_old, rho_new)
-    mids_um[0] = (bin_mids_old[0] / 1000.0) * np.sqrt(rho_old / rho_new)
-    bin_mids_new = np.round(mids_um * 1000.0, 1)
+    # Rebuild the size axis from the fixed AERODYNAMIC cutpoints (density-
+    # independent) rather than from the current midpoints. Convert each cutpoint
+    # to its Stokes diameter at the new density, pin the lowest cutpoint at the
+    # fixed 6 nm filter cutpoint (the ELPI never rescales it), and take the
+    # geometric-mean midpoints. This matches Dekati's own calculation and is
+    # path-independent (e.g. 0.16 → 1.0 reproduces a fresh unit-density load).
+    aero_cut_um = _as_float_array(meta["D50values(um)"])
+    try:
+        filter_low_um = float(_as_float_array(meta["FilterLow(um)"]).flat[0])
+    except (KeyError, ValueError, IndexError):
+        filter_low_um = float(aero_cut_um[0])
 
-    # Bin edges: geometric means of the new mids, with the two ends extrapolated
-    # (matching the loader's behaviour for non-unit density).
-    bin_edges_new = np.empty(bin_mids_new.size + 1)
-    bin_edges_new[1:-1] = np.sqrt(bin_mids_new[1:] * bin_mids_new[:-1])
-    bin_edges_new[0] = bin_edges_new[1] ** 2 / bin_edges_new[2]
-    bin_edges_new[-1] = bin_edges_new[-2] ** 2 / bin_edges_new[-3]
-    bin_edges_new = np.round(bin_edges_new, 1)
+    cut_um = _stokes_from_aerodynamic(aero_cut_um, rho_new)
+    cut_um[0] = filter_low_um
+    mids_um = np.sqrt(cut_um[1:] * cut_um[:-1])
+
+    bin_mids_new = np.round(mids_um * 1000.0, 1)
+    bin_edges_new = np.round(cut_um * 1000.0, 1)
 
     old_headers = [str(x) for x in bin_mids_old]
     new_headers = [str(x) for x in bin_mids_new]
