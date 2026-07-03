@@ -506,6 +506,25 @@ def _disc_size_from_ratio(ratio: np.ndarray, cal: list[float]) -> np.ndarray:
     return np.clip(size, 1.0, _DISC_SIZE_MAX)
 
 
+#: Empirical size-dependent LDSA refinement. ``LDSA = cal[6]·I_total`` slightly
+#: underestimates the vendor's LDSA, by an amount that grows smoothly with the
+#: mean particle size (consistent with the flat charge-signal approximation
+#: diverging from the true size-weighted lung deposition; cf. Fierz 2011 note
+#: #8). A quadratic-in-diameter factor fit to paired raw/processed files removes
+#: most of it; leave-one-out validation across the reference instruments cut the
+#: LDSA error by ~35 % on each held-out instrument, so the trend generalises.
+_LDSA_CORR = (1.003627, -3.126074e-4, 4.279956e-6)  # (c0, c1, c2) in 1/nm powers
+_LDSA_CORR_SIZE_CAP = 150.0  # the fit is only supported up to ~150 nm
+_LDSA_CORR_CLIP = (0.98, 1.06)  # bound the factor against extrapolation
+
+
+def _ldsa_size_factor(size: np.ndarray) -> np.ndarray:
+    """Return the empirical size-dependent LDSA correction factor (see _LDSA_CORR)."""
+    s = np.clip(np.asarray(size, dtype=float), 0.0, _LDSA_CORR_SIZE_CAP)
+    c0, c1, c2 = _LDSA_CORR
+    return np.clip(c0 + c1 * s + c2 * s * s, *_LDSA_CORR_CLIP)
+
+
 def _zero_offset_series(raw: pd.DataFrame, offsets_hdr) -> tuple:
     """Build the time-varying electrometer zero offsets from a raw record.
 
@@ -562,6 +581,7 @@ def Load_DiSCmini_raw_file(
     extra_data: bool = False,
     period: int = 10,
     zero_offset_correction: bool = True,
+    ldsa_correction: bool = False,
 ) -> AerosolAlt:
     """Description:
         Load a **raw** DiSCmini ``.TXT`` file and reproduce the vendor
@@ -588,6 +608,14 @@ def Load_DiSCmini_raw_file(
             computing, as the vendor software does. This markedly improves
             agreement for instruments whose electrometer baseline drifts.
             Defaults to ``True``.
+        ldsa_correction (bool, optional):
+            Apply an **empirical** size-dependent multiplier to LDSA (see
+            :data:`_LDSA_CORR`). The simple ``cal[6]·I_total`` LDSA slightly
+            underestimates the vendor value by an amount that grows with mean
+            particle size; this factor (fit to paired raw/processed files and
+            leave-one-out validated) removes most of it. It is *not* a
+            documented vendor formula, so it defaults to ``False``; enable it
+            for closer agreement with the vendor LDSA.
 
     Returns:
         AerosolAlt:
@@ -730,6 +758,9 @@ def Load_DiSCmini_raw_file(
         ratio = np.where(diff != 0, filt / diff, np.nan)
     size = _disc_size_from_ratio(ratio, cal)
     number = cal[5] * itot / np.power(size, cal[4])
+    # Optional empirical size-dependent LDSA refinement (does not feed Number).
+    if ldsa_correction:
+        ldsa = ldsa * _ldsa_size_factor(size)
 
     # Real timestamps at each window's centre (start + win*period + (period-1)/2),
     # matching the vendor's time labelling and preserving real elapsed time.
@@ -755,6 +786,7 @@ def Load_DiSCmini_raw_file(
     DM._meta["offsets"] = meta["offsets"]
     DM._meta["averaging_period_s"] = period
     DM._meta["zero_offset_correction"] = bool(offsets is not None)
+    DM._meta["ldsa_correction"] = bool(ldsa_correction)
     # Size uses the instrument's stored cubic current-ratio calibration
     # (Fierz 2011); reproduces the vendor output to a median error < 1 %.
     DM._meta["size_inversion"] = "cubic_ratio_polynomial"

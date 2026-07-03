@@ -237,6 +237,30 @@ def test_discmini_zero_offset_correction_recovers_and_applies():
     assert off_d[0] == pytest.approx(meta["offsets"][0])
 
 
+def test_discmini_ldsa_correction_scales_with_size():
+    """The optional LDSA correction raises LDSA and grows with particle size."""
+    import numpy as np
+
+    from aerosoltools.loaders.Discmini import _ldsa_size_factor
+
+    # Factor is ~1 for small particles and increases with size (bounded).
+    assert _ldsa_size_factor(np.array([20.0]))[0] == pytest.approx(1.0, abs=0.01)
+    assert (
+        _ldsa_size_factor(np.array([130.0]))[0] > _ldsa_size_factor(np.array([50.0]))[0]
+    )
+    # Bounded against extrapolation well beyond the fitted range.
+    assert _ldsa_size_factor(np.array([1000.0]))[0] <= 1.06
+
+    raw = _data_path("Sample_Discmini_raw.txt")
+    on = Load_DiSCmini_raw_file(raw, ldsa_correction=True)
+    off = Load_DiSCmini_raw_file(raw, ldsa_correction=False)
+    assert on._meta.get("ldsa_correction") is True
+    assert off._meta.get("ldsa_correction") is False
+    # The correction is a >= 1 multiplier, so corrected LDSA is never smaller.
+    assert (on.data["LDSA"].to_numpy() >= off.data["LDSA"].to_numpy() - 1e-9).all()
+    assert (on.data["LDSA"].to_numpy() > off.data["LDSA"].to_numpy()).any()
+
+
 def test_discmini_processed_has_no_phantom_column_and_only_numeric_series():
     """The trailing-tab 'Unnamed' column is dropped and never offered as a series."""
     from aerosoltools.gui.helpers import plottable_columns
