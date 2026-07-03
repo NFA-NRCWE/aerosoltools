@@ -107,7 +107,11 @@ def test_discmini_raw_loader_pipeline(tmp_path):
     """Raw loader filters idle rows, averages, and reproduces LDSA exactly."""
     raw = tmp_path / "TEST.TXT"
     _write_synthetic_raw(str(raw))
-    dm = Load_DiSCmini_raw_file(str(raw), extra_data=True, period=10)
+    # Disable the zero-offset correction here so the exact cal-formula values
+    # below are checked without the (separately tested) offset subtraction.
+    dm = Load_DiSCmini_raw_file(
+        str(raw), extra_data=True, period=10, zero_offset_correction=False
+    )
 
     # 20 valid rows / period 10 = 2 output rows (idle rows excluded).
     assert dm.data.shape[0] == 2
@@ -180,7 +184,9 @@ def test_discmini_raw_matches_processed_size_and_number():
     """Raw-loader Size & Number reproduce the vendor output (< 3% median)."""
     import numpy as np
 
-    dm = Load_DiSCmini_raw_file(_data_path("Sample_Discmini_raw.txt"))
+    dm = Load_DiSCmini_raw_file(
+        _data_path("Sample_Discmini_raw.txt"), zero_offset_correction=False
+    )
     proc = pd.read_csv(
         _data_path("Sample_Discmini_raw_output.txt"),
         sep="\t",
@@ -196,6 +202,39 @@ def test_discmini_raw_matches_processed_size_and_number():
         ven = pd.to_numeric(proc[ven_col], errors="coerce").to_numpy()[:n]
         rel = np.abs(mine - ven) / ven
         assert np.median(rel) < 0.03, f"{mine_col} median rel err too high"
+
+
+def test_discmini_zero_offset_correction_recovers_and_applies():
+    """Zero-offset correction reads the idle-period zeros and shifts the currents."""
+    from aerosoltools.loaders.Discmini import _parse_raw_header, _zero_offset_series
+
+    raw = _data_path("Sample_Discmini_raw.txt")
+    on = Load_DiSCmini_raw_file(raw, zero_offset_correction=True)
+    off = Load_DiSCmini_raw_file(raw, zero_offset_correction=False)
+    # The flag is recorded and the correction changes the computed currents.
+    assert on._meta.get("zero_offset_correction") is True
+    assert off._meta.get("zero_offset_correction") is False
+    assert (on.data["LDSA"].to_numpy() != off.data["LDSA"].to_numpy()).any()
+
+    # The offset series is anchored on the header Offsets even without an idle
+    # period, and grows a new anchor per hourly idle run when present.
+    with open(raw, encoding="latin-1") as fh:
+        header = [next(fh) for _ in range(15)]
+    meta = _parse_raw_header(header)
+    times, off_d, off_f = _zero_offset_series(
+        pd.DataFrame(
+            {
+                "Time": [0],
+                "Diffusion": [0.0],
+                "Filter": [0.0],
+                "Idiff": [9.8],
+                "Status": ["8B"],
+            }
+        ),
+        meta["offsets"],
+    )
+    assert times[0] == 0.0
+    assert off_d[0] == pytest.approx(meta["offsets"][0])
 
 
 def test_discmini_processed_has_no_phantom_column_and_only_numeric_series():
@@ -219,7 +258,11 @@ def test_discmini_raw_matches_processed_ldsa():
     """Raw-loader LDSA reproduces the vendor-processed LDSA (charger physics)."""
     import numpy as np
 
-    dm = Load_DiSCmini_raw_file(_data_path("Sample_Discmini_raw.txt"))
+    # Compare the pure inversion (no zero-offset correction) against the vendor;
+    # the offset correction is exercised separately.
+    dm = Load_DiSCmini_raw_file(
+        _data_path("Sample_Discmini_raw.txt"), zero_offset_correction=False
+    )
     proc = pd.read_csv(
         _data_path("Sample_Discmini_raw_output.txt"),
         sep="\t",

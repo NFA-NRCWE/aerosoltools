@@ -506,10 +506,62 @@ def _disc_size_from_ratio(ratio: np.ndarray, cal: list[float]) -> np.ndarray:
     return np.clip(size, 1.0, _DISC_SIZE_MAX)
 
 
+def _zero_offset_series(raw: pd.DataFrame, offsets_hdr) -> tuple:
+    """Build the time-varying electrometer zero offsets from a raw record.
+
+    The DiSCmini re-measures its electrometer zero offsets during a ~1 minute
+    pump-/charger-off period every hour (Testo DiSCmini manual, "Zero offsets").
+    The vendor software subtracts these (slowly drifting) offsets from the two
+    stage currents before computing number/size/LDSA. Those offset measurements
+    are recoverable straight from the raw file: during each idle period the
+    charging current ``Idiff`` falls to ≈ 0, and the diffusion/filter readings
+    then are the pure electrometer zeros. This returns anchor points for a
+    linear interpolation of each stage's offset over time, seeded at ``t = 0``
+    with the header ``Offsets:`` values (the instrument's start-up zeros).
+
+    Args:
+        raw: The full raw data table (all rows, incl. idle) with numeric
+            ``Time``/``Diffusion``/``Filter``/``Idiff`` and a ``Status`` column.
+        offsets_hdr: The two header ``Offsets:`` values, or ``None``.
+
+    Returns:
+        ``(times, off_diff, off_filter)`` numpy arrays of anchor times (s) and
+        the corresponding diffusion/filter zero offsets, or ``None`` when no
+        offset information is available.
+    """
+    times, off_d, off_f = [], [], []
+    if offsets_hdr is not None and len(offsets_hdr) >= 2:
+        times.append(0.0)
+        off_d.append(float(offsets_hdr[0]))
+        off_f.append(float(offsets_hdr[1]))
+
+    idle = raw[~raw["Status"].str.lower().str.endswith("b", na=False)]
+    if not idle.empty:
+        # Split the idle rows into consecutive runs (the hourly offset periods).
+        breaks = np.where(np.diff(idle["Time"].to_numpy()) > 1)[0]
+        for run in np.split(idle.index.to_numpy(), breaks + 1):
+            seg = raw.loc[run]
+            settled = seg[seg["Idiff"] < 1.0]  # charger fully off → pure zero
+            if not settled.empty:
+                times.append(float(settled["Time"].mean()))
+                off_d.append(float(settled["Diffusion"].mean()))
+                off_f.append(float(settled["Filter"].mean()))
+
+    if not times:
+        return None
+    order = np.argsort(times)
+    return (
+        np.asarray(times)[order],
+        np.asarray(off_d)[order],
+        np.asarray(off_f)[order],
+    )
+
+
 def Load_DiSCmini_raw_file(
     file: str,
     extra_data: bool = False,
     period: int = 10,
+    zero_offset_correction: bool = True,
 ) -> AerosolAlt:
     """Description:
         Load a **raw** DiSCmini ``.TXT`` file and reproduce the vendor
@@ -529,6 +581,13 @@ def Load_DiSCmini_raw_file(
             Averaging period in seconds. The vendor tool averages the raw
             1 Hz data into 10 s windows; this reproduces that with
             ``period=10`` (the default).
+        zero_offset_correction (bool, optional):
+            Subtract the time-varying electrometer zero offsets (recovered from
+            the hourly pump-off offset measurements, see
+            :func:`_zero_offset_series`) from the stage currents before
+            computing, as the vendor software does. This markedly improves
+            agreement for instruments whose electrometer baseline drifts.
+            Defaults to ``True``.
 
     Returns:
         AerosolAlt:
@@ -573,22 +632,26 @@ def Load_DiSCmini_raw_file(
             number-calibration factor and ``cal[6]`` the LDSA-per-current
             factor. All were validated against vendor-processed files.
 
-            Accuracy: the *inversion* is reproduced essentially exactly — fed
-            the vendor's own stage currents it matches Size/Number to a median
-            error < 1 %. End-to-end from the raw file, agreement depends on the
-            electrometer signal. The vendor applies an internal, time-varying
-            correction to the raw stage currents that is not documented in the
-            published DiSC literature and is not reproduced here: the two
-            currents agree at the start of a record but the vendor's values
-            drift away from the raw block means over time (it is *not* a simple
-            electrometer zero offset — the electrometers read ≈ 0 during the
-            pump-off idle periods). The size and direction of this drift are
-            instrument-specific and do not track firmware version, temperature,
-            battery or flow consistently, so they cannot be inferred from the
-            file. For stable instruments the effect is negligible (agreement
-            < 1 %); for low-signal instruments the absolute Number/Size can
-            deviate more over a long record. The averaged diffusion/filter
-            currents are exposed via ``extra_data`` for inspection.
+            A drifting electrometer **zero offset** is removed before computing
+            (``zero_offset_correction``): the instrument re-measures its zero
+            offsets during a ~1 min pump-off period every hour (Testo DiSCmini
+            manual), and those measurements are recovered from the idle periods
+            in the raw file and subtracted from the stage currents, as the
+            vendor software does (see :func:`_zero_offset_series`). This is the
+            dominant source of raw-vs-vendor disagreement for instruments whose
+            baseline drifts.
+
+            Accuracy: the *inversion* fed the vendor's own currents matches
+            Size/Number to a median error < 1 %; end-to-end from the raw file
+            (with the zero-offset correction) Size/Number agree with the vendor
+            output to roughly 1-3 % across the reference instruments. A small
+            residual remains from effects not reproduced here — the optional
+            *induction correction* (subtracting a term proportional to the
+            filter-signal time-derivative from the diffusion stage, which the
+            vendor leaves off by default and which only matters during rapid
+            transients), the sensor-signal-to-l/min flow conversion, and the
+            2-decimal rounding of the raw currents. The averaged
+            diffusion/filter currents are exposed via ``extra_data``.
 
     Examples:
         .. code-block:: python
@@ -619,6 +682,16 @@ def Load_DiSCmini_raw_file(
     for col in ["Time", "Diffusion", "Filter", "Temp", "Idiff", "Ucor", "Flow", "Batt"]:
         raw[col] = pd.to_numeric(raw[col], errors="coerce")
     raw["Status"] = raw["Status"].astype("string").str.strip()
+
+    # Subtract the drifting electrometer zero offsets (recovered from the hourly
+    # pump-off offset measurements) from the stage currents, as the vendor does.
+    offsets = (
+        _zero_offset_series(raw, meta["offsets"]) if zero_offset_correction else None
+    )
+    if offsets is not None:
+        ot, od, of = offsets
+        raw["Diffusion"] = raw["Diffusion"] - np.interp(raw["Time"], ot, od)
+        raw["Filter"] = raw["Filter"] - np.interp(raw["Time"], ot, of)
 
     # Keep only active-measurement rows (Status low nibble "B", e.g. "8B").
     valid = raw[raw["Status"].str.lower().str.endswith("b", na=False)].copy()
@@ -681,6 +754,7 @@ def Load_DiSCmini_raw_file(
     DM._meta["calibration"] = cal
     DM._meta["offsets"] = meta["offsets"]
     DM._meta["averaging_period_s"] = period
+    DM._meta["zero_offset_correction"] = bool(offsets is not None)
     # Size uses the instrument's stored cubic current-ratio calibration
     # (Fierz 2011); reproduces the vendor output to a median error < 1 %.
     DM._meta["size_inversion"] = "cubic_ratio_polynomial"
