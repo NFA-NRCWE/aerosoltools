@@ -561,15 +561,19 @@ def Load_DiSCmini_raw_file(
             Accuracy: the *inversion* is reproduced essentially exactly — fed
             the vendor's own stage currents it matches Size/Number to a median
             error < 1 %. End-to-end from the raw file, agreement depends on the
-            electrometer signal: the vendor applies an internal, time-varying
-            electrometer baseline (zero-drift) correction to the raw currents
-            that is not documented in the published DiSC literature and is not
-            reproduced here. For instruments with a stable baseline this is
-            negligible (agreement < 1 %); for low-signal instruments the raw
-            currents can drift from the vendor's corrected values over a long
-            record, so the absolute Number/Size may deviate more. The averaged
-            diffusion/filter currents are exposed via ``extra_data`` for
-            inspection.
+            electrometer signal. The vendor applies an internal, time-varying
+            correction to the raw stage currents that is not documented in the
+            published DiSC literature and is not reproduced here: the two
+            currents agree at the start of a record but the vendor's values
+            drift away from the raw block means over time (it is *not* a simple
+            electrometer zero offset — the electrometers read ≈ 0 during the
+            pump-off idle periods). The size and direction of this drift are
+            instrument-specific and do not track firmware version, temperature,
+            battery or flow consistently, so they cannot be inferred from the
+            file. For stable instruments the effect is negligible (agreement
+            < 1 %); for low-signal instruments the absolute Number/Size can
+            deviate more over a long record. The averaged diffusion/filter
+            currents are exposed via ``extra_data`` for inspection.
 
     Examples:
         .. code-block:: python
