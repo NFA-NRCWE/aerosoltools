@@ -113,10 +113,12 @@ def test_discmini_raw_loader_pipeline(tmp_path):
     assert dm.data.shape[0] == 2
     assert dm.serial_number == "123456"  # "SN" stripped
     assert dm._meta.get("firmware") == "3.42"
-    assert dm._meta.get("size_inversion") == "provisional"
+    assert dm._meta.get("size_inversion") == "cubic_ratio_polynomial"
 
     # LDSA = cal[6] * (Diff + Filter) = 0.68 * (10 + 35) = 30.6 (exact here).
     assert dm.data["LDSA"].iloc[0] == pytest.approx(30.6, abs=1e-6)
+    # Size = cal0 + cal1*R + cal2*R^2 + cal3*R^3 with R = 35/10 = 3.5.
+    assert dm.data["Size"].iloc[0] == pytest.approx(83.7, abs=0.1)
     # Idle rows would have dragged the currents toward zero if not excluded.
     assert dm.extra_data["Diffusion"].iloc[0] == pytest.approx(10.0, abs=1e-6)
     assert dm.total_concentration.iloc[0] > 0
@@ -131,12 +133,34 @@ def test_discmini_raw_loader_on_sample_file():
     dm = Load_DiSCmini_raw_file(_data_path("Sample_Discmini_raw.txt"), extra_data=True)
     assert dm.serial_number == "101923"  # "SN101923" in the CalData line
     assert dm._meta.get("firmware") == "3.42"
-    assert dm._meta.get("size_inversion") == "provisional"
+    assert dm._meta.get("size_inversion") == "cubic_ratio_polynomial"
     # 300 valid rows / 10 = 30 averaged output rows.
     assert dm.data.shape[0] == 30
     for col in ("Total_conc", "Size", "LDSA"):
         assert col in dm.data.columns
         assert (dm.data[col] > 0).all()
+
+
+def test_discmini_raw_matches_processed_size_and_number():
+    """Raw-loader Size & Number reproduce the vendor output (< 3% median)."""
+    import numpy as np
+
+    dm = Load_DiSCmini_raw_file(_data_path("Sample_Discmini_raw.txt"))
+    proc = pd.read_csv(
+        _data_path("Sample_Discmini_raw_output.txt"),
+        sep="\t",
+        skiprows=6,
+        header=None,
+        decimal=",",
+        engine="python",
+        names=["Time", "Number", "Size", "LDSA", "Filter", "Diff", "z"],
+    )
+    n = min(len(dm.data), len(proc))
+    for mine_col, ven_col in [("Size", "Size"), ("Total_conc", "Number")]:
+        mine = dm.data[mine_col].to_numpy()[:n]
+        ven = pd.to_numeric(proc[ven_col], errors="coerce").to_numpy()[:n]
+        rel = np.abs(mine - ven) / ven
+        assert np.median(rel) < 0.03, f"{mine_col} median rel err too high"
 
 
 def test_discmini_raw_matches_processed_ldsa():
