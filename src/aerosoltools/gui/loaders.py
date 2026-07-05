@@ -29,6 +29,7 @@ from ..loaders import (
     Load_OPCN3_file,
     Load_OPS_file,
     Load_Partector_file,
+    Load_Ranger_file,
     Load_SMPS_file,
 )
 from ..loaders.Common import _detect_delimiter
@@ -54,6 +55,7 @@ LOADERS: dict[str, Callable] = {
     "SMPS": Load_SMPS_file,
     "Aethalometer": Load_Aethalometer_file,
     "DustTrak": Load_DustTrak_file,
+    "Chlorine (Ranger)": Load_Ranger_file,
 }
 
 # Lower-case filename substrings -> display name.
@@ -73,6 +75,7 @@ _FILENAME_HINTS: list[tuple[str, str]] = [
     ("opcn3", "OPC-N3"),
     ("opc-n3", "OPC-N3"),
     ("partector", "Partector"),
+    ("ranger", "Chlorine (Ranger)"),
     ("nanoscan", "NanoScan (NS)"),
     ("_ns", "NanoScan (NS)"),
     ("smps", "SMPS"),
@@ -354,6 +357,16 @@ def is_OPCN3_file(path: str | Path) -> bool:
     return (has_bins and has_pm and has_env) or "opc-n3" in text or "opcn3" in text
 
 
+def is_Ranger_file(path: str | Path) -> bool:
+    """Detect Ranger chlorine-sensor CSV exports.
+
+    Distinctive: the file opens with a "Ranger Serial Number" line and carries
+    a chlorine-concentration column ("CL2 (PPM)").
+    """
+    text = _head_text(path, max_lines=5)
+    return "ranger serial number" in text or "cl2 (ppm)" in text
+
+
 def is_CPC_file(path: str | Path) -> bool:
     """Conservative CPC detector.
 
@@ -404,6 +417,7 @@ SNIFFERS: dict[str, Callable[[str | Path], bool]] = {
     "FMPS": is_FMPS_file,
     "Fourtec": is_Fourtec_file,
     "OPC-N3": is_OPCN3_file,
+    "Chlorine (Ranger)": is_Ranger_file,
     "CPC": is_CPC_file,
 }
 

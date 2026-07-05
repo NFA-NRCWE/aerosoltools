@@ -15,6 +15,7 @@ from aerosoltools.loaders import (
     Load_OPCN3_file,
     Load_OPS_file,
     Load_Partector_file,
+    Load_Ranger_file,
     Load_SMPS_file,
 )
 from aerosoltools.loaders.Discmini import (
@@ -39,6 +40,7 @@ from aerosoltools.loaders.Discmini import (
         (Load_OPS_file, "Sample_OPS.csv"),
         (Load_OPS_file, "Sample_OPS2.txt"),
         (Load_Partector_file, "Sample_Partector.txt"),
+        (Load_Ranger_file, "Sample_Ranger.csv"),
         (Load_SMPS_file, "Sample_SMPS.txt"),
     ],
 )

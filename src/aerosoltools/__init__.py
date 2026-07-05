@@ -96,6 +96,7 @@ from .loaders import (
     Load_OPCN3_file,
     Load_OPS_file,
     Load_Partector_file,
+    Load_Ranger_file,
     Load_SMPS_file,
 )
 from .utility import (
@@ -124,6 +125,7 @@ load_ns_file = Load_NS_file
 load_opcn3_file = Load_OPCN3_file
 load_ops_file = Load_OPS_file
 load_partector_file = Load_Partector_file
+load_ranger_file = Load_Ranger_file
 load_smps_file = Load_SMPS_file
 load_data_from_folder = Load_data_from_folder
 
@@ -156,6 +158,7 @@ __all__ = [
     "Load_OPCN3_file",
     "Load_OPS_file",
     "Load_Partector_file",
+    "Load_Ranger_file",
     "Load_SMPS_file",
     "Load_data_from_folder",
     # Loaders (snake_case aliases)
@@ -172,6 +175,7 @@ __all__ = [
     "load_opcn3_file",
     "load_ops_file",
     "load_partector_file",
+    "load_ranger_file",
     "load_smps_file",
     "load_data_from_folder",
 ]
