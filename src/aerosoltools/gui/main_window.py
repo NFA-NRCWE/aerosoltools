@@ -7,7 +7,7 @@ import os
 import traceback
 from typing import List, Optional
 
-from ..utility import Combine_NS_OPS, combine_measurements
+from ..utility import combine_measurements, combine_size_ranges
 from . import helpers, theme
 from .adjustments import AdjustmentsBox
 from .assets import icon_path
@@ -27,7 +27,7 @@ from .tabs import (
     SummaryTab,
     TimeSeriesTab,
 )
-from .widgets import CombineNSOPSDialog, KeyboardShortcutsDialog, SlackTabBar
+from .widgets import CombineInstrumentsDialog, KeyboardShortcutsDialog, SlackTabBar
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -634,39 +634,41 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
     def _combine_ns_ops(self) -> None:
-        """Combine a NanoScan + an OPS dataset into one merged distribution."""
+        """Stitch two range-extending size instruments at a chosen crossover."""
         twod = [d for d in self.project.datasets if helpers.is_2d(d.obj)]
         if len(twod) < 2:
             QtWidgets.QMessageBox.information(
                 self,
-                "Combine NS + OPS",
+                "Combine size ranges",
                 "Load at least two size-resolved (2D) datasets first "
-                "(e.g. a NanoScan and an OPS).",
+                "(e.g. a NanoScan/FMPS and an OPS/APS).",
             )
             return
-        dlg = CombineNSOPSDialog(self, twod)
+        dlg = CombineInstrumentsDialog(self, twod)
         if dlg.exec_() != QtWidgets.QDialog.Accepted:
             return
-        ns_ds, ops_ds, match = dlg.result()
-        if ns_ds is ops_ds:
+        ds_a, ds_b, crossover, match = dlg.result()
+        if ds_a is ds_b:
             QtWidgets.QMessageBox.warning(
-                self, "Combine NS + OPS", "Pick two different datasets."
+                self, "Combine size ranges", "Pick two different datasets."
             )
             return
         try:
-            combined = Combine_NS_OPS(ns_ds.obj, ops_ds.obj, match=match)
+            combined = combine_size_ranges(
+                ds_a.obj, ds_b.obj, crossover=crossover, match=match
+            )
         except Exception:
             QtWidgets.QMessageBox.critical(
                 self, "Combine failed", traceback.format_exc(limit=2)
             )
             return
-        # NS+OPS keeps the originals (they remain useful on their own); still
-        # record their raw files on the combined dataset for completeness.
+        # The originals remain useful on their own; still record their raw files
+        # on the combined dataset for completeness.
         self._add_derived_dataset(
             combined,
-            "NS_OPS",
-            "NS + OPS (combined)",
-            source_files=ns_ds.contributing_files + ops_ds.contributing_files,
+            "Combined",
+            f"{ds_a.instrument} + {ds_b.instrument} (combined)",
+            source_files=ds_a.contributing_files + ds_b.contributing_files,
         )
 
     def _refresh_sidebar(self) -> None:

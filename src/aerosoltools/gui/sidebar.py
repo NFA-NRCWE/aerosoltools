@@ -66,10 +66,10 @@ class DatasetSidebar(QtWidgets.QWidget):
         self.join_btn.clicked.connect(self._emit_join)
         layout.addWidget(self.join_btn)
 
-        self.combine_btn = QtWidgets.QPushButton("Combine NS + OPS…")
+        self.combine_btn = QtWidgets.QPushButton("Combine size ranges…")
         self.combine_btn.setToolTip(
-            "Combine a NanoScan and an OPS dataset into one merged size "
-            "distribution."
+            "Stitch two range-extending size instruments (e.g. NanoScan/FMPS + "
+            "OPS/APS) into one distribution at a crossover diameter you choose."
         )
         self.combine_btn.clicked.connect(self.combine_ns_ops_requested.emit)
         layout.addWidget(self.combine_btn)

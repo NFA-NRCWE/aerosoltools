@@ -1,15 +1,18 @@
 """Small reusable widgets and dialogs for the aerosoltools GUI.
 
 These are presentation-only helpers with no business logic: a tab bar that sizes
-its tabs so labels never clip, the modal dialog used to pick the two datasets for
-a NanoScan + OPS combine, and the read-only keyboard-shortcut reference.
+its tabs so labels never clip, the modal dialog used to pick two size-resolved
+datasets and a crossover for combining their ranges, and the read-only
+keyboard-shortcut reference.
 """
 
 from __future__ import annotations
 
 from typing import Iterable, Optional, Tuple
 
-from .qt import QtCore, QtWidgets
+import numpy as np
+
+from .qt import Figure, FigureCanvas, QtCore, QtWidgets
 
 
 class ThresholdControls(QtWidgets.QWidget):
@@ -106,43 +109,80 @@ class SlackTabBar(QtWidgets.QTabBar):
         return size
 
 
-class CombineNSOPSDialog(QtWidgets.QDialog):
-    """Pick a NanoScan and an OPS dataset (+ time-match) to combine."""
+class CombineInstrumentsDialog(QtWidgets.QDialog):
+    """Pick two size-resolved datasets and a crossover to stitch their ranges.
+
+    Shows each instrument's covered size range on a shared log axis (nm) and a
+    draggable crossover line that snaps to whole bin edges, so the user sets
+    exactly where one instrument hands over to the other. Returns the two
+    datasets, the crossover diameter (nm) and the time-match mode; the combining
+    itself is done by :func:`aerosoltools.combine_size_ranges`.
+    """
 
     def __init__(self, parent, datasets):
-        """Build the NS/OPS dataset pickers and match selector.
+        """Build the dataset pickers, range plot and crossover control.
 
         Args:
             parent: Parent widget.
             datasets: Candidate (2D) datasets to choose from.
         """
         super().__init__(parent)
-        self.setWindowTitle("Combine NS + OPS")
+        self.setWindowTitle("Combine size ranges")
         self._datasets = datasets
+        self._crossover = None  # nm
+        self._edges = np.array([])  # snap targets (overlap bin edges)
+        self._dragging = False
 
-        form = QtWidgets.QFormLayout(self)
-        self.ns_combo = QtWidgets.QComboBox()
-        self.ops_combo = QtWidgets.QComboBox()
+        layout = QtWidgets.QVBoxLayout(self)
+
+        pick = QtWidgets.QFormLayout()
+        self.a_combo = QtWidgets.QComboBox()
+        self.b_combo = QtWidgets.QComboBox()
         for d in datasets:
             label = f"{d.label}  ({d.instrument})"
-            self.ns_combo.addItem(label, d.id)
-            self.ops_combo.addItem(label, d.id)
-        self._preselect(self.ns_combo, ("nano", "ns"))
-        self._preselect(self.ops_combo, ("ops",))
-
+            self.a_combo.addItem(label, d.id)
+            self.b_combo.addItem(label, d.id)
+        self._preselect(self.a_combo, ("nano", "ns", "fmps", "smps"))
+        self._preselect(self.b_combo, ("ops", "aps"))
+        if (
+            self.b_combo.currentIndex() == self.a_combo.currentIndex()
+            and len(datasets) > 1
+        ):
+            self.b_combo.setCurrentIndex(
+                1 - self.a_combo.currentIndex()
+                if self.a_combo.currentIndex() < 2
+                else 0
+            )
+        self.a_combo.currentIndexChanged.connect(self._redraw)
+        self.b_combo.currentIndexChanged.connect(self._redraw)
+        pick.addRow("Instrument 1:", self.a_combo)
+        pick.addRow("Instrument 2:", self.b_combo)
         self.match_combo = QtWidgets.QComboBox()
         self.match_combo.addItems(["rebin", "nearest", "exact"])
+        pick.addRow("Time match:", self.match_combo)
+        layout.addLayout(pick)
 
-        form.addRow("NanoScan (smaller sizes):", self.ns_combo)
-        form.addRow("OPS (larger sizes):", self.ops_combo)
-        form.addRow("Time match:", self.match_combo)
+        self.figure = Figure(figsize=(6.5, 2.4))
+        self.canvas = FigureCanvas(self.figure)
+        self.ax = self.figure.add_subplot(111)
+        layout.addWidget(self.canvas, stretch=1)
+        self.canvas.mpl_connect("button_press_event", self._on_press)
+        self.canvas.mpl_connect("motion_notify_event", self._on_motion)
+        self.canvas.mpl_connect("button_release_event", self._on_release)
 
-        buttons = QtWidgets.QDialogButtonBox(
+        self.info = QtWidgets.QLabel("")
+        self.info.setWordWrap(True)
+        layout.addWidget(self.info)
+
+        self.buttons = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
         )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        form.addRow(buttons)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        layout.addWidget(self.buttons)
+
+        self.resize(560, 380)
+        self._redraw()
 
     def _preselect(self, combo, keys) -> None:
         """Preselect the first dataset whose instrument matches ``keys``."""
@@ -154,11 +194,126 @@ class CombineNSOPSDialog(QtWidgets.QDialog):
                 combo.setCurrentIndex(i)
                 return
 
+    def _selected(self):
+        """Return the two currently chosen datasets."""
+        a = next(d for d in self._datasets if d.id == self.a_combo.currentData())
+        b = next(d for d in self._datasets if d.id == self.b_combo.currentData())
+        return a, b
+
+    def _redraw(self, *_a) -> None:
+        """Redraw the range bars + crossover for the current selection."""
+        a, b = self._selected()
+        ok = a is not b
+        self.buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(ok)
+        ax = self.ax
+        ax.clear()
+        if not ok:
+            self.info.setText("Pick two different datasets.")
+            self._edges = np.array([])
+            self.canvas.draw_idle()
+            return
+
+        ea = np.asarray(a.obj.bin_edges, dtype=float)
+        eb = np.asarray(b.obj.bin_edges, dtype=float)
+        lo_end, hi_end = min(ea[0], eb[0]), max(ea[-1], eb[-1])
+        overlap_lo = max(ea[0], eb[0])
+        overlap_hi = min(ea[-1], eb[-1])
+
+        for y, e, ds, color in ((1, ea, a, "#4c72b0"), (0, eb, b, "#dd8452")):
+            ax.plot(
+                [e[0], e[-1]],
+                [y, y],
+                "-",
+                color=color,
+                lw=8,
+                alpha=0.35,
+                solid_capstyle="butt",
+            )
+            ax.plot(e, np.full_like(e, y), "|", color=color, ms=10, mew=1.0)
+            ax.text(
+                e[0],
+                y + 0.18,
+                f"{ds.instrument}",
+                color=color,
+                fontsize=8,
+                ha="left",
+                va="bottom",
+            )
+
+        # Snap targets: bin edges of both instruments inside the overlap.
+        edges = np.unique(np.concatenate([ea, eb]))
+        self._edges = edges[(edges >= overlap_lo) & (edges <= overlap_hi)]
+        if self._crossover is None or not (overlap_lo <= self._crossover <= overlap_hi):
+            self._crossover = float(np.sqrt(overlap_lo * overlap_hi))
+            self._snap()
+
+        if overlap_hi <= overlap_lo:
+            self.info.setText(
+                "These instruments do not overlap in size — they cannot be "
+                "stitched at a crossover."
+            )
+            self.buttons.button(QtWidgets.QDialogButtonBox.Ok).setEnabled(False)
+        else:
+            ax.axvspan(overlap_lo, overlap_hi, color="0.5", alpha=0.08)
+        self._xline = ax.axvline(self._crossover, color="crimson", lw=1.6)
+
+        ax.set_xscale("log")
+        ax.set_xlim(max(1.0, lo_end * 0.7), hi_end * 1.3)
+        ax.set_ylim(-0.6, 1.7)
+        ax.set_yticks([])
+        ax.set_xlabel("Diameter (nm)")
+        ax.grid(True, which="both", axis="x", alpha=0.25)
+        self.figure.tight_layout()
+        self._update_info()
+        self.canvas.draw_idle()
+
+    def _snap(self) -> None:
+        """Snap the crossover to the nearest overlap bin edge."""
+        if self._edges.size:
+            self._crossover = float(
+                self._edges[int(np.argmin(np.abs(self._edges - self._crossover)))]
+            )
+
+    def _update_info(self) -> None:
+        """Refresh the textual summary under the plot."""
+        a, b = self._selected()
+        lo = a if float(a.obj.bin_edges[-1]) <= float(b.obj.bin_edges[-1]) else b
+        hi = b if lo is a else a
+        self.info.setText(
+            f"Crossover {self._crossover:g} nm — "
+            f"{lo.instrument} below, {hi.instrument} above. "
+            "Drag the red line (snaps to bin edges)."
+        )
+
+    # -- crossover dragging ------------------------------------------------
+    def _on_press(self, event) -> None:
+        if event.inaxes is self.ax and event.xdata is not None and self._edges.size:
+            self._dragging = True
+            self._crossover = float(event.xdata)
+            self._snap()
+            self._xline.set_xdata([self._crossover, self._crossover])
+            self._update_info()
+            self.canvas.draw_idle()
+
+    def _on_motion(self, event) -> None:
+        if self._dragging and event.inaxes is self.ax and event.xdata is not None:
+            self._crossover = float(event.xdata)
+            self._snap()
+            self._xline.set_xdata([self._crossover, self._crossover])
+            self._update_info()
+            self.canvas.draw_idle()
+
+    def _on_release(self, _event) -> None:
+        self._dragging = False
+
     def result(self):
-        """Return the chosen ``(ns_dataset, ops_dataset, match)`` tuple."""
-        ns = next(d for d in self._datasets if d.id == self.ns_combo.currentData())
-        ops = next(d for d in self._datasets if d.id == self.ops_combo.currentData())
-        return ns, ops, self.match_combo.currentText()
+        """Return ``(dataset_a, dataset_b, crossover_nm, match)``."""
+        a, b = self._selected()
+        return a, b, self._crossover, self.match_combo.currentText()
+
+
+# Back-compat alias for the previous name.
+CombineNSOPSDialog = CombineInstrumentsDialog
 
 
 class KeyboardShortcutsDialog(QtWidgets.QDialog):
