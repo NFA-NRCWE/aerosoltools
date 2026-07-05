@@ -104,11 +104,13 @@ from .utility import (
     Plot_correlation,
     bland_altman_analysis,
     combine_measurements,
+    combine_size_ranges,
     fit_data,
 )
 
 # snake_case aliases for PEP 8 consistency
 combine_ns_ops = Combine_NS_OPS
+Combine_size_ranges = combine_size_ranges  # PascalCase alias
 plot_correlation = Plot_correlation
 Combine_measurements = combine_measurements  # PascalCase alias
 load_aethalometer_file = Load_Aethalometer_file
@@ -137,6 +139,8 @@ __all__ = [
     # Utilities
     "bland_altman_analysis",
     "Combine_NS_OPS",
+    "combine_size_ranges",
+    "Combine_size_ranges",
     "fit_data",
     "Plot_correlation",
     "combine_ns_ops",
