@@ -63,6 +63,24 @@ class MetadataTab(QtWidgets.QWidget):
         drow.addStretch(1)
         layout.addWidget(self.density_row)
 
+        # Axis selector (correlated APS / Aerosol3d only): which size axis the
+        # other tabs display and analyse.
+        self.axis_row = QtWidgets.QWidget()
+        arow = QtWidgets.QHBoxLayout(self.axis_row)
+        arow.setContentsMargins(0, 0, 0, 0)
+        arow.addWidget(QtWidgets.QLabel("Show axis (APS):"))
+        self.axis_combo = QtWidgets.QComboBox()
+        self.axis_combo.addItem("Aerodynamic", "aerodynamic")
+        self.axis_combo.addItem("Optical", "optical")
+        self.axis_combo.setToolTip(
+            "For a correlated APS, choose which size axis the other tabs show "
+            "and analyse — aerodynamic or optical (both behave as 2D data)."
+        )
+        self.axis_combo.currentIndexChanged.connect(self._on_axis_change)
+        arow.addWidget(self.axis_combo)
+        arow.addStretch(1)
+        layout.addWidget(self.axis_row)
+
         self.table = QtWidgets.QTableWidget(0, 2)
         self.table.setHorizontalHeaderLabels(["Field", "Value"])
         self.table.verticalHeader().setVisible(False)
@@ -81,6 +99,10 @@ class MetadataTab(QtWidgets.QWidget):
             float(self.density_spin.value()), all_datasets=self.apply_all.isChecked()
         )
 
+    def _on_axis_change(self) -> None:
+        """Switch the active APS axis (aerodynamic/optical) for all tabs."""
+        self.main.set_active_axis(self.axis_combo.currentData() or "aerodynamic")
+
     def refresh(self) -> None:
         """Repopulate the metadata table and density control for the active data."""
         obj = self.obj
@@ -94,6 +116,17 @@ class MetadataTab(QtWidgets.QWidget):
             self.density_spin.blockSignals(True)
             self.density_spin.setValue(float(getattr(obj, "density", 1.0)))
             self.density_spin.blockSignals(False)
+
+        is_3d = getattr(obj, "is_correlated", False)
+        self.axis_row.setVisible(is_3d)
+        if is_3d:
+            self.axis_combo.blockSignals(True)
+            self.axis_combo.setCurrentIndex(
+                1
+                if getattr(self.main, "_active_axis", "aerodynamic") == "optical"
+                else 0
+            )
+            self.axis_combo.blockSignals(False)
 
         meta = dict(getattr(obj, "metadata", {}) or {})
         # A couple of derived, user-friendly rows up top.

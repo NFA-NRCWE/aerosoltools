@@ -34,7 +34,13 @@ from .widgets import CombineInstrumentsDialog, KeyboardShortcutsDialog, SlackTab
 
 
 class MainWindow(QtWidgets.QMainWindow):
-    """Top-level window: a load bar, dtype/density controls, and data tabs."""
+    """Top-level window: a datasets sidebar and the data tabs.
+
+    Datasets are added/removed/reloaded from the sidebar; particle density lives
+    on the Metadata tab; the distribution basis stays number (dN) throughout and
+    is converted per-plot for display/export only — so there is no top control
+    bar.
+    """
 
     def __init__(self, path: Optional[str] = None, instrument: Optional[str] = None):
         """Build the window and optionally load a file on startup.
@@ -148,14 +154,14 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.setContentsMargins(14, 14, 14, 10)
         layout.setSpacing(12)
 
-        layout.addWidget(self._build_top_bar())
-
         # The crop / resample / smooth / time-shift controls are built here but
         # *not* added to the main layout: the Time series tab embeds them, so
         # processing always happens where the data is visible.
         self.adjust_box = AdjustmentsBox(self)
 
-        # Tabs sit directly below the top bar.
+        # Datasets are added via the sidebar; density lives on the Metadata tab;
+        # dtype is dN throughout and converted per-plot for display only — so no
+        # top control bar is needed. Tabs fill the window.
         self.tabs = QtWidgets.QTabWidget()
         self.tabs.setTabBar(SlackTabBar())
         self.tabs.tabBar().setExpanding(False)
@@ -174,96 +180,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(scroll)
 
         # File / dataset info lives in the status bar at the bottom.
-        self.info = QtWidgets.QLabel("No data loaded. Use 'Import data…' to begin.")
+        self.info = QtWidgets.QLabel("No data loaded. Use 'Add file…' to begin.")
         self.statusBar().addWidget(self.info)
 
-        self._set_2d_controls_enabled(False)
         self.adjust_box.set_enabled(False)
-
-    def _build_top_bar(self) -> QtWidgets.QWidget:
-        """Build the raised top control bar (open / instrument / dtype / density)."""
-        frame = QtWidgets.QFrame()
-        frame.setObjectName("TopBar")
-        bar = QtWidgets.QHBoxLayout(frame)
-        bar.setContentsMargins(14, 10, 14, 10)
-        bar.setSpacing(8)
-
-        open_btn = QtWidgets.QPushButton("Import data…")
-        open_btn.setObjectName("primary")
-        open_btn.setToolTip(
-            "Import one or more instrument data files as datasets (Ctrl+O)."
-        )
-        open_btn.clicked.connect(self._open_dialog)
-        bar.addWidget(open_btn)
-
-        bar.addWidget(QtWidgets.QLabel("Instrument:"))
-        self.instrument_combo = QtWidgets.QComboBox()
-        self.instrument_combo.addItems(list(LOADERS.keys()))
-        self.instrument_combo.setToolTip(
-            "Loader to use for files whose instrument cannot be guessed from the "
-            "file name."
-        )
-        bar.addWidget(self.instrument_combo)
-
-        self.reload_btn = QtWidgets.QPushButton("Reload")
-        self.reload_btn.setToolTip(
-            "Reload the current file (discards conversions and activities)"
-        )
-        self.reload_btn.clicked.connect(self._reload)
-        self.reload_btn.setEnabled(False)
-        bar.addWidget(self.reload_btn)
-
-        bar.addSpacing(20)
-
-        # dtype / density controls (only meaningful for size-resolved data).
-        self.dtype_label = QtWidgets.QLabel("dtype:")
-        bar.addWidget(self.dtype_label)
-        self.dtype_combo = QtWidgets.QComboBox()
-        self.dtype_combo.addItems(["dN", "dM", "dS", "dV"])
-        self.dtype_combo.setToolTip(
-            "Distribution basis for size-resolved data: number (dN), mass (dM), "
-            "surface (dS) or volume (dV)."
-        )
-        self.dtype_combo.currentIndexChanged.connect(self._on_dtype_change)
-        bar.addWidget(self.dtype_combo)
-
-        self.density_label = QtWidgets.QLabel("density (g/cm³):")
-        bar.addWidget(self.density_label)
-        self.density_spin = QtWidgets.QDoubleSpinBox()
-        self.density_spin.setRange(0.1, 25.0)
-        self.density_spin.setSingleStep(0.1)
-        self.density_spin.setValue(1.0)
-        self.density_spin.setToolTip(
-            "Particle density (g/cm³) used when converting to mass-based metrics."
-        )
-        self.density_spin.editingFinished.connect(self._on_density_change)
-        bar.addWidget(self.density_spin)
-
-        # Aerodynamic / optical axis selector — only meaningful for a correlated
-        # APS (Aerosol3d); hidden otherwise.
-        self.axis_label = QtWidgets.QLabel("show axis:")
-        bar.addWidget(self.axis_label)
-        self.axis_combo = QtWidgets.QComboBox()
-        self.axis_combo.addItem("Aerodynamic", "aerodynamic")
-        self.axis_combo.addItem("Optical", "optical")
-        self.axis_combo.setToolTip(
-            "For a correlated APS dataset, choose which size axis the tabs show "
-            "and analyse — aerodynamic or optical. Both behave as normal 2D "
-            "size distributions (heatmap, PSD, decay fit, …)."
-        )
-        self.axis_combo.currentIndexChanged.connect(self._on_axis_change)
-        bar.addWidget(self.axis_combo)
-
-        bar.addStretch(1)
-
-        # Soft glow for a raised, high-end "card" feel (cyan on the dark theme).
-        shadow = QtWidgets.QGraphicsDropShadowEffect(frame)
-        shadow.setBlurRadius(26)
-        shadow.setColor(QtGui.QColor(*theme.shadow_rgba()))
-        shadow.setOffset(0, 0)
-        frame.setGraphicsEffect(shadow)
-        self._topbar_shadow = shadow
-        return frame
 
     def _build_sidebar(self) -> None:
         """Build the detachable left-hand datasets panel."""
@@ -424,16 +344,6 @@ class MainWindow(QtWidgets.QMainWindow):
             "data.\nLoad multiple datasets, mark shared tasks, and explore.",
         )
 
-    def _set_2d_controls_enabled(self, enabled: bool) -> None:
-        """Enable or disable the dtype + density controls (size-resolved data only)."""
-        for w in (
-            self.dtype_label,
-            self.dtype_combo,
-            self.density_label,
-            self.density_spin,
-        ):
-            w.setEnabled(enabled)
-
     # -- loading -----------------------------------------------------------
     def _open_dialog(self) -> None:
         """Prompt for one or more data files and import them as datasets.
@@ -482,23 +392,27 @@ class MainWindow(QtWidgets.QMainWindow):
         if instrument is None:
             try:
                 instrument = require_identified_instrument(path)
-            except UnrecognizedInstrumentError as e:
-                QtWidgets.QMessageBox.warning(
+            except UnrecognizedInstrumentError:
+                # Auto-detection failed — let the user pick a loader manually
+                # (this replaces the old top-bar instrument combo).
+                names = list(LOADERS.keys())
+                choice, ok = QtWidgets.QInputDialog.getItem(
                     self,
-                    "Unknown instrument",
-                    str(e),
+                    "Choose instrument",
+                    f"Could not identify the instrument for:\n"
+                    f"{os.path.basename(path)}\n\nPick the loader to use:",
+                    names,
+                    editable=False,
                 )
-                return None, None
+                if not ok:
+                    return None, None
+                instrument = choice
 
         if instrument not in LOADERS:
             QtWidgets.QMessageBox.warning(
                 self, "Unknown instrument", f"No loader registered for '{instrument}'."
             )
             return None, None
-
-        idx = self.instrument_combo.findText(instrument)
-        if idx >= 0:
-            self.instrument_combo.setCurrentIndex(idx)
 
         loader = LOADERS[instrument]
         # Include auxiliary channels when the loader supports it, so the
@@ -537,7 +451,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _finalize_after_load(self) -> None:
         """Refresh window state after one or more datasets were added."""
-        self.reload_btn.setEnabled(bool(self.source_path))
         self.adjust_box.set_enabled(True)
         self.adjust_box.sync_crop_fields()
         self._build_tabs()
@@ -580,7 +493,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if ds_id == self.project.active_id or self.project.get(ds_id) is None:
             return
         self.project.set_active(ds_id)
-        self.reload_btn.setEnabled(bool(self.source_path))
+        self._active_axis = "aerodynamic"  # start each dataset on its primary axis
         self.adjust_box.sync_crop_fields()
         self._ensure_tabs()
         self.refresh_all(reset_view=True)
@@ -596,10 +509,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tabs.clear()
             self._tabs = []
             self._tab_sig = None
-            self.reload_btn.setEnabled(False)
             self.adjust_box.set_enabled(False)
-            self._set_2d_controls_enabled(False)
-            self.info.setText("No data loaded. Use 'Import data…' to begin.")
+            self.info.setText("No data loaded. Use 'Add file…' to begin.")
         else:
             self.adjust_box.sync_crop_fields()
             self._build_tabs()
@@ -648,8 +559,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.project.datasets.append(ds)
         self.project._apply_activities(ds)  # project the shared tasks onto it
         self.project.active_id = ds.id
-        # Derived datasets have no source file, so Reload does not apply.
-        self.reload_btn.setEnabled(False)
         self.adjust_box.set_enabled(True)
         self.adjust_box.sync_crop_fields()
         self._build_tabs()
@@ -768,10 +677,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self._tab_sig = None
         self.project = Project()
         self._project_path = None
-        self.reload_btn.setEnabled(False)
         self.adjust_box.set_enabled(False)
-        self._set_2d_controls_enabled(False)
-        self.info.setText("No data loaded. Use 'Import data…' to begin.")
+        self.info.setText("No data loaded. Use 'Add file…' to begin.")
         self._refresh_sidebar()
         self._update_title()
 
@@ -796,7 +703,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def _apply_loaded_project(self) -> None:
         """Rebuild the UI to reflect ``self.project`` (after open/load)."""
         has = self.project.active is not None
-        self.reload_btn.setEnabled(has)
         self.adjust_box.set_enabled(has)
         if has:
             self.adjust_box.sync_crop_fields()
@@ -807,7 +713,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tabs.clear()
             self._tabs = []
             self._tab_sig = None
-            self.info.setText("No data loaded. Use 'Import data…' to begin.")
+            self.info.setText("No data loaded. Use 'Add file…' to begin.")
         self._refresh_sidebar()
         self._update_title()
 
@@ -902,8 +808,6 @@ class MainWindow(QtWidgets.QMainWindow):
             fig.set_facecolor(theme.fig_facecolor())
             for ax in fig.axes:
                 ax.set_facecolor(theme.axes_facecolor())
-        if hasattr(self, "_topbar_shadow"):
-            self._topbar_shadow.setColor(QtGui.QColor(*theme.shadow_rgba()))
         self.refresh_all(reset_view=False)
         if hasattr(self, "_theme_group"):  # keep the View-menu radio in sync
             for act in self._theme_group.actions():
@@ -983,22 +887,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 traceback.print_exc()
 
     def _sync_header(self) -> None:
-        """Refresh the status line and dtype/density controls for the active dataset."""
+        """Refresh the bottom status line for the active dataset."""
         if self.obj is None:
             return
-        is2d = helpers.is_2d(self.obj)
-        self._set_2d_controls_enabled(is2d)
-
-        # The axis selector only applies to a correlated APS (both size axes).
-        is_3d = isinstance(self.active_obj, Aerosol3d) and self.active_obj.is_correlated
-        self.axis_label.setVisible(is_3d)
-        self.axis_combo.setVisible(is_3d)
-        if not is_3d and self._active_axis != "aerodynamic":
-            self._active_axis = "aerodynamic"
-        self.axis_combo.blockSignals(True)
-        self.axis_combo.setCurrentIndex(1 if self._active_axis == "optical" else 0)
-        self.axis_combo.blockSignals(False)
-
         dtype, unit = helpers.describe(self.obj)
         rows = self.obj.data.shape[0]
         ds = self.project.active
@@ -1011,55 +902,17 @@ class MainWindow(QtWidgets.QMainWindow):
             f"{rows} time steps  |  file: {os.path.basename(self.source_path or '')}"
         )
 
-        if is2d:
-            base = helpers.base_dtype(dtype)
-            self.dtype_combo.blockSignals(True)
-            di = self.dtype_combo.findText(base)
-            if di >= 0:
-                self.dtype_combo.setCurrentIndex(di)
-            self.dtype_combo.blockSignals(False)
-
-            self.density_spin.blockSignals(True)
-            self.density_spin.setValue(float(self.obj.density))
-            self.density_spin.blockSignals(False)
-
-    def _on_axis_change(self) -> None:
-        """Switch the tabs between the aerodynamic and optical axis (3D data)."""
-        self._active_axis = self.axis_combo.currentData() or "aerodynamic"
-        self.refresh_all(reset_view=True)
-
-    # -- dtype / density handlers -----------------------------------------
-    def _on_dtype_change(self) -> None:
-        """Convert the active 2D dataset to the selected distribution basis."""
-        if self.obj is None or not helpers.is_2d(self.obj):
-            return
-        target = self.dtype_combo.currentText()
-        try:
-            self.obj.dtype_converter(dtype=target)
-        except Exception:
-            QtWidgets.QMessageBox.warning(
-                self, "Conversion failed", traceback.format_exc(limit=1)
-            )
-            return
-        # Units changed: rescale the axes rather than keeping stale limits.
+    def set_active_axis(self, axis: str) -> None:
+        """Set which APS size axis (aerodynamic/optical) the tabs show, and refresh."""
+        self._active_axis = (
+            axis if axis in ("aerodynamic", "optical") else "aerodynamic"
+        )
         self.refresh_all(reset_view=True)
 
     @staticmethod
     def _is_elpi(obj) -> bool:
         """True if ``obj`` is an ELPI dataset (whose sizes are density-dependent)."""
         return str(getattr(obj, "metadata", {}).get("instrument", "")).upper() == "ELPI"
-
-    def _on_density_change(self) -> None:
-        """Apply the selected density to the active dataset and recalc ELPI data.
-
-        The active 2D dataset always takes the new density. In addition, the
-        project is scanned for ELPI datasets: because the ELPI reports
-        density-dependent particle sizes, each is recalculated (diameters, and
-        number for raw-current files) so it never shows fictitious diameters.
-        """
-        if self.obj is None or not helpers.is_2d(self.obj):
-            return
-        self.apply_density(self.density_spin.value())
 
     def apply_density(self, value: float, all_datasets: bool = False) -> None:
         """Set the particle density on the active (or all) dataset(s) and refresh.

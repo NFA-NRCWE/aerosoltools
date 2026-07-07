@@ -28,6 +28,16 @@ class RawDataTab(QtWidgets.QWidget):
         self.info = QtWidgets.QLabel("")
         bar.addWidget(self.info)
         bar.addStretch(1)
+        # Export basis (size-resolved data only): the dataset stays dN, but the
+        # user can export number/mass/surface/volume.
+        bar.addWidget(QtWidgets.QLabel("Export as:"))
+        self.export_dtype = QtWidgets.QComboBox()
+        self.export_dtype.addItems(["dN", "dM", "dS", "dV"])
+        self.export_dtype.setToolTip(
+            "Distribution basis for the exported size data (number/mass/surface/"
+            "volume). The dataset itself stays as number (dN)."
+        )
+        bar.addWidget(self.export_dtype)
         self.export_btn = QtWidgets.QPushButton("Export to Excel…")
         self.export_btn.setToolTip(
             "Save the displayed table (with timestamps) to an .xlsx or .csv file."
@@ -87,7 +97,17 @@ class RawDataTab(QtWidgets.QWidget):
         if self.obj is None:
             return
         which = "extra" if self.source.currentText() == "Extra data" else "data"
-        df = self.obj.extra_data if which == "extra" else self.obj.data
+        if which == "extra":
+            df = self.obj.extra_data
+        else:
+            # Convert a copy to the chosen basis for export (dataset stays dN).
+            disp = self.export_dtype.currentText()
+            obj = self.obj
+            if disp != "dN" and helpers.is_2d(obj):
+                obj = obj.copy_self()
+                obj.dtype_converter(disp)
+            df = obj.data
+            which = disp if helpers.is_2d(self.obj) else "data"
         base = os.path.splitext(os.path.basename(self.main.source_path or "data"))[0]
         # Keep the timestamp index for raw data exports.
         _export_table(self, df, f"{base}_{which}", with_index=True)
