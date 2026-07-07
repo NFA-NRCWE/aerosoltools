@@ -170,7 +170,9 @@ class PSDTab(_PlotTab):
         row1.addWidget(self.fit_target, stretch=1)
         self.isolate_chk = QtWidgets.QCheckBox("Only")
         self.isolate_chk.setToolTip("Hide the other curves and show only the fit target.")
-        self.isolate_chk.stateChanged.connect(lambda *_: self._draw())
+        # Showing/hiding curves must rescale to the now-visible data, even while
+        # a fit is being edited (which otherwise pins the view).
+        self.isolate_chk.stateChanged.connect(lambda *_: self._draw(force_rescale=True))
         row1.addWidget(self.isolate_chk)
         outer.addLayout(row1)
 
@@ -958,7 +960,7 @@ class PSDTab(_PlotTab):
         bottom = 0.0 if ymin >= 0 else ymin - margin
         return bottom, ymax + margin
 
-    def _draw(self, preserve: bool = False) -> None:
+    def _draw(self, preserve: bool = False, force_rescale: bool = False) -> None:
         """Redraw onto the embedded axis, reporting any error in the figure.
 
         Args:
@@ -966,8 +968,11 @@ class PSDTab(_PlotTab):
                 letting the data-driven limits take over. Always on while editing
                 a fit (so placing/typing modes never snaps the view back), and
                 requested explicitly when toggling editing on/off.
+            force_rescale: Autoscale to the data even while editing — used when
+                the set of visible curves changes (e.g. the "Only" toggle) so the
+                limits follow the shown data rather than the hidden ones.
         """
-        preserve = preserve or self.edit_btn.isChecked()
+        preserve = (preserve or self.edit_btn.isChecked()) and not force_rescale
         prev = None
         if preserve and self.ax.has_data():
             prev = (self.ax.get_xlim(), self.ax.get_ylim())
