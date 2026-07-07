@@ -30,7 +30,12 @@ from .tabs import (
     SummaryTab,
     TimeSeriesTab,
 )
-from .widgets import CombineInstrumentsDialog, KeyboardShortcutsDialog, TwoRowTabs
+from .widgets import (
+    CombineInstrumentsDialog,
+    JoinDatasetsDialog,
+    KeyboardShortcutsDialog,
+    TwoRowTabs,
+)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -569,38 +574,42 @@ class MainWindow(QtWidgets.QMainWindow):
         return ds
 
     def _join_same_instrument(self, ds_id: int) -> None:
-        """Concatenate all datasets sharing the selected one's instrument+serial."""
+        """Concatenate chosen datasets of the same instrument into one recording.
+
+        Only datasets from the *same instrument type* as the clicked one are
+        candidates — joining across instruments would fail, so that stays a hard
+        block. A dialog pre-suggests same-serial datasets but lets the user
+        override the selection (e.g. merge two units of the same OPS model, or
+        drop a suggested one).
+        """
         ds = self.project.get(ds_id)
         if ds is None:
             return
-        group = [
-            d
-            for d in self.project.datasets
-            if d.instrument_key == ds.instrument_key
-            and str(d.serial_number) == str(ds.serial_number)
+        candidates = [
+            d for d in self.project.datasets if d.instrument_key == ds.instrument_key
         ]
-        if len(group) < 2:
+        if len(candidates) < 2:
             QtWidgets.QMessageBox.information(
                 self,
-                "Join same instrument",
-                "Need at least two datasets with the same instrument and serial "
-                f"number to join.\n\nOnly one '{ds.instrument_key}' "
-                f"(serial {ds.serial_number}) dataset is loaded.",
+                "Join datasets",
+                "Need at least two datasets from the same instrument to join.\n\n"
+                f"Only one '{ds.instrument_key}' dataset is loaded.",
             )
             return
-        names = "\n  • ".join(d.label for d in group)
-        ans = QtWidgets.QMessageBox.question(
-            self,
-            "Join same instrument",
-            f"Combine these {len(group)} '{ds.instrument_key}' datasets "
-            f"(serial {ds.serial_number}) into one continuous dataset?\n\n"
-            f"  • {names}\n\nThe originals will be replaced by the combined "
-            "dataset.",
-        )
-        if ans != QtWidgets.QMessageBox.Yes:
+        dlg = JoinDatasetsDialog(self, candidates, ds)
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+        picked_ids = set(dlg.selected_ids())
+        group = [d for d in candidates if d.id in picked_ids]
+        if len(group) < 2:
             return
         try:
-            combined = combine_measurements([d.obj for d in group])
+            # The dialog already warns about (and lets the user deliberately
+            # accept) mixed serial numbers, so don't let combine_measurements
+            # veto the choice on that basis.
+            combined = combine_measurements(
+                [d.obj for d in group], require_same_serial=False
+            )
         except Exception:
             QtWidgets.QMessageBox.critical(
                 self, "Join failed", traceback.format_exc(limit=2)

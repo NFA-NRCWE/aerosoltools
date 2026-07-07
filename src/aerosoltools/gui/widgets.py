@@ -2,7 +2,8 @@
 
 These are presentation-only helpers with no business logic: a tab bar that sizes
 its tabs so labels never clip, the modal dialog used to pick two size-resolved
-datasets and a crossover for combining their ranges, and the read-only
+datasets and a crossover for combining their ranges, the checklist dialog for
+joining same-instrument datasets into one recording, and the read-only
 keyboard-shortcut reference.
 """
 
@@ -393,6 +394,95 @@ class CombineInstrumentsDialog(QtWidgets.QDialog):
 
 # Back-compat alias for the previous name.
 CombineNSOPSDialog = CombineInstrumentsDialog
+
+
+class JoinDatasetsDialog(QtWidgets.QDialog):
+    """Pick which same-instrument datasets to concatenate into one recording.
+
+    Only datasets from the *same instrument type* as the one the user clicked are
+    offered — joining across different instruments would fail, so that is a hard
+    block enforced by the caller. Within that type, every dataset gets a
+    check-box; the ones whose serial number matches the clicked dataset are
+    pre-checked and tagged "suggested", but the user is free to tick others
+    (e.g. two units of the same OPS model) or untick a suggested one. At least
+    two must stay ticked to enable *Join*.
+    """
+
+    def __init__(self, parent, datasets, seed):
+        """Build the checklist of candidate datasets.
+
+        Args:
+            parent: Parent widget.
+            datasets: Candidate datasets — all sharing ``seed``'s instrument.
+            seed: The dataset the user invoked the join from; its serial number
+                drives which candidates are pre-checked.
+        """
+        super().__init__(parent)
+        self.setWindowTitle("Join datasets")
+        self._datasets = list(datasets)
+        self._checks: list[QtWidgets.QCheckBox] = []
+
+        layout = QtWidgets.QVBoxLayout(self)
+        intro = QtWidgets.QLabel(
+            f"Concatenate '{seed.instrument}' datasets into one continuous "
+            "recording. Datasets that share the same serial number are "
+            "suggested (pre-ticked); tick or untick to change the selection. "
+            "The chosen datasets are replaced by the combined one."
+        )
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        seed_serial = str(seed.serial_number)
+        box = QtWidgets.QGroupBox("Datasets to join")
+        vb = QtWidgets.QVBoxLayout(box)
+        for d in self._datasets:
+            serial = str(d.serial_number)
+            suggested = serial == seed_serial
+            tag = "  — suggested (same serial)" if suggested else ""
+            chk = QtWidgets.QCheckBox(f"{d.label}   [serial {serial}]{tag}")
+            chk.setChecked(suggested)
+            chk.setProperty("ds_id", d.id)
+            chk.toggled.connect(self._sync_ok)
+            self._checks.append(chk)
+            vb.addWidget(chk)
+        vb.addStretch(1)
+        layout.addWidget(box, stretch=1)
+
+        self.warn = QtWidgets.QLabel("")
+        self.warn.setWordWrap(True)
+        self.warn.setStyleSheet("color: #c0562b;")
+        layout.addWidget(self.warn)
+
+        self.buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+        )
+        self.buttons.button(QtWidgets.QDialogButtonBox.Ok).setText("Join")
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        layout.addWidget(self.buttons)
+
+        self.resize(460, 320)
+        self._sync_ok()
+
+    def _sync_ok(self, *_a) -> None:
+        """Enable *Join* only when ≥2 datasets are ticked; warn on mixed serials."""
+        picked = self.selected_ids()
+        ok_btn = self.buttons.button(QtWidgets.QDialogButtonBox.Ok)
+        ok_btn.setEnabled(len(picked) >= 2)
+        serials = {str(d.serial_number) for d in self._datasets if d.id in picked}
+        if len(picked) < 2:
+            self.warn.setText("Tick at least two datasets to join.")
+        elif len(serials) > 1:
+            self.warn.setText(
+                "Warning: the selected datasets have different serial numbers — "
+                "joining them assumes they belong to one continuous recording."
+            )
+        else:
+            self.warn.setText("")
+
+    def selected_ids(self) -> list:
+        """Return the ids of the currently ticked datasets."""
+        return [chk.property("ds_id") for chk in self._checks if chk.isChecked()]
 
 
 class KeyboardShortcutsDialog(QtWidgets.QDialog):
