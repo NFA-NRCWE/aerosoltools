@@ -65,6 +65,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._reset_view: bool = True
 
         self._build_ui()
+        self.setAcceptDrops(True)  # drag-and-drop data files onto the window
 
         if path:
             self.load_file(path, instrument)
@@ -113,6 +114,26 @@ class MainWindow(QtWidgets.QMainWindow):
         """Active dataset's instrument key, or None."""
         ds = self.project.active
         return ds.instrument_key if ds is not None else None
+
+    # -- drag & drop -------------------------------------------------------
+    def dragEnterEvent(self, event) -> None:  # noqa: N802 (Qt override)
+        """Accept a drag only when it carries local file paths."""
+        mime = event.mimeData()
+        if mime.hasUrls() and any(u.isLocalFile() for u in mime.urls()):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event) -> None:  # noqa: N802 (Qt override)
+        """Load files dropped onto the window (each guessed from its name)."""
+        paths = [
+            u.toLocalFile()
+            for u in event.mimeData().urls()
+            if u.isLocalFile() and os.path.isfile(u.toLocalFile())
+        ]
+        if paths:
+            event.acceptProposedAction()
+            self.load_files(paths)
 
     # -- UI construction ---------------------------------------------------
     def _build_ui(self) -> None:
