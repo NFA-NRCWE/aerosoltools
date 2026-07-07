@@ -139,6 +139,10 @@ class TwoRowTabs(QtWidgets.QWidget):
         v.addWidget(self.stack, 1)
         self._stack_index: list[list[int]] = [[], []]
 
+    def currentWidget(self):  # noqa: N802 (mirrors QTabWidget)
+        """Return the currently shown pane (or None)."""
+        return self.stack.currentWidget()
+
     def add_tab(self, widget, text: str, row: int) -> None:
         """Add ``widget`` as a pane, with a tab labelled ``text`` on ``row``."""
         si = self.stack.addWidget(widget)

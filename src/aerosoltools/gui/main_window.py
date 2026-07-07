@@ -216,7 +216,11 @@ class MainWindow(QtWidgets.QMainWindow):
         # but never collapses to an ungrabbable sliver.
         dock.setMinimumWidth(80)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dock)
-        self.resizeDocks([dock], [240], QtCore.Qt.Horizontal)
+        # Open wide enough to show the sidebar's content fully (its buttons set
+        # its natural width) plus room for the vertical scrollbar, so there is no
+        # horizontal scrollbar on startup. Adapts to the runtime font size.
+        default_w = max(260, self.sidebar.sizeHint().width() + 28)
+        self.resizeDocks([dock], [default_w], QtCore.Qt.Horizontal)
         self.datasets_dock = dock
 
     def _build_menu(self) -> None:
