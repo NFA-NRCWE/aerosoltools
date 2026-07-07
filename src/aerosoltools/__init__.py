@@ -79,9 +79,11 @@ Typical usage example
 
 from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
+from .aerosol3d import Aerosol3d
 from .aerosolalt import AerosolAlt
 from .loaders import (
     Load_Aethalometer_file,
+    Load_APS_file,
     Load_CPC_file,
     Load_data_from_folder,
     Load_Devlabs_file,
@@ -113,6 +115,7 @@ combine_ns_ops = Combine_NS_OPS
 Combine_size_ranges = combine_size_ranges  # PascalCase alias
 plot_correlation = Plot_correlation
 Combine_measurements = combine_measurements  # PascalCase alias
+load_aps_file = Load_APS_file
 load_aethalometer_file = Load_Aethalometer_file
 load_cpc_file = Load_CPC_file
 load_devlabs_file = Load_Devlabs_file
@@ -135,6 +138,7 @@ __all__ = [
     # Classes
     "Aerosol1D",
     "Aerosol2D",
+    "Aerosol3d",
     "AerosolAlt",
     # Utilities
     "bland_altman_analysis",
@@ -148,6 +152,7 @@ __all__ = [
     "combine_measurements",
     "Combine_measurements",
     # Loaders (original names)
+    "Load_APS_file",
     "Load_Aethalometer_file",
     "Load_CPC_file",
     "Load_Devlabs_file",
@@ -166,6 +171,7 @@ __all__ = [
     "Load_SMPS_file",
     "Load_data_from_folder",
     # Loaders (snake_case aliases)
+    "load_aps_file",
     "load_aethalometer_file",
     "load_cpc_file",
     "load_discmini_file",

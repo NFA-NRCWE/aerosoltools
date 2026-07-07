@@ -17,6 +17,7 @@ from typing import Callable, Optional
 
 from ..loaders import (
     Load_Aethalometer_file,
+    Load_APS_file,
     Load_CPC_file,
     Load_DiSCmini_file,
     Load_DiSCmini_raw_file,
@@ -56,6 +57,7 @@ LOADERS: dict[str, Callable] = {
     "Aethalometer": Load_Aethalometer_file,
     "DustTrak": Load_DustTrak_file,
     "Chlorine (Ranger)": Load_Ranger_file,
+    "APS": Load_APS_file,
 }
 
 # Lower-case filename substrings -> display name.
@@ -63,6 +65,7 @@ LOADERS: dict[str, Callable] = {
 # Checked after content sniffing. Keep longer/more specific names before shorter
 # names where overlap is possible.
 _FILENAME_HINTS: list[tuple[str, str]] = [
+    ("aps", "APS"),
     ("aethalometer", "Aethalometer"),
     ("aeth", "Aethalometer"),
     ("dusttrak", "DustTrak"),
@@ -357,6 +360,19 @@ def is_OPCN3_file(path: str | Path) -> bool:
     return (has_bins and has_pm and has_env) or "opc-n3" in text or "opcn3" in text
 
 
+def is_APS_file(path: str | Path) -> bool:
+    """Detect TSI APS AIM exports (aerodynamic-only or correlated).
+
+    Distinctive: the AIM header carries "Lower Channel Bound" / "Upper Channel
+    Bound" lines, and the data header row names an "Aerodynamic Diameter" or
+    "Correlated" column.
+    """
+    text = _head_text(path, max_lines=8)
+    return "lower channel bound" in text and (
+        "aerodynamic diameter" in text or "correlated" in text
+    )
+
+
 def is_Ranger_file(path: str | Path) -> bool:
     """Detect Ranger chlorine-sensor CSV exports.
 
@@ -404,6 +420,7 @@ def is_CPC_file(path: str | Path) -> bool:
 # - Strong/distinctive formats first.
 # - Weak/generic signatures such as CPC last.
 SNIFFERS: dict[str, Callable[[str | Path], bool]] = {
+    "APS": is_APS_file,
     "ELPI": is_ELPI_file,
     "Aethalometer": is_Aethalometer_file,
     "SMPS": is_SMPS_file,

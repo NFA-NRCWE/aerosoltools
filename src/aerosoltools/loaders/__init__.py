@@ -29,6 +29,7 @@ directory into a single aerosol object.
 """
 
 from .Aethalometer import Load_Aethalometer_file
+from .APS import Load_APS_file
 from .Common import Load_data_from_folder
 from .CPC import Load_CPC_file
 from .Dev_weather import Load_Devlabs_file
@@ -46,6 +47,7 @@ from .Ranger import Load_Ranger_file
 from .SMPS import Load_SMPS_file
 
 __all__ = [
+    "Load_APS_file",
     "Load_Aethalometer_file",
     "Load_CPC_file",
     "Load_DiSCmini_file",
