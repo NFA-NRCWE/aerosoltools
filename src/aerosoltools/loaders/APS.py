@@ -15,6 +15,14 @@ from .Common import _detect_delimiter
 _APS_SAMPLE_FLOW_CM3_MIN = 1000.0
 _AERO_SLICE = slice(4, 56)  # the 52 aerodynamic size-bin columns
 
+# Light-scattering (side-scatter) particle range in nm. Per the APS 3321 manual,
+# the optical signal spans 0.5–20 µm. The optical "channels" are equal bins of
+# the raw side-scatter *intensity* (their number is the SCR setting, e.g. 16),
+# NOT calibrated diameters — the instrument only calibrates the aerodynamic axis
+# (SCA). We therefore assign a nominal log-spaced optical diameter over this
+# range so the two axes can be compared; it is not a scatter→size calibration.
+_APS_OPTICAL_RANGE_NM = (500.0, 20000.0)
+
 
 def _aps_header(file, delimiter, encoding) -> dict:
     """Parse the 6-line APS AIM header (sample time, density, channel bounds)."""
@@ -69,10 +77,15 @@ def Load_APS_file(file: str) -> Aerosol2D:
         Units: exports weighted as "Raw Counts" are converted to number
         concentration with the APS 1 L/min aerosol flow and the header's sample
         time (verified against the instrument's reported Total Conc.);
-        concentration-weighted (correlated) exports are used as-is. Optical
-        channels are reported by the instrument only as indices 1–N with no
-        diameters; a nominal log-spaced optical diameter over the instrument's
-        channel bounds is assigned (flagged ``optical_nominal`` in metadata).
+        concentration-weighted (correlated) exports are used as-is.
+
+        Optical axis: per the APS 3321 manual the optical "channels" are equal
+        bins of the raw side-scatter *intensity* (their count set by the SCR
+        command — 16 in these files), and the instrument calibrates only the
+        aerodynamic axis (SCA), not scatter→size. The optical channels are
+        therefore given a nominal log-spaced diameter over the manual's
+        0.5–20 µm light-scattering range (``optical_nominal`` flag; the raw
+        1–N channel indices are kept in ``optical_channel_index``).
 
     Examples:
         .. code-block:: python
@@ -134,7 +147,7 @@ def Load_APS_file(file: str) -> Aerosol2D:
     aero_time_bin = aero_arr.sum(axis=1)  # (n_samples, n_aero): sum over optical
     opt_time_chan = aero_arr.sum(axis=2)  # (n_samples, n_optical): sum over aero
 
-    opt_mids, opt_edges = _optical_bins_nm(bin_edges, n_opt)
+    opt_mids, opt_edges = _optical_bins_nm(n_opt)
 
     aero_df = pd.DataFrame(aero_time_bin, columns=[str(m) for m in bin_mids])
     aero_df.insert(0, "Total_conc", aero_df.sum(axis=1))
@@ -148,6 +161,7 @@ def Load_APS_file(file: str) -> Aerosol2D:
     optical = _build_aero_2d(opt_df, opt_mids, opt_edges, meta, Aerosol2D)
     optical._meta["instrument"] = "APS (optical)"
     optical._meta["optical_nominal"] = True
+    optical._meta["optical_channel_index"] = list(range(1, n_opt + 1))
 
     # Correlation matrix: time × (optical_mid, aero_mid).
     cols = pd.MultiIndex.from_product([opt_mids, bin_mids], names=["optical", "aero"])
@@ -163,9 +177,15 @@ def Load_APS_file(file: str) -> Aerosol2D:
     return aps
 
 
-def _optical_bins_nm(aero_edges, n_opt):
-    """Nominal log-spaced optical bin midpoints/edges over the channel range."""
-    edges = np.round(np.geomspace(aero_edges[0], aero_edges[-1], n_opt + 1), 1)
+def _optical_bins_nm(n_opt):
+    """Nominal log-spaced optical bin midpoints/edges over the scattering range.
+
+    The APS reports only side-scatter *channel indices* (their number set by the
+    SCR command), not diameters, so these are a nominal mapping over the
+    manual's 0.5–20 µm light-scattering range — see ``_APS_OPTICAL_RANGE_NM``.
+    """
+    lo, hi = _APS_OPTICAL_RANGE_NM
+    edges = np.round(np.geomspace(lo, hi, n_opt + 1), 1)
     mids = np.round(np.sqrt(edges[1:] * edges[:-1]), 1)
     return mids, edges
 

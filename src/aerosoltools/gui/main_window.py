@@ -7,6 +7,7 @@ import os
 import traceback
 from typing import List, Optional
 
+from ..aerosol3d import Aerosol3d
 from ..utility import combine_measurements, combine_size_ranges
 from . import helpers, theme
 from .adjustments import AdjustmentsBox
@@ -17,6 +18,7 @@ from .projectio import load_project, save_project
 from .qt import QtCore, QtGui, QtWidgets
 from .sidebar import DatasetSidebar
 from .tabs import (
+    AeroOpticalTab,
     CorrelationTab,
     DecayTab,
     HeatmapTab,
@@ -55,6 +57,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # Signature ("1d"/"2d") of the tab set currently built, so switching the
         # active dataset only rebuilds tabs when the data shape actually changes.
         self._tab_sig: Optional[str] = None
+        # Which axis of a correlated APS (Aerosol3d) the tabs currently show:
+        # "aerodynamic" (default) or "optical".
+        self._active_axis: str = "aerodynamic"
         # When True, plot tabs autoscale on the next refresh; when False they
         # preserve the user's current zoom/pan (e.g. after marking a task).
         self._reset_view: bool = True
@@ -69,7 +74,31 @@ class MainWindow(QtWidgets.QMainWindow):
     # to whichever dataset is active in the sidebar.
     @property
     def obj(self):
-        """Active dataset's aerosol object, or None when nothing is loaded."""
+        """Active dataset's aerosol object for the current axis, or None.
+
+        For a correlated APS (:class:`Aerosol3d`) the "Show axis" selector
+        chooses whether the tabs see the aerodynamic (default) or the optical
+        distribution; both are plain 2D objects, so every 2D tab works on
+        either. Structural edits still go through :attr:`active_obj` (the
+        parent), which keeps both axes in sync.
+        """
+        ds = self.project.active
+        if ds is None:
+            return None
+        o = ds.obj
+        axis = getattr(self, "_active_axis", "aerodynamic")
+        if axis == "optical" and isinstance(o, Aerosol3d) and o.is_correlated:
+            return o.axis_view("optical")
+        return o
+
+    @property
+    def active_obj(self):
+        """The active dataset's *parent* object (the aerodynamic axis for 3D).
+
+        Structural operations (crop / rebin / smooth / activities) target this
+        so a 3D dataset's two axes stay aligned via ``Aerosol3d``'s time-op
+        overrides.
+        """
         ds = self.project.active
         return ds.obj if ds is not None else None
 
@@ -187,6 +216,21 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         self.density_spin.editingFinished.connect(self._on_density_change)
         bar.addWidget(self.density_spin)
+
+        # Aerodynamic / optical axis selector — only meaningful for a correlated
+        # APS (Aerosol3d); hidden otherwise.
+        self.axis_label = QtWidgets.QLabel("show axis:")
+        bar.addWidget(self.axis_label)
+        self.axis_combo = QtWidgets.QComboBox()
+        self.axis_combo.addItem("Aerodynamic", "aerodynamic")
+        self.axis_combo.addItem("Optical", "optical")
+        self.axis_combo.setToolTip(
+            "For a correlated APS dataset, choose which size axis the tabs show "
+            "and analyse — aerodynamic or optical. Both behave as normal 2D "
+            "size distributions (heatmap, PSD, decay fit, …)."
+        )
+        self.axis_combo.currentIndexChanged.connect(self._on_axis_change)
+        bar.addWidget(self.axis_combo)
 
         bar.addStretch(1)
 
@@ -675,10 +719,15 @@ class MainWindow(QtWidgets.QMainWindow):
         """Mirror the current datasets and active id into the sidebar."""
         self.sidebar.set_datasets(self.project.datasets, self.project.active_id)
 
+    def _shape_sig(self) -> str:
+        """Tab-set signature for the active dataset ("1d" / "2d" / "3d")."""
+        if isinstance(self.active_obj, Aerosol3d) and self.active_obj.is_correlated:
+            return "3d"
+        return "2d" if (self.obj is not None and helpers.is_2d(self.obj)) else "1d"
+
     def _ensure_tabs(self) -> None:
-        """Rebuild tabs only when the active dataset's shape (1D/2D) changes."""
-        sig = "2d" if (self.obj is not None and helpers.is_2d(self.obj)) else "1d"
-        if sig != self._tab_sig:
+        """Rebuild tabs only when the active dataset's shape (1D/2D/3D) changes."""
+        if self._shape_sig() != self._tab_sig:
             self._build_tabs()
 
     # -- project save / load ----------------------------------------------
@@ -864,6 +913,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tabs.addTab(pm, "PM bands")
             self._tabs += [heat, pm]
 
+        # Correlated APS (Aerosol3d): the aerodynamic↔optical comparison pane.
+        if isinstance(self.active_obj, Aerosol3d) and self.active_obj.is_correlated:
+            aero_opt = AeroOpticalTab(self)
+            self.tabs.addTab(aero_opt, "Aero ↔ Optical")
+            self._tabs.append(aero_opt)
+
         # Project-level tabs (work for a single dataset or compare several):
         # PSD + Summary subsume the old single-view tabs; Overlay + Correlation
         # are multi-dataset comparisons. All are always shown.
@@ -877,7 +932,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tabs.addTab(correlation, "Correlation")
         self._tabs += [psd, summ, overlay, correlation]
 
-        self._tab_sig = "2d" if helpers.is_2d(self.obj) else "1d"
+        self._tab_sig = self._shape_sig()
 
     def refresh_all(self, reset_view: bool = False) -> None:
         """Update the info bar, dtype/density controls, and every tab.
@@ -903,6 +958,16 @@ class MainWindow(QtWidgets.QMainWindow):
         is2d = helpers.is_2d(self.obj)
         self._set_2d_controls_enabled(is2d)
 
+        # The axis selector only applies to a correlated APS (both size axes).
+        is_3d = isinstance(self.active_obj, Aerosol3d) and self.active_obj.is_correlated
+        self.axis_label.setVisible(is_3d)
+        self.axis_combo.setVisible(is_3d)
+        if not is_3d and self._active_axis != "aerodynamic":
+            self._active_axis = "aerodynamic"
+        self.axis_combo.blockSignals(True)
+        self.axis_combo.setCurrentIndex(1 if self._active_axis == "optical" else 0)
+        self.axis_combo.blockSignals(False)
+
         dtype, unit = helpers.describe(self.obj)
         rows = self.obj.data.shape[0]
         ds = self.project.active
@@ -926,6 +991,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.density_spin.blockSignals(True)
             self.density_spin.setValue(float(self.obj.density))
             self.density_spin.blockSignals(False)
+
+    def _on_axis_change(self) -> None:
+        """Switch the tabs between the aerodynamic and optical axis (3D data)."""
+        self._active_axis = self.axis_combo.currentData() or "aerodynamic"
+        self.refresh_all(reset_view=True)
 
     # -- dtype / density handlers -----------------------------------------
     def _on_dtype_change(self) -> None:

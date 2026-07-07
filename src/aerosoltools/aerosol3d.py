@@ -67,6 +67,32 @@ class Aerosol3d(Aerosol2D):
         """The time-indexed optical×aerodynamic matrix (``(optical, aero)`` cols)."""
         return self._correlation
 
+    def axis_view(self, axis: str = "aerodynamic") -> Aerosol2D:
+        """Return the live aerodynamic or optical axis with activities synced.
+
+        Unlike :meth:`as_2d` (which returns an independent copy), this returns
+        the *live* companion object with the parent's current activities copied
+        onto it — so switching axes in the GUI keeps marked tasks, fits and
+        views consistent across both. The aerodynamic axis is ``self``.
+
+        Args:
+            axis: ``"aerodynamic"`` (default) or ``"optical"``.
+
+        Returns:
+            Aerosol2D: ``self`` for the aerodynamic axis, or the (activity-
+            synced) optical companion; falls back to ``self`` when there is no
+            optical axis.
+        """
+        if axis.lower().startswith("o") and self._optical is not None:
+            opt = self._optical
+            opt._activities = list(self._activities)
+            opt._activity_periods = dict(self._activity_periods)
+            for name in self._activities:
+                if name in self._data.columns and len(opt._data) == len(self._data):
+                    opt._data[name] = self._data[name].to_numpy()
+            return opt
+        return self
+
     def as_2d(self, axis: str = "aerodynamic") -> Aerosol2D:
         """Return one size axis as an independent :class:`Aerosol2D`.
 
