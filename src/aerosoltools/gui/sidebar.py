@@ -22,6 +22,7 @@ class DatasetSidebar(QtWidgets.QWidget):
     add_requested = QtCore.pyqtSignal()
     remove_requested = QtCore.pyqtSignal(int)
     rename_requested = QtCore.pyqtSignal(int)
+    reload_requested = QtCore.pyqtSignal(int)
     join_requested = QtCore.pyqtSignal(int)
     combine_ns_ops_requested = QtCore.pyqtSignal()
 
@@ -53,8 +54,15 @@ class DatasetSidebar(QtWidgets.QWidget):
         self.remove_btn = QtWidgets.QPushButton("Remove")
         self.remove_btn.setToolTip("Remove the selected dataset from the project.")
         self.remove_btn.clicked.connect(self._emit_remove)
+        self.reload_btn = QtWidgets.QPushButton("Reload")
+        self.reload_btn.setToolTip(
+            "Reload the selected dataset from its source file (discards "
+            "conversions, cropping and activities on it)."
+        )
+        self.reload_btn.clicked.connect(self._emit_reload)
         row.addWidget(self.rename_btn)
         row.addWidget(self.remove_btn)
+        row.addWidget(self.reload_btn)
         layout.addLayout(row)
 
         # Combine actions.
@@ -115,6 +123,7 @@ class DatasetSidebar(QtWidgets.QWidget):
         has_sel = self.list.currentItem() is not None
         self.rename_btn.setEnabled(has_sel)
         self.remove_btn.setEnabled(has_sel)
+        self.reload_btn.setEnabled(has_sel)
         self.join_btn.setEnabled(has_sel)
         self.combine_btn.setEnabled(self.list.count() >= 2)
 
@@ -137,6 +146,12 @@ class DatasetSidebar(QtWidgets.QWidget):
         ds_id = self._selected_id()
         if ds_id is not None:
             self.rename_requested.emit(ds_id)
+
+    def _emit_reload(self) -> None:
+        """Emit :attr:`reload_requested` for the selected dataset."""
+        ds_id = self._selected_id()
+        if ds_id is not None:
+            self.reload_requested.emit(ds_id)
 
     def _emit_join(self) -> None:
         """Emit :attr:`join_requested` for the selected dataset."""

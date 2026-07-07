@@ -211,7 +211,13 @@ class DecayTab(_PlotTab):
             self._result = None
             self._sync_metric_options()
             self._cols_obj = self.obj
-        self._draw_base()
+        # Re-run an existing fit on refresh (e.g. after a density change) so the
+        # mass-based results and curve track the new density; otherwise just
+        # redraw the raw segment.
+        if self._window is not None:
+            self._refit()
+        else:
+            self._draw_base()
 
     def _series(self):
         """Return ``(times, values, unit)`` for the whole active metric series."""
@@ -387,11 +393,17 @@ class DecayTab(_PlotTab):
                 f"{_fmt(result['second_order_rate'])} ({unit}·s)⁻¹"
             )
         if "wall_loss_rate_per_hour" in result:
+            wall = result["wall_loss_rate_per_hour"]
             lines.append(
                 "Estimated wall-loss/deposition rate = "
-                f"{_fmt(result['wall_loss_rate_per_hour'])} 1/h "
-                "(= first-order loss − known ACH)"
+                f"{_fmt(wall)} 1/h (= first-order loss − known ACH)"
             )
+            if wall < 0:
+                lines.append(
+                    "  ⚠ Negative wall loss: the fitted first-order loss is "
+                    "below the entered air-exchange rate (ACH). Check the ACH "
+                    "value or the fit window."
+                )
         if "source_strength" in result:
             lines.append(
                 f"Source strength ≈ {_fmt(result['source_strength'])} "

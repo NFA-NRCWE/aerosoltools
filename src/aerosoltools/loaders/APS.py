@@ -200,4 +200,11 @@ def _build_aero_2d(frame, bin_mids, bin_edges, meta, cls):
     obj._meta["bin_mids"] = np.asarray(bin_mids, dtype=float)
     obj._meta["bin_edges"] = np.asarray(bin_edges, dtype=float)
     obj._meta["density"] = float(meta.get("Density", 1.0) or 1.0)
+    # The APS reports aerodynamic diameter (time-of-flight), which is density-
+    # independent — so, unlike the ELPI, changing density does NOT rescale the
+    # size axis; it only affects mass conversion. The "Stokes Correction" export
+    # flag (whether the software converted to a Stokes/volume-equivalent
+    # diameter) is kept for transparency.
+    obj._meta["stokes_correction"] = str(meta.get("Stokes Correction", "")).strip()
+    obj._meta["sample_time_s"] = float(meta.get("Sample Time", 0) or 0)
     return obj

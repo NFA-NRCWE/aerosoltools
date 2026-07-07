@@ -250,6 +250,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sidebar.dataset_selected.connect(self.set_active_dataset)
         self.sidebar.remove_requested.connect(self._remove_dataset)
         self.sidebar.rename_requested.connect(self._rename_dataset)
+        self.sidebar.reload_requested.connect(self._reload_dataset)
         self.sidebar.join_requested.connect(self._join_same_instrument)
         self.sidebar.combine_ns_ops_requested.connect(self._combine_ns_ops)
 
@@ -426,6 +427,12 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         if paths:
             self.load_files(paths)
+
+    def _reload_dataset(self, ds_id: int) -> None:
+        """Reload a specific dataset (from the sidebar) after making it active."""
+        self.project.set_active(ds_id)
+        self._refresh_sidebar()
+        self._reload()
 
     def _reload(self) -> None:
         """Reload the active dataset's file in place (keeps shared activities)."""
