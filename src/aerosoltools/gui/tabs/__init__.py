@@ -12,6 +12,7 @@ from .aero_optical import AeroOpticalTab
 from .correlation import CorrelationTab
 from .decay import DecayTab
 from .heatmap import HeatmapTab
+from .metadata import MetadataTab
 from .overlay import OverlayTab
 from .pmbands import PMBandsTab
 from .psd import PSDTab
@@ -24,6 +25,7 @@ __all__ = [
     "CorrelationTab",
     "DecayTab",
     "HeatmapTab",
+    "MetadataTab",
     "OverlayTab",
     "PMBandsTab",
     "PSDTab",

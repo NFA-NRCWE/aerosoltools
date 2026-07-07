@@ -22,6 +22,7 @@ from .tabs import (
     CorrelationTab,
     DecayTab,
     HeatmapTab,
+    MetadataTab,
     OverlayTab,
     PMBandsTab,
     PSDTab,
@@ -954,11 +955,13 @@ class MainWindow(QtWidgets.QMainWindow):
         summ = SummaryTab(self)
         overlay = OverlayTab(self)
         correlation = CorrelationTab(self)
+        meta = MetadataTab(self)
         self.tabs.addTab(psd, "PSD")
         self.tabs.addTab(summ, "Summary")
         self.tabs.addTab(overlay, "Overlay")
         self.tabs.addTab(correlation, "Correlation")
-        self._tabs += [psd, summ, overlay, correlation]
+        self.tabs.addTab(meta, "Metadata")
+        self._tabs += [psd, summ, overlay, correlation, meta]
 
         self._tab_sig = self._shape_sig()
 
@@ -1056,44 +1059,29 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         if self.obj is None or not helpers.is_2d(self.obj):
             return
-        new_density = self.density_spin.value()
+        self.apply_density(self.density_spin.value())
 
-        # Targets: the active dataset plus every ELPI dataset in the project.
-        targets = []
+    def apply_density(self, value: float, all_datasets: bool = False) -> None:
+        """Set the particle density on the active (or all) dataset(s) and refresh.
+
+        ELPI datasets are always included, because the ELPI reports density-
+        dependent particle sizes; other 2D datasets take the new density for
+        mass-based conversions only. Used by the Metadata tab's density control.
+        """
         active = self.project.active
-        if active is not None:
-            targets.append(active)
-        for ds in self.project.datasets:
+        if active is None:
+            return
+        targets = list(self.project.datasets) if all_datasets else [active]
+        for ds in self.project.datasets:  # always recalc ELPI sizes
             if ds not in targets and self._is_elpi(ds.obj):
                 targets.append(ds)
-
-        n_elpi = 0
         try:
             for ds in targets:
-                if not helpers.is_2d(ds.obj):
-                    continue
-                ds.obj.set_density(new_density)
-                if self._is_elpi(ds.obj):
-                    n_elpi += 1
+                if helpers.is_2d(ds.obj):
+                    ds.obj.set_density(value)
         except Exception:
             QtWidgets.QMessageBox.warning(
                 self, "set_density failed", traceback.format_exc(limit=1)
             )
             return
         self.refresh_all(reset_view=True)
-        if n_elpi:
-            self._warn_elpi_recalc(n_elpi)
-
-    def _warn_elpi_recalc(self, n: int) -> None:
-        """Non-blocking 'speech bubble' noting ELPI data were recalculated."""
-        pos = self.density_spin.mapToGlobal(
-            QtCore.QPoint(0, self.density_spin.height())
-        )
-        word = "dataset" if n == 1 else "datasets"
-        QtWidgets.QToolTip.showText(
-            pos,
-            f"ELPI sizes are density-dependent — recalculated {n} ELPI {word} for "
-            "the new density (particle diameters, and number for raw-current "
-            "files).",
-            self.density_spin,
-        )
