@@ -26,6 +26,15 @@ import pandas as pd
 from .aerosol2d import Aerosol2D
 
 
+def _log_ticks(set_ticks, set_labels, values) -> None:
+    """Put decade ticks (labelled in nm) on a log₁₀-valued 3-D axis."""
+    lo = int(np.floor(np.log10(values.min())))
+    hi = int(np.ceil(np.log10(values.max())))
+    decades = np.arange(lo, hi + 1)
+    set_ticks(decades)
+    set_labels([f"{10.0**d:g}" for d in decades])
+
+
 class Aerosol3d(Aerosol2D):
     """Aerodynamic + optical size distributions from a correlated APS record.
 
@@ -207,15 +216,7 @@ class Aerosol3d(Aerosol2D):
             )
 
         corr = self._correlation
-        idx = corr.index
-        if activity is not None and activity in self.activities:
-            mask = self._data[activity].astype(bool)
-            mask = mask.reindex(idx, fill_value=False).to_numpy()
-        elif window is not None:
-            start, end = window
-            mask = (idx >= pd.Timestamp(start)) & (idx <= pd.Timestamp(end))
-        else:
-            mask = (idx >= self.time.min()) & (idx <= self.time.max())
+        mask = self._corr_time_mask(activity, window)
 
         matrix = corr.loc[mask].sum(axis=0)  # Series indexed by (optical, aero)
         grid = matrix.unstack()  # rows: optical mid, cols: aero mid
@@ -244,4 +245,93 @@ class Aerosol3d(Aerosol2D):
         ax.legend(loc="upper left", fontsize=8)
         fig.colorbar(mesh, ax=ax, label=f"Concentration ({self.unit})")
         fig.tight_layout()
+        return fig, ax
+
+    def _corr_time_mask(self, activity, window):
+        """Boolean mask selecting correlation rows for an activity / window."""
+        idx = self._correlation.index
+        if activity is not None and activity in self.activities:
+            m = self._data[activity].astype(bool)
+            return m.reindex(idx, fill_value=False).to_numpy()
+        if window is not None:
+            start, end = window
+            return (idx >= pd.Timestamp(start)) & (idx <= pd.Timestamp(end))
+        return (idx >= self.time.min()) & (idx <= self.time.max())
+
+    def plot_aero_optical_3d(
+        self,
+        activity: Optional[str] = None,
+        window: Optional[tuple] = None,
+        ax=None,
+        max_points: int = 8000,
+        cmap: str = "jet",
+    ):
+        """Interactive 3-D view of the correlated APS record over time.
+
+        Each cell of the correlated matrix is drawn as a point at (optical
+        diameter, aerodynamic diameter, time), coloured by its concentration on
+        a log scale — so one can watch how the optical↔aerodynamic relationship
+        evolves. The diameter axes are plotted as log₁₀(nm) (labelled in nm);
+        the returned 3-D axes can be rotated in the GUI, and its view angle is
+        kept when the plot is saved. Only the highest-concentration cells are
+        drawn (capped at ``max_points``) so the view stays responsive.
+
+        Args:
+            activity: Restrict to a marked activity (overrides ``window``).
+            window: ``(start, end)`` window; defaults to the current time span.
+            ax: Existing 3-D axes; a new figure is made when ``None``.
+            max_points: Cap on the number of scatter points (largest kept).
+            cmap: Colormap (default "jet", matching the 2-D heatmaps).
+
+        Returns:
+            tuple: ``(figure, axes3d)``.
+
+        Raises:
+            ValueError: If the record is not correlated.
+        """
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import LogNorm
+
+        if not self.is_correlated:
+            raise ValueError("plot_aero_optical_3d needs a correlated APS record.")
+
+        corr = self._correlation
+        mask = self._corr_time_mask(activity, window)
+        sub = corr.loc[mask]
+        times = sub.index
+        opt = sub.columns.get_level_values("optical").to_numpy(dtype=float)
+        aero = sub.columns.get_level_values("aero").to_numpy(dtype=float)
+        # Time as elapsed minutes from the window start (readable z-axis).
+        elapsed = (times - times.min()).total_seconds().to_numpy() / 60.0
+
+        vals = sub.to_numpy(dtype=float)
+        X = np.tile(opt, vals.shape[0])
+        Y = np.tile(aero, vals.shape[0])
+        Z = np.repeat(elapsed, vals.shape[1])
+        C = vals.ravel()
+
+        keep = np.isfinite(C) & (C > 0)
+        X, Y, Z, C = X[keep], Y[keep], Z[keep], C[keep]
+        if C.size > max_points:  # keep the strongest cells
+            order = np.argsort(C)[-max_points:]
+            X, Y, Z, C = X[order], Y[order], Z[order], C[order]
+
+        if ax is None:
+            fig = plt.figure(figsize=(8, 6))
+            ax = fig.add_subplot(111, projection="3d")
+        else:
+            fig = ax.figure
+
+        if C.size:
+            norm = LogNorm(vmin=C.min(), vmax=C.max())
+            p = ax.scatter(
+                np.log10(X), np.log10(Y), Z, c=C, cmap=cmap, norm=norm, s=6, alpha=0.6
+            )
+            fig.colorbar(p, ax=ax, pad=0.1, label=f"Concentration ({self.unit})")
+        _log_ticks(ax.set_xticks, ax.set_xticklabels, X)
+        _log_ticks(ax.set_yticks, ax.set_yticklabels, Y)
+        ax.set_xlabel("Optical Ø (nm)")
+        ax.set_ylabel("Aerodynamic Ø (nm)")
+        ax.set_zlabel("Time (min)")
+        ax.set_title("APS: optical vs aerodynamic sizing over time")
         return fig, ax
