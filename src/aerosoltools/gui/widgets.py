@@ -109,6 +109,81 @@ class SlackTabBar(QtWidgets.QTabBar):
         return size
 
 
+class TwoRowTabs(QtWidgets.QWidget):
+    """A tab widget with two rows of tabs over one shared content area.
+
+    The two :class:`SlackTabBar` rows share a single :class:`QStackedWidget`, so
+    every pane still fills the whole window but all tabs fit without the scroll
+    arrows. Dataset-specific panes go on the top row, project/comparison panes on
+    the bottom row. Provides the small subset of the ``QTabWidget`` API the main
+    window uses (:meth:`add_tab`, :meth:`clear`).
+    """
+
+    def __init__(self, parent=None):
+        """Build the two tab bars and the shared stacked content area."""
+        super().__init__(parent)
+        v = QtWidgets.QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(0)
+        self.bars = (SlackTabBar(), SlackTabBar())
+        for row, bar in enumerate(self.bars):
+            bar.setExpanding(False)
+            bar.setDrawBase(False)
+            bar.setUsesScrollButtons(True)
+            bar.setProperty("inactiveRow", False)
+            # tabBarClicked (not currentChanged) so re-clicking the row's forced
+            # selection still switches back to it.
+            bar.tabBarClicked.connect(lambda i, r=row: self._activate(r, i))
+            v.addWidget(bar)
+        self.stack = QtWidgets.QStackedWidget()
+        v.addWidget(self.stack, 1)
+        self._stack_index: list[list[int]] = [[], []]
+
+    def add_tab(self, widget, text: str, row: int) -> None:
+        """Add ``widget`` as a pane, with a tab labelled ``text`` on ``row``."""
+        si = self.stack.addWidget(widget)
+        bar = self.bars[row]
+        bar.blockSignals(True)
+        bar.addTab(text)
+        bar.blockSignals(False)
+        self._stack_index[row].append(si)
+
+    def finalize(self) -> None:
+        """Select the first tab (preferring the top row) after (re)building."""
+        for row in (0, 1):
+            if self.bars[row].count():
+                self._activate(row, 0)
+                return
+
+    def clear(self) -> None:
+        """Remove every tab and pane."""
+        for bar in self.bars:
+            bar.blockSignals(True)
+            while bar.count():
+                bar.removeTab(0)
+            bar.blockSignals(False)
+        while self.stack.count():
+            w = self.stack.widget(0)
+            self.stack.removeWidget(w)
+            w.setParent(None)
+        self._stack_index = [[], []]
+
+    def _activate(self, row: int, i: int) -> None:
+        """Show the pane for tab ``i`` of ``row`` and mark that row active."""
+        if i < 0 or i >= self.bars[row].count():
+            return
+        bar = self.bars[row]
+        bar.blockSignals(True)
+        bar.setCurrentIndex(i)
+        bar.blockSignals(False)
+        self.stack.setCurrentIndex(self._stack_index[row][i])
+        # Only the active row draws its tab as selected (QSS: inactiveRow).
+        for r, b in enumerate(self.bars):
+            b.setProperty("inactiveRow", r != row)
+            b.style().unpolish(b)
+            b.style().polish(b)
+
+
 class CombineInstrumentsDialog(QtWidgets.QDialog):
     """Pick two size-resolved datasets and a crossover to stitch their ranges.
 

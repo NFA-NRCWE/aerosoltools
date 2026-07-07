@@ -292,6 +292,14 @@ QTabBar::tab:selected {
     border: 1px solid ${BORDER};
     border-bottom: 3px solid ${ACCENT};
 }
+/* In the two-row tab widget, only the active row's tab reads as selected; the
+   other row keeps a Qt-forced selection but is drawn as an ordinary tab. */
+QTabBar[inactiveRow="true"]::tab:selected {
+    background: ${TAB_BG};
+    color: ${TAB_TEXT};
+    border: 1px solid ${BORDER_SOFT};
+    border-bottom: none;
+}
 
 /* Tables */
 QTableView {

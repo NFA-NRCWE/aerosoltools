@@ -30,7 +30,7 @@ from .tabs import (
     SummaryTab,
     TimeSeriesTab,
 )
-from .widgets import CombineInstrumentsDialog, KeyboardShortcutsDialog, SlackTabBar
+from .widgets import CombineInstrumentsDialog, KeyboardShortcutsDialog, TwoRowTabs
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -162,11 +162,9 @@ class MainWindow(QtWidgets.QMainWindow):
         # Datasets are added via the sidebar; density lives on the Metadata tab;
         # dtype is dN throughout and converted per-plot for display only — so no
         # top control bar is needed. Tabs fill the window.
-        self.tabs = QtWidgets.QTabWidget()
-        self.tabs.setTabBar(SlackTabBar())
-        self.tabs.tabBar().setExpanding(False)
-        self.tabs.setElideMode(QtCore.Qt.ElideNone)
-        self.tabs.setDocumentMode(True)
+        # Two rows of tabs (dataset-specific on top, project/comparison on the
+        # bottom) so every pane fits without the scroll arrows.
+        self.tabs = TwoRowTabs()
         layout.addWidget(self.tabs, stretch=1)
 
         # Wrap the central content in a scroll area, so when a pane is too small
@@ -829,44 +827,46 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tabs.clear()
         self._tabs = []
 
+        # Top row: panes tied to the single active dataset.
         raw = RawDataTab(self)
+        meta = MetadataTab(self)
         ts = TimeSeriesTab(self)
         ts.attach_adjust_controls(self.adjust_box)
         decay = DecayTab(self)
-        self.tabs.addTab(raw, "Raw data")
-        self.tabs.addTab(ts, "Time series")
-        self.tabs.addTab(decay, "Decay / Source")
-        self._tabs += [raw, ts, decay]
+        psd = PSDTab(self)
+        self.tabs.add_tab(raw, "Raw data", 0)
+        self.tabs.add_tab(meta, "Metadata", 0)
+        self.tabs.add_tab(ts, "Time series", 0)
+        self.tabs.add_tab(decay, "Decay / Source", 0)
+        self._tabs += [raw, meta, ts, decay]
 
-        # Single-view 2D plots that follow the active dataset.
+        # Single-view 2D plots that follow the active dataset (top row).
         if helpers.is_2d(self.obj):
             heat = HeatmapTab(self)
             pm = PMBandsTab(self)
-            self.tabs.addTab(heat, "2D heatmap")
-            self.tabs.addTab(pm, "PM bands")
+            self.tabs.add_tab(heat, "2D heatmap", 0)
+            self.tabs.add_tab(pm, "PM bands", 0)
             self._tabs += [heat, pm]
+
+        self.tabs.add_tab(psd, "PSD", 0)
+        self._tabs.append(psd)
 
         # Correlated APS (Aerosol3d): the aerodynamic↔optical comparison pane.
         if isinstance(self.active_obj, Aerosol3d) and self.active_obj.is_correlated:
             aero_opt = AeroOpticalTab(self)
-            self.tabs.addTab(aero_opt, "Aero ↔ Optical")
+            self.tabs.add_tab(aero_opt, "Aero ↔ Optical", 0)
             self._tabs.append(aero_opt)
 
-        # Project-level tabs (work for a single dataset or compare several):
-        # PSD + Summary subsume the old single-view tabs; Overlay + Correlation
-        # are multi-dataset comparisons. All are always shown.
-        psd = PSDTab(self)
+        # Bottom row: panes that summarise or compare several datasets.
         summ = SummaryTab(self)
         overlay = OverlayTab(self)
         correlation = CorrelationTab(self)
-        meta = MetadataTab(self)
-        self.tabs.addTab(psd, "PSD")
-        self.tabs.addTab(summ, "Summary")
-        self.tabs.addTab(overlay, "Overlay")
-        self.tabs.addTab(correlation, "Correlation")
-        self.tabs.addTab(meta, "Metadata")
-        self._tabs += [psd, summ, overlay, correlation, meta]
+        self.tabs.add_tab(summ, "Summary", 1)
+        self.tabs.add_tab(overlay, "Overlay", 1)
+        self.tabs.add_tab(correlation, "Correlation", 1)
+        self._tabs += [summ, overlay, correlation]
 
+        self.tabs.finalize()
         self._tab_sig = self._shape_sig()
 
     def refresh_all(self, reset_view: bool = False) -> None:
