@@ -244,7 +244,10 @@ class Aerosol3d(Aerosol2D):
         ax.set_title("APS: optical vs aerodynamic sizing")
         ax.legend(loc="upper left", fontsize=8)
         fig.colorbar(mesh, ax=ax, label=f"Concentration ({self.unit})")
-        fig.tight_layout()
+        # tight_layout clashes with an already-active (e.g. constrained) layout
+        # engine once a colorbar exists, so only apply it when none is set.
+        if fig.get_layout_engine() is None:
+            fig.tight_layout()
         return fig, ax
 
     def _corr_time_mask(self, activity, window):

@@ -194,7 +194,12 @@ def _build_aero_2d(frame, bin_mids, bin_edges, meta, cls):
     """Construct an Aerosol2D/3d from a prepared (Datetime, Total_conc, bins) df."""
     obj = cls(frame.copy())
     obj._meta["instrument"] = "APS"
-    obj._meta["serial_number"] = str(meta.get("Sample File", "")).split("\\")[-1]
+    # The AIM text export carries no instrument serial number — only the sample
+    # file path. Report the serial as unknown and keep the sample name as its
+    # own field, rather than mislabelling the file name as a serial number.
+    sample_file = str(meta.get("Sample File", "")).replace("/", "\\").split("\\")[-1]
+    obj._meta["serial_number"] = ""
+    obj._meta["sample_file"] = sample_file
     obj._meta["unit"] = "cm⁻³"
     obj._meta["dtype"] = "dN"
     obj._meta["bin_mids"] = np.asarray(bin_mids, dtype=float)
