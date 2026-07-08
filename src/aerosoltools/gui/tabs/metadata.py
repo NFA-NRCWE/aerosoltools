@@ -12,11 +12,16 @@ import traceback
 
 import numpy as np
 
+from .. import calibration as calib
 from .. import helpers
 from ..qt import QtWidgets
 
 #: Metadata keys shown via the dedicated size-bin table instead of a raw dump.
 _BIN_KEYS = {"bin_edges", "bin_mids"}
+#: Keys not shown in the general metadata dump (surfaced elsewhere in the pane):
+#: the bin arrays go to the size table, and the raw ``calibrated`` dict is shown
+#: as human-readable functions via the calibration controls (items 6/7).
+_HIDDEN_KEYS = _BIN_KEYS | {"calibrated"}
 
 
 def _format_value(value) -> str:
@@ -108,24 +113,65 @@ class MetadataTab(QtWidgets.QWidget):
         crow.addStretch(1)
         layout.addWidget(self.crop_row)
 
-        # -- tables: general metadata + per-bin sizes -------------------------
+        # -- tables: general metadata (+ calibration) + per-bin sizes ---------
         tables = QtWidgets.QHBoxLayout()
+
+        # Left: the general metadata table with the calibration summary/controls
+        # directly beneath it (a total-concentration calibration is shown here).
+        left = QtWidgets.QVBoxLayout()
+        left.setContentsMargins(0, 0, 0, 0)
         self.table = QtWidgets.QTableWidget(0, 2)
         self.table.setHorizontalHeaderLabels(["Field", "Value"])
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.table.horizontalHeader().setStretchLastSection(True)
-        tables.addWidget(self.table, stretch=3)
+        left.addWidget(self.table, stretch=1)
+        self._build_calibration_controls(left)
+        left_widget = QtWidgets.QWidget()
+        left_widget.setLayout(left)
+        tables.addWidget(left_widget, stretch=3)
 
-        self.bins = QtWidgets.QTableWidget(0, 4)
+        # Right: the per-bin size table, with a per-bin calibration column.
+        self.bins = QtWidgets.QTableWidget(0, 5)
         self.bins.setHorizontalHeaderLabels(
-            ["#", "lower (nm)", "mid (nm)", "upper (nm)"]
+            ["#", "lower (nm)", "mid (nm)", "upper (nm)", "calibration"]
         )
         self.bins.verticalHeader().setVisible(False)
         self.bins.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.bins.setToolTip("All size-bin edges and midpoints, for inspection.")
+        self.bins.setToolTip(
+            "All size-bin edges and midpoints, plus each bin's calibration "
+            "function when a per-bin calibration is applied."
+        )
         tables.addWidget(self.bins, stretch=2)
         layout.addLayout(tables, stretch=1)
+
+    def _build_calibration_controls(self, parent_layout) -> None:
+        """Build the calibration summary + on/off/reset controls (item 6/7)."""
+        self.cal_group = QtWidgets.QGroupBox("Calibration")
+        cal = QtWidgets.QVBoxLayout(self.cal_group)
+        cal.setContentsMargins(8, 4, 8, 6)
+        row = QtWidgets.QHBoxLayout()
+        self.cal_enable = QtWidgets.QCheckBox("Apply calibration")
+        self.cal_enable.setToolTip(
+            "Toggle the fitted calibration on or off. When off, the original "
+            "(uncalibrated) data is shown across every pane."
+        )
+        self.cal_enable.toggled.connect(self._on_cal_toggle)
+        self.cal_reset = QtWidgets.QPushButton("Reset")
+        self.cal_reset.setToolTip(
+            "Remove the calibration and restore the original data."
+        )
+        self.cal_reset.clicked.connect(self._on_cal_reset)
+        row.addWidget(self.cal_enable)
+        row.addWidget(self.cal_reset)
+        row.addStretch(1)
+        cal.addLayout(row)
+        self.cal_summary = QtWidgets.QLabel("")
+        self.cal_summary.setWordWrap(True)
+        self.cal_summary.setStyleSheet("color: palette(mid);")
+        cal.addWidget(self.cal_summary)
+        parent_layout.addWidget(self.cal_group)
+        self.cal_group.setVisible(False)
 
     @property
     def obj(self):
@@ -147,6 +193,26 @@ class MetadataTab(QtWidgets.QWidget):
     def _on_axis_change(self) -> None:
         """Switch the active APS axis (aerodynamic/optical) for all tabs."""
         self.main.set_active_axis(self.axis_combo.currentData() or "aerodynamic")
+
+    def _on_cal_toggle(self, checked: bool) -> None:
+        """Enable/disable the active dataset's calibration and refresh all panes."""
+        ds = self.main.project.active
+        if ds is None or ds.calibration is None:
+            return
+        if bool(checked) == ds.calibration_enabled:
+            return
+        calib.set_calibration_enabled(ds, checked)
+        self.main.project._apply_activities(ds)  # obj was rebuilt
+        self.main.refresh_all(reset_view=False)
+
+    def _on_cal_reset(self) -> None:
+        """Remove the active dataset's calibration and restore the original data."""
+        ds = self.main.project.active
+        if ds is None or ds.calibration is None:
+            return
+        calib.reset_calibration(ds)
+        self.main.project._apply_activities(ds)
+        self.main.refresh_all(reset_view=False)
 
     def _apply_crop(self) -> None:
         """Keep only the bins between the two chosen edges (conservative rebin)."""
@@ -208,7 +274,7 @@ class MetadataTab(QtWidgets.QWidget):
         meta = dict(getattr(obj, "metadata", {}) or {})
         rows = [("class", type(obj).__name__)]
         rows += [
-            (str(k), _format_value(v)) for k, v in meta.items() if k not in _BIN_KEYS
+            (str(k), _format_value(v)) for k, v in meta.items() if k not in _HIDDEN_KEYS
         ]
         self.table.setRowCount(len(rows))
         for r, (key, val) in enumerate(rows):
@@ -217,17 +283,39 @@ class MetadataTab(QtWidgets.QWidget):
         self.table.resizeColumnToContents(0)
 
         self._fill_bins(obj if is2d else None)
+        self._refresh_calibration()
+
+    def _refresh_calibration(self) -> None:
+        """Update the calibration summary + on/off state for the active dataset."""
+        ds = self.main.project.active
+        has = ds is not None and ds.calibration is not None
+        self.cal_group.setVisible(bool(has))
+        if not has:
+            return
+        self.cal_enable.blockSignals(True)
+        self.cal_enable.setChecked(ds.calibration_enabled)
+        self.cal_enable.blockSignals(False)
+        self.cal_summary.setText(calib.calibration_summary(ds) or "")
 
     def _fill_bins(self, obj) -> None:
-        """Fill the per-bin size table and the crop-range selectors."""
+        """Fill the per-bin size table, its calibration column and the crop pickers."""
         if obj is None:
             self.bins.setRowCount(0)
             return
         edges = np.asarray(obj.bin_edges, dtype=float)
         mids = np.asarray(obj.bin_mids, dtype=float)
+        ds = self.main.project.active
+        cal_texts = calib.bin_calibration_texts(ds) if ds is not None else None
         self.bins.setRowCount(len(mids))
         for i, mid in enumerate(mids):
-            cells = [str(i + 1), f"{edges[i]:g}", f"{mid:g}", f"{edges[i + 1]:g}"]
+            cal = cal_texts[i] if (cal_texts and i < len(cal_texts)) else ""
+            cells = [
+                str(i + 1),
+                f"{edges[i]:g}",
+                f"{mid:g}",
+                f"{edges[i + 1]:g}",
+                cal,
+            ]
             for c, text in enumerate(cells):
                 self.bins.setItem(i, c, QtWidgets.QTableWidgetItem(text))
         self.bins.resizeColumnsToContents()

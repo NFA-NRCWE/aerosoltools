@@ -134,6 +134,16 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
         with open(os.path.join(folder, pkl_rel), "wb") as fh:
             pickle.dump(ds.obj, fh, protocol=pickle.HIGHEST_PROTOCOL)
 
+        # A calibrated dataset also archives its uncalibrated baseline, so the
+        # correction can still be toggled off / reset after a save+reload. The
+        # spec + on/off flag go in the manifest; the pickled ``obj`` above already
+        # reflects the current (on/off) state.
+        cal_rel = None
+        if ds._cal_baseline is not None:
+            cal_rel = f"{DS_DIR}/ds_{i}_baseline.pkl"
+            with open(os.path.join(folder, cal_rel), "wb") as fh:
+                pickle.dump(ds._cal_baseline, fh, protocol=pickle.HIGHEST_PROTOCOL)
+
         manifest["datasets"].append(
             {
                 "label": ds.label,
@@ -142,6 +152,9 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
                 "contributing": contributing,
                 "pickle": pkl_rel,
                 "color": ds.color,
+                "calibration": ds.calibration,
+                "calibration_enabled": ds.calibration_enabled,
+                "calibration_baseline": cal_rel,
                 "psd_fits": _clean_psd_fits(ds.psd_fits),
             }
         )
@@ -204,6 +217,15 @@ def load_project(folder: str) -> tuple[Project, str]:
             ds.contributing_files = [os.path.join(folder, r) for r in contributing]
         ds.color = entry.get("color")  # None for pre-colour projects
         ds.psd_fits = _clean_psd_fits(entry.get("psd_fits", {}))
+        # Restore the calibration spec/state and its uncalibrated baseline (the
+        # pickled obj above already reflects the on/off state). Older projects
+        # simply have none.
+        ds.calibration = entry.get("calibration")
+        ds.calibration_enabled = bool(entry.get("calibration_enabled"))
+        cal_rel = entry.get("calibration_baseline")
+        if cal_rel and os.path.exists(os.path.join(folder, cal_rel)):
+            with open(os.path.join(folder, cal_rel), "rb") as fh:
+                ds._cal_baseline = pickle.load(fh)
         project.datasets.append(ds)
         project.assign_color(ds)  # give older/uncoloured datasets a stable colour
 

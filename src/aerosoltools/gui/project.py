@@ -90,6 +90,13 @@ class Dataset:
         # Stable plot colour for this dataset, followed across every plot. None
         # until assigned by the owning Project (or the user); see DEFAULT_PALETTE.
         self.color: Optional[str] = None
+        # Reversible calibration state (see gui/calibration.py). ``calibration``
+        # is the applied spec (basis, factors, per-bin R²) or None; ``_cal_baseline``
+        # is a snapshot of the uncalibrated object taken when calibration was first
+        # applied, so the correction can be toggled on/off or reset from any pane.
+        self.calibration: Optional[dict] = None
+        self.calibration_enabled: bool = False
+        self._cal_baseline = None
         # Lognormal PSD fits, keyed by activity name (e.g. "All data", "Task 1").
         # Each value is ``{"modes": [{mu, sigma, peak, bound}, ...],
         # "optimized": bool}``. Stored per dataset because a fit describes that
