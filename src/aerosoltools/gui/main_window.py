@@ -602,6 +602,59 @@ class MainWindow(QtWidgets.QMainWindow):
         self._refresh_sidebar()
         return ds
 
+    def extract_window(self, ds_id: int, start, end, label: str, remove: bool) -> None:
+        """Split a time window out of a dataset into a new dataset.
+
+        The window ``[start, end]`` is copied (with all metadata) into a new
+        dataset. With ``remove=True`` that window is also cut from the original,
+        leaving the data before and after it. The new dataset inherits the
+        original's in-scope activities, so tasks marked on the source still apply
+        to the extracted piece.
+
+        Args:
+            ds_id: Source dataset id.
+            start: Window start (inclusive).
+            end: Window end (inclusive).
+            label: Name for the new dataset.
+            remove: Whether to also remove the window from the original.
+        """
+        ds = self.project.get(ds_id)
+        if ds is None:
+            return
+        try:
+            piece = ds.obj.timecrop(start, end, inplace=False, focus=True)
+        except Exception:
+            QtWidgets.QMessageBox.critical(
+                self, "Extract failed", traceback.format_exc(limit=2)
+            )
+            return
+        if piece is None or piece.data.shape[0] == 0:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Nothing to extract",
+                "The selected time window contains no samples in this dataset.",
+            )
+            return
+        if remove:
+            # Cut the same window from the original (keeps before + after).
+            ds.obj.timecrop(start, end, inplace=True, focus=False)
+            self.project._apply_activities(ds)  # rebuild the original's masks
+
+        new = self._add_derived_dataset(
+            piece, ds.instrument_key, label, source_files=ds.contributing_files
+        )
+        # Inherit the source's scoped-activity memberships onto the new piece so
+        # tasks marked on the original also apply here ("all-datasets" tasks are
+        # already included automatically).
+        changed = False
+        for ids in self.project.activity_scopes.values():
+            if ids is not None and ds.id in ids and new.id not in ids:
+                ids.add(new.id)
+                changed = True
+        if changed:
+            self.project._apply_activities(new)
+            self.refresh_all(reset_view=False)
+
     def _join_same_instrument(self, ds_id: int) -> None:
         """Concatenate chosen datasets of the same instrument into one recording.
 

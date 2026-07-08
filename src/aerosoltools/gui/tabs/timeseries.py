@@ -166,6 +166,52 @@ class ActivityScopeDialog(QtWidgets.QDialog):
         }
 
 
+class ExtractRangeDialog(QtWidgets.QDialog):
+    """Name the extracted piece and choose whether to keep it in the original."""
+
+    def __init__(self, parent, default_label, start, end):
+        """Build the label field and the keep/remove choice.
+
+        Args:
+            parent: Parent widget.
+            default_label: Suggested name for the new dataset.
+            start: Selected window start (for the informational label).
+            end: Selected window end.
+        """
+        super().__init__(parent)
+        self.setWindowTitle("Extract to new dataset")
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(
+            QtWidgets.QLabel(
+                f"Extract {start:%Y-%m-%d %H:%M:%S} – {end:%H:%M:%S} into a new "
+                "dataset (metadata is copied)."
+            )
+        )
+        form = QtWidgets.QFormLayout()
+        self.label_edit = QtWidgets.QLineEdit(default_label)
+        form.addRow("New dataset name:", self.label_edit)
+        layout.addLayout(form)
+
+        self.remove_radio = QtWidgets.QRadioButton(
+            "Remove the window from the original dataset"
+        )
+        self.keep_radio = QtWidgets.QRadioButton("Keep it in the original too")
+        self.remove_radio.setChecked(True)
+        layout.addWidget(self.remove_radio)
+        layout.addWidget(self.keep_radio)
+
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def result(self):
+        """Return ``(label, remove_from_original)`` from the dialog fields."""
+        return self.label_edit.text().strip(), self.remove_radio.isChecked()
+
+
 class TimeSeriesTab(_PlotTab):
     """Plot a selectable column over time and mark activities by dragging."""
 
@@ -230,6 +276,16 @@ class TimeSeriesTab(_PlotTab):
         )
         self.mark_mode.toggled.connect(self._toggle_mark_mode)
 
+        # Extract-range toggle: drag a window to split it into a new dataset.
+        self.extract_mode = QtWidgets.QPushButton("Extract range")
+        self.extract_mode.setObjectName("toggle")
+        self.extract_mode.setCheckable(True)
+        self.extract_mode.setToolTip(
+            "Toggle on, then drag across the plot to copy that time window into a "
+            "new dataset (optionally removing it from this one)."
+        )
+        self.extract_mode.toggled.connect(self._toggle_extract_mode)
+
         # Activities side panel (mark toggle + list + edit + delete).
         self.act_list = QtWidgets.QListWidget()
         self.act_list.itemDoubleClicked.connect(lambda _item: self._edit_selected())
@@ -249,6 +305,7 @@ class TimeSeriesTab(_PlotTab):
         side.addWidget(QtWidgets.QLabel("Activities:"))
         side.addWidget(self.act_list, stretch=1)
         side.addWidget(self.mark_mode)
+        side.addWidget(self.extract_mode)
         side.addWidget(self.scope_btn)
         side.addWidget(self.edit_btn)
         side.addWidget(self.rename_btn)
@@ -297,6 +354,32 @@ class TimeSeriesTab(_PlotTab):
         active = self.mark_mode.isChecked()
         # Reflect state in the button label ("Mark activities" -> "Marking").
         self.mark_mode.setText("Marking" if active else "Mark activities")
+        if active:
+            self._set_toggle(self.extract_mode, False)  # the two modes are exclusive
+        self._sync_span_active()
+
+    def _toggle_extract_mode(self) -> None:
+        """Enter or leave extract-range mode (toggles the span selector)."""
+        active = self.extract_mode.isChecked()
+        self.extract_mode.setText("Extracting" if active else "Extract range")
+        if active:
+            self._set_toggle(self.mark_mode, False)
+        self._sync_span_active()
+
+    def _set_toggle(self, button, checked: bool) -> None:
+        """Set a toggle button's state without re-firing its handler."""
+        button.blockSignals(True)
+        button.setChecked(checked)
+        button.setText(
+            {self.mark_mode: "Mark activities", self.extract_mode: "Extract range"}[
+                button
+            ]
+        )
+        button.blockSignals(False)
+
+    def _sync_span_active(self) -> None:
+        """Activate the span selector while either drag-mode is on."""
+        active = self.mark_mode.isChecked() or self.extract_mode.isChecked()
         self._span.set_active(active)
         # Deactivate any active toolbar pan/zoom so it doesn't grab the drag.
         if active and self.toolbar.mode:
@@ -307,10 +390,13 @@ class TimeSeriesTab(_PlotTab):
                 self.toolbar.zoom()  # toggles zoom off
 
     def _on_span(self, xmin: float, xmax: float) -> None:
-        """Handle a dragged span: prompt for a task name and add the period."""
-        if not self.mark_mode.isChecked() or self.obj is None:
+        """Dispatch a dragged span to activity-marking or window-extraction."""
+        if self.obj is None or xmax <= xmin:
             return
-        if xmax <= xmin:
+        if self.extract_mode.isChecked():
+            self._extract_span(xmin, xmax)
+            return
+        if not self.mark_mode.isChecked():
             return
         # SpanSelector gives Matplotlib date floats (tz-aware UTC); strip tz so
         # the comparison against the naive time index in mark_activities works.
@@ -340,6 +426,27 @@ class TimeSeriesTab(_PlotTab):
         self.main.project.add_activity(name.strip(), start, end, scope=scope)
         # Keep the current zoom/pan so the view does not snap back after marking.
         self.main.refresh_all(reset_view=False)
+
+    def _extract_span(self, xmin: float, xmax: float) -> None:
+        """Prompt, then split the dragged window into a new dataset."""
+        active = self.main.project.active
+        if active is None:
+            return
+        start = pd.Timestamp(mdates.num2date(xmin)).tz_localize(None)
+        end = pd.Timestamp(mdates.num2date(xmax)).tz_localize(None)
+        default = f"{active.label} [{start:%H:%M}–{end:%H:%M}]"
+        dlg = ExtractRangeDialog(self, default, start, end)
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+        label, remove = dlg.result()
+        if not label:
+            return
+        # Extraction rebuilds the tab set (destroying this tab), so run it after
+        # the current canvas event returns rather than mid-callback.
+        main, ds_id = self.main, active.id
+        QtCore.QTimer.singleShot(
+            0, lambda: main.extract_window(ds_id, start, end, label, remove)
+        )
 
     def _on_threshold_changed(self) -> None:
         """Persist the threshold overlay state and redraw (keeping the view)."""
