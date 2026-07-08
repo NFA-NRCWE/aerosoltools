@@ -20,12 +20,19 @@ _BIN_KEYS = {"bin_edges", "bin_mids"}
 
 
 def _format_value(value) -> str:
-    """Render a metadata value compactly (summarise big arrays)."""
+    """Render a metadata value compactly (summarise big arrays).
+
+    Plain floats are rendered with a few significant figures so binary-float
+    noise (e.g. a density of ``0.9999999999999998`` after stepping) shows as a
+    clean ``1`` instead of sixteen digits.
+    """
     if isinstance(value, np.ndarray) or (
         isinstance(value, (list, tuple)) and len(value) > 6
     ):
         arr = np.asarray(value, dtype=float).ravel()
         return f"{arr.size} values" if arr.size else "(empty)"
+    if isinstance(value, float) and not isinstance(value, bool):
+        return f"{value:.6g}"
     return str(value)
 
 
@@ -127,9 +134,14 @@ class MetadataTab(QtWidgets.QWidget):
 
     # -- actions -----------------------------------------------------------
     def _apply_density(self) -> None:
-        """Push the chosen density onto the active dataset (or all)."""
+        """Push the chosen density onto the active dataset (or all).
+
+        The value is rounded so repeated spin-box stepping cannot store a noisy
+        density (e.g. ``0.9999999999999998``) that then shows with many digits.
+        """
         self.main.apply_density(
-            float(self.density_spin.value()), all_datasets=self.apply_all.isChecked()
+            round(float(self.density_spin.value()), 4),
+            all_datasets=self.apply_all.isChecked(),
         )
 
     def _on_axis_change(self) -> None:
