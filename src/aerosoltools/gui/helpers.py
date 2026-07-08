@@ -170,14 +170,45 @@ def shade_activities(ax, obj: Aerosol1D, include_all_data: bool = False) -> None
     interactive view matches the library's own plots exactly (same colormap,
     alpha and per-activity colours). Uses the GUI's draw order (behind the data)
     and compact legend.
+
+    Each span is **clamped to the object's own data range** before drawing: an
+    activity may be scoped to several datasets and so extend past *this* one's
+    data (e.g. a task shared with a longer recording). Shading only where the
+    data actually exists keeps the plot's x-limits on the data instead of
+    stretching the view out to reach a span with no samples under it.
     """
     periods = getattr(obj, "_activity_periods", {})
+    periods = _clamp_periods_to_data(periods, obj)
     selected = _shading.resolve_activities(
         periods, True, include_all_data=include_all_data
     )
     _shading.shade_activities(
         ax, periods, selected, zorder=1, legend_kw={"loc": "upper right", "fontsize": 8}
     )
+
+
+def _clamp_periods_to_data(periods: dict, obj: Aerosol1D) -> dict:
+    """Clamp each activity's spans to ``obj``'s data range (keys preserved).
+
+    Every activity name is kept (so the shared per-activity colour assignment,
+    which is keyed on the full name set, does not shift); only the drawn spans
+    are trimmed to ``[t_min, t_max]`` and any span entirely outside the data is
+    dropped. Returns the original mapping unchanged when the object has no time.
+    """
+    t = getattr(obj, "time", None)
+    if t is None or len(t) == 0:
+        return periods
+    tmin, tmax = pd.Timestamp(t.min()), pd.Timestamp(t.max())
+    clamped: dict = {}
+    for name, spans in periods.items():
+        kept = []
+        for start, end in spans:
+            s = max(pd.Timestamp(start), tmin)
+            e = min(pd.Timestamp(end), tmax)
+            if e > s:
+                kept.append((s, e))
+        clamped[name] = kept
+    return clamped
 
 
 # -- per-object activity mutation -----------------------------------------
