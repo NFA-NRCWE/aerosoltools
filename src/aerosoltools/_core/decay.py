@@ -348,6 +348,10 @@ class DecayFitMixin:
         air_exchange_rate: Optional[float] = None,
         emission_start=None,
         peak_time=None,
+        background: Optional[float] = None,
+        peak_concentration: Optional[float] = None,
+        decay_rate: Optional[float] = None,
+        optimize: bool = True,
     ) -> dict:
         """Description:
             Fit a single-zone emission + decay peak to one time window of a
@@ -387,12 +391,32 @@ class DecayFitMixin:
             peak_time: Optional explicit peak time (source-off) splitting the
                 emission from the decay. When ``None`` it is detected as the
                 (smoothed) maximum.
+            background (float | None): Override the background concentration
+                ``P0`` instead of measuring it from the pre-emission baseline.
+                Held fixed during the fit, exactly like the measured value.
+            peak_concentration (float | None): Override the peak concentration
+                (so the peak excess is ``peak_concentration - background``)
+                instead of measuring it at the source-off time. Held fixed.
+            decay_rate (float | None): Seed for the loss kinetics, given as a
+                first-order-equivalent rate in **1/s** (the ``decay_rate`` key a
+                previous fit returns). With ``optimize=True`` it just seeds the
+                optimiser; with ``optimize=False`` it *is* the loss rate, so the
+                returned curve is a pure manual guess. When ``None`` the rate is
+                estimated from the decay slope.
+            optimize (bool): When True (default) the loss kinetics are optimised
+                against the post-peak data. When False the fit is skipped and the
+                model is evaluated directly from the seed/override values, so the
+                caller gets a previewable "initial guess" (used by the GUI to
+                show a live preview before optimising). The returned dict has the
+                same shape either way; ``errors`` are zero for a guess.
 
         Returns:
             dict: With keys including "model", "unit", "metric", "r_squared"
             (whole window), "decay_r_squared" (post-peak fit), "n_points",
             "params", "errors", "background", "peak_concentration",
             "peak_excess", "emission_rate"/"emission_rate_unit",
+            "decay_rate"/"decay_rate_per_hour" (first-order-equivalent loss
+            rate, for round-tripping into ``decay_rate``),
             "loss_rate_per_hour"/"half_life_hours" (first-order term),
             "zeroth_order_rate" (zeroth order), "second_order_rate"
             (second/combined), "wall_loss_rate_per_hour" (with
@@ -440,7 +464,17 @@ class DecayFitMixin:
         wanted = list(_MODELS) if key == "auto" else [_MODEL_ALIASES[key]]
         fits = {}
         for name in wanted:
-            outcome = self._fit_two_stage(name, t, values, peak_idx, t0_idx)
+            outcome = self._fit_two_stage(
+                name,
+                t,
+                values,
+                peak_idx,
+                t0_idx,
+                background=background,
+                peak_concentration=peak_concentration,
+                decay_rate=decay_rate,
+                optimize=optimize,
+            )
             if outcome is not None:
                 fits[name] = outcome
         if not fits:
@@ -554,8 +588,26 @@ class DecayFitMixin:
             bg = float(np.percentile(y[: peak_idx + 1], 10))
         return max(bg, 0.0)
 
-    def _fit_two_stage(self, name, t, y, peak_idx, t0_idx):
-        """Fit one model in two stages; return an outcome dict or None."""
+    def _fit_two_stage(
+        self,
+        name,
+        t,
+        y,
+        peak_idx,
+        t0_idx,
+        *,
+        background=None,
+        peak_concentration=None,
+        decay_rate=None,
+        optimize=True,
+    ):
+        """Fit one model in two stages; return an outcome dict or None.
+
+        ``background`` / ``peak_concentration`` override the measured baseline
+        and peak (both held fixed either way); ``decay_rate`` seeds (or, with
+        ``optimize=False``, *sets*) the loss kinetics; ``optimize=False`` skips
+        the stage-1 optimisation so the result is a pure manual guess.
+        """
         info = _MODELS[name]
         t_peak = float(t[peak_idx])
         td = t[peak_idx:] - t_peak
@@ -563,27 +615,36 @@ class DecayFitMixin:
         if td.size < 4:
             return None
 
-        # Background and peak height are both *measured* and held fixed. The
-        # decay starts at the peak, so its excess at t=0 is the observed peak
-        # excess; fitting it as a free parameter is degenerate (it lets the
-        # flexible combined model overshoot the true peak) and would reintroduce
-        # the "misses the peak" problem. Only the loss constant(s) are fitted, on
-        # the excess above background. Both P0 and the peak use a local 3-point
-        # median so a single noisy sample cannot set them.
-        P0 = self._background(y, t0_idx, peak_idx)
-        peak_val = float(np.median(y[max(0, peak_idx - 1) : peak_idx + 2]))
+        # Background and peak height are both *measured* (or user-supplied) and
+        # held fixed. The decay starts at the peak, so its excess at t=0 is the
+        # observed peak excess; fitting it as a free parameter is degenerate (it
+        # lets the flexible combined model overshoot the true peak) and would
+        # reintroduce the "misses the peak" problem. Only the loss constant(s)
+        # are fitted, on the excess above background. Both P0 and the peak use a
+        # local 3-point median so a single noisy sample cannot set them.
+        if background is not None:
+            P0 = max(float(background), 0.0)
+        else:
+            P0 = self._background(y, t0_idx, peak_idx)
+        if peak_concentration is not None:
+            peak_val = float(peak_concentration)
+        else:
+            peak_val = float(np.median(y[max(0, peak_idx - 1) : peak_idx + 2]))
         xmax = max(peak_val - P0, 1e-9)
         yd_ex = yd - P0
 
-        rate = 1.0 / 1800.0
-        good = yd_ex > 0
-        if good.sum() >= 3:
-            try:
-                slope = np.polyfit(td[good], np.log(yd_ex[good]), 1)[0]
-                if slope < 0:
-                    rate = min(max(-slope, 1e-6), 1.0)
-            except (ValueError, np.linalg.LinAlgError):
-                pass
+        if decay_rate is not None:
+            rate = max(float(decay_rate), 1e-12)
+        else:
+            rate = 1.0 / 1800.0
+            good = yd_ex > 0
+            if good.sum() >= 3:
+                try:
+                    slope = np.polyfit(td[good], np.log(yd_ex[good]), 1)[0]
+                    if slope < 0:
+                        rate = min(max(-slope, 1e-6), 1.0)
+                except (ValueError, np.linalg.LinAlgError):
+                    pass
 
         loss0 = self._decay_loss_seed(name, rate, xmax)
         kernel = _DECAY_EXCESS[name]
@@ -591,16 +652,25 @@ class DecayFitMixin:
         def excess(td_, *loss_params):
             return kernel(td_, *loss_params, xmax)
 
-        lo = [1e-30] * info["n_loss"]
-        hi = [np.inf] * info["n_loss"]
-        try:
-            popt_d, pcov_d = curve_fit(
-                excess, td, yd_ex, p0=loss0, bounds=(lo, hi), maxfev=20000
-            )
-        except (RuntimeError, ValueError):
-            return None
-        loss = list(popt_d)
-        decay_r2 = _r_squared(yd, excess(td, *popt_d) + P0)
+        if optimize:
+            lo = [1e-30] * info["n_loss"]
+            hi = [np.inf] * info["n_loss"]
+            try:
+                popt_d, pcov_d = curve_fit(
+                    excess, td, yd_ex, p0=loss0, bounds=(lo, hi), maxfev=20000
+                )
+            except (RuntimeError, ValueError):
+                return None
+            loss = list(popt_d)
+            with np.errstate(invalid="ignore"):
+                perr_d = np.sqrt(np.diag(pcov_d))
+            loss_err = list(np.nan_to_num(perr_d[: info["n_loss"]], nan=0.0))
+        else:
+            # No optimisation: the seed *is* the guess. This drives the GUI's
+            # live preview of the initial parameters before the user optimises.
+            loss = list(loss0)
+            loss_err = [0.0] * info["n_loss"]
+        decay_r2 = _r_squared(yd, excess(td, *loss) + P0)
         if not np.isfinite(decay_r2):
             return None
 
@@ -612,9 +682,6 @@ class DecayFitMixin:
         fit = info["func"](t, *popt)
         r2 = _r_squared(y, fit)
 
-        with np.errstate(invalid="ignore"):
-            perr_d = np.sqrt(np.diag(pcov_d))
-        loss_err = list(np.nan_to_num(perr_d[: info["n_loss"]], nan=0.0))
         return {
             "popt": popt,
             "loss": loss,
@@ -627,6 +694,22 @@ class DecayFitMixin:
             "r2": r2,
             "decay_r2": decay_r2,
         }
+
+    @staticmethod
+    def _effective_rate(name, loss, xmax) -> float:
+        """First-order-equivalent loss rate (1/s) — inverse of the loss seed.
+
+        Collapses each model's loss constant(s) back to the single ``rate``
+        knob :meth:`_decay_loss_seed` expands, so a fit round-trips through the
+        ``decay_rate`` argument (the GUI's decay-rate control) regardless of
+        model.
+        """
+        xmax = max(float(xmax), 1e-30)
+        if name == "zeroth_order":
+            return float(loss[0]) / xmax  # a = rate · Xmax
+        if name == "second_order":
+            return float(loss[0]) * xmax  # C = rate / Xmax
+        return float(loss[0])  # first_order: k; combined: K
 
     @staticmethod
     def _decay_loss_seed(name, rate, xmax):
@@ -669,6 +752,9 @@ class DecayFitMixin:
             "peak_excess": fit["xmax"],
             "emission_rate": E,
             "emission_rate_unit": f"{unit}/s",
+            "decay_rate": self._effective_rate(model, fit["loss"], fit["xmax"]),
+            "decay_rate_per_hour": self._effective_rate(model, fit["loss"], fit["xmax"])
+            * 3600.0,
             "emission_start_s": t0,
             "emission_duration_s": tp,
             "peak_time_s": t0 + tp,
