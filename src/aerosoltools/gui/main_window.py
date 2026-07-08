@@ -800,11 +800,14 @@ class MainWindow(QtWidgets.QMainWindow):
             )
             return
         # The originals remain useful on their own; still record their raw files
-        # on the combined dataset for completeness.
+        # on the combined dataset for completeness. Name after the two *datasets*
+        # actually selected (their labels) rather than their instrument types, so
+        # picking different sources than the proposed defaults is reflected even
+        # when they are the same kind of instrument.
         self._add_derived_dataset(
             combined,
             "Combined",
-            f"{ds_a.instrument} + {ds_b.instrument} (combined)",
+            f"{ds_a.label} + {ds_b.label} (combined)",
             source_files=ds_a.contributing_files + ds_b.contributing_files,
         )
 

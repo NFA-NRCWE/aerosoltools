@@ -529,6 +529,20 @@ def combine_measurements(datasets, *, require_same_serial: bool = True):
     result._extra_data = combined_extra
     result._raw_extra_data = combined_extra.copy()
 
+    # Correlated APS (Aerosol3d): the concat above covers the aerodynamic axis,
+    # but the optical companion and the optical×aerodynamic correlation matrix
+    # must be concatenated too — otherwise the combined object silently drops to
+    # an aerodynamic-only record and loses its Aero↔Optical capabilities.
+    from ..aerosol3d import Aerosol3d  # local import avoids a circular import
+
+    if isinstance(result, Aerosol3d):
+        opticals = [getattr(d, "_optical", None) for d in datasets]
+        if all(o is not None for o in opticals):
+            result._optical = combine_measurements(opticals, require_same_serial=False)
+        corrs = [getattr(d, "_correlation", None) for d in datasets]
+        if all(c is not None for c in corrs):
+            result._correlation = _concat_sorted(corrs)
+
     # Union the user-defined activity periods across all inputs and re-mark them
     # on the combined time axis.
     merged: dict = {}
