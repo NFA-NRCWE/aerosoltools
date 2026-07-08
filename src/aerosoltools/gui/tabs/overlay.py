@@ -309,12 +309,12 @@ class OverlayTab(_PlotTab):
             label = ds.label
             if ds.view_shift != pd.Timedelta(0):
                 label += f" ({_format_hms(ds.view_shift)})"
-            entries.append((x, y, label, unit))
+            entries.append((ds, x, y, label, unit))
 
         # Distinct units among the plotted series — a second one triggers the
         # secondary axis (but not when everything is normalised to 0–1).
         units = []
-        for _x, _y, _label, unit in entries:
+        for _ds, _x, _y, _label, unit in entries:
             if unit and unit not in units:
                 units.append(unit)
         use_dual = (
@@ -325,12 +325,13 @@ class OverlayTab(_PlotTab):
         ax2 = ax.twinx() if use_dual else None
         self._ax2 = ax2
 
-        # Assign colours across *all* series (both axes) from the shared cycle so
-        # two datasets never collide, even when split over the two axes.
-        colors = _active_color_cycle()
-        for i, (x, y, label, unit) in enumerate(entries):
+        # Each dataset keeps its own stable colour so it reads the same on every
+        # plot (falling back to the active cycle when unset).
+        cycle = _active_color_cycle()
+        for i, (ds, x, y, label, unit) in enumerate(entries):
             target = ax2 if (use_dual and unit != primary_unit) else ax
-            target.plot(x, y, lw=1.4, label=label, color=colors[i % len(colors)])
+            color = ds.color or cycle[i % len(cycle)]
+            target.plot(x, y, lw=1.4, label=label, color=color)
         plotted = len(entries)
 
         ax.set_xlabel("Time")

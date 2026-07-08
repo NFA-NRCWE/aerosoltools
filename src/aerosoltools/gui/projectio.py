@@ -141,6 +141,7 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
                 "raw": raw_rel,
                 "contributing": contributing,
                 "pickle": pkl_rel,
+                "color": ds.color,
                 "psd_fits": _clean_psd_fits(ds.psd_fits),
             }
         )
@@ -201,8 +202,10 @@ def load_project(folder: str) -> tuple[Project, str]:
         contributing = entry.get("contributing")
         if contributing:
             ds.contributing_files = [os.path.join(folder, r) for r in contributing]
+        ds.color = entry.get("color")  # None for pre-colour projects
         ds.psd_fits = _clean_psd_fits(entry.get("psd_fits", {}))
         project.datasets.append(ds)
+        project.assign_color(ds)  # give older/uncoloured datasets a stable colour
 
     # Restore each activity's dataset scope (saved by index). A missing entry or
     # a null value means "all datasets" (also the pre-scoping default), so older

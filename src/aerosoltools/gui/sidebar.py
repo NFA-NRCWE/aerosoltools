@@ -10,9 +10,16 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from .qt import QtCore, QtWidgets
+from .qt import QtCore, QtGui, QtWidgets
 
 _ID_ROLE = QtCore.Qt.UserRole
+
+
+def _color_icon(color: Optional[str]) -> QtGui.QIcon:
+    """Return a small filled-square icon in ``color`` (blank when unset)."""
+    pix = QtGui.QPixmap(14, 14)
+    pix.fill(QtGui.QColor(color) if color else QtGui.QColor(0, 0, 0, 0))
+    return QtGui.QIcon(pix)
 
 
 class DatasetSidebar(QtWidgets.QWidget):
@@ -25,6 +32,7 @@ class DatasetSidebar(QtWidgets.QWidget):
     reload_requested = QtCore.pyqtSignal(int)
     join_requested = QtCore.pyqtSignal(int)
     combine_ns_ops_requested = QtCore.pyqtSignal()
+    color_requested = QtCore.pyqtSignal(int)
 
     def __init__(self, parent=None):
         """Build the add / list / rename / remove / combine controls."""
@@ -60,9 +68,16 @@ class DatasetSidebar(QtWidgets.QWidget):
             "conversions, cropping and activities on it)."
         )
         self.reload_btn.clicked.connect(self._emit_reload)
+        self.color_btn = QtWidgets.QPushButton("Colour…")
+        self.color_btn.setToolTip(
+            "Choose the plot colour for the selected dataset. The colour follows "
+            "the dataset across every plot (Overlay, PSD, …)."
+        )
+        self.color_btn.clicked.connect(self._emit_color)
         row.addWidget(self.rename_btn)
         row.addWidget(self.remove_btn)
         row.addWidget(self.reload_btn)
+        row.addWidget(self.color_btn)
         layout.addLayout(row)
 
         # Combine actions.
@@ -92,6 +107,7 @@ class DatasetSidebar(QtWidgets.QWidget):
         for ds in datasets:
             item = QtWidgets.QListWidgetItem(self._describe(ds))
             item.setData(_ID_ROLE, ds.id)
+            item.setIcon(_color_icon(getattr(ds, "color", None)))
             self.list.addItem(item)
             if ds.id == active_id:
                 item.setSelected(True)
@@ -124,6 +140,7 @@ class DatasetSidebar(QtWidgets.QWidget):
         self.rename_btn.setEnabled(has_sel)
         self.remove_btn.setEnabled(has_sel)
         self.reload_btn.setEnabled(has_sel)
+        self.color_btn.setEnabled(has_sel)
         self.join_btn.setEnabled(has_sel)
         self.combine_btn.setEnabled(self.list.count() >= 2)
 
@@ -158,3 +175,9 @@ class DatasetSidebar(QtWidgets.QWidget):
         ds_id = self._selected_id()
         if ds_id is not None:
             self.join_requested.emit(ds_id)
+
+    def _emit_color(self) -> None:
+        """Emit :attr:`color_requested` for the selected dataset."""
+        ds_id = self._selected_id()
+        if ds_id is not None:
+            self.color_requested.emit(ds_id)

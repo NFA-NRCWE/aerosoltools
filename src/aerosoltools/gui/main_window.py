@@ -200,6 +200,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sidebar.reload_requested.connect(self._reload_dataset)
         self.sidebar.join_requested.connect(self._join_same_instrument)
         self.sidebar.combine_ns_ops_requested.connect(self._combine_ns_ops)
+        self.sidebar.color_requested.connect(self._set_dataset_color)
 
         # Scroll the sidebar when the dock is dragged too narrow, instead of
         # enforcing a minimum width (which would freeze the splitter).
@@ -568,6 +569,21 @@ class MainWindow(QtWidgets.QMainWindow):
             self._refresh_sidebar()
             self._sync_header()
 
+    def _set_dataset_color(self, ds_id: int) -> None:
+        """Prompt for and apply a plot colour for a dataset (used across plots)."""
+        ds = self.project.get(ds_id)
+        if ds is None:
+            return
+        initial = QtGui.QColor(ds.color) if ds.color else QtGui.QColor("#1f77b4")
+        color = QtWidgets.QColorDialog.getColor(
+            initial, self, f"Plot colour — {ds.label}"
+        )
+        if not color.isValid():
+            return
+        ds.color = color.name()
+        self.refresh_all(reset_view=False)
+        self._refresh_sidebar()
+
     def _add_derived_dataset(
         self, obj, instrument_key: str, label: str, remove_ids=(), source_files=()
     ) -> Dataset:
@@ -596,6 +612,7 @@ class MainWindow(QtWidgets.QMainWindow):
         ds.contributing_files = list(dict.fromkeys(source_files))
         self.project.datasets.append(ds)
         self.project._apply_activities(ds)  # project the shared tasks onto it
+        self.project.assign_color(ds)  # give it a stable plot colour
         self.project.active_id = ds.id
         self.adjust_box.set_enabled(True)
         self.adjust_box.sync_crop_fields()

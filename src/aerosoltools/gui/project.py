@@ -27,6 +27,24 @@ _ID = itertools.count(1)
 
 Period = Tuple[pd.Timestamp, pd.Timestamp]
 
+# Fixed, theme-independent palette (Matplotlib "tab10") used to give every
+# dataset a stable colour that follows it across every plot (Overlay, PSD, …),
+# so the same dataset is always the same colour regardless of how many are
+# shown or in what order. Users can override a dataset's colour (see the
+# sidebar); the assignment here just picks a sensible, distinct default.
+DEFAULT_PALETTE = [
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+]
+
 
 class Dataset:
     """One loaded file (or a derived/combined result) inside a project."""
@@ -69,6 +87,9 @@ class Dataset:
         self.overlay_on: bool = True
         self.psd_on: bool = True
         self.summary_on: bool = True
+        # Stable plot colour for this dataset, followed across every plot. None
+        # until assigned by the owning Project (or the user); see DEFAULT_PALETTE.
+        self.color: Optional[str] = None
         # Lognormal PSD fits, keyed by activity name (e.g. "All data", "Task 1").
         # Each value is ``{"modes": [{mu, sigma, peak, bound}, ...],
         # "optimized": bool}``. Stored per dataset because a fit describes that
@@ -151,9 +172,26 @@ class Project:
         """Append a dataset, projecting the shared activities onto it."""
         self.datasets.append(ds)
         self._apply_activities(ds)
+        self.assign_color(ds)
         if self.active_id is None:
             self.active_id = ds.id
         return ds
+
+    def assign_color(self, ds: Dataset) -> None:
+        """Give ``ds`` a stable default colour if it has none.
+
+        Picks the first palette colour not already used by another dataset, so
+        every dataset starts out visually distinct; falls back to cycling the
+        palette once every colour is in use. A colour the user set is kept.
+        """
+        if ds.color:
+            return
+        used = {d.color for d in self.datasets if d is not ds and d.color}
+        for c in DEFAULT_PALETTE:
+            if c not in used:
+                ds.color = c
+                return
+        ds.color = DEFAULT_PALETTE[(len(self.datasets) - 1) % len(DEFAULT_PALETTE)]
 
     def remove_dataset(self, ds_id: int) -> None:
         """Remove a dataset, dropping it from any activity scopes and reactivating."""

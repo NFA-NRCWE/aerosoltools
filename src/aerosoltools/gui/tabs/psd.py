@@ -691,6 +691,10 @@ class PSDTab(_PlotTab):
         plotted = 0
         ci = 0
         single = len(datasets) == 1 or len(activities) == 1
+        # When several datasets are compared, colour each by its own stable
+        # dataset colour so it reads the same across every plot; when a single
+        # dataset's activities are compared, cycle colours so they stay distinct.
+        multi_ds = len(datasets) > 1
         for ds in datasets:
             for act in activities:
                 if act not in ds.obj.activities:
@@ -710,8 +714,11 @@ class PSDTab(_PlotTab):
                 new_coll = list(ax.collections)[n_coll:]
                 if not new_lines:
                     continue  # activity had no samples in this dataset
-                color = colors[ci % len(colors)]
-                ci += 1
+                if multi_ds and ds.color:
+                    color = ds.color
+                else:
+                    color = colors[ci % len(colors)]
+                    ci += 1
                 # Label by whichever dimension actually varies, to keep the
                 # legend uncluttered when comparing along just one axis.
                 if single and len(activities) == 1:
