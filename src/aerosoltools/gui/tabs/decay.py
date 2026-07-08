@@ -264,7 +264,8 @@ class DecayTab(_PlotTab):
         self.metric_cut.setVisible(is_fraction)
         self.metric_cut_label.setVisible(is_fraction)
         self._draw_base()
-        self._recompute()
+        # A different metric has its own data range/units, so rescale the view.
+        self._recompute(preserve=False)
 
     def _build_metric(self) -> str:
         """Assemble the metric string (kind plus cut-off where relevant)."""
@@ -382,16 +383,23 @@ class DecayTab(_PlotTab):
         self._rate_override = (rate_h / 3600.0) if rate_h is not None else None
         self._recompute(optimize=False)
 
-    def _recompute(self, *_args, optimize=None) -> None:
+    def _recompute(self, *_args, optimize=None, preserve=True) -> None:
         """Fit/preview for the current window, overrides and mode, then redraw.
 
         ``optimize`` forces the optimise (True) or preview (False) state; when
         ``None`` the current state is kept (used by control changes that should
-        not switch between fitting and previewing). Signal slots pass through
-        ``*_args`` (an int index/state) which is ignored.
+        not switch between fitting and previewing). ``preserve`` keeps the
+        current zoom/pan across the redraw (the default) so shaping the guess —
+        dragging the background/peak, scrolling the rate, typing values — never
+        snaps the view back; it is turned off only when the data itself changes
+        (a different metric). Signal slots pass through ``*_args`` (an int
+        index/state) which is ignored.
         """
         if self.obj is None or self._window is None:
             return
+        prev = None
+        if preserve and self.ax.has_data():
+            prev = (self.ax.get_xlim(), self.ax.get_ylim())
         if optimize is not None:
             self._optimized = bool(optimize)
         metric = self._build_metric()
@@ -430,6 +438,12 @@ class DecayTab(_PlotTab):
                 "Fit succeeded but the plot failed:\n" + traceback.format_exc(limit=1)
             )
             return
+        # Restore the pre-redraw zoom/pan (the "home"/reset view stays the full
+        # series that _draw_base autoscaled to).
+        if prev is not None:
+            self.ax.set_xlim(prev[0])
+            self.ax.set_ylim(prev[1])
+            self.canvas.draw_idle()
         self._sync_guess_fields(result)
         self.result_label.setText(self._format_result(result))
 
