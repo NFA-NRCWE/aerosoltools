@@ -469,8 +469,9 @@ class PSDTab(_PlotTab):
         if row < 0:
             return
         m = self._modes[row]
-        # Scroll up → narrower, scroll down → wider.
-        sigma = float(m["sigma"]) * (1.12 ** (-event.step))
+        # Scroll up → narrower, scroll down → wider. A small per-notch step
+        # (~6%) lets the width be fine-tuned rather than jumping.
+        sigma = float(m["sigma"]) * (1.06 ** (-event.step))
         m["sigma"] = float(min(fit.SIGMA_MAX, max(fit.SIGMA_MIN, sigma)))
         m.pop("sigma_err", None)
         self._fitted = False
