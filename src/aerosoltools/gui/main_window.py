@@ -381,6 +381,14 @@ class MainWindow(QtWidgets.QMainWindow):
         obj, instrument = self._load_obj(ds.source_path, ds.instrument_key)
         if obj is None:
             return
+        if isinstance(obj, list):
+            # Multi-component file (e.g. Ranger): keep the object whose measured
+            # component matches this dataset, falling back to the first.
+            current = getattr(ds.obj, "metadata", {}).get("measurement")
+            obj = next(
+                (o for o in obj if o.metadata.get("measurement") == current),
+                obj[0],
+            )
         ds.obj = obj
         ds.instrument_key = instrument
         # Re-project the shared project activities onto the freshly loaded data.
@@ -440,21 +448,42 @@ class MainWindow(QtWidgets.QMainWindow):
         return obj, instrument
 
     def _ingest_file(self, path: str, instrument: Optional[str] = None):
-        """Load one file into a new dataset *without* touching the UI.
+        """Load one file into one or more new datasets *without* touching the UI.
+
+        A loader normally returns a single aerosol object, but some (e.g. the
+        Ranger, whose files can interleave several measurement heads) return a
+        list of objects. Each object becomes its own dataset.
 
         Args:
             path: File to load.
             instrument: Loader name, or None to guess from the file name.
 
         Returns:
-            Dataset | None: The added dataset, or None if loading failed.
+            list[Dataset]: The datasets added (empty if loading failed).
         """
         obj, instrument = self._load_obj(path, instrument)
         if obj is None:
-            return None
-        ds = Dataset(obj=obj, source_path=path, instrument_key=instrument)
-        self.project.add_dataset(ds)
-        return ds
+            return []
+
+        objs = obj if isinstance(obj, list) else [obj]
+        stem = os.path.splitext(os.path.basename(path))[0]
+        added: list = []
+        for one in objs:
+            # When a single file yields multiple objects, disambiguate their
+            # labels with the measured component (e.g. "... - Cl₂").
+            label = None
+            if len(objs) > 1:
+                measure = getattr(one, "metadata", {}).get("measurement")
+                label = f"{stem} - {measure}" if measure else None
+            ds = Dataset(
+                obj=one,
+                source_path=path,
+                instrument_key=instrument,
+                label=label,
+            )
+            self.project.add_dataset(ds)
+            added.append(ds)
+        return added
 
     def _finalize_after_load(self) -> None:
         """Refresh window state after one or more datasets were added."""
@@ -465,11 +494,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self._refresh_sidebar()
 
     def load_file(self, path: str, instrument: Optional[str] = None) -> None:
-        """Load ``path`` as a new dataset, make it active, and (re)build tabs."""
-        ds = self._ingest_file(path, instrument)
-        if ds is None:
+        """Load ``path`` as one or more datasets, make one active, rebuild tabs."""
+        added = self._ingest_file(path, instrument)
+        if not added:
             return
-        self.project.set_active(ds.id)
+        self.project.set_active(added[-1].id)
         self._finalize_after_load()
 
     def load_files(self, paths, instrument: Optional[str] = None) -> None:
@@ -486,9 +515,9 @@ class MainWindow(QtWidgets.QMainWindow):
             # If an instrument was explicitly provided, force that loader.
             # Otherwise, let _load_obj identify the file by:
             # content sniffer -> filename convention -> user-facing error.
-            ds = self._ingest_file(path, instrument)
-            if ds is not None:
-                last = ds
+            added = self._ingest_file(path, instrument)
+            if added:
+                last = added[-1]
         if last is None:  # every file failed to load
             return
         self.project.set_active(last.id)
