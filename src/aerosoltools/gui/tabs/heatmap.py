@@ -53,6 +53,14 @@ class HeatmapTab(_PlotTab):
         self.log.stateChanged.connect(self.refresh)
         self.controls.addWidget(self.log)
 
+        self.log_top = QtWidgets.QCheckBox("Log Y (conc.)")
+        self.log_top.setToolTip(
+            "Log-scale the y-axis of the top total-concentration panel so several "
+            "decades of concentration are visible at once."
+        )
+        self.log_top.stateChanged.connect(self.refresh)
+        self.controls.addWidget(self.log_top)
+
         self.controls.addWidget(QtWidgets.QLabel("Color min:"))
         self.cmin = QtWidgets.QLineEdit()
         self.cmin.setPlaceholderText("auto")
@@ -140,6 +148,11 @@ class HeatmapTab(_PlotTab):
             ax2=ax2,
             mark_activities=self.show_acts.isChecked(),
         )
+        # Optionally log-scale the top total-concentration panel's y-axis so
+        # several decades of concentration are visible (the heatmap's own size
+        # axis is already log, and its colour scale is handled separately).
+        if self.log_top.isChecked():
+            ax1.set_yscale("log")
         # Threshold line (e.g. OEL) on the top total-concentration panel.
         helpers.draw_threshold(
             ax1, self.threshold.threshold_value(), self.threshold.legend_text()
