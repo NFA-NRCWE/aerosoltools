@@ -189,7 +189,8 @@ class AdjustmentsBox(QtWidgets.QGroupBox):
     # -- handlers ----------------------------------------------------------
     def _do_crop(self, start, end) -> None:
         """Crop the active object to ``[start, end]`` and refresh."""
-        obj = self.main.obj
+        # Target the parent object so a correlated APS keeps both axes aligned.
+        obj = self.main.active_obj
         if obj is None:
             return
         start = pd.Timestamp(start)
@@ -253,7 +254,7 @@ class AdjustmentsBox(QtWidgets.QGroupBox):
 
     def _apply_smoothing(self) -> None:
         """Apply a rolling smooth to the active dataset (in place)."""
-        obj = self.main.obj
+        obj = self.main.active_obj
         if obj is None:
             return
         try:
@@ -270,7 +271,7 @@ class AdjustmentsBox(QtWidgets.QGroupBox):
 
     def _apply_resampling(self) -> None:
         """Resample the active dataset to the chosen time step (in place)."""
-        obj = self.main.obj
+        obj = self.main.active_obj
         if obj is None:
             return
         freq = self.resample_freq.text().strip()

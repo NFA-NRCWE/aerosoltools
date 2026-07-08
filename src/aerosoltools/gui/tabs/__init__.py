@@ -8,9 +8,11 @@ importing ``from aerosoltools.gui.tabs import SummaryTab`` etc.
 
 from __future__ import annotations
 
+from .aero_optical import AeroOpticalTab
 from .correlation import CorrelationTab
 from .decay import DecayTab
 from .heatmap import HeatmapTab
+from .metadata import MetadataTab
 from .overlay import OverlayTab
 from .pmbands import PMBandsTab
 from .psd import PSDTab
@@ -19,9 +21,11 @@ from .summary import SummaryTab
 from .timeseries import ActivityEditorDialog, TimeSeriesTab
 
 __all__ = [
+    "AeroOpticalTab",
     "CorrelationTab",
     "DecayTab",
     "HeatmapTab",
+    "MetadataTab",
     "OverlayTab",
     "PMBandsTab",
     "PSDTab",

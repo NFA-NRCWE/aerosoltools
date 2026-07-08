@@ -159,7 +159,16 @@ class _PlotTab(QtWidgets.QWidget):
         that cached home view is now stale — clicking "Reset original view"
         would jump back to the pre-crop limits instead of the fresh ones.
         Clearing the stack and pushing the just-drawn view fixes that.
+
+        Autoscale is applied lazily (on draw), so ``push_current`` can otherwise
+        capture the *pre-autoscale* limits and leave "home" too wide after data
+        (a dataset or activity) is removed. Finalise the view first so the pushed
+        home matches the current data.
         """
+        for ax in self.figure.axes:
+            if ax.get_autoscalex_on() or ax.get_autoscaley_on():
+                ax.relim()
+                ax.autoscale_view()
         self.toolbar.update()
         self.toolbar.push_current()
 

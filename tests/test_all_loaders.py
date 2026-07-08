@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from aerosoltools.loaders import (
+    Load_APS_file,
     Load_CPC_file,
     Load_DiSCmini_file,
     Load_DiSCmini_raw_file,
@@ -15,6 +16,7 @@ from aerosoltools.loaders import (
     Load_OPCN3_file,
     Load_OPS_file,
     Load_Partector_file,
+    Load_Ranger_file,
     Load_SMPS_file,
 )
 from aerosoltools.loaders.Discmini import (
@@ -26,6 +28,8 @@ from aerosoltools.loaders.Discmini import (
 @pytest.mark.parametrize(
     "loader_func, filename",
     [
+        (Load_APS_file, "Sample_APS_aero.txt"),
+        (Load_APS_file, "Sample_APS_correlated.txt"),
         (Load_CPC_file, "Sample_CPC_Direct.txt"),
         (Load_DiSCmini_file, "Sample_Discmini.txt"),
         (Load_ELPI_file, "Sample_ELPI.txt"),
@@ -39,6 +43,7 @@ from aerosoltools.loaders.Discmini import (
         (Load_OPS_file, "Sample_OPS.csv"),
         (Load_OPS_file, "Sample_OPS2.txt"),
         (Load_Partector_file, "Sample_Partector.txt"),
+        (Load_Ranger_file, "Sample_Ranger.csv"),
         (Load_SMPS_file, "Sample_SMPS.txt"),
     ],
 )
@@ -51,6 +56,36 @@ def test_loader_smoke(loader_func, filename):
     assert hasattr(data, "data"), f"{filename}: missing 'data'"
     assert hasattr(data, "metadata"), f"{filename}: missing 'metadata'"
     assert isinstance(data.data, pd.DataFrame), f"{filename}: data is not DataFrame"
+
+
+def test_aps_correlated_and_aero_only():
+    """APS: correlated -> Aerosol3d (both axes consistent); aero-only -> 2D."""
+    from aerosoltools import Aerosol2D, Aerosol3d
+
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+
+    # Aerodynamic-only export loads as a plain 2D distribution.
+    aero = Load_APS_file(os.path.join(data_dir, "Sample_APS_aero.txt"))
+    assert isinstance(aero, Aerosol2D)
+    assert not isinstance(aero, Aerosol3d)
+    assert len(aero.bin_mids) == 52
+    assert aero.unit == "cm⁻³"
+
+    # Correlated export carries both size axes plus their matrix.
+    cor = Load_APS_file(os.path.join(data_dir, "Sample_APS_correlated.txt"))
+    assert isinstance(cor, Aerosol3d)
+    assert cor.is_correlated
+    assert len(cor.bin_mids) == 52
+    assert cor.optical is not None and len(cor.optical.bin_mids) == 16
+    # Aerodynamic total, optical total and matrix total agree per sample.
+    a0 = float(cor.data["Total_conc"].iloc[0])
+    o0 = float(cor.optical.data["Total_conc"].iloc[0])
+    m0 = float(cor.correlation.iloc[0].sum())
+    assert a0 == pytest.approx(o0, rel=1e-6)
+    assert a0 == pytest.approx(m0, rel=1e-6)
+    # Time cropping keeps both axes (and the matrix) in sync.
+    cor.timecrop(cor.time[3], cor.time[10])
+    assert len(cor.data) == len(cor.optical.data) == len(cor.correlation)
 
 
 def test_discmini_serial_normalization():

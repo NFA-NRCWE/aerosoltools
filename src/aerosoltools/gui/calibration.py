@@ -105,11 +105,14 @@ def compute_per_bin(target, ref, include_offset: bool, align_kwargs: dict):
 
 
 def apply_total(target, m: float, b: float, include_offset: bool) -> None:
-    """Apply a single-gain total-concentration calibration to ``target``."""
+    """Apply a total-concentration calibration (gain, optional offset) to ``target``."""
     if helpers.is_2d(target):
-        # Scale every size bin by the gain so the distribution and its total are
-        # corrected together (an additive offset is undefined across bins).
+        # Scale every size bin by the gain (an additive offset is undefined
+        # across bins). When an offset is requested, apply it to the total
+        # series so the reported total matches the fitted m·x + b.
         target.calibrate(parameter="bins", Variables={"m": float(m)})
+        if include_offset and b:
+            target.calibrate(parameter="Total_conc", Variables={"m": 1.0, "b": float(b)})
     else:
         target.calibrate(m=float(m), b=float(b) if include_offset else 0.0)
 
@@ -230,17 +233,23 @@ class CalibrationDialog(QtWidgets.QDialog):
     def _on_change(self, *_a) -> None:
         """React to a reference/basis change: fix the offset rule, clear preview."""
         target, _ref = self._target_ref()
-        if self._basis() == _BASIS_TOTAL and helpers.is_2d(target.obj):
-            # Offset can't be distributed across bins, so total-conc calibration
-            # of a 2D instrument is gain-only.
-            self.offset.setChecked(False)
-            self.offset.setEnabled(False)
+        self.offset.setEnabled(True)
+        if self._basis() == _BASIS_BINS and helpers.is_2d(target.obj):
+            # A per-bin offset is generally ill-posed, but still allowed.
             self.offset.setToolTip(
-                "Total-concentration calibration of a size-resolved instrument "
-                "scales every bin by one gain; an offset is not well-defined."
+                "Fit an intercept as well as a gain, per size bin (off by "
+                "default: identical instruments should agree through the origin)."
+            )
+        elif self._basis() == _BASIS_TOTAL and helpers.is_2d(target.obj):
+            # Total-conc offset can't be distributed across bins, so it is
+            # applied to the total series while the bins take the gain only.
+            self.offset.setToolTip(
+                "Fit an intercept as well as a gain. For a size-resolved "
+                "instrument the offset is applied to the total-concentration "
+                "series; the size bins are scaled by the gain only (so the "
+                "total may differ slightly from the sum of the bins)."
             )
         else:
-            self.offset.setEnabled(True)
             self.offset.setToolTip(
                 "Fit an intercept as well as a gain. Off by default: identical "
                 "instruments should agree through the origin."

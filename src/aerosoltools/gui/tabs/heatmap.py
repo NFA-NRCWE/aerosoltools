@@ -24,6 +24,17 @@ class HeatmapTab(_PlotTab):
         """Build the heatmap controls and the two stacked panels."""
         super().__init__(main, nrows=2)
 
+        # Display basis — the dataset stays dN; this only changes what is drawn.
+        self.controls.addWidget(QtWidgets.QLabel("Show as:"))
+        self.dtype = QtWidgets.QComboBox()
+        self.dtype.addItems(["dN", "dM", "dS", "dV"])
+        self.dtype.setToolTip(
+            "Distribution basis for display only (number/mass/surface/volume). "
+            "The dataset itself stays as number (dN)."
+        )
+        self.dtype.currentIndexChanged.connect(self.refresh)
+        self.controls.addWidget(self.dtype)
+
         self.normalize = QtWidgets.QCheckBox("Normalize (dx/dlogDp)")
         self.normalize.setToolTip(
             "Divide each size bin by Δlog₁₀(Dp) so colours are comparable across "
@@ -99,11 +110,15 @@ class HeatmapTab(_PlotTab):
         fig.clear()
         ax1, ax2 = fig.subplots(2, 1, sharex=True)
 
-        # Normalize on a working copy so the loaded object is left untouched.
+        # Convert for display on a working copy so the loaded object stays dN.
+        disp = self.dtype.currentText()
         target = self.obj
-        if self.normalize.isChecked():
+        if disp != "dN" or self.normalize.isChecked():
             target = self.obj.copy_self()
-            target.normalize_logdp()
+            if disp != "dN":
+                target.dtype_converter(disp)
+            if self.normalize.isChecked():
+                target.normalize_logdp()
 
         # y_3d caps the colour scale: (min, max), where 0 means "automatic".
         # A log colour scale needs a strictly positive lower cap; when the user

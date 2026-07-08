@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Callable
 
 import numpy as np
@@ -9,6 +10,257 @@ import pandas as pd
 
 from ..aerosol2d import Aerosol2D
 from ._common import _coarser, _infer_freq, _ts
+
+
+def _align_two_in_time(
+    lower, upper, start, end, match, tolerance, rebin_freq, rebin_method
+):
+    """Time-align two Aerosol2D objects; return the aligned (lower, upper) copies.
+
+    Shared by :func:`combine_size_ranges`. The inputs must already be plain,
+    unnormalized number (dN). Alignment honours the ``match`` strategy
+    ("exact" | "nearest" | "rebin") over the chosen (or overlapping) window.
+    """
+    lo_idx = lower.time
+    up_idx = upper.time
+    st = _ts(start) if start is not None else max(lo_idx.min(), up_idx.min())
+    et = _ts(end) if end is not None else min(lo_idx.max(), up_idx.max())
+    if st > et:
+        raise ValueError(
+            "No overlapping time range between the two instruments for the "
+            "requested start/end times."
+        )
+
+    match = match.lower()
+    if match not in {"exact", "nearest", "rebin"}:
+        raise ValueError("match must be one of 'exact', 'nearest', or 'rebin'.")
+
+    if match == "exact":
+        lo_tm = lower.timecrop(st, et, inplace=False)
+        up_tm = upper.timecrop(st, et, inplace=False)
+        common = lo_tm.data.index.intersection(up_tm.data.index)
+        if common.empty:
+            raise ValueError(
+                "No common timestamps between the instruments with "
+                "match='exact'. Consider match='nearest' or match='rebin'."
+            )
+        lo_tm._data = lo_tm._data.loc[common]
+        up_tm._data = up_tm._data.loc[common]
+
+    elif match == "nearest":
+        lo_tm = lower.timecrop(st, et, inplace=False)
+        up_tm = upper.timecrop(st, et, inplace=False)
+        tol = pd.to_timedelta(tolerance)
+        target = lo_tm.data.index.union(up_tm.data.index).sort_values()
+        lo_tm._data = lo_tm.data.reindex(target, method="nearest", tolerance=tol)
+        up_tm._data = up_tm.data.reindex(target, method="nearest", tolerance=tol)
+
+    else:  # rebin
+        if rebin_freq is None:
+            freq = _coarser(_infer_freq(lo_idx) or "S", _infer_freq(up_idx) or "S")
+        else:
+            freq = rebin_freq
+        lo_tm = lower.timerebin(
+            freq=freq, start=st, end=et, method=rebin_method, inplace=False
+        )
+        up_tm = upper.timerebin(
+            freq=freq, start=st, end=et, method=rebin_method, inplace=False
+        )
+        common = lo_tm.data.index.intersection(up_tm.data.index)
+        if common.empty:
+            raise ValueError(
+                "No overlapping timestamps after rebinning. Check 'rebin_freq' "
+                "or the requested time window."
+            )
+        lo_tm._data = lo_tm._data.loc[common]
+        up_tm._data = up_tm._data.loc[common]
+
+    return lo_tm, up_tm
+
+
+def combine_size_ranges(
+    lower_data: Aerosol2D,
+    upper_data: Aerosol2D,
+    crossover: float | None = None,
+    start: pd.Timestamp | str | None = None,
+    end: pd.Timestamp | str | None = None,
+    *,
+    match: str = "rebin",  # "exact" | "nearest" | "rebin"
+    tolerance: str | pd.Timedelta = "30s",
+    rebin_freq: str | None = None,
+    rebin_method: str | Callable = "mean",
+) -> Aerosol2D:
+    """Description:
+        Stitch two size-resolved instruments that together **extend** the size
+        range (e.g. NanoScan + OPS, FMPS + OPS, NS/FMPS + APS) into one
+        time-aligned :class:`~aerosoltools.aerosol2d.Aerosol2D` number spectrum.
+
+        One instrument supplies the small-size end, the other the large-size
+        end, and a single ``crossover`` diameter marks where one takes over from
+        the other. The cut is a **hard cap at whole size bins**: every bin in the
+        result comes from exactly one instrument (no bin mixes counts from both
+        and no counts are scaled). The two instruments may be passed in either
+        order — the one reaching the larger sizes is used as the upper end.
+
+    Args:
+        lower_data (Aerosol2D):
+            One of the two instruments (order does not matter).
+        upper_data (Aerosol2D):
+            The other instrument.
+        crossover (float | None, optional):
+            Diameter (nm) where the upper instrument takes over from the lower
+            one. Bins of the lower instrument with an upper edge at/below the
+            crossover are kept; bins of the upper instrument with a lower edge
+            at/above it are kept; the two boundary bins have their shared edge
+            set to ``crossover`` (counts unchanged). If ``None``, the upper
+            instrument's lowest bin edge is used (legacy behaviour).
+        start, end (pandas.Timestamp | str | None, optional):
+            Time window to combine over. Defaults to the instruments' overlap.
+        match (str, optional):
+            Time-alignment strategy: ``"rebin"`` (default), ``"exact"`` or
+            ``"nearest"`` (see below).
+        tolerance (str | pandas.Timedelta, optional):
+            Max timestamp separation for ``match="nearest"``. Default ``"30s"``.
+        rebin_freq (str | None, optional):
+            Target cadence for ``match="rebin"``; defaults to the coarser of the
+            two inferred cadences.
+        rebin_method (str | Callable, optional):
+            Aggregation for ``match="rebin"``. Default ``"mean"``.
+
+    Returns:
+        Aerosol2D:
+            The merged number size distribution (dN, cm⁻³), with the lower
+            instrument's activities/metadata propagated and ``instrument`` set
+            to ``"<lower> + <upper>"``.
+
+    Raises:
+        ValueError:
+            If the two instruments do not form a size-range extension (one must
+            reach smaller and the other larger — combining two instruments that
+            cover the *same* range, e.g. ELPI + SMPS, is rejected); if the
+            crossover lies outside the shared range; or if the time alignment
+            yields no common timestamps.
+
+    Notes:
+        Number concentration per bin is expressed as plain dN (cm⁻³, no
+        ``/dlogDp``) before stitching. Because the cut snaps to whole bins, a
+        boundary bin may be marginally widened to meet the crossover, but its
+        counts are never split or scaled — so total number is conserved to the
+        bin the crossover falls in.
+
+    Examples:
+        .. code-block:: python
+
+            import aerosoltools as at
+
+            ns = at.Load_NS_file("nanoscan.csv")
+            ops = at.Load_OPS_file("ops.csv")
+            combined = at.combine_size_ranges(ns, ops, crossover=400)
+            fig, ax = combined.plot_timeseries()
+    """
+    # --- copy + force dN, unnormalized ---------------------------------------
+    a = lower_data.copy_self()
+    b = upper_data.copy_self()
+    for obj in (a, b):
+        obj._convert_to_number_concentration()
+        obj.unnormalize_logdp()
+
+    # Order by size range: the instrument reaching larger sizes is the upper one.
+    if float(a.bin_edges[-1]) > float(b.bin_edges[-1]):
+        lower, upper = b, a
+    else:
+        lower, upper = a, b
+
+    lo_edges = np.asarray(lower.bin_edges, dtype=float)
+    up_edges = np.asarray(upper.bin_edges, dtype=float)
+
+    # --- range-extension guard ----------------------------------------------
+    # A meaningful stitch needs the lower instrument to reach below the upper
+    # one and the upper to reach above the lower one, with a shared overlap. Two
+    # instruments covering essentially the same range (e.g. ELPI + SMPS) are
+    # rejected — there is no sensible single crossover.
+    extends = up_edges[-1] > lo_edges[-1] and lo_edges[0] < up_edges[0]
+    overlaps = lo_edges[-1] > up_edges[0]
+    if not (extends and overlaps):
+        raise ValueError(
+            "These two instruments do not form a size-range extension with a "
+            f"shared overlap (lower {lo_edges[0]:.1f}-{lo_edges[-1]:.1f} nm, "
+            f"upper {up_edges[0]:.1f}-{up_edges[-1]:.1f} nm). Combining "
+            "instruments that cover the same range is not supported."
+        )
+
+    if crossover is None:
+        crossover = float(up_edges[0])
+    Dc = float(crossover)
+    lo_min = max(lo_edges[0], up_edges[0])
+    hi_max = min(lo_edges[-1], up_edges[-1])
+    if not (lo_min <= Dc <= hi_max):
+        raise ValueError(
+            f"crossover {Dc:.1f} nm is outside the instruments' shared overlap "
+            f"({lo_min:.1f}-{hi_max:.1f} nm)."
+        )
+
+    # --- time alignment ------------------------------------------------------
+    lo_tm, up_tm = _align_two_in_time(
+        lower, upper, start, end, match, tolerance, rebin_freq, rebin_method
+    )
+
+    # --- size-domain stitch (hard cap at whole bins, no scaling) -------------
+    # Lower keeps bins whose upper edge <= Dc; upper keeps bins whose lower edge
+    # >= Dc; the shared boundary edge is set to Dc (counts unchanged).
+    n_lo = int(np.searchsorted(lo_edges, Dc, side="right") - 1)  # lower bins kept
+    first_up = int(np.searchsorted(up_edges, Dc, side="left"))  # first upper edge >= Dc
+    n_up = (len(up_edges) - 1) - first_up  # upper bins kept
+    if n_lo < 1 or n_up < 1:
+        raise ValueError(
+            "The chosen crossover leaves one instrument with no bins; pick a "
+            "crossover further inside the shared overlap."
+        )
+
+    edges = np.concatenate([lo_edges[:n_lo], [Dc], up_edges[first_up + 1 :]])
+    mids = np.round(np.sqrt(edges[:-1] * edges[1:]), 1)
+    # Keep original midpoints for the untouched interior bins; only the two
+    # boundary bins (last lower, first upper) get a recomputed geometric mid.
+    lo_mids = np.asarray(lower.bin_mids, dtype=float)
+    up_mids = np.asarray(upper.bin_mids, dtype=float)
+    if n_lo >= 2:
+        mids[: n_lo - 1] = lo_mids[: n_lo - 1]
+    if n_up >= 2:
+        mids[n_lo + 1 :] = up_mids[first_up + 1 :]
+
+    lo_headers = list(lower._sizebin_headers)
+    up_headers = list(upper._sizebin_headers)
+    lo_keep = lo_headers[:n_lo]
+    up_keep = up_headers[first_up:]
+
+    lower_df = lo_tm.data.drop(
+        columns=[h for h in lo_headers if h not in lo_keep] + ["Total_conc"],
+        errors="ignore",
+    )
+    upper_df = up_tm.data[up_keep]
+    combined = pd.concat([lower_df, upper_df], axis=1)
+
+    new_mids = [str(m) for m in mids]
+    combined = combined.rename(columns=dict(zip(lo_keep + up_keep, new_mids)))
+    combined["Total_conc"] = combined[new_mids].sum(axis=1)
+
+    res = Aerosol2D(combined)
+    res._activities = lower.activities
+    res._activity_periods = lower.activity_periods
+    res._meta["bin_edges"] = edges
+    res._meta["bin_mids"] = mids
+    res._meta["density"] = lower._meta.get("density", 1.0)
+    res._meta["instrument"] = f"{lower.instrument} + {upper.instrument}"
+    res._meta["serial_number"] = (
+        f"{lower.instrument}: {lower.serial_number}, "
+        f"{upper.instrument}: {upper.serial_number}"
+    )
+    res._meta["unit"] = "cm⁻³"
+    res._meta["dtype"] = "dN"
+    res._raw_extra_data = pd.concat(
+        [lower._raw_extra_data, upper._raw_extra_data], axis=1
+    )
+    return res
 
 
 def Combine_NS_OPS(
@@ -159,158 +411,24 @@ def Combine_NS_OPS(
             fig, ax = combined.plot_timeseries()
     """
 
-    # --- copy + force dN, unnormalized ---------------------------------------
-    NS = NS_data.copy_self()
-    OPS = OPS_data.copy_self()
-    NS._convert_to_number_concentration()
-    NS.unnormalize_logdp()
-    OPS._convert_to_number_concentration()
-    OPS.unnormalize_logdp()
-
-    # --- determine time window -----------------------------------------------
-    ns_idx = NS.time
-    ops_idx = OPS.time
-
-    # default overlap window
-    default_start = max(ns_idx.min(), ops_idx.min())
-    default_end = min(ns_idx.max(), ops_idx.max())
-
-    if start is None:
-        st = default_start
-    else:
-        st = _ts(start)
-
-    if end is None:
-        et = default_end
-    else:
-        et = _ts(end)
-
-    if st > et:
-        raise ValueError(
-            "No overlapping time range between NS and OPS for the "
-            "requested start/end times."
-        )
-
-    # --- align in time according to 'match' ----------------------------------
-    match = match.lower()
-    if match not in {"exact", "nearest", "rebin"}:
-        raise ValueError("match must be one of 'exact', 'nearest', or 'rebin'.")
-
-    if match == "exact":
-        # Crop both and intersect their time indices – only exact coincidences
-        NS_tm = NS.timecrop(st, et, inplace=False)
-        OPS_tm = OPS.timecrop(st, et, inplace=False)
-
-        common_idx = NS_tm.data.index.intersection(OPS_tm.data.index)
-        if common_idx.empty:
-            raise ValueError(
-                "No common timestamps between NS and OPS with match='exact'. "
-                "Consider using match='nearest' or match='rebin'."
-            )
-        NS_tm._data = NS_tm._data.loc[common_idx]
-        OPS_tm._data = OPS_tm._data.loc[common_idx]
-
-    elif match == "nearest":
-        # Crop both to the window
-        NS_tm = NS.timecrop(st, et, inplace=False)
-        OPS_tm = OPS.timecrop(st, et, inplace=False)
-
-        tol = pd.to_timedelta(tolerance)
-
-        # Union of both time axes within the window
-        target_index = NS_tm.data.index.union(OPS_tm.data.index).sort_values()
-
-        # Reindex each to the union grid by nearest neighbor (within tolerance)
-        ns_aligned = NS_tm.data.reindex(target_index, method="nearest", tolerance=tol)
-        ops_aligned = OPS_tm.data.reindex(target_index, method="nearest", tolerance=tol)
-
-        NS_tm._data = ns_aligned
-        OPS_tm._data = ops_aligned
-
-    else:  # match == "rebin"
-        # Infer a common cadence if none is given
-        if rebin_freq is None:
-            f_ns = _infer_freq(ns_idx) or "S"
-            f_ops = _infer_freq(ops_idx) or "S"
-            freq = _coarser(f_ns, f_ops)
-        else:
-            freq = rebin_freq
-
-        NS_tm = NS.timerebin(
-            freq=freq, start=st, end=et, method=rebin_method, inplace=False
-        )
-        OPS_tm = OPS.timerebin(
-            freq=freq, start=st, end=et, method=rebin_method, inplace=False
-        )
-
-        common_idx = NS_tm.data.index.intersection(OPS_tm.data.index)
-        if common_idx.empty:
-            raise ValueError(
-                "No overlapping timestamps after rebinning NS and OPS. "
-                "Check 'rebin_freq' or the requested time window."
-            )
-        NS_tm._data = NS_tm._data.loc[common_idx]
-        OPS_tm._data = OPS_tm._data.loc[common_idx]
-
-    # --- size-domain combination (same logic as before) ----------------------
-    NS_bins = NS.bin_edges.astype(float)
-    OPS_bins = OPS.bin_edges.astype(float)
-    OPS0 = float(OPS_bins[0])
-
-    # index j such that NS_bins[j] < OPS0 <= NS_bins[j+1]
-    j = int(np.searchsorted(NS_bins, OPS0, side="right") - 1)
-    if j < 0 or j >= len(NS_bins) - 1:
-        raise ValueError("OPS lower edge is outside the NS bin range.")
-
-    # fraction of the NS bin to keep
-    factor_reduction = (OPS0 - NS_bins[j]) / (NS_bins[j + 1] - NS_bins[j])
-
-    # combined edges and mids
-    ns_ops_edges = np.concatenate([NS_bins[: j + 1], OPS_bins])
-    bin_mids = np.round(0.5 * (ns_ops_edges[:-1] + ns_ops_edges[1:]), 1)
-    # keep original NS midpoints where appropriate
-    bin_mids[:j] = NS.bin_mids[:j]
-
-    # Select the relevant NS columns (truncate above splice bin)
-    ns_df = NS_tm.data.drop(columns=NS_tm.data.columns[j + 2 :])
-    # OPS: drop its Total_conc; we recompute it later
-    ops_df = OPS_tm.data.drop(columns=["Total_conc"])
-
-    # scale the last kept NS bin by the reduction factor
-    last_ns_col = ns_df.columns[-1]
-    ns_df[last_ns_col] = ns_df[last_ns_col].astype(float) * factor_reduction
-
-    # merge NS and OPS by index (already aligned in time)
-    combined = pd.concat([ns_df, ops_df], axis=1)
-
-    # rename size-bin columns to string mids in one shot
-    old_size_cols = list(combined.columns[1 : 1 + len(bin_mids)])
-    rename_map = dict(zip(old_size_cols, [str(x) for x in bin_mids], strict=False))
-    combined.rename(columns=rename_map, inplace=True)
-
-    # total concentration where both instruments have any data at a timestamp
-    mask = ns_df[ns_df.columns[1:]].notna().any(axis=1) & ops_df[
-        OPS._sizebin_headers
-    ].notna().any(axis=1)
-
-    # sum only over the size-bin columns (first column is the first bin)
-    sizebin_span = combined.columns[1 : 1 + (len(ns_ops_edges) - 1)]
-    combined["Total_conc"] = combined[sizebin_span].sum(axis=1).where(mask, np.nan)
-
-    # --- build result object and propagate metadata/activities ----------------
-    res = Aerosol2D(combined)
-    res._activities = NS.activities
-    res._activity_periods = NS.activity_periods
-    res._meta["bin_edges"] = ns_ops_edges
-    res._meta["bin_mids"] = bin_mids
-    res._meta["density"] = NS._meta["density"]
-    res._meta["instrument"] = f"{NS_data.instrument} + {OPS_data.instrument}"
-    res._meta["serial_number"] = f"NS: {NS.serial_number}, OPS: {OPS.serial_number}"
-    res._meta["unit"] = "cm⁻³"
-    res._meta["dtype"] = "dN"
-    res._raw_extra_data = pd.concat([NS._raw_extra_data, OPS._raw_extra_data], axis=1)
-
-    return res
+    warnings.warn(
+        "Combine_NS_OPS is deprecated; use combine_size_ranges (it works for "
+        "any pair of range-extending instruments and lets you set the "
+        "crossover diameter).",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return combine_size_ranges(
+        NS_data,
+        OPS_data,
+        crossover=None,
+        start=start,
+        end=end,
+        match=match,
+        tolerance=tolerance,
+        rebin_freq=rebin_freq,
+        rebin_method=rebin_method,
+    )
 
 
 def combine_measurements(datasets, *, require_same_serial: bool = True):

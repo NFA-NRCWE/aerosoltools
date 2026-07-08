@@ -79,9 +79,11 @@ Typical usage example
 
 from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
+from .aerosol3d import Aerosol3d
 from .aerosolalt import AerosolAlt
 from .loaders import (
     Load_Aethalometer_file,
+    Load_APS_file,
     Load_CPC_file,
     Load_data_from_folder,
     Load_Devlabs_file,
@@ -96,6 +98,7 @@ from .loaders import (
     Load_OPCN3_file,
     Load_OPS_file,
     Load_Partector_file,
+    Load_Ranger_file,
     Load_SMPS_file,
 )
 from .utility import (
@@ -103,13 +106,16 @@ from .utility import (
     Plot_correlation,
     bland_altman_analysis,
     combine_measurements,
+    combine_size_ranges,
     fit_data,
 )
 
 # snake_case aliases for PEP 8 consistency
 combine_ns_ops = Combine_NS_OPS
+Combine_size_ranges = combine_size_ranges  # PascalCase alias
 plot_correlation = Plot_correlation
 Combine_measurements = combine_measurements  # PascalCase alias
+load_aps_file = Load_APS_file
 load_aethalometer_file = Load_Aethalometer_file
 load_cpc_file = Load_CPC_file
 load_devlabs_file = Load_Devlabs_file
@@ -124,6 +130,7 @@ load_ns_file = Load_NS_file
 load_opcn3_file = Load_OPCN3_file
 load_ops_file = Load_OPS_file
 load_partector_file = Load_Partector_file
+load_ranger_file = Load_Ranger_file
 load_smps_file = Load_SMPS_file
 load_data_from_folder = Load_data_from_folder
 
@@ -131,10 +138,13 @@ __all__ = [
     # Classes
     "Aerosol1D",
     "Aerosol2D",
+    "Aerosol3d",
     "AerosolAlt",
     # Utilities
     "bland_altman_analysis",
     "Combine_NS_OPS",
+    "combine_size_ranges",
+    "Combine_size_ranges",
     "fit_data",
     "Plot_correlation",
     "combine_ns_ops",
@@ -142,6 +152,7 @@ __all__ = [
     "combine_measurements",
     "Combine_measurements",
     # Loaders (original names)
+    "Load_APS_file",
     "Load_Aethalometer_file",
     "Load_CPC_file",
     "Load_Devlabs_file",
@@ -156,9 +167,11 @@ __all__ = [
     "Load_OPCN3_file",
     "Load_OPS_file",
     "Load_Partector_file",
+    "Load_Ranger_file",
     "Load_SMPS_file",
     "Load_data_from_folder",
     # Loaders (snake_case aliases)
+    "load_aps_file",
     "load_aethalometer_file",
     "load_cpc_file",
     "load_discmini_file",
@@ -172,6 +185,7 @@ __all__ = [
     "load_opcn3_file",
     "load_ops_file",
     "load_partector_file",
+    "load_ranger_file",
     "load_smps_file",
     "load_data_from_folder",
 ]

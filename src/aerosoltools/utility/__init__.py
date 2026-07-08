@@ -7,7 +7,7 @@ Re-exports the public helpers from the topic submodules so the historical
 * :mod:`~aerosoltools.utility.correlation` - correlation / Bland-Altman analysis.
 """
 
-from .combine import Combine_NS_OPS, combine_measurements
+from .combine import Combine_NS_OPS, combine_measurements, combine_size_ranges
 from .correlation import (
     Plot_correlation,
     bland_altman_analysis,
@@ -19,6 +19,7 @@ from .correlation import _align_series as _align_series
 
 __all__ = [
     "Combine_NS_OPS",
+    "combine_size_ranges",
     "fit_data",
     "Plot_correlation",
     "bland_altman_analysis",
