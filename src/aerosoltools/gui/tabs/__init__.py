@@ -15,21 +15,23 @@ from .heatmap import HeatmapTab
 from .metadata import MetadataTab
 from .overlay import OverlayTab
 from .pmbands import PMBandsTab
-from .psd import PSDTab
+from .psd_compare import ComparisonPSDTab
+from .psd_single import SinglePSDTab
 from .raw import RawDataTab
 from .summary import SummaryTab
 from .timeseries import ActivityEditorDialog, TimeSeriesTab
 
 __all__ = [
     "AeroOpticalTab",
+    "ComparisonPSDTab",
     "CorrelationTab",
     "DecayTab",
     "HeatmapTab",
     "MetadataTab",
     "OverlayTab",
     "PMBandsTab",
-    "PSDTab",
     "RawDataTab",
+    "SinglePSDTab",
     "SummaryTab",
     "TimeSeriesTab",
     "ActivityEditorDialog",

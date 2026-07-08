@@ -21,14 +21,15 @@ from .qt import QtCore, QtGui, QtWidgets
 from .sidebar import DatasetSidebar
 from .tabs import (
     AeroOpticalTab,
+    ComparisonPSDTab,
     CorrelationTab,
     DecayTab,
     HeatmapTab,
     MetadataTab,
     OverlayTab,
     PMBandsTab,
-    PSDTab,
     RawDataTab,
+    SinglePSDTab,
     SummaryTab,
     TimeSeriesTab,
 )
@@ -992,10 +993,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def _build_tabs(self) -> None:
         """(Re)create the tab set appropriate to the active dataset's shape.
 
-        The PSD and Summary tabs read the *whole project* (one or many datasets),
-        so they replace the former single-view PSD/Summary tabs and are always
-        shown. The 2D heatmap and PM-bands tabs stay single-view (they follow the
-        active dataset) and so are only built for a size-resolved active dataset.
+        Top row = panes tied to the single active dataset (including the single
+        PSD pane with lognormal fitting, shown for size-resolved data). Bottom
+        row = panes that summarise or compare several datasets (including the PSD
+        comparison pane). The 2D heatmap, PM-bands and single PSD panes are only
+        built for a size-resolved active dataset.
         """
         # Detach the shared adjustments box before clearing the tabs, so
         # deleting the old Time series tab does not destroy it.
@@ -1010,23 +1012,22 @@ class MainWindow(QtWidgets.QMainWindow):
         ts = TimeSeriesTab(self)
         ts.attach_adjust_controls(self.adjust_box)
         decay = DecayTab(self)
-        psd = PSDTab(self)
         self.tabs.add_tab(raw, "Raw data", 0)
         self.tabs.add_tab(meta, "Metadata", 0)
         self.tabs.add_tab(ts, "Time series", 0)
         self.tabs.add_tab(decay, "Decay / Source", 0)
         self._tabs += [raw, meta, ts, decay]
 
-        # Single-view 2D plots that follow the active dataset (top row).
+        # Single-view 2D plots that follow the active dataset (top row): the
+        # heatmap, PM bands, and the single-dataset PSD pane (which fits).
         if helpers.is_2d(self.obj):
             heat = HeatmapTab(self)
             pm = PMBandsTab(self)
+            single_psd = SinglePSDTab(self)
             self.tabs.add_tab(heat, "2D heatmap", 0)
             self.tabs.add_tab(pm, "PM bands", 0)
-            self._tabs += [heat, pm]
-
-        self.tabs.add_tab(psd, "PSD", 0)
-        self._tabs.append(psd)
+            self.tabs.add_tab(single_psd, "PSD", 0)
+            self._tabs += [heat, pm, single_psd]
 
         # Correlated APS (Aerosol3d): the aerodynamic↔optical comparison pane.
         if isinstance(self.active_obj, Aerosol3d) and self.active_obj.is_correlated:
@@ -1034,14 +1035,17 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tabs.add_tab(aero_opt, "Aero ↔ Optical", 0)
             self._tabs.append(aero_opt)
 
-        # Bottom row: panes that summarise or compare several datasets.
+        # Bottom row: panes that summarise or compare several datasets, including
+        # the multi-dataset PSD comparison pane (display only, no fitting).
         summ = SummaryTab(self)
         overlay = OverlayTab(self)
         correlation = CorrelationTab(self)
+        psd_cmp = ComparisonPSDTab(self)
         self.tabs.add_tab(summ, "Summary", 1)
         self.tabs.add_tab(overlay, "Overlay", 1)
         self.tabs.add_tab(correlation, "Correlation", 1)
-        self._tabs += [summ, overlay, correlation]
+        self.tabs.add_tab(psd_cmp, "PSD comparison", 1)
+        self._tabs += [summ, overlay, correlation, psd_cmp]
 
         self.tabs.finalize()
         self._tab_sig = self._shape_sig()
