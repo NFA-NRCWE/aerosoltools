@@ -9,6 +9,13 @@ emission (source) strength and the loss kinetics — zeroth order (constant
 removal), first order (air exchange + wall deposition), second order
 (coagulation) or both combined — plus, when a chamber volume or a known air
 exchange rate are supplied, the source strength and wall-loss rate.
+
+Like the PSD tab's lognormal fitting, the fit is **interactive**: selecting a
+window seeds an automatic fit, then the user can shape the *initial guess* by
+eye — drag the background line, drag the peak height, scroll to change the decay
+rate, or type exact values — and see a live dashed **preview** of that guess.
+Pressing **Fit** optimises the loss kinetics from the current guess (solid
+curve); **Reset guess** clears the manual values and re-fits automatically.
 """
 
 from __future__ import annotations
@@ -43,6 +50,13 @@ _SUPERSCRIPT = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
 #: Colours for the draggable emission-start / source-off markers.
 _T0_COLOR = "#2e8b57"
 _PEAK_COLOR = "#d1495b"
+#: Colour of the draggable background (P0) line.
+_BG_COLOR = "#7f7f7f"
+#: Curve colour for a manual guess preview (vs the optimised fit).
+_GUESS_COLOR = "#e08214"
+
+#: Factor a single scroll notch multiplies/divides the decay rate by.
+_SCROLL_RATE_STEP = 1.15
 
 
 def _fmt(value, sig: int = 4) -> str:
@@ -89,7 +103,7 @@ class DecayTab(_PlotTab):
             "• Combined — first + second order together.\n"
             "• Auto — fit all and pick the best (favouring the simpler)."
         )
-        self.model.currentIndexChanged.connect(self._refit)
+        self.model.currentIndexChanged.connect(self._recompute)
         self.controls.addWidget(self.model)
 
         self.controls.addWidget(QtWidgets.QLabel("Volume (m³):"))
@@ -100,7 +114,7 @@ class DecayTab(_PlotTab):
             "Chamber/room volume in m³. Converts the fitted emission rate into a "
             "source strength (emission rate × volume) and a total emitted amount."
         )
-        self.volume.editingFinished.connect(self._refit)
+        self.volume.editingFinished.connect(self._recompute)
         self.controls.addWidget(self.volume)
 
         self.controls.addWidget(QtWidgets.QLabel("Known ACH (1/h):"))
@@ -112,33 +126,47 @@ class DecayTab(_PlotTab):
             "wall-loss/deposition rate is estimated as the fitted first-order "
             "loss minus this value."
         )
-        self.ach.editingFinished.connect(self._refit)
+        self.ach.editingFinished.connect(self._recompute)
         self.controls.addWidget(self.ach)
 
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
+        # Second controls row: the interactive initial-guess parameters + the
+        # Fit / Reset actions (mirrors the PSD tab's manual-then-optimise flow).
+        self._layout.insertLayout(1, self._build_guess_row())
+
         self.ax = self.figure.add_subplot(111)
 
         self.result_label = QtWidgets.QLabel(
             "Drag on the plot to select a window spanning the rise, peak and "
-            "decay. Then drag the dashed lines to adjust the emission start "
-            "(green) and the source-off / peak (red)."
+            "decay. Then shape the guess: drag the emission start (green) / "
+            "source-off (red) markers, drag the background line or the peak "
+            "handle, scroll to change the decay rate, or type values above — the "
+            "dashed preview updates live. Press Fit to optimise."
         )
         self.result_label.setWordWrap(True)
         self.result_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
         self._layout.addWidget(self.result_label)
 
-        # Fit state: the selected window and the (optional) manual overrides for
-        # the emission start / source-off, plus the current fit result.
+        # Fit state: the selected window, the (optional) manual overrides for the
+        # emission start / source-off (times), the background P0, the peak
+        # concentration and the decay rate (1/s), whether the shown fit is an
+        # optimisation or a manual-guess preview, plus the current fit result.
         self._cols_obj = None
         self._window = None  # (start, end) timestamps
         self._t0_override = None
-        self._peak_override = None
+        self._peak_override = None  # source-off (peak) TIME
+        self._bg_override = None  # background P0 (concentration)
+        self._peakval_override = None  # peak concentration
+        self._rate_override = None  # decay rate (1/s, first-order-equivalent)
+        self._optimized = False
         self._result = None
         self._t0_line = None
         self._peak_line = None
-        self._dragging = None  # "t0" | "peak" while a marker is being dragged
+        self._bg_line = None  # horizontal background (P0) line
+        self._peak_marker = None  # (peak_time, peak_conc) handle
+        self._dragging = None  # "t0" | "peak" | "bg" | "peakval" while dragging
 
         self.span = SpanSelector(
             self.ax,
@@ -152,6 +180,65 @@ class DecayTab(_PlotTab):
         self.canvas.mpl_connect("button_press_event", self._on_press)
         self.canvas.mpl_connect("motion_notify_event", self._on_motion)
         self.canvas.mpl_connect("button_release_event", self._on_release)
+        self.canvas.mpl_connect("scroll_event", self._on_scroll)
+
+    def _build_guess_row(self) -> QtWidgets.QHBoxLayout:
+        """Build the initial-guess parameter fields and Fit / Reset buttons."""
+        row = QtWidgets.QHBoxLayout()
+        self.fit_btn = QtWidgets.QPushButton("Fit")
+        self.fit_btn.setObjectName("primary")
+        self.fit_btn.setToolTip(
+            "Optimise the loss kinetics to the decay, starting from the current "
+            "guess (the background, peak and timing you set are held fixed)."
+        )
+        self.fit_btn.clicked.connect(self._on_fit)
+        row.addWidget(self.fit_btn)
+
+        self.reset_btn = QtWidgets.QPushButton("Reset guess")
+        self.reset_btn.setToolTip(
+            "Clear the manual background / peak / decay-rate values and re-fit "
+            "the window automatically."
+        )
+        self.reset_btn.clicked.connect(self._on_reset)
+        row.addWidget(self.reset_btn)
+
+        row.addSpacing(12)
+        row.addWidget(QtWidgets.QLabel("Guess —  P₀:"))
+        self.bg_edit = QtWidgets.QLineEdit()
+        self.bg_edit.setFixedWidth(72)
+        self.bg_edit.setPlaceholderText("auto")
+        self.bg_edit.setToolTip(
+            "Background concentration P₀. Drag the grey line on the plot, or type "
+            "a value. Held fixed during the fit."
+        )
+        self.bg_edit.editingFinished.connect(self._apply_guess_fields)
+        row.addWidget(self.bg_edit)
+
+        row.addWidget(QtWidgets.QLabel("Peak:"))
+        self.peak_edit = QtWidgets.QLineEdit()
+        self.peak_edit.setFixedWidth(84)
+        self.peak_edit.setPlaceholderText("auto")
+        self.peak_edit.setToolTip(
+            "Peak concentration at source-off. Drag the hollow peak handle up/"
+            "down, or type a value. Held fixed during the fit."
+        )
+        self.peak_edit.editingFinished.connect(self._apply_guess_fields)
+        row.addWidget(self.peak_edit)
+
+        row.addWidget(QtWidgets.QLabel("Decay rate (1/h):"))
+        self.rate_edit = QtWidgets.QLineEdit()
+        self.rate_edit.setFixedWidth(72)
+        self.rate_edit.setPlaceholderText("auto")
+        self.rate_edit.setToolTip(
+            "First-order-equivalent loss rate (1/h). Scroll over the plot to "
+            "change it, or type a value. Seeds the fit; with a manual value the "
+            "preview uses it directly."
+        )
+        self.rate_edit.editingFinished.connect(self._apply_guess_fields)
+        row.addWidget(self.rate_edit)
+
+        row.addStretch(1)
+        return row
 
     # -- option syncing ------------------------------------------------------
     def _sync_metric_options(self) -> None:
@@ -177,7 +264,7 @@ class DecayTab(_PlotTab):
         self.metric_cut.setVisible(is_fraction)
         self.metric_cut_label.setVisible(is_fraction)
         self._draw_base()
-        self._refit()
+        self._recompute()
 
     def _build_metric(self) -> str:
         """Assemble the metric string (kind plus cut-off where relevant)."""
@@ -208,14 +295,16 @@ class DecayTab(_PlotTab):
             # from the previous dataset.
             self._window = None
             self._t0_override = self._peak_override = None
+            self._bg_override = self._peakval_override = self._rate_override = None
+            self._optimized = False
             self._result = None
             self._sync_metric_options()
             self._cols_obj = self.obj
         # Re-run an existing fit on refresh (e.g. after a density change) so the
         # mass-based results and curve track the new density; otherwise just
-        # redraw the raw segment.
+        # redraw the raw segment. The optimise/preview state is preserved.
         if self._window is not None:
-            self._refit()
+            self._recompute()
         else:
             self._draw_base()
 
@@ -235,6 +324,7 @@ class DecayTab(_PlotTab):
         ax = self.ax
         ax.clear()
         self._t0_line = self._peak_line = None
+        self._bg_line = self._peak_marker = None
         try:
             times, values, unit, metric = self._series()
             ax.plot(times, values, "-", lw=0.8, color="#4c72b0", alpha=0.5)
@@ -253,29 +343,80 @@ class DecayTab(_PlotTab):
 
     # -- window selection & fitting --------------------------------------
     def _on_span(self, xmin: float, xmax: float) -> None:
-        """Store the dragged window (date numbers) and fit it fresh."""
+        """Store the dragged window (date numbers) and auto-fit it fresh."""
         if xmax - xmin < 1e-9:
             return
         self._window = (self._num_to_ts(xmin), self._num_to_ts(xmax))
-        self._t0_override = self._peak_override = None  # fresh auto-detect
-        self._refit()
+        # A fresh window drops every manual override and auto-detects/optimises.
+        self._t0_override = self._peak_override = None
+        self._bg_override = self._peakval_override = self._rate_override = None
+        self._recompute(optimize=True)
 
-    def _refit(self, *_args) -> None:
-        """Run the fit for the current window/overrides and redraw."""
+    def _on_fit(self) -> None:
+        """Optimise the loss kinetics from the current guess."""
+        if self._window is None:
+            self.result_label.setText("Select a window on the plot first.")
+            return
+        self._recompute(optimize=True)
+
+    def _on_reset(self) -> None:
+        """Clear the manual background / peak / rate guesses and re-auto-fit."""
+        self._bg_override = self._peakval_override = self._rate_override = None
+        self._recompute(optimize=True)
+
+    def _apply_guess_fields(self) -> None:
+        """Read the guess fields into overrides and preview (if user-edited).
+
+        ``editingFinished`` also fires on focus-out with unchanged text, so act
+        only when the user actually modified a field — otherwise clicking away
+        from an optimised fit would silently drop it back to a preview.
+        """
+        fields = (self.bg_edit, self.peak_edit, self.rate_edit)
+        if not any(f.isModified() for f in fields):
+            return
+        for f in fields:
+            f.setModified(False)
+        self._bg_override = self._to_float(self.bg_edit.text(), None)
+        self._peakval_override = self._to_float(self.peak_edit.text(), None)
+        rate_h = self._to_float(self.rate_edit.text(), None)
+        self._rate_override = (rate_h / 3600.0) if rate_h is not None else None
+        self._recompute(optimize=False)
+
+    def _recompute(self, *_args, optimize=None) -> None:
+        """Fit/preview for the current window, overrides and mode, then redraw.
+
+        ``optimize`` forces the optimise (True) or preview (False) state; when
+        ``None`` the current state is kept (used by control changes that should
+        not switch between fitting and previewing). Signal slots pass through
+        ``*_args`` (an int index/state) which is ignored.
+        """
         if self.obj is None or self._window is None:
             return
+        if optimize is not None:
+            self._optimized = bool(optimize)
         metric = self._build_metric()
         volume = self._to_float(self.volume.text(), None)
         ach = self._to_float(self.ach.text(), None)
+        # While previewing a manual guess under "Auto", keep the model family the
+        # last optimisation chose — otherwise scrubbing the rate could silently
+        # jump between model families (e.g. a linear zeroth-order seed suddenly
+        # scoring best), which is disorienting mid-adjustment.
+        model = self.model.currentData()
+        if not self._optimized and model == "auto" and self._result is not None:
+            model = self._result["model"]
         try:
             result = self.obj.fit_decay(
                 self._window,
                 metric=metric,
-                model=self.model.currentData(),
+                model=model,
                 volume=volume,
                 air_exchange_rate=ach,
                 emission_start=self._t0_override,
                 peak_time=self._peak_override,
+                background=self._bg_override,
+                peak_concentration=self._peakval_override,
+                decay_rate=self._rate_override,
+                optimize=self._optimized,
             )
         except Exception as exc:
             self._result = None
@@ -289,10 +430,24 @@ class DecayTab(_PlotTab):
                 "Fit succeeded but the plot failed:\n" + traceback.format_exc(limit=1)
             )
             return
+        self._sync_guess_fields(result)
         self.result_label.setText(self._format_result(result))
 
+    def _sync_guess_fields(self, result: dict) -> None:
+        """Show the fit's current background / peak / decay-rate in the fields."""
+        pairs = (
+            (self.bg_edit, result.get("background")),
+            (self.peak_edit, result.get("peak_concentration")),
+            (self.rate_edit, result.get("decay_rate_per_hour")),
+        )
+        for edit, value in pairs:
+            edit.blockSignals(True)
+            edit.setText("" if value is None else f"{value:.4g}")
+            edit.setModified(False)
+            edit.blockSignals(False)
+
     def _draw_fit(self, metric: str, result: dict) -> None:
-        """Redraw the series with the fitted curve and draggable markers."""
+        """Redraw the series with the fit/preview curve and draggable handles."""
         self._draw_base()
         ax = self.ax
         start, end = self._window
@@ -303,8 +458,41 @@ class DecayTab(_PlotTab):
         t_fit = np.unique(np.concatenate([t_fit, [peak_s]]))
         c_fit = _decay.decay_curve(result["model"], t_fit, result["model_popt"])
         t_dates = start + pd.to_timedelta(t_fit, unit="s")
-        label = f"Fit ({result['model'].replace('_', ' ')})"
-        ax.plot(t_dates, c_fit, "-", lw=2.0, color=_PEAK_COLOR, label=label)
+        optimized = self._optimized
+        curve_color = _PEAK_COLOR if optimized else _GUESS_COLOR
+        if optimized:
+            label = f"Fit ({result['model'].replace('_', ' ')})"
+        else:
+            label = "Guess (preview)"
+        ax.plot(
+            t_dates,
+            c_fit,
+            ls="-" if optimized else "--",
+            lw=2.0,
+            color=curve_color,
+            label=label,
+        )
+
+        # Draggable background (P0) line and peak handle.
+        self._bg_line = ax.axhline(
+            result["background"],
+            color=_BG_COLOR,
+            ls="--",
+            lw=1.2,
+            label="background P₀",
+        )
+        self._peak_marker = ax.plot(
+            [result["peak_time"]],
+            [result["peak_concentration"]],
+            marker="o",
+            ms=9,
+            mfc="white",
+            mec=_PEAK_COLOR,
+            mew=1.8,
+            ls="None",
+            zorder=9,
+            label="peak",
+        )[0]
 
         t0_ts = result["window_start"] + pd.to_timedelta(
             result["emission_start_s"], unit="s"
@@ -318,7 +506,7 @@ class DecayTab(_PlotTab):
         ax.legend(loc="upper right", fontsize=8)
         self.canvas.draw_idle()
 
-    # -- draggable markers ------------------------------------------------
+    # -- draggable handles ------------------------------------------------
     def _line_x_pixels(self, line) -> float:
         """Screen-x (pixels) of a vertical marker line, or None."""
         if line is None:
@@ -326,39 +514,93 @@ class DecayTab(_PlotTab):
         xnum = line.get_xdata()[0]
         return float(self.ax.transData.transform((mdates.date2num(xnum), 0))[0])
 
+    def _line_y_pixels(self, line) -> float:
+        """Screen-y (pixels) of a horizontal marker line, or None."""
+        if line is None:
+            return None
+        yval = line.get_ydata()[0]
+        x0 = self.ax.get_xlim()[0]
+        return float(self.ax.transData.transform((x0, yval))[1])
+
     def _on_press(self, event) -> None:
-        """Grab a marker if the click landed on it (disabling the span picker)."""
+        """Grab a handle if the click landed on it (disabling the span picker)."""
         if event.inaxes is not self.ax or event.x is None or self._result is None:
             return
+        # Peak handle first (it sits on the source-off line): needs x *and* y.
+        if self._peak_marker is not None and event.y is not None:
+            mx = mdates.date2num(self._peak_marker.get_xdata()[0])
+            my = self._peak_marker.get_ydata()[0]
+            px, py = self.ax.transData.transform((mx, my))
+            if abs(event.x - px) <= 8 and abs(event.y - py) <= 8:
+                self._grab("peakval")
+                return
         for name, line in (("t0", self._t0_line), ("peak", self._peak_line)):
             px = self._line_x_pixels(line)
             if px is not None and abs(event.x - px) <= 6:
-                self._dragging = name
-                self.span.set_active(False)
+                self._grab(name)
                 return
+        py = self._line_y_pixels(self._bg_line)
+        if py is not None and event.y is not None and abs(event.y - py) <= 6:
+            self._grab("bg")
+
+    def _grab(self, name: str) -> None:
+        """Start dragging handle ``name`` (suspending the span selector)."""
+        self._dragging = name
+        self.span.set_active(False)
 
     def _on_motion(self, event) -> None:
-        """Move the grabbed marker to follow the cursor."""
-        if self._dragging is None or event.inaxes is not self.ax or event.xdata is None:
+        """Move the grabbed handle to follow the cursor."""
+        if self._dragging is None or event.inaxes is not self.ax:
             return
-        line = self._t0_line if self._dragging == "t0" else self._peak_line
-        num = mdates.num2date(event.xdata)
-        line.set_xdata([num, num])
+        if self._dragging in ("t0", "peak"):
+            if event.xdata is None:
+                return
+            line = self._t0_line if self._dragging == "t0" else self._peak_line
+            num = mdates.num2date(event.xdata)
+            line.set_xdata([num, num])
+        elif self._dragging == "bg":
+            if event.ydata is None:
+                return
+            self._bg_line.set_ydata([event.ydata, event.ydata])
+        elif self._dragging == "peakval":
+            if event.ydata is None:
+                return
+            self._peak_marker.set_ydata([event.ydata])
         self.canvas.draw_idle()
 
     def _on_release(self, event) -> None:
-        """Commit a dragged marker as an override and refit."""
+        """Commit a dragged handle as an override and preview."""
         if self._dragging is None:
             return
         name, self._dragging = self._dragging, None
         self.span.set_active(True)
-        line = self._t0_line if name == "t0" else self._peak_line
-        ts = self._num_to_ts(mdates.date2num(line.get_xdata()[0]))
-        if name == "t0":
-            self._t0_override = ts
-        else:
-            self._peak_override = ts
-        self._refit()
+        if name in ("t0", "peak"):
+            line = self._t0_line if name == "t0" else self._peak_line
+            ts = self._num_to_ts(mdates.date2num(line.get_xdata()[0]))
+            if name == "t0":
+                self._t0_override = ts
+            else:
+                self._peak_override = ts
+        elif name == "bg":
+            self._bg_override = float(self._bg_line.get_ydata()[0])
+        elif name == "peakval":
+            self._peakval_override = float(self._peak_marker.get_ydata()[0])
+        self._recompute(optimize=False)
+
+    def _on_scroll(self, event) -> None:
+        """Scroll over the plot: speed up / slow down the decay rate."""
+        if self._result is None or event.inaxes is not self.ax:
+            return
+        if self.toolbar.mode:  # don't fight an active pan/zoom
+            return
+        base = self._rate_override
+        if base is None:
+            base = self._result.get("decay_rate")
+        if not base or not np.isfinite(base) or base <= 0:
+            base = 1.0 / 1800.0
+        # Scroll up -> faster decay (larger rate), down -> slower.
+        self._rate_override = float(max(base * (_SCROLL_RATE_STEP**event.step), 1e-9))
+        self._recompute(optimize=False)
 
     @staticmethod
     def _num_to_ts(xnum: float) -> pd.Timestamp:
@@ -366,16 +608,25 @@ class DecayTab(_PlotTab):
         return pd.Timestamp(mdates.num2date(xnum)).tz_localize(None)
 
     # -- results ----------------------------------------------------------
-    @staticmethod
-    def _format_result(result: dict) -> str:
+    def _format_result(self, result: dict) -> str:
         """Render the fit dict as a short multi-line results summary."""
         unit = result["unit"]
         model_name = result["model"].replace("_", " ")
+        if self._optimized:
+            header = (
+                f"Model: {model_name}   R² = {result['r_squared']:.4f} "
+                f"(decay {result['decay_r_squared']:.4f})   n = {result['n_points']}"
+            )
+        else:
+            header = (
+                f"Preview (initial guess) — {model_name}, R² = "
+                f"{result['r_squared']:.4f}. Press Fit to optimise."
+            )
         lines = [
-            f"Model: {model_name}   R² = {result['r_squared']:.4f} "
-            f"(decay {result['decay_r_squared']:.4f})   n = {result['n_points']}",
+            header,
             f"Background P0 = {_fmt(result['background'])} {unit}   "
             f"Peak = {_fmt(result['peak_concentration'])} {unit}",
+            f"Decay rate = {_fmt(result['decay_rate_per_hour'])} 1/h   "
             f"Emission rate E = {_fmt(result['emission_rate'])} {unit}/s",
         ]
         if "zeroth_order_rate" in result:
