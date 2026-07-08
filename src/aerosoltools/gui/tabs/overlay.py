@@ -11,7 +11,46 @@ import pandas as pd
 from .. import helpers
 from ..qt import QtCore, QtWidgets
 from ..widgets import ThresholdControls
-from ._base import _PlotTab
+from ._base import _active_color_cycle, _PlotTab
+
+
+def _format_hms(td: pd.Timedelta) -> str:
+    """Render a timedelta as a signed ``[-]H:MM:SS`` string (whole seconds)."""
+    total = int(round(td.total_seconds()))
+    sign = "-" if total < 0 else ""
+    total = abs(total)
+    h, rem = divmod(total, 3600)
+    m, s = divmod(rem, 60)
+    return f"{sign}{h}:{m:02d}:{s:02d}"
+
+
+def _parse_hms(text: str):
+    """Parse ``[-]H:MM:SS`` / ``M:SS`` / bare seconds into a timedelta, or None.
+
+    A bare number is read as seconds, so small nudges (a few seconds) are easy
+    to type. Returns ``None`` on unparseable input so the caller can revert.
+    """
+    text = text.strip()
+    if not text:
+        return pd.Timedelta(0)
+    sign = 1
+    if text[0] in "+-":
+        sign = -1 if text[0] == "-" else 1
+        text = text[1:].strip()
+    parts = text.split(":")
+    try:
+        nums = [float(p) for p in parts]
+    except ValueError:
+        return None
+    if len(parts) == 1:
+        h, m, s = 0.0, 0.0, nums[0]
+    elif len(parts) == 2:
+        h, m, s = 0.0, nums[0], nums[1]
+    elif len(parts) == 3:
+        h, m, s = nums
+    else:
+        return None
+    return pd.Timedelta(seconds=sign * (h * 3600 + m * 60 + s))
 
 
 class OverlayTab(_PlotTab):
@@ -58,8 +97,9 @@ class OverlayTab(_PlotTab):
 
         # Side panel: per-dataset include + shift table, plus an apply button.
         self._building = False
+        self._ax2 = None  # secondary y-axis for a second unit (e.g. ppm)
         self.table = QtWidgets.QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels(["", "Dataset", "Shift (min)"])
+        self.table.setHorizontalHeaderLabels(["", "Dataset", "Shift (h:mm:ss)"])
         self.table.verticalHeader().setVisible(False)
         self.table.itemChanged.connect(self._on_item_changed)
 
@@ -76,8 +116,8 @@ class OverlayTab(_PlotTab):
         side.addWidget(self.table, stretch=1)
         side.addWidget(self.apply_btn)
         hint = QtWidgets.QLabel(
-            "Tick datasets to overlay. Adjust 'Shift (min)' to slide a dataset in "
-            "time and line up peaks (view only until you apply permanently)."
+            "Tick datasets to overlay. Set 'Shift (h:mm:ss)' to slide a dataset "
+            "in time and line up peaks (view only until you apply permanently)."
         )
         hint.setWordWrap(True)
         side.addWidget(hint)
@@ -149,12 +189,13 @@ class OverlayTab(_PlotTab):
             name = QtWidgets.QTableWidgetItem(ds.label)
             name.setFlags(QtCore.Qt.ItemIsEnabled)
             self.table.setItem(r, 1, name)
-            spin = QtWidgets.QDoubleSpinBox()
-            spin.setRange(-100000.0, 100000.0)
-            spin.setDecimals(2)
-            spin.setValue(ds.view_shift.total_seconds() / 60.0)
-            spin.valueChanged.connect(lambda v, d=ds: self._on_shift(d, v))
-            self.table.setCellWidget(r, 2, spin)
+            edit = QtWidgets.QLineEdit(_format_hms(ds.view_shift))
+            edit.setToolTip(
+                "View-only time shift as [-]h:mm:ss (e.g. -0:00:30 to move the "
+                "dataset 30 s earlier). A bare number is read as seconds."
+            )
+            edit.editingFinished.connect(lambda e=edit, d=ds: self._on_shift_edit(d, e))
+            self.table.setCellWidget(r, 2, edit)
         self.table.resizeColumnsToContents()
         self.table.blockSignals(False)
         self._building = False
@@ -172,11 +213,18 @@ class OverlayTab(_PlotTab):
             # cover a dataset that was just hidden.
             self._draw()
 
-    def _on_shift(self, ds, minutes: float) -> None:
-        """Persist a dataset's view-only time shift and redraw."""
+    def _on_shift_edit(self, ds, edit) -> None:
+        """Parse an h:mm:ss shift field, persist the view-only shift and redraw."""
         if self._building:
             return
-        ds.view_shift = pd.Timedelta(minutes=float(minutes))
+        td = _parse_hms(edit.text())
+        if td is None:  # unparseable — revert to the current shift
+            edit.setText(_format_hms(ds.view_shift))
+            return
+        ds.view_shift = td
+        edit.blockSignals(True)
+        edit.setText(_format_hms(td))  # normalise the display
+        edit.blockSignals(False)
         # Preserve the current view so the user can zoom in, then slide a
         # dataset and watch it move within the same window.
         self._draw(preserve=True)
@@ -221,52 +269,89 @@ class OverlayTab(_PlotTab):
         self._draw()
 
     def _draw_on(self, ax) -> None:
-        """Draw each included dataset's (optionally normalized, shifted) series."""
+        """Draw each included dataset's (optionally normalized, shifted) series.
+
+        When the datasets carry different concentration units (e.g. particle
+        counts in cm⁻³ and a gas in ppm), the second unit is drawn on a secondary
+        right-hand y-axis so both data types are legible on one plot (each axis
+        autoscales to its own series).
+        """
         ax.clear()
-        plotted = 0
-        unit = ""  # unit of the first plotted dataset (for the total-conc label)
+        # Drop any secondary axis from the previous draw before rebuilding.
+        if self._ax2 is not None:
+            try:
+                self._ax2.remove()
+            except Exception:
+                pass
+            self._ax2 = None
+
+        metric = self.metric.currentText()
+        normalize = self.normalize.isChecked()
+
+        # Gather each included, non-empty series with its unit (units are only
+        # reliably known for the total-concentration metric).
+        entries = []  # (x, y, label, unit)
         for ds in self._datasets:
             if not ds.overlay_on:
                 continue
             s = self._series_for(ds)
             if s is None or s.empty:
                 continue
-            if not plotted:
-                _, unit = helpers.describe(ds.obj)
+            unit = (
+                helpers.describe(ds.obj)[1] if metric == "Total concentration" else ""
+            )
             x = s.index + ds.view_shift  # view-only shift
             y = s.to_numpy(dtype=float)
-            if self.normalize.isChecked():
+            if normalize:
                 lo, hi = np.nanmin(y), np.nanmax(y)
                 if np.isfinite(lo) and np.isfinite(hi) and hi > lo:
                     y = (y - lo) / (hi - lo)
             label = ds.label
-            mins = ds.view_shift.total_seconds() / 60.0
-            if mins:
-                label += f" ({mins:+.0f} min)"
-            ax.plot(x, y, lw=1.4, label=label)
-            plotted += 1
+            if ds.view_shift != pd.Timedelta(0):
+                label += f" ({_format_hms(ds.view_shift)})"
+            entries.append((x, y, label, unit))
+
+        # Distinct units among the plotted series — a second one triggers the
+        # secondary axis (but not when everything is normalised to 0–1).
+        units = []
+        for _x, _y, _label, unit in entries:
+            if unit and unit not in units:
+                units.append(unit)
+        use_dual = (
+            (not normalize) and metric == "Total concentration" and len(units) >= 2
+        )
+        primary_unit = units[0] if units else ""
+
+        ax2 = ax.twinx() if use_dual else None
+        self._ax2 = ax2
+
+        # Assign colours across *all* series (both axes) from the shared cycle so
+        # two datasets never collide, even when split over the two axes.
+        colors = _active_color_cycle()
+        for i, (x, y, label, unit) in enumerate(entries):
+            target = ax2 if (use_dual and unit != primary_unit) else ax
+            target.plot(x, y, lw=1.4, label=label, color=colors[i % len(colors)])
+        plotted = len(entries)
 
         ax.set_xlabel("Time")
-        # Units are only reliably known for the total-concentration metric (the
-        # object's own unit); extra/data columns carry no per-column unit, so
-        # those are labelled by name only.
-        metric = self.metric.currentText()
-        if self.normalize.isChecked():
-            ylabel = "Normalized (0–1)"
-        elif metric == "Total concentration" and unit:
-            ylabel = f"{metric} [{unit}]"
+        if normalize:
+            ax.set_ylabel("Normalized (0–1)")
+        elif metric == "Total concentration" and primary_unit:
+            ax.set_ylabel(f"{metric} [{primary_unit}]")
+            if use_dual:
+                ax2.set_ylabel(f"{metric} [{units[1]}]")
         else:
-            ylabel = metric
-        ax.set_ylabel(ylabel)
+            ax.set_ylabel(metric)
         ax.grid(True, alpha=0.3)
         ax.xaxis.set_major_formatter(
             mdates.ConciseDateFormatter(mdates.AutoDateLocator())
         )
         if self.log_y.isChecked():
             ax.set_yscale("log")
-        if plotted:
-            ax.legend(loc="upper right", fontsize=8)
-        else:
+            if ax2 is not None:
+                ax2.set_yscale("log")
+
+        if not plotted:
             ax.text(
                 0.5,
                 0.5,
@@ -275,10 +360,17 @@ class OverlayTab(_PlotTab):
                 va="center",
                 transform=ax.transAxes,
             )
-        # Threshold line (e.g. OEL) on top of the overlaid series.
+            return
+
+        # Threshold line (e.g. OEL) on the primary axis, then a combined legend
+        # spanning both axes (the threshold rebuilds its own legend on ax alone,
+        # so build the final one afterwards to keep the right-axis series in it).
         helpers.draw_threshold(
             ax, self.threshold.threshold_value(), self.threshold.legend_text()
         )
+        h1, l1 = ax.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels() if ax2 is not None else ([], [])
+        ax.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=8)
 
     def _draw(self, preserve: bool = False) -> None:
         """Redraw onto the embedded axis, reporting any error inline.
