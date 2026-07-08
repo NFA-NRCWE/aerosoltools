@@ -97,6 +97,19 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
             ]
             for name, periods in project.activities.items()
         },
+        # Which datasets each activity applies to, stored by dataset *index*
+        # (ids are per-session), or null for "all datasets". Older projects
+        # have no entry and load as all-datasets (the pre-scoping behaviour).
+        "activity_scopes": {
+            name: (
+                None
+                if (ids := project.activity_scopes.get(name)) is None
+                else sorted(
+                    project.index_of(i) for i in ids if project.index_of(i) >= 0
+                )
+            )
+            for name in project.activities
+        },
         # Cached Summary-tab results (table + inputs + staleness signature).
         # Already built from JSON-safe primitives by the Summary tab.
         "summary_state": getattr(
@@ -191,8 +204,24 @@ def load_project(folder: str) -> tuple[Project, str]:
         ds.psd_fits = _clean_psd_fits(entry.get("psd_fits", {}))
         project.datasets.append(ds)
 
-    # Restore the active dataset, then re-project the shared activities so every
-    # object's masks are guaranteed consistent with the saved registry.
+    # Restore each activity's dataset scope (saved by index). A missing entry or
+    # a null value means "all datasets" (also the pre-scoping default), so older
+    # projects keep behaving as before.
+    scopes = manifest.get("activity_scopes", {})
+    for name in project.activities:
+        raw = scopes.get(name)
+        if raw is None:
+            project.activity_scopes[name] = None
+        else:
+            ids = {
+                project.datasets[i].id
+                for i in raw
+                if isinstance(i, int) and 0 <= i < len(project.datasets)
+            }
+            project.activity_scopes[name] = ids
+
+    # Restore the active dataset, then re-project the activities so every
+    # object's masks are guaranteed consistent with the saved registry + scopes.
     idx = manifest.get("active_index", -1)
     if 0 <= idx < len(project.datasets):
         project.active_id = project.datasets[idx].id

@@ -210,7 +210,14 @@ def delete_activity(obj: Aerosol1D, name: str) -> None:
 
 
 def rename_activity(obj: Aerosol1D, old_name: str, new_name: str) -> None:
-    """Rename an activity on a single object; a no-op for ``"All data"``."""
-    if old_name == "All data" or old_name == new_name:
+    """Rename an activity on a single object; no-op if it isn't present.
+
+    An activity may be scoped to only some datasets, so the object handed in
+    here need not carry it (or ``"All data"``); in those cases there is nothing
+    to rename.
+    """
+    if old_name in ("All data", new_name) or old_name not in getattr(
+        obj, "_activities", []
+    ):
         return
     obj.rename_activity(old_name, new_name)
