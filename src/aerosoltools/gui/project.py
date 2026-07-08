@@ -3,8 +3,10 @@
 A :class:`Project` holds an ordered collection of :class:`Dataset` objects (the
 files the user has loaded) plus a single *active* dataset that the single-view
 tabs follow. User-defined activities/tasks live on the **project** (not on any
-one dataset): they are stored once here and projected onto every dataset's time
-axis, so marking a task on one instrument applies it to all of them.
+one dataset): they are stored once here and projected onto their in-scope
+datasets' time axes. Each activity has a *scope* — a set of dataset ids, or
+None for "all datasets" — so a task can apply to one instrument, a chosen few,
+or every dataset, rather than always being forced onto all of them.
 
 This module is intentionally Qt-free so the data model can be reasoned about and
 tested independently of the widgets.
@@ -14,7 +16,7 @@ from __future__ import annotations
 
 import itertools
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 
@@ -107,6 +109,12 @@ class Project:
         # name -> list of (start, end). "All data" is intentionally NOT stored
         # here; each dataset manages its own "All data" span over its own range.
         self.activities: Dict[str, List[Period]] = {}
+        # name -> the set of dataset ids the activity applies to, or None meaning
+        # "all datasets" (the shared default and the back-compat state for
+        # projects saved before scoping existed). A scoped activity is only
+        # projected onto its listed datasets, so marking a task on one instrument
+        # need not force it onto instruments that have no data in that span.
+        self.activity_scopes: Dict[str, Optional[Set[int]]] = {}
         # Cached Summary-tab results so reopening a project shows the computed
         # values (and the STEL/OEL/window inputs) directly, without recomputing.
         # ``cache`` is keyed by summary kind; each entry holds the table plus an
@@ -148,11 +156,16 @@ class Project:
         return ds
 
     def remove_dataset(self, ds_id: int) -> None:
-        """Remove a dataset, reassigning the active id when needed."""
+        """Remove a dataset, dropping it from any activity scopes and reactivating."""
         ds = self.get(ds_id)
         if ds is None:
             return
         self.datasets.remove(ds)
+        # Drop the removed dataset from every explicit activity scope so a stale
+        # id can never keep an activity "assigned" to a dataset that is gone.
+        for ids in self.activity_scopes.values():
+            if ids is not None:
+                ids.discard(ds_id)
         if self.active_id == ds_id:
             self.active_id = self.datasets[0].id if self.datasets else None
 
@@ -161,42 +174,87 @@ class Project:
         if self.get(ds_id) is not None:
             self.active_id = ds_id
 
-    # -- shared (project-level) activities --------------------------------
+    # -- project-level activities (optionally scoped to some datasets) ------
     def user_activities(self) -> List[str]:
-        """Names of the shared user tasks (excludes per-dataset 'All data')."""
+        """Names of the user tasks (excludes per-dataset 'All data')."""
         return list(self.activities.keys())
 
-    def _apply_activities(self, ds: Dataset) -> None:
-        """(Re)apply every shared activity onto a single dataset's time axis."""
-        for name, periods in self.activities.items():
+    def activity_scope(self, name: str) -> Optional[Set[int]]:
+        """The dataset ids a task applies to, or None for 'all datasets'."""
+        return self.activity_scopes.get(name)
+
+    def applies_to(self, name: str, ds_id: int) -> bool:
+        """Whether task ``name`` applies to dataset ``ds_id`` (None scope = all)."""
+        ids = self.activity_scopes.get(name)
+        return ids is None or ds_id in ids
+
+    def _project_activity(self, ds: Dataset, name: str, periods) -> None:
+        """Apply (in scope) or remove (out of scope) one task on one dataset."""
+        if self.applies_to(name, ds.id):
             helpers.set_activity_periods(ds.obj, name, periods)
+        else:
+            helpers.delete_activity(ds.obj, name)
+
+    def _apply_activities(self, ds: Dataset) -> None:
+        """(Re)apply every in-scope activity onto a single dataset's time axis."""
+        for name, periods in self.activities.items():
+            self._project_activity(ds, name, periods)
 
     def reapply_all(self) -> None:
-        """Re-project the whole shared registry onto every dataset."""
+        """Re-project the whole registry onto every dataset (honouring scope)."""
         for ds in self.datasets:
             self._apply_activities(ds)
 
-    def add_activity(self, name: str, start, end) -> None:
-        """Append one occurrence to a task and sync it across all datasets."""
+    def add_activity(
+        self, name: str, start, end, scope: Optional[Set[int]] = None
+    ) -> None:
+        """Append one occurrence to a task and sync it onto its datasets.
+
+        ``scope`` sets the datasets a *new* task applies to (a set of dataset
+        ids, or None for all datasets); it is ignored for a task that already
+        exists (its current scope is kept, the occurrence is just added).
+        """
+        if name not in self.activities:
+            self.activity_scopes[name] = None if scope is None else set(scope)
         periods = list(self.activities.get(name, []))
         periods.append((pd.Timestamp(start), pd.Timestamp(end)))
         self.set_activity_periods(name, periods)
 
     def set_activity_periods(self, name: str, periods) -> None:
-        """Replace a task's full period list and sync it across all datasets.
+        """Replace a task's full period list and sync it onto its datasets.
 
         Editing a task changes which samples it covers, so any stored PSD fit
         for it is now stale and is dropped (the user re-fits the new data).
         """
         norm: List[Period] = [(pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods]
         self.activities[name] = norm
+        self.activity_scopes.setdefault(name, None)
         for ds in self.datasets:
-            helpers.set_activity_periods(ds.obj, name, norm)
+            self._project_activity(ds, name, norm)
+            ds.psd_fits.pop(name, None)
+
+    def set_activity_scope(self, name: str, scope: Optional[Set[int]]) -> None:
+        """Set which datasets a task applies to and re-project it accordingly.
+
+        Args:
+            name: Task to rescope.
+            scope: Set of dataset ids the task applies to, or None for all
+                datasets. Datasets dropped from the scope lose the task's mask;
+                datasets added to it gain it. A rescoped dataset's stale PSD fit
+                for the task is dropped.
+        """
+        if name not in self.activities:
+            return
+        self.activity_scopes[name] = None if scope is None else set(scope)
+        periods = self.activities[name]
+        for ds in self.datasets:
+            self._project_activity(ds, name, periods)
             ds.psd_fits.pop(name, None)
 
     def delete_activity(self, name: str) -> None:
         """Remove a task from the registry, every dataset, and its PSD fits."""
         self.activities.pop(name, None)
+        self.activity_scopes.pop(name, None)
         for ds in self.datasets:
             helpers.delete_activity(ds.obj, name)
             ds.psd_fits.pop(name, None)
@@ -219,6 +277,8 @@ class Project:
         if new_name in self.activities:
             raise ValueError(f"A task named {new_name!r} already exists.")
         self.activities[new_name] = self.activities.pop(old_name)
+        if old_name in self.activity_scopes:
+            self.activity_scopes[new_name] = self.activity_scopes.pop(old_name)
         for ds in self.datasets:
             helpers.rename_activity(ds.obj, old_name, new_name)
             if old_name in ds.psd_fits:

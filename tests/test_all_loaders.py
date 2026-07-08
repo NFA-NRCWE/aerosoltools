@@ -88,6 +88,99 @@ def test_aps_correlated_and_aero_only():
     assert len(cor.data) == len(cor.optical.data) == len(cor.correlation)
 
 
+_RANGER_STATUS = "Status(f:fail a:aging w:warming-up z:zerocal c:spancal)"
+
+
+def _write_ranger(path, blocks):
+    """Write a synthetic Ranger export with the given (header, rows) blocks."""
+    lines = ["Ranger Serial Number:,2605-1000088-A"]
+    for header, rows in blocks:
+        lines.append(header)
+        lines.extend(rows)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+
+
+def test_ranger_single_component_returns_single_object():
+    """A Cl₂-only file loads as one Aerosol1D with ppm / Cl₂ metadata."""
+    from aerosoltools import Aerosol1D
+
+    data = Load_Ranger_file(_data_path("Sample_Ranger.csv"))
+    assert isinstance(data, Aerosol1D)
+    assert "Total_conc" in data.data.columns
+    assert data.metadata["unit"] == "ppm"
+    assert data.metadata["dtype"] == "Cl₂"
+    assert data.metadata["measurement"] == "Cl₂"
+
+
+def test_ranger_multi_header_splits_by_component(tmp_path):
+    """Interleaved heads (PM/Cl₂/NO₂) split into one object per component."""
+    from aerosoltools import Aerosol1D, AerosolAlt
+
+    pm_header = (
+        "UTC time,Local time,LocationID,PM1 (ug/m3),PM2.5 (ug/m3),"
+        f"PMrsp (ug/m3),PM10 (ug/m3),TSP (ug/m3),{_RANGER_STATUS}"
+    )
+    cl2_header = f"UTC time,Local time,LocationID,CL2 (PPM),{_RANGER_STATUS}"
+    no2_header = f"UTC time,Local time,LocationID,NO2 (PPM),{_RANGER_STATUS}"
+
+    path = tmp_path / "Ranger_multi.csv"
+    _write_ranger(
+        path,
+        [
+            (
+                pm_header,
+                ["2026-05-19 08:42:00,2026-05-19 08:42:00,02,0.2,0.8,1.6,3.1,4.8,"],
+            ),
+            (
+                cl2_header,
+                [
+                    "2026-06-01 10:53:00,2026-06-01 10:53:00,10,0.12,",
+                    "2026-06-01 10:54:00,2026-06-01 10:54:00,10,0.11,",
+                ],
+            ),
+            (no2_header, ["2026-06-02 09:00:00,2026-06-02 09:00:00,10,0.05,"]),
+            # A second Cl₂ block must merge into the first Cl₂ object.
+            (cl2_header, ["2026-06-03 08:00:00,2026-06-03 08:00:00,10,0.20,"]),
+        ],
+    )
+
+    result = Load_Ranger_file(str(path))
+    assert isinstance(result, list) and len(result) == 3
+
+    by_measure = {o.metadata["measurement"]: o for o in result}
+    assert set(by_measure) == {"PM", "Cl₂", "NO₂"}
+
+    # PM head -> AerosolAlt with one column per fraction.
+    pm = by_measure["PM"]
+    assert isinstance(pm, AerosolAlt)
+    for col in ("PM1", "PM2.5", "PMrsp", "PM10", "TSP"):
+        assert col in pm.data.columns
+    assert pm.metadata["unit"]["PM10"] == "µg/m³"
+
+    # Gas heads -> Aerosol1D; the two Cl₂ blocks are concatenated (2 + 1 rows).
+    cl2 = by_measure["Cl₂"]
+    assert isinstance(cl2, Aerosol1D)
+    assert cl2.metadata["unit"] == "ppm"
+    assert cl2.data["Total_conc"].notna().sum() == 3
+
+    assert by_measure["NO₂"].metadata["dtype"] == "NO₂"
+
+
+def test_ranger_sniffer_identifies_non_chlorine_heads(tmp_path):
+    """The sniffer recognizes a Ranger export even with no Cl₂ column."""
+    from aerosoltools.gui.loaders import identify_instrument, is_Ranger_file
+
+    pm_header = f"UTC time,Local time,LocationID,PM10 (ug/m3),{_RANGER_STATUS}"
+    path = tmp_path / "Ranger_pm.csv"
+    _write_ranger(
+        path, [(pm_header, ["2026-05-19 08:42:00,2026-05-19 08:42:00,02,3.1,"])]
+    )
+
+    assert is_Ranger_file(str(path)) is True
+    assert identify_instrument(str(path)) == "Ranger"
+
+
 def test_discmini_serial_normalization():
     """The serial normalizer strips the inconsistent 'SN' prefix."""
     assert _normalize_serial("SN101923") == "101923"

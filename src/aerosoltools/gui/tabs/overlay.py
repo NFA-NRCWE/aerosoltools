@@ -167,8 +167,10 @@ class OverlayTab(_PlotTab):
         ds = self.main.project.get(item.data(QtCore.Qt.UserRole))
         if ds is not None:
             ds.overlay_on = item.checkState() == QtCore.Qt.Checked
-            # Keep the current zoom/pan: ticking a dataset shouldn't reset it.
-            self._draw(preserve=True)
+            # Rescale to the now-visible datasets so the axis limits (and the
+            # "reset view" target) follow the shown data instead of stretching to
+            # cover a dataset that was just hidden.
+            self._draw()
 
     def _on_shift(self, ds, minutes: float) -> None:
         """Persist a dataset's view-only time shift and redraw."""

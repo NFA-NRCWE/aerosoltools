@@ -104,6 +104,136 @@ class ActivityEditorDialog(QtWidgets.QDialog):
         return out
 
 
+class ActivityScopeDialog(QtWidgets.QDialog):
+    """Choose which datasets an activity applies to.
+
+    An activity can be shared across every dataset ("All datasets") or scoped to
+    a chosen subset, so a task marked on one instrument need not be forced onto
+    instruments that have no data in that time span.
+    """
+
+    def __init__(self, parent, name, datasets, current_scope):
+        """Build the 'all datasets' toggle and the per-dataset checklist.
+
+        Args:
+            parent: Parent widget.
+            name: Activity being scoped.
+            datasets: The project's datasets (each with ``id`` and ``label``).
+            current_scope: Set of dataset ids the activity currently applies to,
+                or ``None`` for all datasets.
+        """
+        super().__init__(parent)
+        self.setWindowTitle(f"Applies to — {name}")
+        self.resize(360, 380)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(QtWidgets.QLabel(f"Which datasets does '{name}' apply to?"))
+
+        self.all_chk = QtWidgets.QCheckBox("All datasets (shared)")
+        self.all_chk.setChecked(current_scope is None)
+        self.all_chk.toggled.connect(self._on_all_toggled)
+        layout.addWidget(self.all_chk)
+
+        self.list = QtWidgets.QListWidget()
+        for ds in datasets:
+            item = QtWidgets.QListWidgetItem(ds.label)
+            item.setData(QtCore.Qt.UserRole, ds.id)
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+            checked = current_scope is None or ds.id in current_scope
+            item.setCheckState(QtCore.Qt.Checked if checked else QtCore.Qt.Unchecked)
+            self.list.addItem(item)
+        layout.addWidget(self.list, stretch=1)
+        self.list.setEnabled(current_scope is not None)
+
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _on_all_toggled(self, checked: bool) -> None:
+        """Disable the per-dataset list while 'all datasets' is selected."""
+        self.list.setEnabled(not checked)
+
+    def scope(self):
+        """Return the chosen scope: ``None`` for all datasets, else a set of ids."""
+        if self.all_chk.isChecked():
+            return None
+        return {
+            self.list.item(r).data(QtCore.Qt.UserRole)
+            for r in range(self.list.count())
+            if self.list.item(r).checkState() == QtCore.Qt.Checked
+        }
+
+
+class ExtractRangeDialog(QtWidgets.QDialog):
+    """Split a dataset at a dragged window, or copy that window out of it."""
+
+    def __init__(self, parent, base_label, start, end, n_pieces):
+        """Build the split/copy choice.
+
+        Args:
+            parent: Parent widget.
+            base_label: The source dataset's name (for the piece names / copy default).
+            start: Selected window start.
+            end: Selected window end.
+            n_pieces: How many datasets the split would produce (2 or 3),
+                depending on whether the window touches an end of the data.
+        """
+        super().__init__(parent)
+        self.setWindowTitle("Split / extract")
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(
+            QtWidgets.QLabel(
+                f"Selected window: {start:%Y-%m-%d %H:%M:%S} – {end:%H:%M:%S}."
+            )
+        )
+
+        self.split_radio = QtWidgets.QRadioButton(
+            f"Split into {n_pieces} datasets and remove '{base_label}'"
+        )
+        self.split_radio.setToolTip(
+            "Cut the dataset at the window edges: the data before the window, "
+            "the window itself, and the data after it each become a new dataset "
+            "(only the non-empty pieces). The original is removed."
+        )
+        self.copy_radio = QtWidgets.QRadioButton(
+            "Copy the window to a new dataset (keep the original)"
+        )
+        self.split_radio.setChecked(True)
+        layout.addWidget(self.split_radio)
+        layout.addWidget(self.copy_radio)
+
+        form = QtWidgets.QFormLayout()
+        self.label_edit = QtWidgets.QLineEdit(
+            f"{base_label} [{start:%H:%M}–{end:%H:%M}]"
+        )
+        self.label_row = QtWidgets.QLabel("New dataset name:")
+        form.addRow(self.label_row, self.label_edit)
+        layout.addLayout(form)
+        # The name field only applies to the copy option.
+        self.copy_radio.toggled.connect(self._on_copy_toggled)
+        self._on_copy_toggled(False)
+
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _on_copy_toggled(self, checked: bool) -> None:
+        """Enable the name field only when 'copy' is selected."""
+        self.label_edit.setEnabled(checked)
+        self.label_row.setEnabled(checked)
+
+    def result(self):
+        """Return ``(mode, label)`` — mode is ``"split"`` or ``"copy"``."""
+        if self.split_radio.isChecked():
+            return "split", None
+        return "copy", self.label_edit.text().strip()
+
+
 class TimeSeriesTab(_PlotTab):
     """Plot a selectable column over time and mark activities by dragging."""
 
@@ -168,9 +298,25 @@ class TimeSeriesTab(_PlotTab):
         )
         self.mark_mode.toggled.connect(self._toggle_mark_mode)
 
+        # Extract-range toggle: drag a window to split it into a new dataset.
+        self.extract_mode = QtWidgets.QPushButton("Extract range")
+        self.extract_mode.setObjectName("toggle")
+        self.extract_mode.setCheckable(True)
+        self.extract_mode.setToolTip(
+            "Toggle on, then drag across the plot to copy that time window into a "
+            "new dataset (optionally removing it from this one)."
+        )
+        self.extract_mode.toggled.connect(self._toggle_extract_mode)
+
         # Activities side panel (mark toggle + list + edit + delete).
         self.act_list = QtWidgets.QListWidget()
         self.act_list.itemDoubleClicked.connect(lambda _item: self._edit_selected())
+        self.scope_btn = QtWidgets.QPushButton("Applies to…")
+        self.scope_btn.setToolTip(
+            "Choose which datasets the selected activity applies to (all "
+            "datasets, or a chosen subset)."
+        )
+        self.scope_btn.clicked.connect(self._scope_selected)
         self.edit_btn = QtWidgets.QPushButton("Edit selected activity")
         self.edit_btn.clicked.connect(self._edit_selected)
         self.rename_btn = QtWidgets.QPushButton("Rename selected activity")
@@ -181,14 +327,16 @@ class TimeSeriesTab(_PlotTab):
         side.addWidget(QtWidgets.QLabel("Activities:"))
         side.addWidget(self.act_list, stretch=1)
         side.addWidget(self.mark_mode)
+        side.addWidget(self.extract_mode)
+        side.addWidget(self.scope_btn)
         side.addWidget(self.edit_btn)
         side.addWidget(self.rename_btn)
         side.addWidget(self.del_btn)
         hint = QtWidgets.QLabel(
             "Tip: click 'Mark activities', then drag across the plot to add a "
             "task period (pick an existing task name to add another occurrence). "
-            "Double-click a task to edit its periods. Click 'Marking' again to "
-            "stop and zoom/pan."
+            "New tasks apply to the active dataset only — use 'Applies to…' to "
+            "share them. Double-click a task to edit its periods."
         )
         hint.setWordWrap(True)
         side.addWidget(hint)
@@ -228,6 +376,32 @@ class TimeSeriesTab(_PlotTab):
         active = self.mark_mode.isChecked()
         # Reflect state in the button label ("Mark activities" -> "Marking").
         self.mark_mode.setText("Marking" if active else "Mark activities")
+        if active:
+            self._set_toggle(self.extract_mode, False)  # the two modes are exclusive
+        self._sync_span_active()
+
+    def _toggle_extract_mode(self) -> None:
+        """Enter or leave extract-range mode (toggles the span selector)."""
+        active = self.extract_mode.isChecked()
+        self.extract_mode.setText("Extracting" if active else "Extract range")
+        if active:
+            self._set_toggle(self.mark_mode, False)
+        self._sync_span_active()
+
+    def _set_toggle(self, button, checked: bool) -> None:
+        """Set a toggle button's state without re-firing its handler."""
+        button.blockSignals(True)
+        button.setChecked(checked)
+        button.setText(
+            {self.mark_mode: "Mark activities", self.extract_mode: "Extract range"}[
+                button
+            ]
+        )
+        button.blockSignals(False)
+
+    def _sync_span_active(self) -> None:
+        """Activate the span selector while either drag-mode is on."""
+        active = self.mark_mode.isChecked() or self.extract_mode.isChecked()
         self._span.set_active(active)
         # Deactivate any active toolbar pan/zoom so it doesn't grab the drag.
         if active and self.toolbar.mode:
@@ -238,10 +412,13 @@ class TimeSeriesTab(_PlotTab):
                 self.toolbar.zoom()  # toggles zoom off
 
     def _on_span(self, xmin: float, xmax: float) -> None:
-        """Handle a dragged span: prompt for a task name and add the period."""
-        if not self.mark_mode.isChecked() or self.obj is None:
+        """Dispatch a dragged span to activity-marking or window-extraction."""
+        if self.obj is None or xmax <= xmin:
             return
-        if xmax <= xmin:
+        if self.extract_mode.isChecked():
+            self._extract_span(xmin, xmax)
+            return
+        if not self.mark_mode.isChecked():
             return
         # SpanSelector gives Matplotlib date floats (tz-aware UTC); strip tz so
         # the comparison against the naive time index in mark_activities works.
@@ -263,31 +440,65 @@ class TimeSeriesTab(_PlotTab):
         )
         if not ok or not name.strip():
             return
-        # Tasks are shared across all datasets in the project.
-        self.main.project.add_activity(name.strip(), start, end)
+        # A brand-new task applies to the active dataset only (scope it wider
+        # later via 'Applies to…'); adding an occurrence to an existing task
+        # keeps that task's current scope.
+        active_id = self.main.project.active_id
+        scope = {active_id} if active_id is not None else None
+        self.main.project.add_activity(name.strip(), start, end, scope=scope)
         # Keep the current zoom/pan so the view does not snap back after marking.
         self.main.refresh_all(reset_view=False)
+
+    def _extract_span(self, xmin: float, xmax: float) -> None:
+        """Prompt, then split the dataset at the window or copy the window out."""
+        active = self.main.project.active
+        if active is None:
+            return
+        start = pd.Timestamp(mdates.num2date(xmin)).tz_localize(None)
+        end = pd.Timestamp(mdates.num2date(xmax)).tz_localize(None)
+        # How many pieces a split yields: the window plus any data before/after it.
+        t = active.obj.time
+        n_pieces = 1 + int(t.min() < start) + int(t.max() > end)
+        dlg = ExtractRangeDialog(self, active.label, start, end, n_pieces)
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+        mode, label = dlg.result()
+        if mode == "copy" and not label:
+            return
+        # These rebuild the tab set (destroying this tab), so run them after the
+        # current canvas event returns rather than mid-callback.
+        main, ds_id = self.main, active.id
+        if mode == "split":
+            QtCore.QTimer.singleShot(0, lambda: main.split_dataset(ds_id, start, end))
+        else:
+            QtCore.QTimer.singleShot(
+                0, lambda: main.copy_window(ds_id, start, end, label)
+            )
 
     def _on_threshold_changed(self) -> None:
         """Persist the threshold overlay state and redraw (keeping the view)."""
         self.main.project.plot_thresholds[self.export_tag] = self.threshold.state()
         self.refresh(reset_view=False)
 
+    def _selected_activity(self) -> str | None:
+        """Name of the selected activity (from the item's stored name), or None."""
+        item = self.act_list.currentItem()
+        return None if item is None else item.data(QtCore.Qt.UserRole)
+
     def _delete_selected(self) -> None:
         """Delete the selected activity across every dataset."""
-        item = self.act_list.currentItem()
-        if item is None or self.obj is None:
+        name = self._selected_activity()
+        if name is None:
             return
         # Deleting a task removes it from every dataset in the project.
-        self.main.project.delete_activity(item.text())
+        self.main.project.delete_activity(name)
         self.main.refresh_all(reset_view=False)
 
     def _rename_selected(self) -> None:
         """Prompt for a new name and rename the selected activity/task."""
-        item = self.act_list.currentItem()
-        if item is None or self.obj is None:
+        old_name = self._selected_activity()
+        if old_name is None:
             return
-        old_name = item.text()
         new_name, ok = QtWidgets.QInputDialog.getText(
             self, "Rename task", "New name:", QtWidgets.QLineEdit.Normal, old_name
         )
@@ -301,19 +512,32 @@ class TimeSeriesTab(_PlotTab):
             return
         self.main.refresh_all(reset_view=False)
 
+    def _scope_selected(self) -> None:
+        """Edit which datasets the selected activity applies to."""
+        name = self._selected_activity()
+        if name is None:
+            return
+        proj = self.main.project
+        dlg = ActivityScopeDialog(self, name, proj.datasets, proj.activity_scope(name))
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+        proj.set_activity_scope(name, dlg.scope())
+        self.main.refresh_all(reset_view=False)
+
     def _edit_selected(self) -> None:
         """Open the period editor for the selected activity."""
-        item = self.act_list.currentItem()
-        if item is None or self.obj is None:
+        name = self._selected_activity()
+        if name is None:
             return
-        name = item.text()
-        periods = list(self.obj._activity_periods.get(name, []))
+        # Periods live on the project registry (the active dataset may be out of
+        # this task's scope and so not carry it), keyed by task name.
+        periods = list(self.main.project.activities.get(name, []))
         tmin = pd.Timestamp(self.obj.time.min())
         tmax = pd.Timestamp(self.obj.time.max())
         dlg = ActivityEditorDialog(self, name, periods, tmin, tmax)
         if dlg.exec_() != QtWidgets.QDialog.Accepted:
             return
-        # Replace the task's periods across every dataset in the project.
+        # Replace the task's periods across its in-scope datasets.
         self.main.project.set_activity_periods(name, dlg.periods())
         self.main.refresh_all(reset_view=False)
 
@@ -333,9 +557,28 @@ class TimeSeriesTab(_PlotTab):
         self.column.blockSignals(False)
 
     def _sync_activities(self) -> None:
-        """Refresh the activities list from the active object."""
+        """Refresh the activities list from the project, annotating each scope.
+
+        Lists *all* project tasks (not just those on the active dataset), each
+        labelled with the datasets it applies to, so scoped tasks can be seen
+        and managed from any dataset.
+        """
+        proj = self.main.project
+        selected = self._selected_activity()
         self.act_list.clear()
-        self.act_list.addItems(helpers.user_activities(self.obj))
+        for name in proj.user_activities():
+            scope = proj.activity_scope(name)
+            if scope is None:
+                suffix = "all datasets"
+            else:
+                labels = [d.label for d in proj.datasets if d.id in scope]
+                suffix = ", ".join(labels) if labels else "no datasets"
+            item = QtWidgets.QListWidgetItem(f"{name}  —  {suffix}")
+            item.setData(QtCore.Qt.UserRole, name)
+            self.act_list.addItem(item)
+            if name == selected:
+                item.setSelected(True)
+                self.act_list.setCurrentItem(item)
 
     def _cap(self, edit) -> float | None:
         """Parse a Y-axis cap field, returning None when blank or invalid."""

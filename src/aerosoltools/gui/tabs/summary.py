@@ -142,22 +142,30 @@ class SummaryTab(QtWidgets.QWidget):
         # Third row: exposure-limit parameters (only shown for exposure).
         self.exp_bar = QtWidgets.QHBoxLayout()
         self.short_limit = self._add_field(
-            "STEL (short-term limit):", "1.0", width=80,
+            "STEL (short-term limit):",
+            "1.0",
+            width=80,
             tip="Short-term exposure limit. The highest short-window average is "
             "compared against this value (same unit as the chosen metric).",
         )
         self.short_window = self._add_field(
-            "over", "15min", width=70,
+            "over",
+            "15min",
+            width=70,
             tip="Averaging window for the short-term (STEL) check, as a pandas "
             "offset, e.g. 15min.",
         )
         self.long_limit = self._add_field(
-            "OEL (8h limit):", "1.0", width=80,
+            "OEL (8h limit):",
+            "1.0",
+            width=80,
             tip="Occupational exposure limit. The time-weighted average is "
             "compared against this value (same unit as the chosen metric).",
         )
         self.twa_window = self._add_field(
-            "TWA window", "8h", width=70,
+            "TWA window",
+            "8h",
+            width=70,
             tip="Averaging window for the time-weighted average (TWA), e.g. 8h.",
         )
         self.exp_bar.addStretch(1)
@@ -320,6 +328,33 @@ class SummaryTab(QtWidgets.QWidget):
             return f"{kind}{self.metric_cut.currentText().strip()}"
         return kind
 
+    #: Gas mixing-ratio units — a "total concentration" in these is not a
+    #: particle number concentration, so it must not sit under the "PNC" column.
+    _MIXING_RATIO_UNITS = ("ppm", "ppb", "ppt")
+
+    @staticmethod
+    def _relabel_total_metric(df: pd.DataFrame, obj) -> pd.DataFrame:
+        """Rename the ``PNC`` total-concentration columns for non-particle data.
+
+        ``summarize_activities`` labels the total-concentration metric ``PNC``
+        (particle number concentration). For a gas sensor (e.g. the Ranger's
+        Cl₂ in ppm) that total is not a particle count, so it must not be pooled
+        into the shared ``PNC`` column when several instruments are combined.
+        Here the ``PNC`` token is swapped for the dataset's own quantity (its
+        dtype, e.g. ``Cl₂``), giving it a separate column; instruments without
+        that quantity simply leave those cells blank.
+        """
+        _dtype, unit = helpers.describe(obj)
+        if unit.strip().lower() not in SummaryTab._MIXING_RATIO_UNITS:
+            return df
+        name = helpers.base_dtype(_dtype).strip() or "Concentration"
+        rename = {
+            col: f"{name} {col[len('PNC '):]}"
+            for col in df.columns
+            if col.startswith("PNC ")
+        }
+        return df.rename(columns=rename) if rename else df
+
     @staticmethod
     def _clarify_activity_columns(df: pd.DataFrame) -> pd.DataFrame:
         """Append " mean" to activity-summary value columns that lack it.
@@ -417,7 +452,11 @@ class SummaryTab(QtWidgets.QWidget):
         if self._restored_proj_id != id(proj):
             self._restored_proj_id = id(proj)
             active = (proj.summary_state or {}).get("active_kind")
-            if active and self.kind.findText(active) >= 0 and active != self.kind.currentText():
+            if (
+                active
+                and self.kind.findText(active) >= 0
+                and active != self.kind.currentText()
+            ):
                 # Switching kind triggers _on_kind_change, which restores that
                 # kind's params + table and checks staleness.
                 self.kind.setCurrentText(active)
@@ -462,6 +501,7 @@ class SummaryTab(QtWidgets.QWidget):
                             kwargs["metrics"] = act_metrics
                         df = ds.obj.summarize_activities(**kwargs)
                         df = self._clarify_activity_columns(df)
+                        df = self._relabel_total_metric(df, ds.obj)
                 except Exception as exc:  # e.g. a PM metric on a 1D instrument
                     skipped.append(f"{ds.label} ({exc})")
                     continue
@@ -569,6 +609,14 @@ class SummaryTab(QtWidgets.QWidget):
                     for s, e in periods
                 ]
                 for name, periods in sorted(proj.activities.items())
+            },
+            # Rescoping a task changes which datasets contribute its rows, so the
+            # scope is part of what makes a cached summary stale.
+            "activity_scopes": {
+                name: (
+                    None if (ids := proj.activity_scope(name)) is None else sorted(ids)
+                )
+                for name in sorted(proj.activities)
             },
         }
         if kind == "Exposure summary":

@@ -445,6 +445,15 @@ def Load_data_from_folder(
         try:
             data = load_function(file_path, **kwargs)
 
+            if isinstance(data, list):
+                # Some loaders (e.g. Ranger files with several measurement
+                # heads) return multiple objects for one file. These cannot be
+                # concatenated into a single series here; load them individually.
+                raise ValueError(
+                    "Loader returned multiple datasets for this file; load it "
+                    "individually rather than via Load_data_from_folder."
+                )
+
             if time_rebin:
                 # Rebin the data in time to reduce resolution and memory usage
                 data.timerebin(time_rebin)

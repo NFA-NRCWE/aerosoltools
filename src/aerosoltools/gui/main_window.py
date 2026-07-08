@@ -7,6 +7,8 @@ import os
 import traceback
 from typing import List, Optional
 
+import pandas as pd
+
 from ..aerosol3d import Aerosol3d
 from ..utility import combine_measurements, combine_size_ranges
 from . import helpers, theme
@@ -381,6 +383,14 @@ class MainWindow(QtWidgets.QMainWindow):
         obj, instrument = self._load_obj(ds.source_path, ds.instrument_key)
         if obj is None:
             return
+        if isinstance(obj, list):
+            # Multi-component file (e.g. Ranger): keep the object whose measured
+            # component matches this dataset, falling back to the first.
+            current = getattr(ds.obj, "metadata", {}).get("measurement")
+            obj = next(
+                (o for o in obj if o.metadata.get("measurement") == current),
+                obj[0],
+            )
         ds.obj = obj
         ds.instrument_key = instrument
         # Re-project the shared project activities onto the freshly loaded data.
@@ -440,21 +450,42 @@ class MainWindow(QtWidgets.QMainWindow):
         return obj, instrument
 
     def _ingest_file(self, path: str, instrument: Optional[str] = None):
-        """Load one file into a new dataset *without* touching the UI.
+        """Load one file into one or more new datasets *without* touching the UI.
+
+        A loader normally returns a single aerosol object, but some (e.g. the
+        Ranger, whose files can interleave several measurement heads) return a
+        list of objects. Each object becomes its own dataset.
 
         Args:
             path: File to load.
             instrument: Loader name, or None to guess from the file name.
 
         Returns:
-            Dataset | None: The added dataset, or None if loading failed.
+            list[Dataset]: The datasets added (empty if loading failed).
         """
         obj, instrument = self._load_obj(path, instrument)
         if obj is None:
-            return None
-        ds = Dataset(obj=obj, source_path=path, instrument_key=instrument)
-        self.project.add_dataset(ds)
-        return ds
+            return []
+
+        objs = obj if isinstance(obj, list) else [obj]
+        stem = os.path.splitext(os.path.basename(path))[0]
+        added: list = []
+        for one in objs:
+            # When a single file yields multiple objects, disambiguate their
+            # labels with the measured component (e.g. "... - Cl₂").
+            label = None
+            if len(objs) > 1:
+                measure = getattr(one, "metadata", {}).get("measurement")
+                label = f"{stem} - {measure}" if measure else None
+            ds = Dataset(
+                obj=one,
+                source_path=path,
+                instrument_key=instrument,
+                label=label,
+            )
+            self.project.add_dataset(ds)
+            added.append(ds)
+        return added
 
     def _finalize_after_load(self) -> None:
         """Refresh window state after one or more datasets were added."""
@@ -465,11 +496,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self._refresh_sidebar()
 
     def load_file(self, path: str, instrument: Optional[str] = None) -> None:
-        """Load ``path`` as a new dataset, make it active, and (re)build tabs."""
-        ds = self._ingest_file(path, instrument)
-        if ds is None:
+        """Load ``path`` as one or more datasets, make one active, rebuild tabs."""
+        added = self._ingest_file(path, instrument)
+        if not added:
             return
-        self.project.set_active(ds.id)
+        self.project.set_active(added[-1].id)
         self._finalize_after_load()
 
     def load_files(self, paths, instrument: Optional[str] = None) -> None:
@@ -486,9 +517,9 @@ class MainWindow(QtWidgets.QMainWindow):
             # If an instrument was explicitly provided, force that loader.
             # Otherwise, let _load_obj identify the file by:
             # content sniffer -> filename convention -> user-facing error.
-            ds = self._ingest_file(path, instrument)
-            if ds is not None:
-                last = ds
+            added = self._ingest_file(path, instrument)
+            if added:
+                last = added[-1]
         if last is None:  # every file failed to load
             return
         self.project.set_active(last.id)
@@ -572,6 +603,119 @@ class MainWindow(QtWidgets.QMainWindow):
         self.refresh_all(reset_view=True)
         self._refresh_sidebar()
         return ds
+
+    def copy_window(self, ds_id: int, start, end, label: str) -> None:
+        """Copy a time window out of a dataset into a new dataset (original kept).
+
+        The window ``[start, end]`` is copied (with all metadata) into a new
+        dataset that inherits the source's in-scope activities. The original is
+        left unchanged.
+
+        Args:
+            ds_id: Source dataset id.
+            start: Window start (inclusive).
+            end: Window end (inclusive).
+            label: Name for the new dataset.
+        """
+        ds = self.project.get(ds_id)
+        if ds is None:
+            return
+        try:
+            piece = ds.obj.timecrop(start, end, inplace=False, focus=True)
+        except Exception:
+            QtWidgets.QMessageBox.critical(
+                self, "Copy failed", traceback.format_exc(limit=2)
+            )
+            return
+        if piece is None or piece.data.shape[0] == 0:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Nothing to copy",
+                "The selected time window contains no samples in this dataset.",
+            )
+            return
+        new = self._add_derived_dataset(
+            piece, ds.instrument_key, label, source_files=ds.contributing_files
+        )
+        self._inherit_activity_scopes(ds.id, new.id)
+
+    def split_dataset(self, ds_id: int, start, end) -> None:
+        """Split a dataset at a dragged window into contiguous new datasets.
+
+        Partitions the dataset into up to three pieces — the data before the
+        window, the window itself, and the data after it — and replaces the
+        original with the non-empty pieces. A window in the middle yields three
+        datasets; a window touching an end yields two. Each piece inherits the
+        original's in-scope activities.
+
+        Args:
+            ds_id: Source dataset id.
+            start: Window (lower cut) start.
+            end: Window (upper cut) end.
+        """
+        ds = self.project.get(ds_id)
+        if ds is None:
+            return
+        # Non-overlapping partition: before is strictly earlier than the window,
+        # after strictly later, so no sample lands in two pieces.
+        eps = pd.Timedelta(1, "ns")
+        try:
+            specs = [
+                (f"{ds.label} (1)", (None, start - eps)),
+                (f"{ds.label} (2)", (start, end)),
+                (f"{ds.label} (3)", (end + eps, None)),
+            ]
+            pieces = []
+            for lbl, (lo, hi) in specs:
+                part = ds.obj.timecrop(lo, hi, inplace=False, focus=True)
+                if part is not None and part.data.shape[0] > 0:
+                    pieces.append((lbl, part))
+        except Exception:
+            QtWidgets.QMessageBox.critical(
+                self, "Split failed", traceback.format_exc(limit=2)
+            )
+            return
+        if len(pieces) < 2:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Nothing to split",
+                "The window does not divide this dataset into two or more "
+                "non-empty pieces.",
+            )
+            return
+
+        # Renumber the kept pieces 1..N (a window at an end drops piece 1 or 3).
+        for i, (_lbl, part) in enumerate(pieces, start=1):
+            new = self._add_derived_dataset(
+                part,
+                ds.instrument_key,
+                f"{ds.label} ({i})",
+                remove_ids=[ds.id] if i == 1 else (),  # drop the original once
+                source_files=ds.contributing_files,
+            )
+            self._inherit_activity_scopes(ds.id, new.id)
+        # The original was removed by list surgery (not remove_dataset), so purge
+        # its now-stale id from any activity scopes.
+        for ids in self.project.activity_scopes.values():
+            if ids is not None:
+                ids.discard(ds.id)
+
+    def _inherit_activity_scopes(self, src_id: int, new_id: int) -> None:
+        """Add ``new_id`` to every scoped activity that includes ``src_id``.
+
+        So a dataset produced from ``src_id`` (a copy or split piece) keeps the
+        source's in-scope activities ("all-datasets" tasks already include it).
+        """
+        changed = False
+        for ids in self.project.activity_scopes.values():
+            if ids is not None and src_id in ids and new_id not in ids:
+                ids.add(new_id)
+                changed = True
+        if changed:
+            new = self.project.get(new_id)
+            if new is not None:
+                self.project._apply_activities(new)
+                self.refresh_all(reset_view=False)
 
     def _join_same_instrument(self, ds_id: int) -> None:
         """Concatenate chosen datasets of the same instrument into one recording.

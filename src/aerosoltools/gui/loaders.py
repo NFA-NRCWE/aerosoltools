@@ -56,7 +56,7 @@ LOADERS: dict[str, Callable] = {
     "SMPS": Load_SMPS_file,
     "Aethalometer": Load_Aethalometer_file,
     "DustTrak": Load_DustTrak_file,
-    "Chlorine (Ranger)": Load_Ranger_file,
+    "Ranger": Load_Ranger_file,
     "APS": Load_APS_file,
 }
 
@@ -78,7 +78,7 @@ _FILENAME_HINTS: list[tuple[str, str]] = [
     ("opcn3", "OPC-N3"),
     ("opc-n3", "OPC-N3"),
     ("partector", "Partector"),
-    ("ranger", "Chlorine (Ranger)"),
+    ("ranger", "Ranger"),
     ("nanoscan", "NanoScan (NS)"),
     ("_ns", "NanoScan (NS)"),
     ("smps", "SMPS"),
@@ -374,13 +374,16 @@ def is_APS_file(path: str | Path) -> bool:
 
 
 def is_Ranger_file(path: str | Path) -> bool:
-    """Detect Ranger chlorine-sensor CSV exports.
+    """Detect Ranger gas / PM sensor CSV exports.
 
-    Distinctive: the file opens with a "Ranger Serial Number" line and carries
-    a chlorine-concentration column ("CL2 (PPM)").
+    The Ranger uses interchangeable heads (Cl₂, NO₂, PM, …), so a chlorine
+    column is not always present. Two markers are distinctive and appear near
+    the top of every export regardless of head: the opening
+    "Ranger Serial Number" line, and the sensor status legend
+    ("z:zerocal") carried by every header row.
     """
-    text = _head_text(path, max_lines=5)
-    return "ranger serial number" in text or "cl2 (ppm)" in text
+    text = _head_text(path, max_lines=8)
+    return "ranger serial number" in text or "z:zerocal" in text
 
 
 def is_CPC_file(path: str | Path) -> bool:
@@ -434,7 +437,7 @@ SNIFFERS: dict[str, Callable[[str | Path], bool]] = {
     "FMPS": is_FMPS_file,
     "Fourtec": is_Fourtec_file,
     "OPC-N3": is_OPCN3_file,
-    "Chlorine (Ranger)": is_Ranger_file,
+    "Ranger": is_Ranger_file,
     "CPC": is_CPC_file,
 }
 

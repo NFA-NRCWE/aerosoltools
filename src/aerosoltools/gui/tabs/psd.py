@@ -169,7 +169,9 @@ class PSDTab(_PlotTab):
         self.fit_target.currentIndexChanged.connect(self._on_target_changed)
         row1.addWidget(self.fit_target, stretch=1)
         self.isolate_chk = QtWidgets.QCheckBox("Only")
-        self.isolate_chk.setToolTip("Hide the other curves and show only the fit target.")
+        self.isolate_chk.setToolTip(
+            "Hide the other curves and show only the fit target."
+        )
         # Showing/hiding curves must rescale to the now-visible data, even while
         # a fit is being edited (which otherwise pins the view).
         self.isolate_chk.stateChanged.connect(lambda *_: self._draw(force_rescale=True))
@@ -235,8 +237,11 @@ class PSDTab(_PlotTab):
         self.local_chk.setToolTip(
             "Fit each mode only to the bins near it (a window scaled by its "
             "width), so modes follow the peaks instead of one broad lognormal "
-            "stretching across the whole size range. Turn off to fit globally."
+            "stretching across the whole size range. Turn off to fit globally. "
+            "The shaded band on the plot marks the window the fit uses."
         )
+        # Toggling Local changes the shaded fit-window band, so repaint it.
+        self.local_chk.stateChanged.connect(lambda *_: self._redraw_overlay())
         self.log_scaling = QtWidgets.QCheckBox("Log")
         self.log_scaling.setChecked(True)
         self.log_scaling.setToolTip(
@@ -439,7 +444,12 @@ class PSDTab(_PlotTab):
             self._modes[row].pop("mu_err", None)
         else:
             self._modes.append(
-                {"mu": float(x), "sigma": fit.DEFAULT_SIGMA, "peak": float(y), "bound": False}
+                {
+                    "mu": float(x),
+                    "sigma": fit.DEFAULT_SIGMA,
+                    "peak": float(y),
+                    "bound": False,
+                }
             )
             row = len(self._modes) - 1
         self._fitted = False
@@ -459,8 +469,9 @@ class PSDTab(_PlotTab):
         if row < 0:
             return
         m = self._modes[row]
-        # Scroll up → narrower, scroll down → wider.
-        sigma = float(m["sigma"]) * (1.12 ** (-event.step))
+        # Scroll up → narrower, scroll down → wider. A small per-notch step
+        # (~6%) lets the width be fine-tuned rather than jumping.
+        sigma = float(m["sigma"]) * (1.06 ** (-event.step))
         m["sigma"] = float(min(fit.SIGMA_MAX, max(fit.SIGMA_MIN, sigma)))
         m.pop("sigma_err", None)
         self._fitted = False
@@ -489,7 +500,9 @@ class PSDTab(_PlotTab):
             ydata = np.asarray(self._target_xy[1], dtype=float)
             if np.isfinite(ydata).any():
                 peak = float(np.nanmax(ydata))
-        self._modes.append({"mu": mu, "sigma": fit.DEFAULT_SIGMA, "peak": peak, "bound": False})
+        self._modes.append(
+            {"mu": mu, "sigma": fit.DEFAULT_SIGMA, "peak": peak, "bound": False}
+        )
         self._fitted = False
         self._ensure_normalized()
         self._store_target_fit()
@@ -542,7 +555,9 @@ class PSDTab(_PlotTab):
             bind.setCheckState(
                 QtCore.Qt.Checked if m.get("bound") else QtCore.Qt.Unchecked
             )
-            bind.setToolTip("Hold this mode's peak diameter near its value during the fit.")
+            bind.setToolTip(
+                "Hold this mode's peak diameter near its value during the fit."
+            )
             self.modes_table.setItem(r, _COL_BIND, bind)
         self.modes_table.blockSignals(False)
         self._building_table = False
@@ -574,7 +589,9 @@ class PSDTab(_PlotTab):
             except (TypeError, ValueError, AttributeError):
                 continue
             bind_item = self.modes_table.item(r, _COL_BIND)
-            bound = bind_item is not None and bind_item.checkState() == QtCore.Qt.Checked
+            bound = (
+                bind_item is not None and bind_item.checkState() == QtCore.Qt.Checked
+            )
             modes.append({"mu": mu, "sigma": sigma, "peak": peak, "bound": bound})
         self._modes = modes
 
@@ -667,7 +684,9 @@ class PSDTab(_PlotTab):
         isolate = self.isolate_chk.isChecked() and target is not None
         # Emphasise the target while there are modes or the user is editing, so a
         # plain comparison (nothing being fitted) looks unchanged.
-        emphasize = target is not None and (bool(self._modes) or self.edit_btn.isChecked())
+        emphasize = target is not None and (
+            bool(self._modes) or self.edit_btn.isChecked()
+        )
 
         plotted = 0
         ci = 0
@@ -676,7 +695,9 @@ class PSDTab(_PlotTab):
             for act in activities:
                 if act not in ds.obj.activities:
                     continue
-                is_target = target is not None and ds.id == target[0] and act == target[1]
+                is_target = (
+                    target is not None and ds.id == target[0] and act == target[1]
+                )
                 if isolate and not is_target:
                     continue
                 n_lines = len(list(ax.lines))
@@ -843,6 +864,33 @@ class PSDTab(_PlotTab):
                     zorder=6 if (is_target and emphasize) else 4,
                 )
 
+    def _fit_window_spans(self, bin_mids) -> list:
+        """X-intervals the lognormal fit uses, for the shaded fit-window band.
+
+        With "Local" on this is each valid mode's local window
+        (μ · σ^±:data:`_psdfit.FIT_LOCAL_SIGMAS`), merged where they overlap;
+        with it off it is the whole measured size range. Clamped to the data
+        range so the band never widens the view.
+        """
+        valid = self._valid_modes()
+        if not valid:
+            return []
+        lo_data, hi_data = float(np.min(bin_mids)), float(np.max(bin_mids))
+        if not self.local_chk.isChecked():
+            return [(lo_data, hi_data)]
+        raw = []
+        for _idx, mu, sigma, _peak, _bound in valid:
+            half = sigma**fit.FIT_LOCAL_SIGMAS
+            raw.append((max(mu / half, lo_data), min(mu * half, hi_data)))
+        raw.sort()
+        merged = [list(raw[0])]
+        for lo, hi in raw[1:]:
+            if lo <= merged[-1][1]:  # overlaps the previous window -> extend it
+                merged[-1][1] = max(merged[-1][1], hi)
+            else:
+                merged.append([lo, hi])
+        return [(lo, hi) for lo, hi in merged if hi > lo]
+
     def _paint_overlay(self, ax, remove_existing: bool = False) -> None:
         """Draw the modes + total on the target; track the artists for reuse.
 
@@ -877,6 +925,15 @@ class PSDTab(_PlotTab):
             return
         triples = self._modes_as_triples()
         bm = np.asarray(obj.bin_mids, dtype=float)
+
+        # Light band(s) marking the x-window the fit actually uses, drawn behind
+        # everything else. Makes it obvious when a mode is being fit to an
+        # unsuitable region (or when "Local" narrows the fit to a poor slice of
+        # the spectrum) — a common reason a fit fails or looks wrong.
+        for lo, hi in self._fit_window_spans(bm):
+            band = ax.axvspan(lo, hi, facecolor="#7f7f7f", alpha=0.12, lw=0, zorder=0)
+            self._overlay_artists.append(band)
+
         dp = np.logspace(np.log10(bm.min()), np.log10(bm.max()), 300)
         total, per_mode = fit.lognormal_modes(dp, triples)
         optimized = self._fitted
