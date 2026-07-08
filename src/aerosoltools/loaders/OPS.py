@@ -448,14 +448,14 @@ def _Load_OPS_Direct(
 
     # Apply correction: counts to concentration (excluding Bin 17)
     deadtime = df["Deadtime (s)"].to_numpy()
-    counts = df.iloc[:, 1:17].to_numpy()  # Bin 1–16
+    counts = df.iloc[:, 0:16].to_numpy()  # Bin 1–16
 
     # Convert counts to concentration using flow rate (16.67 cm³/s)
     conc = np.true_divide(counts, 16.67 * (sample_length - deadtime[:, np.newaxis]))
 
     # If requested, store Bin 17 and other columns as extra data
     if extra_data:
-        extra = df.drop(columns=df.columns[1:17]).copy()
+        extra = df.drop(columns=df.columns[0:16]).copy()
         try:
             extra["Bin 17"] = extra["Bin 17"] / (16.67 * (sample_length - deadtime))
         except KeyError:
