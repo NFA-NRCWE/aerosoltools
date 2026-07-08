@@ -328,6 +328,33 @@ class SummaryTab(QtWidgets.QWidget):
             return f"{kind}{self.metric_cut.currentText().strip()}"
         return kind
 
+    #: Gas mixing-ratio units — a "total concentration" in these is not a
+    #: particle number concentration, so it must not sit under the "PNC" column.
+    _MIXING_RATIO_UNITS = ("ppm", "ppb", "ppt")
+
+    @staticmethod
+    def _relabel_total_metric(df: pd.DataFrame, obj) -> pd.DataFrame:
+        """Rename the ``PNC`` total-concentration columns for non-particle data.
+
+        ``summarize_activities`` labels the total-concentration metric ``PNC``
+        (particle number concentration). For a gas sensor (e.g. the Ranger's
+        Cl₂ in ppm) that total is not a particle count, so it must not be pooled
+        into the shared ``PNC`` column when several instruments are combined.
+        Here the ``PNC`` token is swapped for the dataset's own quantity (its
+        dtype, e.g. ``Cl₂``), giving it a separate column; instruments without
+        that quantity simply leave those cells blank.
+        """
+        _dtype, unit = helpers.describe(obj)
+        if unit.strip().lower() not in SummaryTab._MIXING_RATIO_UNITS:
+            return df
+        name = helpers.base_dtype(_dtype).strip() or "Concentration"
+        rename = {
+            col: f"{name} {col[len('PNC '):]}"
+            for col in df.columns
+            if col.startswith("PNC ")
+        }
+        return df.rename(columns=rename) if rename else df
+
     @staticmethod
     def _clarify_activity_columns(df: pd.DataFrame) -> pd.DataFrame:
         """Append " mean" to activity-summary value columns that lack it.
@@ -474,6 +501,7 @@ class SummaryTab(QtWidgets.QWidget):
                             kwargs["metrics"] = act_metrics
                         df = ds.obj.summarize_activities(**kwargs)
                         df = self._clarify_activity_columns(df)
+                        df = self._relabel_total_metric(df, ds.obj)
                 except Exception as exc:  # e.g. a PM metric on a 1D instrument
                     skipped.append(f"{ds.label} ({exc})")
                     continue
