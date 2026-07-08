@@ -352,6 +352,7 @@ class DecayFitMixin:
         peak_concentration: Optional[float] = None,
         decay_rate: Optional[float] = None,
         optimize: bool = True,
+        snap_to_samples: bool = True,
     ) -> dict:
         """Description:
             Fit a single-zone emission + decay peak to one time window of a
@@ -409,6 +410,14 @@ class DecayFitMixin:
                 caller gets a previewable "initial guess" (used by the GUI to
                 show a live preview before optimising). The returned dict has the
                 same shape either way; ``errors`` are zero for a guess.
+            snap_to_samples (bool): When True (default) an explicit
+                ``emission_start`` / ``peak_time`` is quantised to the nearest
+                sample time, so the reported timing lands exactly on a data
+                point. When False the supplied timestamps are used as continuous
+                times (an onset or source-off may fall *between* two samples), so
+                the emission duration ``tp`` and the drawn markers vary smoothly
+                rather than jumping from sample to sample. Only affects the two
+                timing overrides; detection (when they are ``None``) is unchanged.
 
         Returns:
             dict: With keys including "model", "unit", "metric", "r_squared"
@@ -461,6 +470,17 @@ class DecayFitMixin:
             t, values, times, emission_start, peak_time
         )
 
+        # Continuous (non-snapped) override times: when the caller supplies an
+        # explicit onset/source-off and asks not to snap, carry the exact seconds
+        # so the emission duration and markers can fall between samples.
+        t0_cont = peak_cont = None
+        if not snap_to_samples:
+            lo, hi = float(t[0]), float(t[-1])
+            if emission_start is not None:
+                t0_cont = min(max(self._to_seconds(emission_start, times), lo), hi)
+            if peak_time is not None:
+                peak_cont = min(max(self._to_seconds(peak_time, times), lo), hi)
+
         wanted = list(_MODELS) if key == "auto" else [_MODEL_ALIASES[key]]
         fits = {}
         for name in wanted:
@@ -474,6 +494,8 @@ class DecayFitMixin:
                 peak_concentration=peak_concentration,
                 decay_rate=decay_rate,
                 optimize=optimize,
+                t0_cont=t0_cont,
+                peak_cont=peak_cont,
             )
             if outcome is not None:
                 fits[name] = outcome
@@ -600,6 +622,8 @@ class DecayFitMixin:
         peak_concentration=None,
         decay_rate=None,
         optimize=True,
+        t0_cont=None,
+        peak_cont=None,
     ):
         """Fit one model in two stages; return an outcome dict or None.
 
@@ -607,9 +631,16 @@ class DecayFitMixin:
         and peak (both held fixed either way); ``decay_rate`` seeds (or, with
         ``optimize=False``, *sets*) the loss kinetics; ``optimize=False`` skips
         the stage-1 optimisation so the result is a pure manual guess.
+        ``t0_cont`` / ``peak_cont`` are continuous (non-snapped) onset/source-off
+        seconds: when given they set the emission timing exactly (so ``tp`` and
+        the markers can sit between samples) while the post-peak sample selection
+        still uses the nearest-sample ``peak_idx``.
         """
         info = _MODELS[name]
-        t_peak = float(t[peak_idx])
+        # The decay samples (post-peak) are still chosen by sample index, but the
+        # peak *time* used for the arithmetic follows the continuous override when
+        # one is supplied, so the fitted curve and markers are not quantised.
+        t_peak = float(t[peak_idx]) if peak_cont is None else float(peak_cont)
         td = t[peak_idx:] - t_peak
         yd = y[peak_idx:]
         if td.size < 4:
@@ -675,10 +706,11 @@ class DecayFitMixin:
             return None
 
         # Stage 2: emission rate from the anchored peak and duration.
-        tp = max(t_peak - float(t[t0_idx]), float(np.median(np.diff(t)) or 1.0))
+        t0_val = float(t[t0_idx]) if t0_cont is None else float(min(t0_cont, t_peak))
+        tp = max(t_peak - t0_val, float(np.median(np.diff(t)) or 1.0))
         E = _invert_emission(name, loss, xmax, tp)
 
-        popt = [*loss, P0, E, float(t[t0_idx]), tp]
+        popt = [*loss, P0, E, t0_val, tp]
         fit = info["func"](t, *popt)
         r2 = _r_squared(y, fit)
 
@@ -689,7 +721,7 @@ class DecayFitMixin:
             "xmax": xmax,
             "P0": P0,
             "E": E,
-            "t0": float(t[t0_idx]),
+            "t0": t0_val,
             "tp": tp,
             "r2": r2,
             "decay_r2": decay_r2,

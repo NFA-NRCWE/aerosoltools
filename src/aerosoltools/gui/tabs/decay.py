@@ -87,6 +87,10 @@ class DecayTab(_PlotTab):
         self.metric_cut = QtWidgets.QComboBox()
         self.metric_cut.setEditable(True)
         self.metric_cut.setFixedWidth(64)
+        # A different cut-off diameter (e.g. PM2.5 vs PM10) selects a different
+        # metric series, so refit when it changes — via selection or typed value.
+        self.metric_cut.currentIndexChanged.connect(self._on_metric_cut_change)
+        self.metric_cut.lineEdit().editingFinished.connect(self._on_metric_cut_change)
         self.controls.addWidget(self.metric_cut)
         self.metric_cut_label = QtWidgets.QLabel("µm")
         self.controls.addWidget(self.metric_cut_label)
@@ -128,6 +132,11 @@ class DecayTab(_PlotTab):
         )
         self.ach.editingFinished.connect(self._recompute)
         self.controls.addWidget(self.ach)
+
+        self.log_y = QtWidgets.QCheckBox("Log Y")
+        self.log_y.setToolTip("Log-scale the concentration (y) axis.")
+        self.log_y.stateChanged.connect(self._on_logy)
+        self.controls.addWidget(self.log_y)
 
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
@@ -254,8 +263,12 @@ class DecayTab(_PlotTab):
         idx = self.metric_kind.findText(current)
         self.metric_kind.setCurrentIndex(idx if idx >= 0 else 0)
         self.metric_kind.blockSignals(False)
+        # Repopulating the cut-off list would otherwise fire the refit handler
+        # against a possibly stale window; block it and refit once at the end.
+        self.metric_cut.blockSignals(True)
         self.metric_cut.clear()
         self.metric_cut.addItems(["0.1", "0.25", "0.5", "1", "2.5", "4", "4.2", "10"])
+        self.metric_cut.blockSignals(False)
         self._on_metric_kind_change()
 
     def _on_metric_kind_change(self, *_args) -> None:
@@ -266,6 +279,21 @@ class DecayTab(_PlotTab):
         self._draw_base()
         # A different metric has its own data range/units, so rescale the view.
         self._recompute(preserve=False)
+
+    def _on_metric_cut_change(self, *_args) -> None:
+        """Refit when the fraction cut-off diameter (e.g. PM2.5 → PM10) changes."""
+        if self.metric_kind.currentText().strip() not in _FRACTION_KINDS:
+            return
+        self._draw_base()
+        # A different cut-off yields a different metric series/range, so rescale.
+        self._recompute(preserve=False)
+
+    def _on_logy(self, *_args) -> None:
+        """Toggle the y-axis log scale, rescaling to the (re)drawn data."""
+        if self._window is not None:
+            self._recompute(preserve=False)
+        else:
+            self._draw_base()
 
     def _build_metric(self) -> str:
         """Assemble the metric string (kind plus cut-off where relevant)."""
@@ -339,6 +367,7 @@ class DecayTab(_PlotTab):
             )
         except Exception:
             pass
+        ax.set_yscale("log" if self.log_y.isChecked() else "linear")
         self._sync_toolbar_home()
         self.canvas.draw_idle()
 
@@ -425,6 +454,7 @@ class DecayTab(_PlotTab):
                 peak_concentration=self._peakval_override,
                 decay_rate=self._rate_override,
                 optimize=self._optimized,
+                snap_to_samples=False,
             )
         except Exception as exc:
             self._result = None
