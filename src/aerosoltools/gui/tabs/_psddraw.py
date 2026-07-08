@@ -102,33 +102,12 @@ def _draw_bars(ax, obj, bin_mids, heights, color, label, sigma=None) -> None:
 def data_ylim(ax, log_y: bool):
     """Compute y-limits from the *data* artists on ``ax`` (lines, bars, bands).
 
-    Measured from the plotted data (mean curves, bars and the ±σ band) so a
+    Thin wrapper over the shared axis-limit policy (:mod:`_autoscale`): the range
+    is measured from the plotted data (mean curves, bars and the ±σ band), so a
     lognormal fit's near-zero tails or a huge σ spread never drive the limits.
-    Returns ``(bottom, top)`` or ``None`` when there is nothing to measure.
+    A non-negative linear PSD is anchored at 0. Returns ``(bottom, top)`` or
+    ``None`` when there is nothing to measure.
     """
-    vals = []
-    for line in ax.lines:
-        vals.append(np.asarray(line.get_ydata(), dtype=float))
-    for patch in ax.patches:  # bars: base .. base+height
-        base = float(patch.get_y())
-        vals.append(np.array([base, base + float(patch.get_height())]))
-    for coll in ax.collections:  # ±σ fill_between envelopes
-        for path in coll.get_paths():
-            vals.append(np.asarray(path.vertices[:, 1], dtype=float))
-    if not vals:
-        return None
-    allv = np.concatenate(vals)
-    allv = allv[np.isfinite(allv)]
-    if allv.size == 0:
-        return None
-    ymax = float(allv.max())
-    if log_y:
-        pos = allv[allv > 0]
-        if pos.size == 0 or ymax <= 0:
-            return None
-        return float(pos.min()) * 0.8, ymax * 1.25
-    ymin = float(allv.min())
-    span = ymax - min(0.0, ymin)
-    margin = 0.05 * span if span > 0 else (0.05 * abs(ymax) or 1.0)
-    bottom = 0.0 if ymin >= 0 else ymin - margin
-    return bottom, ymax + margin
+    from . import _autoscale
+
+    return _autoscale.y_limits([ax], log_y=log_y, anchor_zero=True)

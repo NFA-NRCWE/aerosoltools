@@ -172,6 +172,44 @@ class _PlotTab(QtWidgets.QWidget):
         self.toolbar.update()
         self.toolbar.push_current()
 
+    def autoscale_to_data(
+        self,
+        ax=None,
+        *,
+        log_x: bool | None = None,
+        log_y: bool | None = None,
+        y_anchor_zero: bool = False,
+        extra_axes=(),
+        set_x: bool = True,
+        set_y: bool = True,
+    ) -> None:
+        """Set ``ax``'s limits from the data currently drawn on it (the shared policy).
+
+        Reads the drawn artists via :mod:`_autoscale` (lines, bars and ±σ bands)
+        and applies tight limits with a small margin, so panes get consistent,
+        never-stale limits by calling this after any display/dataset change. Pass
+        ``extra_axes`` (e.g. a twin axis) to include their y-data in the y-range;
+        ``set_x`` / ``set_y`` restrict which axis is updated. ``log_x`` / ``log_y``
+        default to the axis' current scale (so a log axis gets a positive range).
+        """
+        from . import _autoscale
+
+        ax = ax if ax is not None else getattr(self, "ax", None)
+        if ax is None:
+            return
+        if log_x is None:
+            log_x = ax.get_xscale() == "log"
+        if log_y is None:
+            log_y = ax.get_yscale() == "log"
+        xlim, _ = _autoscale.limits([ax], log_x=log_x)
+        _, ylim = _autoscale.limits(
+            [ax, *extra_axes], log_y=log_y, y_anchor_zero=y_anchor_zero
+        )
+        if set_x and xlim is not None:
+            ax.set_xlim(*xlim)
+        if set_y and ylim is not None:
+            ax.set_ylim(*ylim)
+
     def current_time_xlim(self):
         """Return the (xmin, xmax) of the time axis as Matplotlib date numbers.
 
