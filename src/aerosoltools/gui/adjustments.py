@@ -136,6 +136,19 @@ class AdjustmentsBox(QtWidgets.QGroupBox):
         sh.addWidget(self.shift_btn)
         sh.addStretch(1)
 
+        # --- extract / split ----------------------------------------------
+        # The Time series tab's "Extract range" toggle is hosted here (a more
+        # logical home than the activities panel): toggle it, then drag a window
+        # on the plot to split the dataset or copy the window out. The button is
+        # owned by the current Time series tab and (re)attached on each rebuild.
+        ext = _row("Extract")
+        self._extract_row = ext
+        self._extract_btn = None
+        ext_hint = QtWidgets.QLabel("toggle, then drag a window on the plot")
+        ext_hint.setStyleSheet("color: palette(mid);")
+        ext.addWidget(ext_hint)
+        ext.addStretch(1)
+
         hint = QtWidgets.QLabel("Tip: use Reload to undo resample / smooth / shift.")
         hint.setStyleSheet("color: palette(mid);")
         grid.addWidget(hint)
@@ -148,6 +161,20 @@ class AdjustmentsBox(QtWidgets.QGroupBox):
         )
 
     # -- public API --------------------------------------------------------
+    def attach_extract_button(self, btn) -> None:
+        """Embed the Time series tab's Extract-range toggle in the Extract row.
+
+        The button is created and owned by the current Time series tab (which is
+        rebuilt with the tab set), so any previously hosted button is removed
+        first and the new one inserted just after the row's label.
+        """
+        old = self._extract_btn
+        if old is not None and old is not btn:
+            self._extract_row.removeWidget(old)
+            old.setParent(None)
+        self._extract_btn = btn
+        self._extract_row.insertWidget(1, btn)
+
     def set_enabled(self, enabled: bool) -> None:
         """Enable/disable every control (used when no dataset is loaded)."""
         for w in (

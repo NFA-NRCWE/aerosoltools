@@ -189,7 +189,9 @@ class ExtractRangeDialog(QtWidgets.QDialog):
             )
         )
 
-        self.split_radio = QtWidgets.QRadioButton(
+        # Tick boxes (in an exclusive group) rather than radio buttons: the small
+        # radio dot was easy to miss, so it wasn't obvious these were choices.
+        self.split_radio = QtWidgets.QCheckBox(
             f"Split into {n_pieces} datasets and remove '{base_label}'"
         )
         self.split_radio.setToolTip(
@@ -197,9 +199,13 @@ class ExtractRangeDialog(QtWidgets.QDialog):
             "the window itself, and the data after it each become a new dataset "
             "(only the non-empty pieces). The original is removed."
         )
-        self.copy_radio = QtWidgets.QRadioButton(
+        self.copy_radio = QtWidgets.QCheckBox(
             "Copy the window to a new dataset (keep the original)"
         )
+        self._choice_group = QtWidgets.QButtonGroup(self)
+        self._choice_group.setExclusive(True)
+        self._choice_group.addButton(self.split_radio)
+        self._choice_group.addButton(self.copy_radio)
         self.split_radio.setChecked(True)
         layout.addWidget(self.split_radio)
         layout.addWidget(self.copy_radio)
@@ -327,7 +333,8 @@ class TimeSeriesTab(_PlotTab):
         side.addWidget(QtWidgets.QLabel("Activities:"))
         side.addWidget(self.act_list, stretch=1)
         side.addWidget(self.mark_mode)
-        side.addWidget(self.extract_mode)
+        # The Extract-range toggle now lives in the Data adjustments box (see
+        # attach_adjust_controls), a more logical home than the activities panel.
         side.addWidget(self.scope_btn)
         side.addWidget(self.edit_btn)
         side.addWidget(self.rename_btn)
@@ -366,9 +373,11 @@ class TimeSeriesTab(_PlotTab):
 
         The box is built and owned by :class:`MainWindow` (so its handlers can
         operate on the loaded object), but lives inside this tab so that data
-        adjustments happen where the data is shown.
+        adjustments happen where the data is shown. The Extract-range toggle is
+        hosted in the box too (its drag still acts on this tab's plot).
         """
         self._left_col.insertWidget(0, adjust_box)
+        adjust_box.attach_extract_button(self.extract_mode)
 
     # -- behaviour ---------------------------------------------------------
     def _toggle_mark_mode(self) -> None:
@@ -549,6 +558,14 @@ class TimeSeriesTab(_PlotTab):
         self.column.clear()
         for label, kind, name in helpers.plottable_columns(self.obj):
             self.column.addItem(label, userData=(kind, name))
+        # For size-resolved data, offer the total concentration on the mass/
+        # surface/volume bases too (the old top-bar dtype control was removed).
+        # dN is already the plain "Total concentration" entry above.
+        if helpers.is_2d(self.obj):
+            for basis in ("dM", "dS", "dV"):
+                self.column.addItem(
+                    f"Total concentration ({basis})", userData=("dtype", basis)
+                )
         # Restore previous selection if still present.
         if current is not None:
             idx = self.column.findData(current)
@@ -593,13 +610,21 @@ class TimeSeriesTab(_PlotTab):
     def _plot_on(self, ax) -> None:
         """Draw the currently selected series onto ``ax`` (no view/cap logic)."""
         kind, name = self.column.currentData() or ("total", helpers.TOTAL)
-        series = helpers.series_for(self.obj, kind, name)
+        if kind == "dtype":
+            # Total concentration on a converted basis (dM/dS/dV): convert a copy
+            # so the loaded object stays dN, then use its recomputed total.
+            conv = self.obj.copy_self()
+            conv.dtype_converter(name)
+            series = conv.total_concentration
+            dtype, unit = helpers.describe(conv)
+        else:
+            series = helpers.series_for(self.obj, kind, name)
+            col_for_units = None if kind == "total" else name
+            dtype, unit = helpers.describe(self.obj, col_for_units)
 
         ax.clear()
         ax.plot(series.index, series.to_numpy(), lw=1.5)
 
-        col_for_units = None if kind == "total" else name
-        dtype, unit = helpers.describe(self.obj, col_for_units)
         ax.set_xlabel("Time")
         ax.set_ylabel(f"{helpers.base_dtype(dtype)}, {unit}".strip(", "))
         ax.grid(True, alpha=0.3)
