@@ -7,6 +7,8 @@ import os
 import traceback
 from typing import List, Optional
 
+import pandas as pd
+
 from ..aerosol3d import Aerosol3d
 from ..utility import combine_measurements, combine_size_ranges
 from . import helpers, theme
@@ -602,21 +604,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self._refresh_sidebar()
         return ds
 
-    def extract_window(self, ds_id: int, start, end, label: str, remove: bool) -> None:
-        """Split a time window out of a dataset into a new dataset.
+    def copy_window(self, ds_id: int, start, end, label: str) -> None:
+        """Copy a time window out of a dataset into a new dataset (original kept).
 
         The window ``[start, end]`` is copied (with all metadata) into a new
-        dataset. With ``remove=True`` that window is also cut from the original,
-        leaving the data before and after it. The new dataset inherits the
-        original's in-scope activities, so tasks marked on the source still apply
-        to the extracted piece.
+        dataset that inherits the source's in-scope activities. The original is
+        left unchanged.
 
         Args:
             ds_id: Source dataset id.
             start: Window start (inclusive).
             end: Window end (inclusive).
             label: Name for the new dataset.
-            remove: Whether to also remove the window from the original.
         """
         ds = self.project.get(ds_id)
         if ds is None:
@@ -625,35 +624,98 @@ class MainWindow(QtWidgets.QMainWindow):
             piece = ds.obj.timecrop(start, end, inplace=False, focus=True)
         except Exception:
             QtWidgets.QMessageBox.critical(
-                self, "Extract failed", traceback.format_exc(limit=2)
+                self, "Copy failed", traceback.format_exc(limit=2)
             )
             return
         if piece is None or piece.data.shape[0] == 0:
             QtWidgets.QMessageBox.information(
                 self,
-                "Nothing to extract",
+                "Nothing to copy",
                 "The selected time window contains no samples in this dataset.",
             )
             return
-        if remove:
-            # Cut the same window from the original (keeps before + after).
-            ds.obj.timecrop(start, end, inplace=True, focus=False)
-            self.project._apply_activities(ds)  # rebuild the original's masks
-
         new = self._add_derived_dataset(
             piece, ds.instrument_key, label, source_files=ds.contributing_files
         )
-        # Inherit the source's scoped-activity memberships onto the new piece so
-        # tasks marked on the original also apply here ("all-datasets" tasks are
-        # already included automatically).
+        self._inherit_activity_scopes(ds.id, new.id)
+
+    def split_dataset(self, ds_id: int, start, end) -> None:
+        """Split a dataset at a dragged window into contiguous new datasets.
+
+        Partitions the dataset into up to three pieces — the data before the
+        window, the window itself, and the data after it — and replaces the
+        original with the non-empty pieces. A window in the middle yields three
+        datasets; a window touching an end yields two. Each piece inherits the
+        original's in-scope activities.
+
+        Args:
+            ds_id: Source dataset id.
+            start: Window (lower cut) start.
+            end: Window (upper cut) end.
+        """
+        ds = self.project.get(ds_id)
+        if ds is None:
+            return
+        # Non-overlapping partition: before is strictly earlier than the window,
+        # after strictly later, so no sample lands in two pieces.
+        eps = pd.Timedelta(1, "ns")
+        try:
+            specs = [
+                (f"{ds.label} (1)", (None, start - eps)),
+                (f"{ds.label} (2)", (start, end)),
+                (f"{ds.label} (3)", (end + eps, None)),
+            ]
+            pieces = []
+            for lbl, (lo, hi) in specs:
+                part = ds.obj.timecrop(lo, hi, inplace=False, focus=True)
+                if part is not None and part.data.shape[0] > 0:
+                    pieces.append((lbl, part))
+        except Exception:
+            QtWidgets.QMessageBox.critical(
+                self, "Split failed", traceback.format_exc(limit=2)
+            )
+            return
+        if len(pieces) < 2:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Nothing to split",
+                "The window does not divide this dataset into two or more "
+                "non-empty pieces.",
+            )
+            return
+
+        # Renumber the kept pieces 1..N (a window at an end drops piece 1 or 3).
+        for i, (_lbl, part) in enumerate(pieces, start=1):
+            new = self._add_derived_dataset(
+                part,
+                ds.instrument_key,
+                f"{ds.label} ({i})",
+                remove_ids=[ds.id] if i == 1 else (),  # drop the original once
+                source_files=ds.contributing_files,
+            )
+            self._inherit_activity_scopes(ds.id, new.id)
+        # The original was removed by list surgery (not remove_dataset), so purge
+        # its now-stale id from any activity scopes.
+        for ids in self.project.activity_scopes.values():
+            if ids is not None:
+                ids.discard(ds.id)
+
+    def _inherit_activity_scopes(self, src_id: int, new_id: int) -> None:
+        """Add ``new_id`` to every scoped activity that includes ``src_id``.
+
+        So a dataset produced from ``src_id`` (a copy or split piece) keeps the
+        source's in-scope activities ("all-datasets" tasks already include it).
+        """
         changed = False
         for ids in self.project.activity_scopes.values():
-            if ids is not None and ds.id in ids and new.id not in ids:
-                ids.add(new.id)
+            if ids is not None and src_id in ids and new_id not in ids:
+                ids.add(new_id)
                 changed = True
         if changed:
-            self.project._apply_activities(new)
-            self.refresh_all(reset_view=False)
+            new = self.project.get(new_id)
+            if new is not None:
+                self.project._apply_activities(new)
+                self.refresh_all(reset_view=False)
 
     def _join_same_instrument(self, ds_id: int) -> None:
         """Concatenate chosen datasets of the same instrument into one recording.

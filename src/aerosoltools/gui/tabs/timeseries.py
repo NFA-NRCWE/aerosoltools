@@ -167,38 +167,53 @@ class ActivityScopeDialog(QtWidgets.QDialog):
 
 
 class ExtractRangeDialog(QtWidgets.QDialog):
-    """Name the extracted piece and choose whether to keep it in the original."""
+    """Split a dataset at a dragged window, or copy that window out of it."""
 
-    def __init__(self, parent, default_label, start, end):
-        """Build the label field and the keep/remove choice.
+    def __init__(self, parent, base_label, start, end, n_pieces):
+        """Build the split/copy choice.
 
         Args:
             parent: Parent widget.
-            default_label: Suggested name for the new dataset.
-            start: Selected window start (for the informational label).
+            base_label: The source dataset's name (for the piece names / copy default).
+            start: Selected window start.
             end: Selected window end.
+            n_pieces: How many datasets the split would produce (2 or 3),
+                depending on whether the window touches an end of the data.
         """
         super().__init__(parent)
-        self.setWindowTitle("Extract to new dataset")
+        self.setWindowTitle("Split / extract")
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(
             QtWidgets.QLabel(
-                f"Extract {start:%Y-%m-%d %H:%M:%S} – {end:%H:%M:%S} into a new "
-                "dataset (metadata is copied)."
+                f"Selected window: {start:%Y-%m-%d %H:%M:%S} – {end:%H:%M:%S}."
             )
         )
-        form = QtWidgets.QFormLayout()
-        self.label_edit = QtWidgets.QLineEdit(default_label)
-        form.addRow("New dataset name:", self.label_edit)
-        layout.addLayout(form)
 
-        self.remove_radio = QtWidgets.QRadioButton(
-            "Remove the window from the original dataset"
+        self.split_radio = QtWidgets.QRadioButton(
+            f"Split into {n_pieces} datasets and remove '{base_label}'"
         )
-        self.keep_radio = QtWidgets.QRadioButton("Keep it in the original too")
-        self.remove_radio.setChecked(True)
-        layout.addWidget(self.remove_radio)
-        layout.addWidget(self.keep_radio)
+        self.split_radio.setToolTip(
+            "Cut the dataset at the window edges: the data before the window, "
+            "the window itself, and the data after it each become a new dataset "
+            "(only the non-empty pieces). The original is removed."
+        )
+        self.copy_radio = QtWidgets.QRadioButton(
+            "Copy the window to a new dataset (keep the original)"
+        )
+        self.split_radio.setChecked(True)
+        layout.addWidget(self.split_radio)
+        layout.addWidget(self.copy_radio)
+
+        form = QtWidgets.QFormLayout()
+        self.label_edit = QtWidgets.QLineEdit(
+            f"{base_label} [{start:%H:%M}–{end:%H:%M}]"
+        )
+        self.label_row = QtWidgets.QLabel("New dataset name:")
+        form.addRow(self.label_row, self.label_edit)
+        layout.addLayout(form)
+        # The name field only applies to the copy option.
+        self.copy_radio.toggled.connect(self._on_copy_toggled)
+        self._on_copy_toggled(False)
 
         buttons = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
@@ -207,9 +222,16 @@ class ExtractRangeDialog(QtWidgets.QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
+    def _on_copy_toggled(self, checked: bool) -> None:
+        """Enable the name field only when 'copy' is selected."""
+        self.label_edit.setEnabled(checked)
+        self.label_row.setEnabled(checked)
+
     def result(self):
-        """Return ``(label, remove_from_original)`` from the dialog fields."""
-        return self.label_edit.text().strip(), self.remove_radio.isChecked()
+        """Return ``(mode, label)`` — mode is ``"split"`` or ``"copy"``."""
+        if self.split_radio.isChecked():
+            return "split", None
+        return "copy", self.label_edit.text().strip()
 
 
 class TimeSeriesTab(_PlotTab):
@@ -428,25 +450,30 @@ class TimeSeriesTab(_PlotTab):
         self.main.refresh_all(reset_view=False)
 
     def _extract_span(self, xmin: float, xmax: float) -> None:
-        """Prompt, then split the dragged window into a new dataset."""
+        """Prompt, then split the dataset at the window or copy the window out."""
         active = self.main.project.active
         if active is None:
             return
         start = pd.Timestamp(mdates.num2date(xmin)).tz_localize(None)
         end = pd.Timestamp(mdates.num2date(xmax)).tz_localize(None)
-        default = f"{active.label} [{start:%H:%M}–{end:%H:%M}]"
-        dlg = ExtractRangeDialog(self, default, start, end)
+        # How many pieces a split yields: the window plus any data before/after it.
+        t = active.obj.time
+        n_pieces = 1 + int(t.min() < start) + int(t.max() > end)
+        dlg = ExtractRangeDialog(self, active.label, start, end, n_pieces)
         if dlg.exec_() != QtWidgets.QDialog.Accepted:
             return
-        label, remove = dlg.result()
-        if not label:
+        mode, label = dlg.result()
+        if mode == "copy" and not label:
             return
-        # Extraction rebuilds the tab set (destroying this tab), so run it after
-        # the current canvas event returns rather than mid-callback.
+        # These rebuild the tab set (destroying this tab), so run them after the
+        # current canvas event returns rather than mid-callback.
         main, ds_id = self.main, active.id
-        QtCore.QTimer.singleShot(
-            0, lambda: main.extract_window(ds_id, start, end, label, remove)
-        )
+        if mode == "split":
+            QtCore.QTimer.singleShot(0, lambda: main.split_dataset(ds_id, start, end))
+        else:
+            QtCore.QTimer.singleShot(
+                0, lambda: main.copy_window(ds_id, start, end, label)
+            )
 
     def _on_threshold_changed(self) -> None:
         """Persist the threshold overlay state and redraw (keeping the view)."""
