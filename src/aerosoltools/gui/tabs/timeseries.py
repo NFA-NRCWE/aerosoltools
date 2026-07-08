@@ -104,6 +104,68 @@ class ActivityEditorDialog(QtWidgets.QDialog):
         return out
 
 
+class ActivityScopeDialog(QtWidgets.QDialog):
+    """Choose which datasets an activity applies to.
+
+    An activity can be shared across every dataset ("All datasets") or scoped to
+    a chosen subset, so a task marked on one instrument need not be forced onto
+    instruments that have no data in that time span.
+    """
+
+    def __init__(self, parent, name, datasets, current_scope):
+        """Build the 'all datasets' toggle and the per-dataset checklist.
+
+        Args:
+            parent: Parent widget.
+            name: Activity being scoped.
+            datasets: The project's datasets (each with ``id`` and ``label``).
+            current_scope: Set of dataset ids the activity currently applies to,
+                or ``None`` for all datasets.
+        """
+        super().__init__(parent)
+        self.setWindowTitle(f"Applies to — {name}")
+        self.resize(360, 380)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(QtWidgets.QLabel(f"Which datasets does '{name}' apply to?"))
+
+        self.all_chk = QtWidgets.QCheckBox("All datasets (shared)")
+        self.all_chk.setChecked(current_scope is None)
+        self.all_chk.toggled.connect(self._on_all_toggled)
+        layout.addWidget(self.all_chk)
+
+        self.list = QtWidgets.QListWidget()
+        for ds in datasets:
+            item = QtWidgets.QListWidgetItem(ds.label)
+            item.setData(QtCore.Qt.UserRole, ds.id)
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+            checked = current_scope is None or ds.id in current_scope
+            item.setCheckState(QtCore.Qt.Checked if checked else QtCore.Qt.Unchecked)
+            self.list.addItem(item)
+        layout.addWidget(self.list, stretch=1)
+        self.list.setEnabled(current_scope is not None)
+
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _on_all_toggled(self, checked: bool) -> None:
+        """Disable the per-dataset list while 'all datasets' is selected."""
+        self.list.setEnabled(not checked)
+
+    def scope(self):
+        """Return the chosen scope: ``None`` for all datasets, else a set of ids."""
+        if self.all_chk.isChecked():
+            return None
+        return {
+            self.list.item(r).data(QtCore.Qt.UserRole)
+            for r in range(self.list.count())
+            if self.list.item(r).checkState() == QtCore.Qt.Checked
+        }
+
+
 class TimeSeriesTab(_PlotTab):
     """Plot a selectable column over time and mark activities by dragging."""
 
@@ -171,6 +233,12 @@ class TimeSeriesTab(_PlotTab):
         # Activities side panel (mark toggle + list + edit + delete).
         self.act_list = QtWidgets.QListWidget()
         self.act_list.itemDoubleClicked.connect(lambda _item: self._edit_selected())
+        self.scope_btn = QtWidgets.QPushButton("Applies to…")
+        self.scope_btn.setToolTip(
+            "Choose which datasets the selected activity applies to (all "
+            "datasets, or a chosen subset)."
+        )
+        self.scope_btn.clicked.connect(self._scope_selected)
         self.edit_btn = QtWidgets.QPushButton("Edit selected activity")
         self.edit_btn.clicked.connect(self._edit_selected)
         self.rename_btn = QtWidgets.QPushButton("Rename selected activity")
@@ -181,14 +249,15 @@ class TimeSeriesTab(_PlotTab):
         side.addWidget(QtWidgets.QLabel("Activities:"))
         side.addWidget(self.act_list, stretch=1)
         side.addWidget(self.mark_mode)
+        side.addWidget(self.scope_btn)
         side.addWidget(self.edit_btn)
         side.addWidget(self.rename_btn)
         side.addWidget(self.del_btn)
         hint = QtWidgets.QLabel(
             "Tip: click 'Mark activities', then drag across the plot to add a "
             "task period (pick an existing task name to add another occurrence). "
-            "Double-click a task to edit its periods. Click 'Marking' again to "
-            "stop and zoom/pan."
+            "New tasks apply to the active dataset only — use 'Applies to…' to "
+            "share them. Double-click a task to edit its periods."
         )
         hint.setWordWrap(True)
         side.addWidget(hint)
@@ -263,8 +332,12 @@ class TimeSeriesTab(_PlotTab):
         )
         if not ok or not name.strip():
             return
-        # Tasks are shared across all datasets in the project.
-        self.main.project.add_activity(name.strip(), start, end)
+        # A brand-new task applies to the active dataset only (scope it wider
+        # later via 'Applies to…'); adding an occurrence to an existing task
+        # keeps that task's current scope.
+        active_id = self.main.project.active_id
+        scope = {active_id} if active_id is not None else None
+        self.main.project.add_activity(name.strip(), start, end, scope=scope)
         # Keep the current zoom/pan so the view does not snap back after marking.
         self.main.refresh_all(reset_view=False)
 
@@ -273,21 +346,25 @@ class TimeSeriesTab(_PlotTab):
         self.main.project.plot_thresholds[self.export_tag] = self.threshold.state()
         self.refresh(reset_view=False)
 
+    def _selected_activity(self) -> str | None:
+        """Name of the selected activity (from the item's stored name), or None."""
+        item = self.act_list.currentItem()
+        return None if item is None else item.data(QtCore.Qt.UserRole)
+
     def _delete_selected(self) -> None:
         """Delete the selected activity across every dataset."""
-        item = self.act_list.currentItem()
-        if item is None or self.obj is None:
+        name = self._selected_activity()
+        if name is None:
             return
         # Deleting a task removes it from every dataset in the project.
-        self.main.project.delete_activity(item.text())
+        self.main.project.delete_activity(name)
         self.main.refresh_all(reset_view=False)
 
     def _rename_selected(self) -> None:
         """Prompt for a new name and rename the selected activity/task."""
-        item = self.act_list.currentItem()
-        if item is None or self.obj is None:
+        old_name = self._selected_activity()
+        if old_name is None:
             return
-        old_name = item.text()
         new_name, ok = QtWidgets.QInputDialog.getText(
             self, "Rename task", "New name:", QtWidgets.QLineEdit.Normal, old_name
         )
@@ -301,19 +378,32 @@ class TimeSeriesTab(_PlotTab):
             return
         self.main.refresh_all(reset_view=False)
 
+    def _scope_selected(self) -> None:
+        """Edit which datasets the selected activity applies to."""
+        name = self._selected_activity()
+        if name is None:
+            return
+        proj = self.main.project
+        dlg = ActivityScopeDialog(self, name, proj.datasets, proj.activity_scope(name))
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+        proj.set_activity_scope(name, dlg.scope())
+        self.main.refresh_all(reset_view=False)
+
     def _edit_selected(self) -> None:
         """Open the period editor for the selected activity."""
-        item = self.act_list.currentItem()
-        if item is None or self.obj is None:
+        name = self._selected_activity()
+        if name is None:
             return
-        name = item.text()
-        periods = list(self.obj._activity_periods.get(name, []))
+        # Periods live on the project registry (the active dataset may be out of
+        # this task's scope and so not carry it), keyed by task name.
+        periods = list(self.main.project.activities.get(name, []))
         tmin = pd.Timestamp(self.obj.time.min())
         tmax = pd.Timestamp(self.obj.time.max())
         dlg = ActivityEditorDialog(self, name, periods, tmin, tmax)
         if dlg.exec_() != QtWidgets.QDialog.Accepted:
             return
-        # Replace the task's periods across every dataset in the project.
+        # Replace the task's periods across its in-scope datasets.
         self.main.project.set_activity_periods(name, dlg.periods())
         self.main.refresh_all(reset_view=False)
 
@@ -333,9 +423,28 @@ class TimeSeriesTab(_PlotTab):
         self.column.blockSignals(False)
 
     def _sync_activities(self) -> None:
-        """Refresh the activities list from the active object."""
+        """Refresh the activities list from the project, annotating each scope.
+
+        Lists *all* project tasks (not just those on the active dataset), each
+        labelled with the datasets it applies to, so scoped tasks can be seen
+        and managed from any dataset.
+        """
+        proj = self.main.project
+        selected = self._selected_activity()
         self.act_list.clear()
-        self.act_list.addItems(helpers.user_activities(self.obj))
+        for name in proj.user_activities():
+            scope = proj.activity_scope(name)
+            if scope is None:
+                suffix = "all datasets"
+            else:
+                labels = [d.label for d in proj.datasets if d.id in scope]
+                suffix = ", ".join(labels) if labels else "no datasets"
+            item = QtWidgets.QListWidgetItem(f"{name}  —  {suffix}")
+            item.setData(QtCore.Qt.UserRole, name)
+            self.act_list.addItem(item)
+            if name == selected:
+                item.setSelected(True)
+                self.act_list.setCurrentItem(item)
 
     def _cap(self, edit) -> float | None:
         """Parse a Y-axis cap field, returning None when blank or invalid."""
