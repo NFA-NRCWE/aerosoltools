@@ -260,6 +260,24 @@ def _align_series(
     else:
         raise ValueError("match must be 'exact', 'nearest', or 'rebin'")
 
+    # If alignment produced nothing at all, the two instruments never lined up
+    # under the current settings — most often an 'exact' match between
+    # instruments that log on different clocks/cadences. Point at nearest/rebin.
+    if xy.empty:
+        if match == "exact":
+            raise ValueError(
+                "No exact timestamp matches between the two instruments. They "
+                "likely log on different clocks or sampling intervals, so no two "
+                "samples share the same timestamp. In 'Time alignment', switch "
+                "'Match' to 'nearest' (with a tolerance, e.g. 30s) or 'rebin' to "
+                "a common interval, then Compute again."
+            )
+        raise ValueError(
+            "The two instruments produced no overlapping data under the current "
+            "time-alignment settings. Try a larger tolerance, 'rebin' to a common "
+            "interval, or widen the time window."
+        )
+
     # Optionally keep only the aligned points that fall inside one activity.
     # The activity periods are absolute-time, so this works uniformly for all
     # three match modes (and for activities with several occurrences).
@@ -267,7 +285,11 @@ def _align_series(
         xy = xy.loc[_activity_period_mask(xy.index, X, Y, activity)]
         if xy.empty:
             raise ValueError(
-                f"No aligned data points fall within activity '{activity}'."
+                f"No aligned data points fall inside activity '{activity}'. The "
+                "two instruments do align elsewhere, but not within this "
+                "activity's time window — check that the activity covers the "
+                "side-by-side period, or (if their timestamps differ) switch "
+                "'Match' to 'nearest' or 'rebin'."
             )
 
     # Remove rows with non-finite values in either series

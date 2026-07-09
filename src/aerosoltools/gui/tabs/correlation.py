@@ -49,14 +49,14 @@ class CorrelationTab(_PlotTab):
         self.controls.addWidget(self.y_combo)
 
         self.param = QtWidgets.QComboBox()
-        self.param.setMinimumWidth(120)
+        self.param.setMinimumWidth(90)
         self.controls.addWidget(QtWidgets.QLabel("Parameter:"))
         self.controls.addWidget(self.param)
 
         # Restrict the correlation to one activity (e.g. a marked side-by-side
         # region). "All data" uses the full overlapping record.
         self.activity = QtWidgets.QComboBox()
-        self.activity.setMinimumWidth(110)
+        self.activity.setMinimumWidth(90)
         self.activity.setToolTip(
             "Correlate only the timestamps inside this activity — mark a "
             "side-by-side region in the Time series tab, then pick it here."
@@ -152,8 +152,13 @@ class CorrelationTab(_PlotTab):
         side_w = QtWidgets.QWidget()
         side_w.setLayout(side)
 
-        # Plot on the left of a resizable divider, side panel on the right.
-        self._split_with_side(side_w)
+        # Plot on the left of a resizable divider, side panel on the right. The
+        # side panel here is wider than the other tabs' (time-alignment +
+        # regression + Bland–Altman groups), so start the split narrower and let
+        # the canvas shrink, keeping the whole pane inside the window (no
+        # horizontal scroll) at the default size.
+        self._split_with_side(side_w, sizes=(560, 320))
+        self.canvas.setMinimumWidth(360)
 
         self.ax = self.figure.add_subplot(111)
         self._has_drawn = False
