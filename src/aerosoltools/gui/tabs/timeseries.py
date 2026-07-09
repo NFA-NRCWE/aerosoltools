@@ -552,11 +552,19 @@ class TimeSeriesTab(_PlotTab):
 
     # -- rendering ---------------------------------------------------------
     def _sync_columns(self) -> None:
-        """Rebuild the series selector, preserving the selection."""
+        """Rebuild the series selector, preserving the selection.
+
+        The core channels (total + primary data columns, plus the dM/dS/dV
+        totals for size-resolved data) are listed first; the many extra
+        housekeeping columns some instruments expose are tucked behind a
+        labelled, non-selectable "Extra" header so they don't overwhelm the
+        picker.
+        """
         self.column.blockSignals(True)
         current = self.column.currentData()
         self.column.clear()
-        for label, kind, name in helpers.plottable_columns(self.obj):
+        standard, extra = helpers.grouped_columns(self.obj)
+        for label, kind, name in standard:
             self.column.addItem(label, userData=(kind, name))
         # For size-resolved data, offer the total concentration on the mass/
         # surface/volume bases too (the old top-bar dtype control was removed).
@@ -566,12 +574,23 @@ class TimeSeriesTab(_PlotTab):
                 self.column.addItem(
                     f"Total concentration ({basis})", userData=("dtype", basis)
                 )
+        if extra:
+            self._add_column_header(f"── Extra: {self.obj.instrument} ──")
+            for label, kind, name in extra:
+                self.column.addItem(label, userData=(kind, name))
         # Restore previous selection if still present.
         if current is not None:
             idx = self.column.findData(current)
             if idx >= 0:
                 self.column.setCurrentIndex(idx)
         self.column.blockSignals(False)
+
+    def _add_column_header(self, text: str) -> None:
+        """Add a non-selectable section header to the series combo."""
+        self.column.addItem(text)
+        item = self.column.model().item(self.column.count() - 1)
+        if item is not None:
+            item.setEnabled(False)
 
     def _sync_activities(self) -> None:
         """Refresh the activities list from the project, annotating each scope.
