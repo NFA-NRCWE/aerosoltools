@@ -35,30 +35,52 @@ _NONE = "— none —"
 #: Words describing each axis by its drawing position (left, right, 2nd right).
 _POSITION_WORDS = ["Left axis", "Right axis", "2nd right axis"]
 
-#: Concentration-basis options for the "Total concentration" metric only.
-_BASES = [
-    ("dN (number)", "dN"),
-    ("dM (mass)", "dM"),
-    ("dS (surface)", "dS"),
-    ("dV (volume)", "dV"),
-]
+#: Concentration bases offered (as suffixed options) for the particle total.
+_TOTAL_BASES = ["dN", "dM", "dS", "dV"]
 
-#: Spellings of number-concentration units that should be treated as one unit
-#: (so number instruments share a y-axis regardless of the loader's wording).
+#: Superscript digits/sign mapped to plain characters for unit comparison.
+_SUP = str.maketrans(
+    {
+        "⁻": "-",
+        "⁰": "0",
+        "¹": "1",
+        "²": "2",
+        "³": "3",
+        "⁴": "4",
+        "⁵": "5",
+        "⁶": "6",
+        "⁷": "7",
+        "⁸": "8",
+        "⁹": "9",
+    }
+)
+
+
+def _unit_key(unit: str) -> str:
+    """Normalise a unit string (drop LaTeX/superscript/case/spaces) for comparison.
+
+    So ``"cm⁻³"``, ``"cm^-3"`` and the CPC's LaTeX ``"cm$^{-3}$"`` all reduce to
+    the same key and are recognised as one unit.
+    """
+    key = (unit or "").strip().lower().translate(_SUP)
+    for ch in "$^{}\\ ":
+        key = key.replace(ch, "")
+    return key
+
+
+#: Normalised keys of number-concentration units (share one y-axis / label).
 _NUMBER_UNIT_KEYS = {
-    "cm⁻³",
-    "cm-3",
-    "cm^-3",
-    "#/cm³",
-    "#/cm3",
-    "1/cm³",
-    "1/cm3",
-    "p/cm³",
-    "p/cm3",
-    "particles/cm³",
-    "particles/cm3",
-    "n/cm³",
-    "n/cm3",
+    _unit_key(u)
+    for u in (
+        "cm⁻³",
+        "cm-3",
+        "#/cm³",
+        "1/cm³",
+        "p/cm³",
+        "particles/cm³",
+        "n/cm³",
+        "cm$^{-3}$",
+    )
 }
 
 
@@ -102,9 +124,8 @@ def _parse_hms(text: str):
 
 
 def _canon_unit(unit: str) -> str:
-    """Canonicalise a unit string so number-concentration spellings compare equal."""
-    key = (unit or "").strip().lower().replace(" ", "")
-    if key in {u.lower() for u in _NUMBER_UNIT_KEYS}:
+    """Canonicalise a unit so number-concentration spellings compare/display equal."""
+    if _unit_key(unit) in _NUMBER_UNIT_KEYS:
         return "cm⁻³"
     return (unit or "").strip()
 
@@ -139,10 +160,17 @@ class OverlayTab(_PlotTab):
         for slot in range(3):
             self.controls.addWidget(QtWidgets.QLabel(f"M{slot + 1}:"))
             combo = QtWidgets.QComboBox()
-            combo.setMaximumWidth(150)
+            # A small minimum keeps the controls row (and hence the middle pane)
+            # from claiming an excessive minimum width; it still expands to show
+            # the long option text when there is room.
+            combo.setMinimumWidth(80)
+            combo.setMaximumWidth(160)
             combo.setToolTip(
                 "Metric for this slot (colour = dataset, line style = slot). "
-                "Choose '— none —' to leave the slot unused."
+                "The 'Total concentration (dN/dM/dS/dV)' options are particle "
+                "totals; named measurements (e.g. a black-carbon or gas channel) "
+                "appear under their own name. Choose '— none —' to leave the slot "
+                "unused."
             )
             combo.currentIndexChanged.connect(self.refresh)
             self.controls.addWidget(combo)
@@ -155,18 +183,6 @@ class OverlayTab(_PlotTab):
             ax_combo.currentIndexChanged.connect(lambda *_: self._draw())
             self.controls.addWidget(ax_combo)
             self.axis_combos.append(ax_combo)
-
-        self.controls.addWidget(QtWidgets.QLabel("Basis:"))
-        self.basis = QtWidgets.QComboBox()
-        for label, value in _BASES:
-            self.basis.addItem(label, value)
-        self.basis.setToolTip(
-            "Concentration basis for the 'Total concentration' metric only "
-            "(other metrics are unaffected). dM/dS/dV apply to size-resolved "
-            "datasets; 1D datasets (e.g. a CPC) are omitted on those bases."
-        )
-        self.basis.currentIndexChanged.connect(self.refresh)
-        self.controls.addWidget(self.basis)
 
         self.normalize = QtWidgets.QCheckBox("Normalize (0–1)")
         self.normalize.setToolTip(
@@ -183,12 +199,6 @@ class OverlayTab(_PlotTab):
         )
         self.show_acts.stateChanged.connect(lambda: self._draw(preserve=True))
         self.controls.addWidget(self.show_acts)
-
-        # Concentration-threshold (e.g. OEL) overlay; state persists on the project.
-        self.threshold = ThresholdControls()
-        self.threshold.set_state(self.main.project.plot_thresholds.get(self.export_tag))
-        self.threshold.changed.connect(self._on_threshold_changed)
-        self.controls.addWidget(self.threshold)
 
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
@@ -224,6 +234,13 @@ class OverlayTab(_PlotTab):
             self.axis_min.append(mn)
             self.axis_max.append(mx)
             self.axis_log.append(lg)
+
+        # Concentration-threshold (e.g. OEL) overlay lives on the second row to
+        # keep the metric row (and thus the middle pane's minimum width) narrow.
+        self.threshold = ThresholdControls()
+        self.threshold.set_state(self.main.project.plot_thresholds.get(self.export_tag))
+        self.threshold.changed.connect(self._on_threshold_changed)
+        self.controls2.addWidget(self.threshold)
         self.controls2.addStretch(1)
 
         # Side panel: per-dataset include + shift table, plus an apply button.
@@ -275,65 +292,97 @@ class OverlayTab(_PlotTab):
         """All datasets in the project."""
         return self.main.project.datasets
 
+    @staticmethod
+    def _measurement_of(obj):
+        """A dataset's named measurement (e.g. 'IR BCc'), or None for a plain total.
+
+        Datasets that carry a measurement name are *not* particle number totals,
+        so they are offered under that name rather than folded into the generic
+        "Total concentration" metric (which would mislabel/mismix them).
+        """
+        meas = getattr(obj, "measurement", None)
+        if not meas:
+            meas = (getattr(obj, "metadata", {}) or {}).get("measurement")
+        return meas or None
+
     def _metric_options(self):
         """Return ``(standard_names, extra_groups)`` shared by all metric pickers.
 
-        ``standard_names`` is the total plus the core data channels across
-        datasets. ``extra_groups`` is a list of ``(header, [names])`` — one per
-        *distinct instrument + extra-column-set*, so identical instruments
-        contribute a single group (e.g. two OPS loaded the same way share one
-        "Extra: OPS" group) while genuinely different column sets (e.g. an OPS
-        loaded direct vs from an export) each keep their own group.
+        ``standard_names`` lists the particle-total options ("Total concentration
+        (dN/dM/dS/dV)"), then any named measurements (e.g. an aethalometer's
+        "IR BCc"), then the shared core data channels. ``extra_groups`` is one
+        ``(header, [names])`` per *instrument* — the extra housekeeping columns
+        of all that instrument's datasets are unioned into a single group, so N
+        datasets of the same instrument never spawn "Extra: ELPI", "Extra: ELPI
+        (2)", … duplicates.
         """
-        standard = ["Total concentration"]
-        seen = set(standard)
-        groups = []
-        seen_sigs = set()
-        header_counts: dict = {}
+        has_number = has_2d = False
+        measurements: list = []
+        channels: list = []
+        seen_channels: set = set()
+        extra_by_instr: dict = {}
         for ds in self._datasets:
-            std, extra = helpers.grouped_columns(ds.obj)
+            obj = ds.obj
+            meas = self._measurement_of(obj)
+            if meas:
+                if meas not in measurements:
+                    measurements.append(meas)
+            else:
+                has_number = True
+                if helpers.is_2d(obj):
+                    has_2d = True
+            std, extra = helpers.grouped_columns(obj)
             for _label, kind, name in std:
-                if kind == "total" or name in seen:
+                if kind == "total" or name in seen_channels:
                     continue
-                seen.add(name)
-                standard.append(name)
-            enames: list = []
+                seen_channels.add(name)
+                channels.append(name)
+            names = extra_by_instr.setdefault(ds.instrument, [])
             for _label, _kind, name in extra:
-                if name not in enames:
-                    enames.append(name)
-            if not enames:
-                continue
-            instr = ds.instrument
-            sig = (instr, tuple(enames))
-            if sig in seen_sigs:
-                continue
-            seen_sigs.add(sig)
-            n = header_counts.get(instr, 0)
-            header_counts[instr] = n + 1
-            header = f"Extra: {instr}" if n == 0 else f"Extra: {instr} ({n + 1})"
-            groups.append((header, enames))
+                if name not in names:
+                    names.append(name)
+
+        totals: list = []
+        if has_number:
+            totals.append("Total concentration (dN)")
+        if has_2d:
+            totals += [f"Total concentration ({b})" for b in _TOTAL_BASES[1:]]
+        standard = totals + measurements + channels
+        groups = [
+            (f"Extra: {instr}", names)
+            for instr, names in extra_by_instr.items()
+            if names
+        ]
         return standard, groups
 
-    def _series_for(self, ds, metric: str, basis: str):
+    def _series_for(self, ds, metric: str):
         """Return ``(series, name, unit)`` for a dataset's metric, or None.
 
-        Only the "Total concentration" metric honours ``basis``: on dM/dS/dV it
-        is converted on a copy (size-resolved data only — 1D datasets return
-        None so they are simply omitted on a mass/surface/volume basis).
+        "Total concentration (dN/dM/dS/dV)" is the generic particle total, only
+        for datasets *without* a named measurement (dM/dS/dV need size-resolved
+        data); a named measurement resolves to that dataset's primary series;
+        otherwise the metric is looked up as a data / extra column.
         """
         obj = ds.obj
-        if metric == "Total concentration":
-            if basis and basis != "dN":
+        meas = self._measurement_of(obj)
+        if metric.startswith("Total concentration (") and metric.endswith(")"):
+            basis = metric[metric.index("(") + 1 : -1]
+            if meas:  # a named measurement is not a generic particle total
+                return None
+            if basis != "dN":
                 if not helpers.is_2d(obj):
                     return None
                 conv = obj.copy_self()
                 conv.dtype_converter(basis)
                 _dtype, unit = helpers.describe(conv)
                 s = pd.to_numeric(conv.total_concentration, errors="coerce")
-                return s, f"Total conc ({basis})", unit
-            name, unit = helpers.measurement_label(obj)
+                return s, f"Total concentration ({basis})", unit
+            _dtype, unit = helpers.describe(obj)
             s = pd.to_numeric(obj.total_concentration, errors="coerce")
-            return s, name, unit
+            return s, "Total concentration", unit
+        if meas is not None and metric == meas:
+            _dtype, unit = helpers.describe(obj)
+            return pd.to_numeric(obj.total_concentration, errors="coerce"), metric, unit
         if metric in obj.data.columns:
             _dtype, unit = helpers.describe(obj, metric)
             return pd.to_numeric(obj.data[metric], errors="coerce"), metric, unit
@@ -368,7 +417,8 @@ class OverlayTab(_PlotTab):
             if idx >= 0:
                 combo.setCurrentIndex(idx)
             elif slot == 0:
-                combo.setCurrentIndex(combo.findText("Total concentration"))
+                default = combo.findText("Total concentration (dN)")
+                combo.setCurrentIndex(default if default >= 0 else 0)
             else:
                 combo.setCurrentIndex(0)  # — none —
             combo.blockSignals(False)
@@ -528,13 +578,12 @@ class OverlayTab(_PlotTab):
 
     def _gather_entries(self, normalize: bool) -> list:
         """Collect one entry dict per (dataset × active metric slot) series."""
-        basis = self.basis.currentData()
         entries = []
         for slot, metric, uaxis in self._active_metrics():
             for ds in self._datasets:
                 if not ds.overlay_on:
                     continue
-                res = self._series_for(ds, metric, basis)
+                res = self._series_for(ds, metric)
                 if res is None:
                     continue
                 s, name, unit = res

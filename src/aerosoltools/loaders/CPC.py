@@ -37,7 +37,7 @@ def Load_CPC_file(file: str, extra_data: bool = False) -> Aerosol1D:
               - ``"instrument"`` — set to ``"CPC"``.
               - ``"serial_number"`` — instrument serial number parsed from
                 the header.
-              - ``"unit"`` — set to ``"cm$^{-3}$"``.
+              - ``"unit"`` — set to ``"cm⁻³"``.
               - ``"dtype"`` — set to ``"dN"`` (number concentration).
 
             If ``extra_data=True`` and the file is a *full* CPC export,
@@ -178,7 +178,7 @@ def _Load_CPC_focused(file: str, encoding: str, delimiter: str) -> Aerosol1D:
     CPC = Aerosol1D(df)
     CPC._meta["instrument"] = "CPC"
     CPC._meta["serial_number"] = meta[5, 1][5:-3]
-    CPC._meta["unit"] = "cm$^{-3}$"
+    CPC._meta["unit"] = "cm⁻³"
     CPC._meta["dtype"] = "dN"
     return CPC
 
@@ -228,7 +228,7 @@ def _Load_CPC_full(
     CPC = Aerosol1D(data_df.copy())
     CPC._meta["instrument"] = "CPC"
     CPC._meta["serial_number"] = df["Instrument ID"].iloc[0][5:-3]
-    CPC._meta["unit"] = "cm$^{-3}$"
+    CPC._meta["unit"] = "cm⁻³"
     CPC._meta["dtype"] = "dN"
 
     if extra_data:
