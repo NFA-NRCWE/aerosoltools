@@ -95,6 +95,34 @@ class ThresholdControls(QtWidgets.QWidget):
         return self.label.text().strip()
 
 
+class WheelLineEdit(QtWidgets.QLineEdit):
+    """A line edit that emits a step signal on mouse-wheel while focused.
+
+    Used for the Overlay time-shift field: once the field has keyboard focus,
+    scrolling nudges the value up/down for a quick, smooth adjustment (Ctrl for a
+    coarse step). The widget stays value-agnostic — it emits
+    ``stepped(direction, coarse)`` and lets the owner parse/format the value — so
+    it can drive any stepped text field. Requiring focus first avoids hijacking
+    wheel scrolling of the surrounding table.
+    """
+
+    #: Emitted on a focused wheel tick: ``(+1|-1 direction, coarse?)``.
+    stepped = QtCore.pyqtSignal(int, bool)
+
+    def wheelEvent(self, event):  # noqa: N802 (Qt override)
+        """Turn a wheel tick into a :attr:`stepped` signal when focused."""
+        if not self.hasFocus():
+            event.ignore()
+            return
+        dy = event.angleDelta().y()
+        if dy == 0:
+            event.ignore()
+            return
+        coarse = bool(event.modifiers() & QtCore.Qt.ControlModifier)
+        self.stepped.emit(1 if dy > 0 else -1, coarse)
+        event.accept()
+
+
 class SlackTabBar(QtWidgets.QTabBar):
     """Tab bar that pads each tab's width hint so labels never clip.
 

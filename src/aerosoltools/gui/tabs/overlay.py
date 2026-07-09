@@ -8,10 +8,16 @@ import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
 
+from ..._core import _shading
 from .. import helpers
 from ..qt import QtCore, QtWidgets
-from ..widgets import ThresholdControls
+from ..widgets import ThresholdControls, WheelLineEdit
+from . import _autoscale
 from ._base import _active_color_cycle, _PlotTab
+
+#: Line styles encoding which y-axis a series is read against (axis 0/1/2).
+_AXIS_STYLES = ["-", "--", ":"]
+_AXIS_WORDS = ["solid, left", "dashed, right", "dotted, right"]
 
 
 def _format_hms(td: pd.Timedelta) -> str:
@@ -60,6 +66,12 @@ class OverlayTab(_PlotTab):
     per-dataset **view-only** time shift lets the user slide instruments in time
     to line up peaks; "Apply shifts permanently" bakes those shifts into the
     datasets' time axes (and re-projects the shared, absolute-time tasks).
+
+    When the datasets carry different concentration units (e.g. particle counts
+    in cm⁻³, a gas in ppm and black carbon in ng/m³) each unit gets its own
+    y-axis (left, right, then a second offset right spine — up to three), and the
+    **line style** encodes which axis a series belongs to (solid/dashed/dotted)
+    while the **colour** stays tied to the dataset.
     """
 
     export_tag = "overlay"
@@ -73,18 +85,30 @@ class OverlayTab(_PlotTab):
         self.controls.addWidget(QtWidgets.QLabel("Metric:"))
         self.controls.addWidget(self.metric)
 
-        self.log_y = QtWidgets.QCheckBox("Log Y")
-        # A scale change rescales the axes, so don't preserve the old view.
-        self.log_y.stateChanged.connect(lambda: self._draw())
-        self.controls.addWidget(self.log_y)
+        # Per-unit log toggles are rebuilt whenever the shown units change; one
+        # checkbox per distinct unit (each unit has its own y-axis/scale).
+        self._log_units: set[str] = set()
+        self.log_box = QtWidgets.QWidget()
+        self._log_layout = QtWidgets.QHBoxLayout(self.log_box)
+        self._log_layout.setContentsMargins(0, 0, 0, 0)
+        self._log_checks: dict = {}
+        self.controls.addWidget(self.log_box)
 
         self.normalize = QtWidgets.QCheckBox("Normalize (0–1)")
         self.normalize.setToolTip(
             "Scale each series to 0–1 to compare shapes across instruments with "
             "different units/magnitudes."
         )
-        self.normalize.stateChanged.connect(lambda: self._draw())
+        self.normalize.stateChanged.connect(self._on_normalize)
         self.controls.addWidget(self.normalize)
+
+        self.show_acts = QtWidgets.QCheckBox("Show activities")
+        self.show_acts.setToolTip(
+            "Shade the project's activities across every dataset, so you can see "
+            "how the different instruments behave within the same task window."
+        )
+        self.show_acts.stateChanged.connect(lambda: self._draw(preserve=True))
+        self.controls.addWidget(self.show_acts)
 
         # Concentration-threshold (e.g. OEL) overlay; state persists on the project.
         self.threshold = ThresholdControls()
@@ -97,9 +121,9 @@ class OverlayTab(_PlotTab):
 
         # Side panel: per-dataset include + shift table, plus an apply button.
         self._building = False
-        self._ax2 = None  # secondary y-axis for a second unit (e.g. ppm)
+        self._extra_axes: list = []  # secondary y-axes for further units
         self.table = QtWidgets.QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels(["", "Dataset", "Shift (h:mm:ss)"])
+        self.table.setHorizontalHeaderLabels(["", "Dataset", "Shift"])
         self.table.verticalHeader().setVisible(False)
         self.table.itemChanged.connect(self._on_item_changed)
 
@@ -116,8 +140,10 @@ class OverlayTab(_PlotTab):
         side.addWidget(self.table, stretch=1)
         side.addWidget(self.apply_btn)
         hint = QtWidgets.QLabel(
-            "Tick datasets to overlay. Set 'Shift (h:mm:ss)' to slide a dataset "
-            "in time and line up peaks (view only until you apply permanently)."
+            "Tick datasets to overlay. Set 'Shift' (h:mm:ss) to slide a dataset "
+            "in time and line up peaks — click the field and scroll the mouse "
+            "wheel for a smooth ±1 s nudge (Ctrl = ±1 min). View only until you "
+            "apply permanently."
         )
         hint.setWordWrap(True)
         side.addWidget(hint)
@@ -128,6 +154,10 @@ class OverlayTab(_PlotTab):
         self._split_with_side(side_widget)
 
         self.ax = self.figure.add_subplot(111)
+        self.canvas.setToolTip(
+            "Colour identifies the dataset; line style identifies the y-axis: "
+            "solid = left, dashed = right, dotted = 2nd right."
+        )
 
     # -- data access -------------------------------------------------------
     @property
@@ -135,17 +165,33 @@ class OverlayTab(_PlotTab):
         """All datasets in the project."""
         return self.main.project.datasets
 
-    def _metric_options(self) -> list:
-        """Metric names available across the datasets."""
-        names = ["Total concentration"]
-        seen = set(names)
+    def _metric_groups(self):
+        """Return ``(standard_names, extra_groups)`` for the metric picker.
+
+        ``standard_names`` is the total plus the core data channels shared across
+        datasets; ``extra_groups`` is a list of ``(header, [names])`` — one per
+        dataset that exposes extra housekeeping columns — so those (often many)
+        columns are tucked behind a labelled, per-instrument separator.
+        """
+        standard = ["Total concentration"]
+        seen = set(standard)
+        extra_groups = []
         for ds in self._datasets:
-            for _label, kind, name in helpers.plottable_columns(ds.obj):
+            std, extra = helpers.grouped_columns(ds.obj)
+            for _label, kind, name in std:
                 if kind == "total" or name in seen:
                     continue
                 seen.add(name)
-                names.append(name)
-        return names
+                standard.append(name)
+            enames, eseen = [], set()
+            for _label, _kind, name in extra:
+                if name in eseen:
+                    continue
+                eseen.add(name)
+                enames.append(name)
+            if enames:
+                extra_groups.append((f"Extra: {ds.label}", enames))
+        return standard, extra_groups
 
     def _series_for(self, ds):
         """Return the numeric series for a dataset's chosen metric, or None."""
@@ -160,16 +206,71 @@ class OverlayTab(_PlotTab):
             return None
         return pd.to_numeric(s, errors="coerce")
 
+    def _name_unit_for(self, ds):
+        """Return the ``(name, unit)`` label pair for ``ds`` under the metric.
+
+        Units are only resolved for the total-concentration metric (where they
+        drive the per-unit axes); a named column keeps a single shared axis.
+        """
+        if self.metric.currentText() == "Total concentration":
+            return helpers.measurement_label(ds.obj)
+        return self.metric.currentText(), ""
+
+    def _gather_units(self) -> list:
+        """Distinct units among the currently included, non-empty series (≤3)."""
+        if self.normalize.isChecked():
+            return []
+        units: list = []
+        for ds in self._datasets:
+            if not ds.overlay_on:
+                continue
+            s = self._series_for(ds)
+            if s is None or s.empty:
+                continue
+            u = self._name_unit_for(ds)[1]
+            if u not in units:
+                units.append(u)
+        return units
+
     # -- table sync --------------------------------------------------------
     def _sync_metric(self) -> None:
-        """Repopulate the metric combo, preserving the selection."""
+        """Repopulate the metric combo (grouped), preserving the selection."""
         current = self.metric.currentText()
         self.metric.blockSignals(True)
         self.metric.clear()
-        self.metric.addItems(self._metric_options())
+        standard, extra_groups = self._metric_groups()
+        for name in standard:
+            self.metric.addItem(name)
+        for header, names in extra_groups:
+            self._add_metric_header(f"── {header} ──")
+            for name in names:
+                self.metric.addItem(name)
         idx = self.metric.findText(current)
         self.metric.setCurrentIndex(idx if idx >= 0 else 0)
         self.metric.blockSignals(False)
+
+    def _add_metric_header(self, text: str) -> None:
+        """Add a non-selectable section header to the metric combo."""
+        self.metric.addItem(text)
+        item = self.metric.model().item(self.metric.count() - 1)
+        if item is not None:
+            item.setEnabled(False)
+
+    def _sync_log_controls(self) -> None:
+        """Rebuild the per-unit 'Log' checkboxes for the currently shown units."""
+        while self._log_layout.count():
+            w = self._log_layout.takeAt(0).widget()
+            if w is not None:
+                w.deleteLater()
+        self._log_checks = {}
+        units = self._gather_units()
+        self.log_box.setVisible(bool(units))
+        for u in units:
+            cb = QtWidgets.QCheckBox(f"Log {u}" if u else "Log Y")
+            cb.setChecked(u in self._log_units)
+            cb.toggled.connect(lambda on, unit=u: self._on_log_toggle(unit, on))
+            self._log_layout.addWidget(cb)
+            self._log_checks[u] = cb
 
     def _sync_table(self) -> None:
         """Rebuild the include/shift table from the datasets."""
@@ -189,18 +290,39 @@ class OverlayTab(_PlotTab):
             name = QtWidgets.QTableWidgetItem(ds.label)
             name.setFlags(QtCore.Qt.ItemIsEnabled)
             self.table.setItem(r, 1, name)
-            edit = QtWidgets.QLineEdit(_format_hms(ds.view_shift))
+            edit = WheelLineEdit(_format_hms(ds.view_shift))
+            edit.setFixedWidth(74)
             edit.setToolTip(
                 "View-only time shift as [-]h:mm:ss (e.g. -0:00:30 to move the "
-                "dataset 30 s earlier). A bare number is read as seconds."
+                "dataset 30 s earlier). A bare number is read as seconds. With "
+                "the field focused, scroll to nudge ±1 s (Ctrl = ±1 min)."
             )
             edit.editingFinished.connect(lambda e=edit, d=ds: self._on_shift_edit(d, e))
+            edit.stepped.connect(
+                lambda direction, coarse, e=edit, d=ds: self._on_shift_step(
+                    d, e, direction, coarse
+                )
+            )
             self.table.setCellWidget(r, 2, edit)
-        self.table.resizeColumnsToContents()
+        self.table.resizeColumnToContents(0)
+        self.table.resizeColumnToContents(1)
         self.table.blockSignals(False)
         self._building = False
 
     # -- interaction -------------------------------------------------------
+    def _on_normalize(self) -> None:
+        """Redraw for a normalize toggle (units become irrelevant)."""
+        self._sync_log_controls()
+        self._draw()
+
+    def _on_log_toggle(self, unit: str, on: bool) -> None:
+        """Persist a unit's log-scale choice and redraw (keeping the view)."""
+        if on:
+            self._log_units.add(unit)
+        else:
+            self._log_units.discard(unit)
+        self._draw(preserve=True)
+
     def _on_item_changed(self, item) -> None:
         """Persist a dataset's overlay-include flag and redraw."""
         if self._building or item.column() != 0:
@@ -211,6 +333,7 @@ class OverlayTab(_PlotTab):
             # Rescale to the now-visible datasets so the axis limits (and the
             # "reset view" target) follow the shown data instead of stretching to
             # cover a dataset that was just hidden.
+            self._sync_log_controls()
             self._draw()
 
     def _on_shift_edit(self, ds, edit) -> None:
@@ -227,6 +350,17 @@ class OverlayTab(_PlotTab):
         edit.blockSignals(False)
         # Preserve the current view so the user can zoom in, then slide a
         # dataset and watch it move within the same window.
+        self._draw(preserve=True)
+
+    def _on_shift_step(self, ds, edit, direction: int, coarse: bool) -> None:
+        """Nudge a dataset's view shift by a wheel tick (±1 s, or ±1 min coarse)."""
+        if self._building:
+            return
+        step = pd.Timedelta(minutes=1) if coarse else pd.Timedelta(seconds=1)
+        ds.view_shift = ds.view_shift + direction * step
+        edit.blockSignals(True)
+        edit.setText(_format_hms(ds.view_shift))
+        edit.blockSignals(False)
         self._draw(preserve=True)
 
     def _apply_shifts(self) -> None:
@@ -261,46 +395,34 @@ class OverlayTab(_PlotTab):
 
     # -- rendering ---------------------------------------------------------
     def refresh(self) -> None:
-        """Re-sync the metric combo and table, then redraw."""
+        """Re-sync the metric combo, table and log controls, then redraw."""
         if not self._datasets:
             return
         self._sync_metric()
         self._sync_table()
+        self._sync_log_controls()
         self._draw()
 
-    def _draw_on(self, ax) -> None:
-        """Draw each included dataset's (optionally normalized, shifted) series.
-
-        When the datasets carry different concentration units (e.g. particle
-        counts in cm⁻³ and a gas in ppm), the second unit is drawn on a secondary
-        right-hand y-axis so both data types are legible on one plot (each axis
-        autoscales to its own series).
-        """
-        ax.clear()
-        # Drop any secondary axis from the previous draw before rebuilding.
-        if self._ax2 is not None:
+    def _clear_extra_axes(self) -> None:
+        """Drop any secondary axes from the previous draw."""
+        for extra in self._extra_axes:
             try:
-                self._ax2.remove()
+                extra.remove()
             except Exception:
                 pass
-            self._ax2 = None
+        self._extra_axes = []
 
-        metric = self.metric.currentText()
-        normalize = self.normalize.isChecked()
-
-        # Gather each included, non-empty series with its unit (units are only
-        # reliably known for the total-concentration metric).
-        entries = []  # (x, y, label, unit)
+    def _gather_entries(self, normalize: bool) -> list:
+        """Collect ``(ds, x, y, name, unit)`` for each included, non-empty series."""
+        entries = []
         for ds in self._datasets:
             if not ds.overlay_on:
                 continue
             s = self._series_for(ds)
             if s is None or s.empty:
                 continue
-            unit = (
-                helpers.describe(ds.obj)[1] if metric == "Total concentration" else ""
-            )
-            x = s.index + ds.view_shift  # view-only shift
+            name, unit = self._name_unit_for(ds)
+            x = mdates.date2num((s.index + ds.view_shift).to_pydatetime())
             y = s.to_numpy(dtype=float)
             if normalize:
                 lo, hi = np.nanmin(y), np.nanmax(y)
@@ -309,50 +431,19 @@ class OverlayTab(_PlotTab):
             label = ds.label
             if ds.view_shift != pd.Timedelta(0):
                 label += f" ({_format_hms(ds.view_shift)})"
-            entries.append((ds, x, y, label, unit))
+            entries.append((ds, x, y, label, name, unit))
+        return entries
 
-        # Distinct units among the plotted series — a second one triggers the
-        # secondary axis (but not when everything is normalised to 0–1).
-        units = []
-        for _ds, _x, _y, _label, unit in entries:
-            if unit and unit not in units:
-                units.append(unit)
-        use_dual = (
-            (not normalize) and metric == "Total concentration" and len(units) >= 2
-        )
-        primary_unit = units[0] if units else ""
-
-        ax2 = ax.twinx() if use_dual else None
-        self._ax2 = ax2
-
-        # Each dataset keeps its own stable colour so it reads the same on every
-        # plot (falling back to the active cycle when unset).
+    def _draw_on(self, ax) -> None:
+        """Draw each included dataset's series, grouping units onto their axes."""
+        ax.clear()
+        self._clear_extra_axes()
+        normalize = self.normalize.isChecked()
+        entries = self._gather_entries(normalize)
         cycle = _active_color_cycle()
-        for i, (ds, x, y, label, unit) in enumerate(entries):
-            target = ax2 if (use_dual and unit != primary_unit) else ax
-            color = ds.color or cycle[i % len(cycle)]
-            target.plot(x, y, lw=1.4, label=label, color=color)
-        plotted = len(entries)
 
-        ax.set_xlabel("Time")
-        if normalize:
-            ax.set_ylabel("Normalized (0–1)")
-        elif metric == "Total concentration" and primary_unit:
-            ax.set_ylabel(f"{metric} [{primary_unit}]")
-            if use_dual:
-                ax2.set_ylabel(f"{metric} [{units[1]}]")
-        else:
-            ax.set_ylabel(metric)
-        ax.grid(True, alpha=0.3)
-        ax.xaxis.set_major_formatter(
-            mdates.ConciseDateFormatter(mdates.AutoDateLocator())
-        )
-        if self.log_y.isChecked():
-            ax.set_yscale("log")
-            if ax2 is not None:
-                ax2.set_yscale("log")
-
-        if not plotted:
+        if not entries:
+            ax.set_xlabel("Time")
             ax.text(
                 0.5,
                 0.5,
@@ -363,15 +454,101 @@ class OverlayTab(_PlotTab):
             )
             return
 
-        # Threshold line (e.g. OEL) on the primary axis, then a combined legend
-        # spanning both axes (the threshold rebuilds its own legend on ax alone,
-        # so build the final one afterwards to keep the right-axis series in it).
+        if normalize:
+            self._draw_single(ax, entries, cycle)
+        else:
+            self._draw_multi_axis(ax, entries, cycle)
+
+        # x-range from all series (the twin axes share this axis), then activity
+        # shading and a combined legend spanning every axis.
+        xs = np.concatenate([e[1] for e in entries])
+        xs = xs[np.isfinite(xs)]
+        if xs.size:
+            ax.set_xlim(float(xs.min()), float(xs.max()))
+        ax.set_xlabel("Time")
+        ax.grid(True, alpha=0.3)
+        ax.xaxis.set_major_formatter(
+            mdates.ConciseDateFormatter(mdates.AutoDateLocator())
+        )
+        if self.show_acts.isChecked():
+            periods = self.main.project.activities
+            selected = _shading.resolve_activities(periods, True)
+            _shading.shade_activities(ax, periods, selected, zorder=1, legend=False)
+
+        # Threshold line on the primary axis, then one legend across all axes.
         helpers.draw_threshold(
             ax, self.threshold.threshold_value(), self.threshold.legend_text()
         )
-        h1, l1 = ax.get_legend_handles_labels()
-        h2, l2 = ax2.get_legend_handles_labels() if ax2 is not None else ([], [])
-        ax.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=8)
+        handles, labels = ax.get_legend_handles_labels()
+        for extra in self._extra_axes:
+            h, ll = extra.get_legend_handles_labels()
+            handles += h
+            labels += ll
+        if handles:
+            ax.legend(handles, labels, loc="upper right", fontsize=8)
+
+    def _draw_single(self, ax, entries, cycle) -> None:
+        """Draw all series on one axis (the normalized 0–1 view)."""
+        for i, (ds, x, y, label, _name, _unit) in enumerate(entries):
+            ax.plot(x, y, lw=1.4, label=label, color=ds.color or cycle[i % len(cycle)])
+        ax.set_ylabel("Normalized (0–1)")
+        ylim = _autoscale.y_limits([ax], log_y=False, anchor_zero=True)
+        if ylim is not None:
+            ax.set_ylim(*ylim)
+
+    def _draw_multi_axis(self, ax, entries, cycle) -> None:
+        """Draw series with one y-axis per unit (up to three), style = axis."""
+        unit_order: list = []
+        for _ds, _x, _y, _label, _name, unit in entries:
+            if unit not in unit_order:
+                unit_order.append(unit)
+        if len(unit_order) > 3:
+            shown = ", ".join(u or "(dimensionless)" for u in unit_order[:3])
+            extra = ", ".join(u or "(dimensionless)" for u in unit_order[3:])
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Too many units",
+                "The overlay can show at most three different units at once "
+                f"(one per y-axis). Showing: {shown}.\nNot shown: {extra}.\n\n"
+                "Untick some datasets to reduce the number of distinct units.",
+            )
+            unit_order = unit_order[:3]
+
+        # Build one axis per unit: left, right, then an offset right spine.
+        axis_for = {}
+        for idx, unit in enumerate(unit_order):
+            if idx == 0:
+                axis_for[unit] = ax
+            else:
+                twin = ax.twinx()
+                if idx == 2:
+                    twin.spines["right"].set_position(("outward", 60))
+                self._extra_axes.append(twin)
+                axis_for[unit] = twin
+
+        names_by_axis: dict = {u: set() for u in unit_order}
+        for i, (ds, x, y, label, name, unit) in enumerate(entries):
+            if unit not in axis_for:
+                continue  # a 4th+ unit that was dropped above
+            aidx = unit_order.index(unit)
+            target = axis_for[unit]
+            color = ds.color or cycle[i % len(cycle)]
+            target.plot(x, y, lw=1.4, ls=_AXIS_STYLES[aidx], label=label, color=color)
+            names_by_axis[unit].add(name)
+
+        # Label each axis by its (shared) measurement + unit and its style hint,
+        # and apply that unit's own log scale and autoscaled limits.
+        for aidx, unit in enumerate(unit_order):
+            axis = axis_for[unit]
+            names = names_by_axis[unit]
+            base = next(iter(names)) if len(names) == 1 else "Concentration"
+            unit_part = f" [{unit}]" if unit else ""
+            axis.set_ylabel(f"{base}{unit_part} ({_AXIS_WORDS[aidx]})")
+            is_log = unit in self._log_units
+            axis.set_yscale("log" if is_log else "linear")
+            ylim = _autoscale.y_limits([axis], log_y=is_log, anchor_zero=not is_log)
+            if ylim is not None:
+                axis.set_ylim(*ylim)
 
     def _draw(self, preserve: bool = False) -> None:
         """Redraw onto the embedded axis, reporting any error inline.
