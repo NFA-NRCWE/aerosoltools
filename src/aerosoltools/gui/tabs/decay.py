@@ -138,6 +138,19 @@ class DecayTab(_PlotTab):
         self.log_y.stateChanged.connect(self._on_logy)
         self.controls.addWidget(self.log_y)
 
+        # Mark-area toggle: only while it is on does a drag select the fit
+        # window (so otherwise the plot is free to zoom/pan/adjust handles).
+        self.mark_btn = QtWidgets.QPushButton("Mark area")
+        self.mark_btn.setObjectName("toggle")
+        self.mark_btn.setCheckable(True)
+        self.mark_btn.setToolTip(
+            "Toggle on, then drag across the plot to select the window spanning "
+            "the rise, peak and decay. Selecting a window turns this back off so "
+            "you can adjust the guess and zoom/pan freely."
+        )
+        self.mark_btn.toggled.connect(self._toggle_mark)
+        self.controls.addWidget(self.mark_btn)
+
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
@@ -148,11 +161,12 @@ class DecayTab(_PlotTab):
         self.ax = self.figure.add_subplot(111)
 
         self.result_label = QtWidgets.QLabel(
-            "Drag on the plot to select a window spanning the rise, peak and "
-            "decay. Then shape the guess: drag the emission start (green) / "
-            "source-off (red) markers, drag the background line or the peak "
-            "handle, scroll to change the decay rate, or type values above — the "
-            "dashed preview updates live. Press Fit to optimise."
+            "Click 'Mark area', then drag on the plot to select a window "
+            "spanning the rise, peak and decay. Then shape the guess: drag the "
+            "emission start (green) / source-off (red) markers, drag the "
+            "background line or the peak handle, Shift+scroll to change the "
+            "decay rate, or type values above — the dashed preview updates live. "
+            "Scroll to zoom, right-drag to pan. Press Fit to optimise."
         )
         self.result_label.setWordWrap(True)
         self.result_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
@@ -185,7 +199,9 @@ class DecayTab(_PlotTab):
             interactive=True,
             drag_from_anywhere=True,
             props=dict(alpha=0.12, facecolor="#4c72b0"),
+            button=1,
         )
+        self.span.set_active(False)  # armed only via the "Mark area" toggle
         self.canvas.mpl_connect("button_press_event", self._on_press)
         self.canvas.mpl_connect("motion_notify_event", self._on_motion)
         self.canvas.mpl_connect("button_release_event", self._on_release)
@@ -239,9 +255,9 @@ class DecayTab(_PlotTab):
         self.rate_edit.setFixedWidth(72)
         self.rate_edit.setPlaceholderText("auto")
         self.rate_edit.setToolTip(
-            "First-order-equivalent loss rate (1/h). Scroll over the plot to "
-            "change it, or type a value. Seeds the fit; with a manual value the "
-            "preview uses it directly."
+            "First-order-equivalent loss rate (1/h). Shift+scroll over the plot "
+            "to change it, or type a value. Seeds the fit; with a manual value "
+            "the preview uses it directly."
         )
         self.rate_edit.editingFinished.connect(self._apply_guess_fields)
         row.addWidget(self.rate_edit)
@@ -371,11 +387,45 @@ class DecayTab(_PlotTab):
         self._sync_toolbar_home()
         self.canvas.draw_idle()
 
+    # -- interaction gating ----------------------------------------------
+    def _toggle_mark(self) -> None:
+        """Arm/disarm area marking (a drag selects the window only while on)."""
+        active = self.mark_btn.isChecked()
+        self.mark_btn.setText("Marking…" if active else "Mark area")
+        self.span.set_active(active)
+        # Drop any active toolbar pan/zoom so the drag reaches the span picker.
+        if active and self.toolbar.mode:
+            mode = str(self.toolbar.mode)
+            if "pan" in mode:
+                self.toolbar.pan()
+            elif "zoom" in mode:
+                self.toolbar.zoom()
+
+    @staticmethod
+    def _shift_held(event) -> bool:
+        """True when Shift is held during a scroll event."""
+        return bool(getattr(event, "key", None)) and "shift" in event.key
+
+    def _scroll_reserved(self, event) -> bool:
+        """Shift+scroll adjusts the decay rate; a plain scroll zooms instead."""
+        return (
+            self._result is not None
+            and not self.mark_btn.isChecked()
+            and self._shift_held(event)
+        )
+
+    def _pan_locked(self) -> bool:
+        """Lock the view while marking so the drag defines the window cleanly."""
+        return self.mark_btn.isChecked()
+
     # -- window selection & fitting --------------------------------------
     def _on_span(self, xmin: float, xmax: float) -> None:
         """Store the dragged window (date numbers) and auto-fit it fresh."""
         if xmax - xmin < 1e-9:
             return
+        # Marking is a one-shot action: disarm so the plot returns to zoom/pan.
+        if self.mark_btn.isChecked():
+            self.mark_btn.setChecked(False)
         self._window = (self._num_to_ts(xmin), self._num_to_ts(xmax))
         # A fresh window drops every manual override and auto-detects/optimises.
         self._t0_override = self._peak_override = None
@@ -568,6 +618,8 @@ class DecayTab(_PlotTab):
 
     def _on_press(self, event) -> None:
         """Grab a handle if the click landed on it (disabling the span picker)."""
+        if event.button != 1:
+            return  # right button is reserved for panning
         if event.inaxes is not self.ax or event.x is None or self._result is None:
             return
         # Peak handle first (it sits on the source-off line): needs x *and* y.
@@ -617,7 +669,7 @@ class DecayTab(_PlotTab):
         if self._dragging is None:
             return
         name, self._dragging = self._dragging, None
-        self.span.set_active(True)
+        self.span.set_active(self.mark_btn.isChecked())
         if name in ("t0", "peak"):
             line = self._t0_line if name == "t0" else self._peak_line
             ts = self._num_to_ts(mdates.date2num(line.get_xdata()[0]))
@@ -632,10 +684,16 @@ class DecayTab(_PlotTab):
         self._recompute(optimize=False)
 
     def _on_scroll(self, event) -> None:
-        """Scroll over the plot: speed up / slow down the decay rate."""
+        """Shift+scroll over the plot: speed up / slow down the decay rate.
+
+        A plain scroll is left to the shared cursor-zoom; holding Shift makes
+        the wheel adjust the first-order-equivalent decay rate instead.
+        """
         if self._result is None or event.inaxes is not self.ax:
             return
-        if self.toolbar.mode:  # don't fight an active pan/zoom
+        if self.toolbar.mode or self.mark_btn.isChecked():
+            return
+        if not self._shift_held(event):
             return
         base = self._rate_override
         if base is None:

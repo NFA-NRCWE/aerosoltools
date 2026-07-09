@@ -304,6 +304,14 @@ class SinglePSDTab(_PlotTab):
                 self.toolbar.zoom()
         self._draw(preserve=True)
 
+    def _scroll_reserved(self, event) -> bool:
+        """While editing on the plot, the wheel sets a mode's width (not zoom)."""
+        return getattr(self, "edit_btn", None) is not None and self.edit_btn.isChecked()
+
+    def _pan_locked(self) -> bool:
+        """Lock the view while editing so placing modes never shifts it."""
+        return getattr(self, "edit_btn", None) is not None and self.edit_btn.isChecked()
+
     def _selected_row(self) -> int:
         """Index of the selected mode, or -1."""
         row = self.modes_table.currentRow()

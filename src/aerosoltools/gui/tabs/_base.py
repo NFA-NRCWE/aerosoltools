@@ -9,12 +9,14 @@ tab colours stay theme-correct on screen and in exports.
 from __future__ import annotations
 
 import io
+import math
 import os
 import pickle
 import traceback
 
 import matplotlib as mpl
 import matplotlib.colors as mcolors
+import numpy as np
 import pandas as pd
 
 from .. import theme
@@ -79,6 +81,11 @@ class _PlotTab(QtWidgets.QWidget):
     #: Short tag used in the suggested export file name.
     export_tag = "plot"
 
+    #: Whether the shared cursor-zoom / right-drag-pan navigation is attached.
+    #: Panes with their own drag/rotate navigation (e.g. the 3D APS view) opt
+    #: out by setting this False.
+    interactive_nav = True
+
     def __init__(self, main, nrows: int = 1):
         """Build the embedded figure, canvas, toolbar and a Save-plot button.
 
@@ -106,6 +113,17 @@ class _PlotTab(QtWidgets.QWidget):
             "using the light export style."
         )
         self.save_btn.clicked.connect(self.save_figure)
+
+        # Direct-manipulation navigation: scroll to zoom toward the cursor and
+        # right-drag to pan, so the toolbar tools are rarely needed. Panes gate
+        # these while a modal interaction (fit editing, area marking) owns the
+        # mouse — see :meth:`_scroll_reserved` / :meth:`_pan_locked`.
+        self._pan_state = None
+        if self.interactive_nav:
+            self.canvas.mpl_connect("scroll_event", self._nav_scroll)
+            self.canvas.mpl_connect("button_press_event", self._nav_press)
+            self.canvas.mpl_connect("motion_notify_event", self._nav_motion)
+            self.canvas.mpl_connect("button_release_event", self._nav_release)
 
     @property
     def obj(self):
@@ -292,6 +310,95 @@ class _PlotTab(QtWidgets.QWidget):
     def refresh(self) -> None:  # pragma: no cover - overridden
         """Redraw the tab from the current object (overridden by subclasses)."""
         raise NotImplementedError
+
+    # -- shared direct-manipulation navigation ----------------------------
+    # Scroll zooms toward the cursor; right-drag pans. Both defer to a pane's
+    # modal interaction (fit editing, area marking) via the two predicates
+    # below, and to an active toolbar pan/zoom tool, so limits stay locked while
+    # a mode owns the mouse (and the wheel/clicks do that mode's job instead).
+
+    def _scroll_reserved(self, event) -> bool:  # pragma: no cover - overridden
+        """True when a pane mode claims the wheel (so cursor-zoom stands down)."""
+        return False
+
+    def _pan_locked(self) -> bool:  # pragma: no cover - overridden
+        """True when a pane mode locks the view (so right-drag pan is disabled)."""
+        return False
+
+    @staticmethod
+    def _rescale_range(lo, hi, center, scale, is_log):
+        """Zoom a ``(lo, hi)`` range about ``center`` by ``scale`` (log-aware)."""
+        if center is None:
+            return None
+        if is_log:
+            if lo <= 0 or hi <= 0 or center <= 0:
+                return None
+            lo, hi, center = math.log10(lo), math.log10(hi), math.log10(center)
+        new_lo = center - (center - lo) * scale
+        new_hi = center + (hi - center) * scale
+        if is_log:
+            return 10**new_lo, 10**new_hi
+        return new_lo, new_hi
+
+    def _nav_scroll(self, event) -> None:
+        """Zoom the axes under the cursor toward the cursor point on scroll."""
+        ax = event.inaxes
+        if ax is None or self.toolbar.mode:
+            return
+        if self._pan_locked() or self._scroll_reserved(event):
+            return
+        scale = 1.0 / 1.2 if event.step > 0 else 1.2  # scroll up = zoom in
+        xr = self._rescale_range(
+            *ax.get_xlim(), event.xdata, scale, ax.get_xscale() == "log"
+        )
+        yr = self._rescale_range(
+            *ax.get_ylim(), event.ydata, scale, ax.get_yscale() == "log"
+        )
+        if xr is not None:
+            ax.set_xlim(*xr)
+        if yr is not None:
+            ax.set_ylim(*yr)
+        self.canvas.draw_idle()
+
+    def _nav_press(self, event) -> None:
+        """Begin a right-drag pan on the axes under the cursor."""
+        if event.button != 3 or event.inaxes is None:
+            return
+        if self.toolbar.mode or self._pan_locked():
+            return
+        ax = event.inaxes
+        self._pan_state = {
+            "ax": ax,
+            "x": event.x,
+            "y": event.y,
+            "xlim": ax.get_xlim(),
+            "ylim": ax.get_ylim(),
+        }
+
+    def _nav_motion(self, event) -> None:
+        """Pan the grabbed axes so the point under the cursor tracks the drag."""
+        pan = self._pan_state
+        if pan is None or event.x is None or event.y is None:
+            return
+        ax = pan["ax"]
+        trans = ax.transData
+        # Shift the axes' corner points by the cursor's pixel delta, then map
+        # back to data coordinates — correct for linear and log axes alike.
+        corners = np.array(
+            [[pan["xlim"][0], pan["ylim"][0]], [pan["xlim"][1], pan["ylim"][1]]]
+        )
+        disp = trans.transform(corners)
+        disp[:, 0] -= event.x - pan["x"]
+        disp[:, 1] -= event.y - pan["y"]
+        new = trans.inverted().transform(disp)
+        ax.set_xlim(new[0, 0], new[1, 0])
+        ax.set_ylim(new[0, 1], new[1, 1])
+        self.canvas.draw_idle()
+
+    def _nav_release(self, event) -> None:
+        """End a right-drag pan."""
+        if event.button == 3:
+            self._pan_state = None
 
 
 def _active_color_cycle() -> list:

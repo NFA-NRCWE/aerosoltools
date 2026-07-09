@@ -26,6 +26,9 @@ class AeroOpticalTab(_PlotTab):
     """Time-cursor + 3-D bar view of a correlated APS record."""
 
     export_tag = "aero_optical"
+    # The 3-D panel has its own drag-to-rotate navigation and the top panel a
+    # time-cursor drag, so the shared cursor-zoom / right-drag-pan is left off.
+    interactive_nav = False
 
     def __init__(self, main):
         """Build the (empty) controls and the two-panel figure with a cursor."""
