@@ -999,6 +999,11 @@ class MainWindow(QtWidgets.QMainWindow):
         comparison pane). The 2D heatmap, PM-bands and single PSD panes are only
         built for a size-resolved active dataset.
         """
+        # Remember the open tab so a dataset switch that rebuilds the tab set
+        # (e.g. moving between a 1D and a 2D dataset) stays on the same pane when
+        # it still exists, instead of snapping back to "Raw data".
+        prev_tab = self.tabs.current_text() if self._tabs else None
+
         # Detach the shared adjustments box before clearing the tabs, so
         # deleting the old Time series tab does not destroy it.
         self.adjust_box.setParent(None)
@@ -1048,6 +1053,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._tabs += [summ, overlay, correlation, psd_cmp]
 
         self.tabs.finalize()
+        # Restore the previously open pane when it survived the rebuild.
+        if prev_tab:
+            self.tabs.select_text(prev_tab)
         self._tab_sig = self._shape_sig()
 
     def refresh_all(self, reset_view: bool = False) -> None:

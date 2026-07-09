@@ -172,6 +172,24 @@ class TwoRowTabs(QtWidgets.QWidget):
         """Return the currently shown pane (or None)."""
         return self.stack.currentWidget()
 
+    def current_text(self):
+        """Title of the currently shown tab (across both rows), or None."""
+        cur = self.stack.currentIndex()
+        for row in (0, 1):
+            for i, si in enumerate(self._stack_index[row]):
+                if si == cur:
+                    return self.bars[row].tabText(i)
+        return None
+
+    def select_text(self, text: str) -> bool:
+        """Activate the first tab whose title matches ``text``; True if found."""
+        for row in (0, 1):
+            for i in range(self.bars[row].count()):
+                if self.bars[row].tabText(i) == text:
+                    self._activate(row, i)
+                    return True
+        return False
+
     def add_tab(self, widget, text: str, row: int) -> None:
         """Add ``widget`` as a pane, with a tab labelled ``text`` on ``row``."""
         si = self.stack.addWidget(widget)
