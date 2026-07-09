@@ -130,6 +130,40 @@ class MetadataTab(QtWidgets.QWidget):
         crow.addStretch(1)
         layout.addWidget(self.crop_row)
 
+        # -- diffusion-loss correction (size-resolved data only) --------------
+        self.diff_row = QtWidgets.QWidget()
+        frow = QtWidgets.QHBoxLayout(self.diff_row)
+        frow.setContentsMargins(0, 0, 0, 0)
+        frow.addWidget(QtWidgets.QLabel("Diffusion loss — tube length"))
+        self.diff_length = QtWidgets.QLineEdit()
+        self.diff_length.setFixedWidth(56)
+        self.diff_length.setPlaceholderText("m")
+        self.diff_length.setToolTip("Sampling-tube length in metres.")
+        frow.addWidget(self.diff_length)
+        frow.addWidget(QtWidgets.QLabel("m,  inner diameter"))
+        self.diff_diam = QtWidgets.QLineEdit()
+        self.diff_diam.setFixedWidth(56)
+        self.diff_diam.setPlaceholderText("mm")
+        self.diff_diam.setToolTip("Sampling-tube inner diameter in millimetres.")
+        frow.addWidget(self.diff_diam)
+        frow.addWidget(QtWidgets.QLabel("mm,  flow"))
+        self.diff_flow = QtWidgets.QLineEdit()
+        self.diff_flow.setFixedWidth(56)
+        self.diff_flow.setPlaceholderText("L/min")
+        self.diff_flow.setToolTip("Volumetric flow through the tube in L/min.")
+        frow.addWidget(self.diff_flow)
+        frow.addWidget(QtWidgets.QLabel("L/min"))
+        self.diff_btn = QtWidgets.QPushButton("Apply diffusion correction")
+        self.diff_btn.setToolTip(
+            "Divide each size bin by its tube transmission efficiency to recover "
+            "the upstream concentration (per-bin efficiency shown in the size "
+            "table). Structural — use the sidebar Reload to undo."
+        )
+        self.diff_btn.clicked.connect(self._apply_diffusion)
+        frow.addWidget(self.diff_btn)
+        frow.addStretch(1)
+        layout.addWidget(self.diff_row)
+
         # -- tables: general metadata (+ calibration) + per-bin sizes ---------
         tables = QtWidgets.QHBoxLayout()
 
@@ -148,16 +182,17 @@ class MetadataTab(QtWidgets.QWidget):
         left_widget.setLayout(left)
         tables.addWidget(left_widget, stretch=3)
 
-        # Right: the per-bin size table, with a per-bin calibration column.
-        self.bins = QtWidgets.QTableWidget(0, 5)
+        # Right: the per-bin size table, with per-bin calibration and diffusion
+        # transmission-efficiency columns.
+        self.bins = QtWidgets.QTableWidget(0, 6)
         self.bins.setHorizontalHeaderLabels(
-            ["#", "lower (nm)", "mid (nm)", "upper (nm)", "calibration"]
+            ["#", "lower (nm)", "mid (nm)", "upper (nm)", "calibration", "diff. eff."]
         )
         self.bins.verticalHeader().setVisible(False)
         self.bins.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.bins.setToolTip(
             "All size-bin edges and midpoints, plus each bin's calibration "
-            "function when a per-bin calibration is applied."
+            "function and diffusion transmission efficiency when applied."
         )
         tables.addWidget(self.bins, stretch=2)
         layout.addLayout(tables, stretch=1)
@@ -274,6 +309,53 @@ class MetadataTab(QtWidgets.QWidget):
             return
         self.main.refresh_all(reset_view=True)
 
+    def _apply_diffusion(self) -> None:
+        """Correct the active dataset for diffusion losses in the sampling tube."""
+        obj = self.obj
+        if obj is None or not helpers.is_2d(obj):
+            return
+        length = self._to_float(self.diff_length.text())
+        diam_mm = self._to_float(self.diff_diam.text())
+        flow = self._to_float(self.diff_flow.text())
+        if not (length and diam_mm and flow) or min(length, diam_mm, flow) <= 0:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Diffusion correction",
+                "Enter positive tube length (m), inner diameter (mm) and flow "
+                "(L/min).",
+            )
+            return
+        if obj.metadata.get("diffusion_loss_corrected"):
+            ans = QtWidgets.QMessageBox.question(
+                self,
+                "Already corrected",
+                "This dataset has already been diffusion-corrected. Applying "
+                "again compounds the correction. Continue?",
+            )
+            if ans != QtWidgets.QMessageBox.Yes:
+                return
+        try:
+            obj.correct_diffusion_losses(
+                D_tube=diam_mm / 1000.0, L=length, Q=flow, inplace=True
+            )
+        except Exception:
+            QtWidgets.QMessageBox.warning(
+                self, "Diffusion correction failed", traceback.format_exc(limit=1)
+            )
+            return
+        self.main.refresh_all(reset_view=False)
+
+    @staticmethod
+    def _to_float(text: str):
+        """Parse a field as a float, returning None when blank or invalid."""
+        text = text.strip()
+        if not text:
+            return None
+        try:
+            return float(text)
+        except ValueError:
+            return None
+
     # -- rendering ---------------------------------------------------------
     def refresh(self) -> None:
         """Repopulate the metadata/size tables and the density/crop controls."""
@@ -291,6 +373,7 @@ class MetadataTab(QtWidgets.QWidget):
         is2d = helpers.is_2d(obj)
         self.density_row.setVisible(is2d)
         self.crop_row.setVisible(is2d)
+        self.diff_row.setVisible(is2d)
         if is2d:
             self.density_spin.blockSignals(True)
             self.density_spin.setValue(float(getattr(obj, "density", 1.0)))
@@ -343,15 +426,18 @@ class MetadataTab(QtWidgets.QWidget):
         mids = np.asarray(obj.bin_mids, dtype=float)
         ds = self.main.project.active
         cal_texts = calib.bin_calibration_texts(ds) if ds is not None else None
+        eff = obj.metadata.get("diffusion_efficiency")
         self.bins.setRowCount(len(mids))
         for i, mid in enumerate(mids):
             cal = cal_texts[i] if (cal_texts and i < len(cal_texts)) else ""
+            diff = f"{eff[i]:.3f}" if (eff is not None and i < len(eff)) else ""
             cells = [
                 str(i + 1),
                 f"{edges[i]:g}",
                 f"{mid:g}",
                 f"{edges[i + 1]:g}",
                 cal,
+                diff,
             ]
             for c, text in enumerate(cells):
                 self.bins.setItem(i, c, QtWidgets.QTableWidgetItem(text))
