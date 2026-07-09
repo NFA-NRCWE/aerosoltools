@@ -33,6 +33,14 @@ class AeroOpticalTab(_PlotTab):
         self.controls.addWidget(
             QtWidgets.QLabel("Drag the line on the top plot to pick a time.")
         )
+        self.normalize = QtWidgets.QCheckBox("Normalize (dlogDp)")
+        self.normalize.setToolTip(
+            "Divide each cell by BOTH log bin widths — dN/(dlogDp_optical · "
+            "dlogDp_aerodynamic) — so bins of unequal width are comparable. The "
+            "top total-concentration panel stays on the raw counts."
+        )
+        self.normalize.stateChanged.connect(self.refresh)
+        self.controls.addWidget(self.normalize)
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
@@ -41,7 +49,8 @@ class AeroOpticalTab(_PlotTab):
         self._obj = None  # currently drawn correlated object
         self._times = None  # correlation time index
         self._total = None  # total concentration per time
-        self._matrix = None  # (n_times, n_optical, n_aero)
+        self._matrix = None  # raw (n_times, n_optical, n_aero)
+        self._disp = None  # displayed matrix (raw or dlogDp-normalized)
         self._opt_edges = None
         self._aero_edges = None
         self._norm = None
@@ -80,10 +89,21 @@ class AeroOpticalTab(_PlotTab):
         n_aero = len(obj.bin_mids)
         # (n_times, n_optical, n_aero) — matrix columns are (optical, aero).
         self._matrix = corr.to_numpy(dtype=float).reshape(len(corr), n_opt, n_aero)
+        # Total concentration is always the raw (physical) sum over both axes.
         self._total = np.nansum(self._matrix, axis=(1, 2))
         self._opt_edges = np.asarray(obj.optical.bin_edges, dtype=float)
         self._aero_edges = np.asarray(obj.bin_edges, dtype=float)
-        gmax = np.nanmax(self._matrix) if self._matrix.size else 1.0
+        # Displayed matrix: optionally dN/(dlogDp_optical · dlogDp_aerodynamic),
+        # so unequally sized bins are comparable across both size axes.
+        if self.normalize.isChecked():
+            dlog_opt = np.diff(np.log10(self._opt_edges))  # length n_opt
+            dlog_aero = np.diff(np.log10(self._aero_edges))  # length n_aero
+            self._disp = self._matrix / (
+                dlog_opt[None, :, None] * dlog_aero[None, None, :]
+            )
+        else:
+            self._disp = self._matrix
+        gmax = np.nanmax(self._disp) if self._disp.size else 1.0
         self._norm = Normalize(vmin=0.0, vmax=gmax if gmax > 0 else 1.0)
         self._sel = min(self._sel, len(self._times) - 1)
 
@@ -97,13 +117,19 @@ class AeroOpticalTab(_PlotTab):
             ax=self.ax_bot,
             pad=0.08,
             shrink=0.7,
-            label=f"Concentration ({obj.unit})",
+            label=self._conc_label(obj),
         )
 
         self._draw_top()
         self._draw_bottom()
         self._sync_toolbar_home()
         self.canvas.draw_idle()
+
+    def _conc_label(self, obj) -> str:
+        """Colourbar label reflecting whether the cells are dlogDp-normalized."""
+        if self.normalize.isChecked():
+            return f"dN / (dlogDp_opt · dlogDp_aero)  ({obj.unit})"
+        return f"Concentration ({obj.unit})"
 
     def _draw_top(self) -> None:
         """Total concentration vs time with the draggable time cursor."""
@@ -124,7 +150,7 @@ class AeroOpticalTab(_PlotTab):
         """3-D bar plot of the optical×aerodynamic distribution at the cursor."""
         ax = self.ax_bot
         ax.clear()
-        mat = self._matrix[self._sel]  # (n_optical, n_aero)
+        mat = self._disp[self._sel]  # (n_optical, n_aero)
         xe = np.log10(self._opt_edges)  # optical on x
         ye = np.log10(self._aero_edges)  # aerodynamic on y
         xs, ys, zs, dxs, dys, dzs, colors = [], [], [], [], [], [], []
@@ -147,7 +173,11 @@ class AeroOpticalTab(_PlotTab):
         self._log_ticks(ax.set_yticks, ax.set_yticklabels, self._aero_edges)
         ax.set_xlabel("Optical Ø (nm)", fontsize=8)
         ax.set_ylabel("Aerodynamic Ø (nm)", fontsize=8)
-        ax.set_zlabel(f"Conc. ({self._obj.unit})", fontsize=8)
+        if self.normalize.isChecked():
+            zlabel = "Norm. conc."
+        else:
+            zlabel = f"Conc. ({self._obj.unit})"
+        ax.set_zlabel(zlabel, fontsize=8)
         ax.tick_params(labelsize=7)
         ax.set_title(
             f"t = {self._times[self._sel].strftime('%Y-%m-%d %H:%M:%S')}", fontsize=9
