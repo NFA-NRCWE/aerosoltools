@@ -13,7 +13,9 @@ from __future__ import annotations
 import traceback
 
 from .. import helpers
-from ..qt import QtCore, QtWidgets
+from ..project import shade_of
+from ..qt import QtCore, QtGui, QtWidgets
+from ..sidebar import _color_icon
 from . import _psddraw as draw
 from ._base import _active_color_cycle, _PlotTab
 
@@ -68,11 +70,21 @@ class ComparisonPSDTab(_PlotTab):
             "Tick the 2D datasets and activities to compare. One mean-PSD curve "
             "is drawn per dataset × activity."
         )
+        # Per-curve colour swatches (click to override the auto shade).
+        self.color_list = QtWidgets.QListWidget()
+        self.color_list.setToolTip(
+            "One row per drawn curve. Each activity defaults to a shade of its "
+            "dataset's colour; click a row to pick a custom colour."
+        )
+        self.color_list.itemClicked.connect(self._on_swatch_clicked)
+
         side = QtWidgets.QVBoxLayout()
         side.addWidget(QtWidgets.QLabel("Datasets to compare:"))
         side.addWidget(self.ds_list, stretch=1)
         side.addWidget(QtWidgets.QLabel("Activities:"))
         side.addWidget(self.act_list, stretch=1)
+        side.addWidget(QtWidgets.QLabel("Curve colours (click to change):"))
+        side.addWidget(self.color_list, stretch=1)
         side_widget = QtWidgets.QWidget()
         side_widget.setLayout(side)
         self._split_with_side(side_widget, sizes=(760, 320))
@@ -134,29 +146,41 @@ class ComparisonPSDTab(_PlotTab):
         self._sync_activities()
         self._draw()
 
+    def _activity_color(self, ds, act, n_selected: int) -> str:
+        """Resolve a curve's colour: user override, else a shade of the base.
+
+        With a single activity selected the datasets keep their own base colours
+        (so a multi-instrument comparison is read by dataset colour); with
+        several activities, each activity auto-shades its dataset's base colour
+        (light/dark variants) so same-dataset curves stay distinguishable. A
+        stored override always wins.
+        """
+        override = ds.activity_colors.get(act)
+        if override:
+            return override
+        if n_selected <= 1:
+            return ds.color or _active_color_cycle()[0]
+        names = ["All data"] + self.main.project.user_activities()
+        k = names.index(act) if act in names else 0
+        return shade_of(ds.color, k, len(names))
+
     def _draw_on(self, ax) -> None:
         """Overlay one mean-PSD curve per (ticked dataset × selected activity)."""
         ax.clear()
         datasets = [d for d in self._datasets_2d if d.psd_on]
         activities = self._selected_activities()
-        cycle = _active_color_cycle()
         normalize = self.normalize.isChecked()
         show_band = self.band.isChecked()
         bars = self.display_mode.currentText() == "Bars"
-        multi_ds = len(datasets) > 1
         single = len(datasets) == 1 or len(activities) == 1
 
         plotted = 0
-        ci = 0
+        drawn: list = []  # (ds, act, color, label) for the swatch list
         for ds in datasets:
             for act in activities:
                 if act not in ds.obj.activities:
                     continue
-                if multi_ds and ds.color:
-                    color = ds.color
-                else:
-                    color = cycle[ci % len(cycle)]
-                    ci += 1
+                color = self._activity_color(ds, act, len(activities))
                 # Label by whichever dimension varies, to keep the legend tidy.
                 if single and len(activities) == 1:
                     label = ds.label
@@ -176,6 +200,9 @@ class ComparisonPSDTab(_PlotTab):
                 )
                 if xy is not None:
                     plotted += 1
+                    drawn.append((ds, act, color, label))
+
+        self._sync_color_list(drawn)
 
         if not plotted:
             msg = (
@@ -193,6 +220,32 @@ class ComparisonPSDTab(_PlotTab):
         if ylim is not None:
             ax.set_ylim(*ylim)
         ax.legend(loc="upper right", fontsize=8)
+
+    def _sync_color_list(self, drawn: list) -> None:
+        """Populate the swatch list with one row per drawn curve."""
+        self.color_list.blockSignals(True)
+        self.color_list.clear()
+        for ds, act, color, label in drawn:
+            item = QtWidgets.QListWidgetItem(_color_icon(color), label)
+            item.setData(QtCore.Qt.UserRole, (ds.id, act, color))
+            self.color_list.addItem(item)
+        self.color_list.blockSignals(False)
+
+    def _on_swatch_clicked(self, item) -> None:
+        """Open a colour dialog for a curve and store the chosen override."""
+        data = item.data(QtCore.Qt.UserRole)
+        if not data:
+            return
+        ds_id, act, color = data
+        ds = self.main.project.get(ds_id)
+        if ds is None:
+            return
+        chosen = QtWidgets.QColorDialog.getColor(
+            QtGui.QColor(color), self, f"Colour for {ds.label} – {act}"
+        )
+        if chosen.isValid():
+            ds.activity_colors[act] = chosen.name()
+            self._draw()
 
     def _draw(self) -> None:
         """Redraw onto the embedded axis, reporting any error in the figure."""

@@ -46,6 +46,36 @@ DEFAULT_PALETTE = [
 ]
 
 
+def shade_of(base: Optional[str], k: int, n: int) -> str:
+    """Return the ``k``-th of ``n`` distinct lightness shades of ``base``.
+
+    Used to colour several activities of one dataset: they read as clearly
+    related to the dataset's base colour (e.g. shades of green) while staying
+    distinguishable. ``k=0..n-1`` maps to a darker→lighter spread around the base
+    lightness; a single shade (``n<=1``) returns the base unchanged. Falls back
+    to a mid grey when ``base`` is unset/invalid.
+    """
+    import colorsys
+
+    from matplotlib.colors import to_hex, to_rgb
+
+    if not base:
+        base = "#7f7f7f"
+    try:
+        r, g, b = to_rgb(base)
+    except (ValueError, TypeError):
+        r, g, b = to_rgb("#7f7f7f")
+    if n <= 1:
+        return to_hex((r, g, b))
+    h, lightness, s = colorsys.rgb_to_hls(r, g, b)
+    # Spread the lightness multiplicatively from ~0.7·L (dark) to ~1.3·L (light).
+    t = k / (n - 1)
+    factor = 0.7 + 0.6 * t
+    new_l = min(0.92, max(0.12, lightness * factor))
+    nr, ng, nb = colorsys.hls_to_rgb(h, new_l, s)
+    return to_hex((nr, ng, nb))
+
+
 class Dataset:
     """One loaded file (or a derived/combined result) inside a project."""
 
@@ -103,6 +133,10 @@ class Dataset:
         # instrument's PSD for one activity; persisted in the project file and
         # dropped when the activity is edited or removed (see Project).
         self.psd_fits: Dict[str, dict] = {}
+        # Per-activity plot colours for the PSD-comparison pane, keyed by
+        # activity name. Empty by default: each activity then auto-shades the
+        # dataset's base colour; a user override is stored here and persisted.
+        self.activity_colors: Dict[str, str] = {}
 
     @property
     def instrument(self) -> str:

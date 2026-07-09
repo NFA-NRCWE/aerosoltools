@@ -156,6 +156,7 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
                 "calibration_enabled": ds.calibration_enabled,
                 "calibration_baseline": cal_rel,
                 "psd_fits": _clean_psd_fits(ds.psd_fits),
+                "activity_colors": dict(ds.activity_colors),
             }
         )
 
@@ -217,6 +218,7 @@ def load_project(folder: str) -> tuple[Project, str]:
             ds.contributing_files = [os.path.join(folder, r) for r in contributing]
         ds.color = entry.get("color")  # None for pre-colour projects
         ds.psd_fits = _clean_psd_fits(entry.get("psd_fits", {}))
+        ds.activity_colors = dict(entry.get("activity_colors", {}) or {})
         # Restore the calibration spec/state and its uncalibrated baseline (the
         # pickled obj above already reflects the on/off state). Older projects
         # simply have none.
