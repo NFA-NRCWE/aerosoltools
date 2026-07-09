@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from aerosoltools.loaders import (
+    Load_Aethalometer_file,
     Load_APS_file,
     Load_CPC_file,
     Load_DiSCmini_file,
@@ -28,6 +29,7 @@ from aerosoltools.loaders.Discmini import (
 @pytest.mark.parametrize(
     "loader_func, filename",
     [
+        (Load_Aethalometer_file, "Sample_Aetholometer.csv"),
         (Load_APS_file, "Sample_APS_aero.txt"),
         (Load_APS_file, "Sample_APS_correlated.txt"),
         (Load_CPC_file, "Sample_CPC_Direct.txt"),
@@ -179,6 +181,62 @@ def test_ranger_sniffer_identifies_non_chlorine_heads(tmp_path):
 
     assert is_Ranger_file(str(path)) is True
     assert identify_instrument(str(path)) == "Ranger"
+
+
+def test_aethalometer_per_channel_units():
+    """Aethalometer stores per-channel unit/dtype dicts (not a single scalar).
+
+    The AerosolAlt convention is a name→value dict keyed by channel; the BC
+    channels are ng/m³ mass concentrations and (when present) the Ångström
+    exponent AAE is dimensionless. A scalar unit here would make
+    ``summarize_activities`` iterate over the characters of the string.
+    """
+    import contextlib
+    import io
+
+    aeth = Load_Aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    unit, dtype = aeth.metadata["unit"], aeth.metadata["dtype"]
+    assert isinstance(unit, dict) and isinstance(dtype, dict)
+    channels = [c for c in aeth.data.columns if c != "All data"]
+    assert channels, "expected at least the spectral BC channels"
+    for ch in channels:
+        if "AAE" in ch:
+            assert unit[ch] == "" and dtype[ch] == "AAE"
+        else:
+            assert unit[ch] == "ng/m³" and dtype[ch] == "dM"
+
+    # With a proper unit dict the per-channel summary runs (it prints a table).
+    with contextlib.redirect_stdout(io.StringIO()):
+        aeth.summarize_activities()
+
+
+def test_calibration_never_negative():
+    """Applying a calibration clamps concentrations at 0 (total and per-bin)."""
+    from aerosoltools.gui import calibration as calib
+
+    # 1D total-concentration calibration with a large negative offset.
+    cpc = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    calib._apply_spec_to_obj(
+        cpc,
+        {"basis": "Total concentration", "m": 1.0, "b": -1e12, "include_offset": True},
+    )
+    assert (cpc.total_concentration.dropna() >= 0).all()
+
+    # 2D per-bin calibration with negative offsets on every bin.
+    ops = Load_OPS_file(_data_path("Sample_OPS.csv"))
+    n = len(ops.size_data.columns)
+    calib._apply_spec_to_obj(
+        ops,
+        {
+            "basis": "Per size bin",
+            "ms": [1.0] * n,
+            "bs": [-1e12] * n,
+            "applied": [True] * n,
+            "include_offset": True,
+        },
+    )
+    assert (ops.size_data.to_numpy() >= 0).all()
+    assert (ops.total_concentration.dropna() >= 0).all()
 
 
 def test_discmini_serial_normalization():

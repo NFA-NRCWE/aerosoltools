@@ -173,6 +173,21 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
         return self._meta.get("instrument", "Unknown instrument")
 
     @property
+    def measurement(self):
+        """Human-readable name of the measured quantity, if known.
+
+        Returns:
+            The label describing *what* the primary series represents — for
+            example ``"Cl₂"`` or ``"NO₂"`` for a gas monitor — as set by the
+            loader in ``metadata["measurement"]``. Returns ``None`` when no
+            explicit label was stored (in which case callers fall back to a
+            generic name such as ``"Total concentration"`` or the channel name).
+            This is distinct from :attr:`dtype` (``dN``/``dM``/…) and
+            :attr:`unit`; it names the quantity rather than its basis or units.
+        """
+        return self._meta.get("measurement", None)
+
+    @property
     def metadata(self) -> Dict:
         """Metadata associated with the dataset.
 

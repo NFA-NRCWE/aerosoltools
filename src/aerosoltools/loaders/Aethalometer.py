@@ -32,8 +32,10 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> AerosolAlt:
               - ``"serial_number"`` — Aethalometer serial number.
               - ``"optical_config"`` — optical configuration string.
               - ``"instrument"`` — set to ``"Aethalometer"``.
-              - ``"unit"`` — set to ``"ng/m³"``.
-              - ``"dtype"`` — set to ``"dm"`` (mass concentration).
+              - ``"unit"`` — per-channel dict: ``"ng/m³"`` for the BC
+                channels and ``""`` (dimensionless) for ``"AAE"``.
+              - ``"dtype"`` — per-channel dict: ``"dM"`` (mass concentration)
+                for the BC channels and ``"AAE"`` for the Ångström exponent.
 
             If ``extra_data=True``, additional columns that are not part of
             the core BC channels are stored in ``.extra_data``.
@@ -133,13 +135,12 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> AerosolAlt:
     # Parse timestamps to pandas datetime
     df["Datetime"] = pd.to_datetime(df["Datetime"], format="%Y-%m-%dT%H:%M:%S")
 
-    # Extract instrument metadata from the first row
+    # Extract instrument metadata from the first row. Per-channel unit/dtype
+    # dicts are attached below, once the core channels are known.
     meta = {
         "serial_number": df["Serial number"].iloc[0],
         "optical_config": df["Optical config"].iloc[0],
         "instrument": "Aethalometer",
-        "unit": "ng/m³",
-        "dtype": "dm",
     }
 
     # Remove non-measurement / header-like columns no longer needed
@@ -176,6 +177,13 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> AerosolAlt:
             "Green BCc",
             "Red BCc",
         ]
+
+    # Attach per-channel unit/dtype metadata (the AerosolAlt convention: a
+    # name→value dict keyed by channel). The BC channels are mass
+    # concentrations in ng/m³; the Ångström exponent (AAE) is dimensionless.
+    channels = core_cols[1:]  # everything except "Datetime"
+    meta["unit"] = {c: ("" if "AAE" in c else "ng/m³") for c in channels}
+    meta["dtype"] = {c: ("AAE" if "AAE" in c else "dM") for c in channels}
 
     # Build AerosolAlt object from core channels and attach metadata
     data = df[core_cols]
