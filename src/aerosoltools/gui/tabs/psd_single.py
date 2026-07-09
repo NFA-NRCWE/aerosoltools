@@ -16,6 +16,7 @@ import traceback
 
 import numpy as np
 
+from ...aerosol3d import Aerosol3d
 from .. import helpers
 from ..qt import QtCore, QtWidgets
 from . import _psddraw as draw
@@ -41,12 +42,29 @@ class SinglePSDTab(_PlotTab):
         self._target_obj = None
         self._target_xy = None  # (bin_mids, mean) of the shown PSD, for fit/R²
         self._overlay_artists: list = []
+        self._drawn_obj = None  # source object of the last draw (dataset/axis switch)
 
         self.controls.addWidget(QtWidgets.QLabel("Task:"))
         self.task = QtWidgets.QComboBox()
         self.task.setToolTip("Which activity of the active dataset to show and fit.")
         self.task.currentIndexChanged.connect(self._on_task_changed)
         self.controls.addWidget(self.task)
+
+        # APS aerodynamic/optical axis toggle (correlated APS only). Local to
+        # this pane: it chooses which axis' PSD is shown and fitted here, with
+        # fits stored separately per axis, and does not touch the global "Show
+        # axis" selection the other tabs follow.
+        self.axis_combo = QtWidgets.QComboBox()
+        self.axis_combo.addItem("Aerodynamic", "aerodynamic")
+        self.axis_combo.addItem("Optical", "optical")
+        self.axis_combo.setToolTip(
+            "For a correlated APS, show and fit the aerodynamic or the optical "
+            "size distribution."
+        )
+        self.axis_combo.currentIndexChanged.connect(self._on_axis_changed)
+        self.axis_label = QtWidgets.QLabel("Axis:")
+        self.controls.addWidget(self.axis_label)
+        self.controls.addWidget(self.axis_combo)
 
         self.normalize = QtWidgets.QCheckBox("Normalize (dx/dlogDp)")
         self.normalize.setChecked(True)
@@ -185,9 +203,37 @@ class SinglePSDTab(_PlotTab):
         """The active dataset, or None."""
         return self.main.project.active
 
+    def _is_correlated_aps(self) -> bool:
+        """True when the active dataset is a correlated APS (two size axes)."""
+        obj = self.main.active_obj
+        return isinstance(obj, Aerosol3d) and obj.is_correlated
+
+    def _source(self):
+        """Object whose PSD this pane shows: the chosen APS axis, else the active.
+
+        For a correlated APS the local axis toggle picks the aerodynamic or
+        optical :class:`Aerosol2D` view (independent of the global axis); every
+        other dataset uses the active object directly.
+        """
+        if self._is_correlated_aps():
+            return self.main.active_obj.axis_view(self.axis_combo.currentData())
+        return self.obj
+
     def _current_task(self) -> str:
         """The selected task name (falling back to 'All data')."""
         return self.task.currentText() or "All data"
+
+    def _fit_key(self) -> str:
+        """Storage key for the current fit — the task, split per APS axis.
+
+        Aerodynamic keeps the plain task name (back-compatible); the optical
+        axis gets a suffixed key so a fit on one axis never overwrites or shows
+        on the other (their diameters differ).
+        """
+        task = self._current_task()
+        if self._is_correlated_aps() and self.axis_combo.currentData() == "optical":
+            return f"{task} [optical]"
+        return task
 
     def _sync_task(self) -> None:
         """Repopulate the task drop-down from the active dataset's activities."""
@@ -213,7 +259,7 @@ class SinglePSDTab(_PlotTab):
             self._modes, self._fitted = [], False
             self._write_modes_to_table()
             return
-        rec = ds.psd_fits.get(self._current_task())
+        rec = ds.psd_fits.get(self._fit_key())
         if rec and rec.get("modes"):
             self._modes = fit.clean_modes(rec["modes"])
             self._fitted = bool(rec.get("optimized"))
@@ -226,17 +272,22 @@ class SinglePSDTab(_PlotTab):
         ds = self._active_ds
         if ds is None:
             return
-        task = self._current_task()
+        key = self._fit_key()
         if self._modes:
-            ds.psd_fits[task] = {
+            ds.psd_fits[key] = {
                 "modes": fit.clean_modes(self._modes),
                 "optimized": bool(self._fitted),
             }
         else:
-            ds.psd_fits.pop(task, None)
+            ds.psd_fits.pop(key, None)
 
     def _on_task_changed(self, _index: int = 0) -> None:
         """Task changed: load that task's stored modes and redraw."""
+        self._load_target_fit()
+        self._draw()
+
+    def _on_axis_changed(self, _index: int = 0) -> None:
+        """APS axis changed: load that axis' stored fit for the task and redraw."""
         self._load_target_fit()
         self._draw()
 
@@ -316,7 +367,7 @@ class SinglePSDTab(_PlotTab):
 
     def _add_mode(self) -> None:
         """Append a default mode centred on the dataset's size range."""
-        obj = self.obj
+        obj = self._source()
         if obj is None or not helpers.is_2d(obj):
             return
         bm = np.asarray(obj.bin_mids, dtype=float)
@@ -430,7 +481,7 @@ class SinglePSDTab(_PlotTab):
     # -- fitting -----------------------------------------------------------
     def _run_fit(self) -> None:
         """Optimise the seeded modes on the shown PSD via ``_psdfit.run_fit``."""
-        obj = self.obj
+        obj = self._source()
         if obj is None or not helpers.is_2d(obj):
             self.fit_status.setText("No size-resolved dataset to fit.")
             return
@@ -480,6 +531,10 @@ class SinglePSDTab(_PlotTab):
     def refresh(self) -> None:
         """Re-sync the task list, reload the fit and redraw."""
         self._sync_task()
+        # Show the APS axis toggle only for a correlated APS.
+        is_aps = self._is_correlated_aps()
+        self.axis_label.setVisible(is_aps)
+        self.axis_combo.setVisible(is_aps)
         self._load_target_fit()
         self._draw()
 
@@ -489,7 +544,7 @@ class SinglePSDTab(_PlotTab):
         self._overlay_artists = []
         self._target_obj = None
         self._target_xy = None
-        obj = self.obj
+        obj = self._source()
         if obj is None or not helpers.is_2d(obj):
             ax.text(
                 0.5,
@@ -649,17 +704,24 @@ class SinglePSDTab(_PlotTab):
         """Redraw onto the embedded axis, reporting any error in the figure.
 
         Keeps the current zoom/pan while a fit is being edited (so placing/typing
-        modes never snaps the view back).
+        modes never snaps the view back) — but a change of the shown object
+        (a different dataset, or the APS axis toggle) always rescales, so the
+        home/reset view follows the new data instead of the previous dataset's
+        stale limits.
         """
-        preserve = preserve or self.edit_btn.isChecked()
+        src = self._source()
+        changed = src is not self._drawn_obj
+        preserve = (preserve or self.edit_btn.isChecked()) and not changed
         prev = None
         if preserve and self.ax.has_data():
             prev = (self.ax.get_xlim(), self.ax.get_ylim())
         try:
             self._draw_on(self.ax)
         except Exception:
+            self._drawn_obj = src
             self._show_message("Could not draw PSD:\n" + traceback.format_exc(limit=1))
             return
+        self._drawn_obj = src
         if prev is not None:
             self.ax.set_xlim(prev[0])
             self.ax.set_ylim(prev[1])
