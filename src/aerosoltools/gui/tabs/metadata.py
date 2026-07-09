@@ -51,6 +51,23 @@ class MetadataTab(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout(self)
 
+        # -- measurement label (all datasets) ---------------------------------
+        self.meas_row = QtWidgets.QWidget()
+        mrow = QtWidgets.QHBoxLayout(self.meas_row)
+        mrow.setContentsMargins(0, 0, 0, 0)
+        mrow.addWidget(QtWidgets.QLabel("Measurement:"))
+        self.meas_edit = QtWidgets.QLineEdit()
+        self.meas_edit.setMaximumWidth(240)
+        self.meas_edit.setToolTip(
+            "Name of the measured quantity (e.g. 'Cl₂', 'IR BCc'). Shown on the "
+            "y-axis and legend across the panes instead of the generic 'Total "
+            "concentration'. Clear the field to restore the default label."
+        )
+        self.meas_edit.editingFinished.connect(self._apply_measurement)
+        mrow.addWidget(self.meas_edit)
+        mrow.addStretch(1)
+        layout.addWidget(self.meas_row)
+
         # -- density (size-resolved data only) --------------------------------
         self.density_row = QtWidgets.QWidget()
         drow = QtWidgets.QHBoxLayout(self.density_row)
@@ -194,6 +211,21 @@ class MetadataTab(QtWidgets.QWidget):
         """Switch the active APS axis (aerodynamic/optical) for all tabs."""
         self.main.set_active_axis(self.axis_combo.currentData() or "aerodynamic")
 
+    def _apply_measurement(self) -> None:
+        """Store an edited measurement label on the active object (or clear it)."""
+        obj = self.obj
+        if obj is None:
+            return
+        text = self.meas_edit.text().strip()
+        current = obj.metadata.get("measurement")
+        if text == (current or "") or (not text and current is None):
+            return  # no change
+        if text:
+            obj._meta["measurement"] = text
+        else:
+            obj._meta.pop("measurement", None)
+        self.main.refresh_all(reset_view=False)
+
     def _on_cal_toggle(self, checked: bool) -> None:
         """Enable/disable the active dataset's calibration and refresh all panes."""
         ds = self.main.project.active
@@ -250,6 +282,11 @@ class MetadataTab(QtWidgets.QWidget):
             self.table.setRowCount(0)
             self.bins.setRowCount(0)
             return
+
+        # Seed the editable measurement label from the resolved default.
+        self.meas_edit.blockSignals(True)
+        self.meas_edit.setText(helpers.measurement_label(obj)[0])
+        self.meas_edit.blockSignals(False)
 
         is2d = helpers.is_2d(obj)
         self.density_row.setVisible(is2d)

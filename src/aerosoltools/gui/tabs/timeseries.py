@@ -617,16 +617,28 @@ class TimeSeriesTab(_PlotTab):
             conv.dtype_converter(name)
             series = conv.total_concentration
             dtype, unit = helpers.describe(conv)
+            ylabel = f"{helpers.base_dtype(dtype)}, {unit}".strip(", ")
+        elif kind == "total":
+            # Name the primary series by its measured quantity (e.g. "Cl₂") so a
+            # gas/BC dataset is not mislabelled as a generic "Total concentration".
+            series = helpers.series_for(self.obj, kind, name)
+            mname, unit = helpers.measurement_label(self.obj)
+            ylabel = f"{mname}, {unit}".strip(", ")
         else:
             series = helpers.series_for(self.obj, kind, name)
-            col_for_units = None if kind == "total" else name
-            dtype, unit = helpers.describe(self.obj, col_for_units)
+            dtype, unit = helpers.describe(self.obj, name)
+            ylabel = f"{helpers.base_dtype(dtype)}, {unit}".strip(", ")
+
+        # Draw the line in the active dataset's stable colour so the same
+        # instrument reads the same across the single-dataset panes.
+        ds = self.main.project.active
+        color = (ds.color if ds is not None else None) or None
 
         ax.clear()
-        ax.plot(series.index, series.to_numpy(), lw=1.5)
+        ax.plot(series.index, series.to_numpy(), lw=1.5, color=color)
 
         ax.set_xlabel("Time")
-        ax.set_ylabel(f"{helpers.base_dtype(dtype)}, {unit}".strip(", "))
+        ax.set_ylabel(ylabel)
         ax.grid(True, alpha=0.3)
         ax.xaxis.set_major_formatter(
             mdates.ConciseDateFormatter(mdates.AutoDateLocator())

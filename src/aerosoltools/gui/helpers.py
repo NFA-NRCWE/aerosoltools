@@ -23,7 +23,9 @@ __all__ = [
     "base_dtype",
     "is_2d",
     "describe",
+    "measurement_label",
     "plottable_columns",
+    "grouped_columns",
     "series_for",
     "user_activities",
     "shade_activities",
@@ -107,6 +109,40 @@ def describe(obj: Aerosol1D, column: str | None = None) -> Tuple[str, str]:
     return _resolve(dtype), _resolve(unit)
 
 
+def measurement_label(obj: Aerosol1D, column: str | None = None) -> Tuple[str, str]:
+    """Resolve a ``(name, unit)`` display pair for a dataset's primary series.
+
+    ``name`` is *what* the series measures — the loader-supplied
+    :attr:`~aerosoltools.Aerosol1D.measurement` (e.g. ``"Cl₂"``) when set, else
+    the selected/primary channel name for a multi-channel object, else the
+    generic ``"Total concentration"``. ``unit`` comes from :func:`describe`, so
+    per-channel dict units on :class:`AerosolAlt` are handled. This lets panes
+    label a gas or black-carbon series correctly instead of always writing
+    "Total concentration".
+
+    Args:
+        obj: The aerosol object.
+        column: A specific column to label (its own name/unit); ``None`` for the
+            object's primary series.
+
+    Returns:
+        A ``(name, unit)`` tuple of display strings.
+    """
+    _dtype, unit = describe(obj, column)
+    name = getattr(obj, "measurement", None)
+    if not name:
+        if column is not None:
+            name = column
+        elif "Total_conc" in obj.data.columns:
+            name = "Total concentration"
+        else:
+            # Multi-channel object: the primary is the first non-activity column.
+            activities = set(getattr(obj, "activities", []))
+            data_cols = [c for c in obj.data.columns if c not in activities]
+            name = data_cols[0] if data_cols else "Total concentration"
+    return str(name), unit
+
+
 def plottable_columns(obj: Aerosol1D) -> List[Tuple[str, str, str]]:
     """Enumerate columns that can be plotted as a 1D time series.
 
@@ -144,6 +180,24 @@ def plottable_columns(obj: Aerosol1D) -> List[Tuple[str, str, str]]:
                 cols.append((f"{name} (extra)", "extra", name))
 
     return cols
+
+
+def grouped_columns(
+    obj: Aerosol1D,
+) -> Tuple[List[Tuple[str, str, str]], List[Tuple[str, str, str]]]:
+    """Split :func:`plottable_columns` into ``(standard, extra)`` groups.
+
+    ``standard`` holds the canonical total plus the core data channels;
+    ``extra`` holds the (often numerous) housekeeping/diagnostic columns. The
+    pickers show the standard group up front and tuck the extra group behind a
+    labelled separator so instruments with 20–30 diagnostic channels don't
+    overwhelm the selector. Non-plottable columns are already excluded upstream.
+    """
+    standard: List[Tuple[str, str, str]] = []
+    extra: List[Tuple[str, str, str]] = []
+    for label, kind, name in plottable_columns(obj):
+        (extra if kind == "extra" else standard).append((label, kind, name))
+    return standard, extra
 
 
 def series_for(obj: Aerosol1D, kind: str, name: str) -> pd.Series:
