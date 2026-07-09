@@ -1,4 +1,11 @@
-"""Multi-dataset time-series overlay comparison tab."""
+"""Multi-dataset time-series overlay comparison tab.
+
+Overlays up to **three metrics** over time for several datasets at once. Colour
+identifies the dataset; line style identifies the *metric slot* (solid, dash-dot,
+dotted); and each metric is assigned to one of up to three y-axes (left, right,
+2nd right) so quantities in different units stay readable together. A per-dataset
+view-only time shift lets the user slide instruments in time to line peaks up.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +14,7 @@ import traceback
 import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
+from matplotlib.lines import Line2D
 
 from ..._core import _shading
 from .. import helpers
@@ -15,9 +23,43 @@ from ..widgets import ThresholdControls, WheelLineEdit
 from . import _autoscale
 from ._base import _active_color_cycle, _PlotTab
 
-#: Line styles encoding which y-axis a series is read against (axis 0/1/2).
-_AXIS_STYLES = ["-", "--", ":"]
-_AXIS_WORDS = ["solid, left", "dashed, right", "dotted, right"]
+#: Line styles encoding which *metric slot* a series belongs to. Slot 1 (the
+#: primary, usually total concentration) is solid so a fast-oscillating,
+#: high-time-resolution series (e.g. a CPC) still reads clearly; the secondary
+#: slots use dash-dot / dotted, which stay distinguishable when zoomed out.
+_METRIC_STYLES = ["-", "-.", ":"]
+
+#: Sentinel shown in the metric pickers for an unused slot.
+_NONE = "— none —"
+
+#: Words describing each axis by its drawing position (left, right, 2nd right).
+_POSITION_WORDS = ["Left axis", "Right axis", "2nd right axis"]
+
+#: Concentration-basis options for the "Total concentration" metric only.
+_BASES = [
+    ("dN (number)", "dN"),
+    ("dM (mass)", "dM"),
+    ("dS (surface)", "dS"),
+    ("dV (volume)", "dV"),
+]
+
+#: Spellings of number-concentration units that should be treated as one unit
+#: (so number instruments share a y-axis regardless of the loader's wording).
+_NUMBER_UNIT_KEYS = {
+    "cm⁻³",
+    "cm-3",
+    "cm^-3",
+    "#/cm³",
+    "#/cm3",
+    "1/cm³",
+    "1/cm3",
+    "p/cm³",
+    "p/cm3",
+    "particles/cm³",
+    "particles/cm3",
+    "n/cm³",
+    "n/cm3",
+}
 
 
 def _format_hms(td: pd.Timedelta) -> str:
@@ -59,19 +101,29 @@ def _parse_hms(text: str):
     return pd.Timedelta(seconds=sign * (h * 3600 + m * 60 + s))
 
 
+def _canon_unit(unit: str) -> str:
+    """Canonicalise a unit string so number-concentration spellings compare equal."""
+    key = (unit or "").strip().lower().replace(" ", "")
+    if key in {u.lower() for u in _NUMBER_UNIT_KEYS}:
+        return "cm⁻³"
+    return (unit or "").strip()
+
+
 class OverlayTab(_PlotTab):
-    """Overlay one metric over time for several datasets at once.
+    """Overlay up to three metrics over time for several datasets at once.
 
-    Unlike the single-view tabs, this reads *all* of the project's datasets. A
-    per-dataset **view-only** time shift lets the user slide instruments in time
-    to line up peaks; "Apply shifts permanently" bakes those shifts into the
+    Unlike the single-view tabs, this reads *all* of the project's datasets.
+
+    Encoding:
+        * **Colour** identifies the dataset.
+        * **Line style** identifies the metric slot (solid / dash-dot / dotted).
+        * Each metric is drawn against a **user-assigned y-axis** (1/2/3), which
+          become the left, right and 2nd-right spines. Per-axis min/max and log
+          controls live in a second controls row.
+
+    A per-dataset **view-only** time shift lets the user slide instruments in
+    time to line up peaks; "Apply shifts permanently" bakes those shifts into the
     datasets' time axes (and re-projects the shared, absolute-time tasks).
-
-    When the datasets carry different concentration units (e.g. particle counts
-    in cm⁻³, a gas in ppm and black carbon in ng/m³) each unit gets its own
-    y-axis (left, right, then a second offset right spine — up to three), and the
-    **line style** encodes which axis a series belongs to (solid/dashed/dotted)
-    while the **colour** stays tied to the dataset.
     """
 
     export_tag = "overlay"
@@ -80,24 +132,46 @@ class OverlayTab(_PlotTab):
         """Build the overlay controls and the per-dataset include/shift table."""
         super().__init__(main, nrows=1)
 
-        self.metric = QtWidgets.QComboBox()
-        self.metric.currentIndexChanged.connect(self.refresh)
-        self.controls.addWidget(QtWidgets.QLabel("Metric:"))
-        self.controls.addWidget(self.metric)
+        # -- metric row (row 1): up to three narrow metric pickers, each with a
+        #    small target-axis selector, plus the concentration-basis selector.
+        self.metric_combos: list = []
+        self.axis_combos: list = []
+        for slot in range(3):
+            self.controls.addWidget(QtWidgets.QLabel(f"M{slot + 1}:"))
+            combo = QtWidgets.QComboBox()
+            combo.setMaximumWidth(150)
+            combo.setToolTip(
+                "Metric for this slot (colour = dataset, line style = slot). "
+                "Choose '— none —' to leave the slot unused."
+            )
+            combo.currentIndexChanged.connect(self.refresh)
+            self.controls.addWidget(combo)
+            self.metric_combos.append(combo)
+            ax_combo = QtWidgets.QComboBox()
+            ax_combo.addItems(["→1", "→2", "→3"])
+            ax_combo.setCurrentIndex(slot)  # default M1→axis1, M2→axis2, M3→axis3
+            ax_combo.setToolTip("Which y-axis (1=left, 2=right, 3=2nd right).")
+            ax_combo.setMaximumWidth(48)
+            ax_combo.currentIndexChanged.connect(lambda *_: self._draw())
+            self.controls.addWidget(ax_combo)
+            self.axis_combos.append(ax_combo)
 
-        # Per-unit log toggles are rebuilt whenever the shown units change; one
-        # checkbox per distinct unit (each unit has its own y-axis/scale).
-        self._log_units: set[str] = set()
-        self.log_box = QtWidgets.QWidget()
-        self._log_layout = QtWidgets.QHBoxLayout(self.log_box)
-        self._log_layout.setContentsMargins(0, 0, 0, 0)
-        self._log_checks: dict = {}
-        self.controls.addWidget(self.log_box)
+        self.controls.addWidget(QtWidgets.QLabel("Basis:"))
+        self.basis = QtWidgets.QComboBox()
+        for label, value in _BASES:
+            self.basis.addItem(label, value)
+        self.basis.setToolTip(
+            "Concentration basis for the 'Total concentration' metric only "
+            "(other metrics are unaffected). dM/dS/dV apply to size-resolved "
+            "datasets; 1D datasets (e.g. a CPC) are omitted on those bases."
+        )
+        self.basis.currentIndexChanged.connect(self.refresh)
+        self.controls.addWidget(self.basis)
 
         self.normalize = QtWidgets.QCheckBox("Normalize (0–1)")
         self.normalize.setToolTip(
             "Scale each series to 0–1 to compare shapes across instruments with "
-            "different units/magnitudes."
+            "different units/magnitudes (all on one axis)."
         )
         self.normalize.stateChanged.connect(self._on_normalize)
         self.controls.addWidget(self.normalize)
@@ -119,9 +193,42 @@ class OverlayTab(_PlotTab):
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
+        # -- axis-limits row (row 2): per-axis min / max / log controls. Built
+        #    here, inserted into the left column after _split_with_side.
+        self.controls2 = QtWidgets.QHBoxLayout()
+        self.axis_groups: list = []
+        self.axis_labels: list = []
+        self.axis_min: list = []
+        self.axis_max: list = []
+        self.axis_log: list = []
+        for i in range(3):
+            group = QtWidgets.QWidget()
+            gl = QtWidgets.QHBoxLayout(group)
+            gl.setContentsMargins(0, 0, 0, 0)
+            lbl = QtWidgets.QLabel(f"Axis {i + 1}")
+            mn = QtWidgets.QLineEdit()
+            mn.setPlaceholderText("min")
+            mn.setFixedWidth(58)
+            mn.editingFinished.connect(lambda: self._draw(preserve=True))
+            mx = QtWidgets.QLineEdit()
+            mx.setPlaceholderText("max")
+            mx.setFixedWidth(58)
+            mx.editingFinished.connect(lambda: self._draw(preserve=True))
+            lg = QtWidgets.QCheckBox("log")
+            lg.toggled.connect(lambda *_: self._draw(preserve=True))
+            for w in (lbl, mn, mx, lg):
+                gl.addWidget(w)
+            self.controls2.addWidget(group)
+            self.axis_groups.append(group)
+            self.axis_labels.append(lbl)
+            self.axis_min.append(mn)
+            self.axis_max.append(mx)
+            self.axis_log.append(lg)
+        self.controls2.addStretch(1)
+
         # Side panel: per-dataset include + shift table, plus an apply button.
         self._building = False
-        self._extra_axes: list = []  # secondary y-axes for further units
+        self._extra_axes: list = []  # secondary y-axes for further metrics
         self.table = QtWidgets.QTableWidget(0, 3)
         self.table.setHorizontalHeaderLabels(["", "Dataset", "Shift"])
         self.table.verticalHeader().setVisible(False)
@@ -152,11 +259,14 @@ class OverlayTab(_PlotTab):
         side_widget = QtWidgets.QWidget()
         side_widget.setLayout(side)
         self._split_with_side(side_widget)
+        # Insert the axis-limits row just under the metric row (index 0 is the
+        # metric controls, then the toolbar and canvas follow).
+        self._left_col.insertLayout(1, self.controls2)
 
         self.ax = self.figure.add_subplot(111)
         self.canvas.setToolTip(
-            "Colour identifies the dataset; line style identifies the y-axis: "
-            "solid = left, dashed = right, dotted = 2nd right."
+            "Colour identifies the dataset; line style identifies the metric "
+            "slot: solid = M1, dash-dot = M2, dotted = M3."
         )
 
     # -- data access -------------------------------------------------------
@@ -165,17 +275,21 @@ class OverlayTab(_PlotTab):
         """All datasets in the project."""
         return self.main.project.datasets
 
-    def _metric_groups(self):
-        """Return ``(standard_names, extra_groups)`` for the metric picker.
+    def _metric_options(self):
+        """Return ``(standard_names, extra_groups)`` shared by all metric pickers.
 
-        ``standard_names`` is the total plus the core data channels shared across
-        datasets; ``extra_groups`` is a list of ``(header, [names])`` — one per
-        dataset that exposes extra housekeeping columns — so those (often many)
-        columns are tucked behind a labelled, per-instrument separator.
+        ``standard_names`` is the total plus the core data channels across
+        datasets. ``extra_groups`` is a list of ``(header, [names])`` — one per
+        *distinct instrument + extra-column-set*, so identical instruments
+        contribute a single group (e.g. two OPS loaded the same way share one
+        "Extra: OPS" group) while genuinely different column sets (e.g. an OPS
+        loaded direct vs from an export) each keep their own group.
         """
         standard = ["Total concentration"]
         seen = set(standard)
-        extra_groups = []
+        groups = []
+        seen_sigs = set()
+        header_counts: dict = {}
         for ds in self._datasets:
             std, extra = helpers.grouped_columns(ds.obj)
             for _label, kind, name in std:
@@ -183,94 +297,100 @@ class OverlayTab(_PlotTab):
                     continue
                 seen.add(name)
                 standard.append(name)
-            enames, eseen = [], set()
+            enames: list = []
             for _label, _kind, name in extra:
-                if name in eseen:
-                    continue
-                eseen.add(name)
-                enames.append(name)
-            if enames:
-                extra_groups.append((f"Extra: {ds.label}", enames))
-        return standard, extra_groups
+                if name not in enames:
+                    enames.append(name)
+            if not enames:
+                continue
+            instr = ds.instrument
+            sig = (instr, tuple(enames))
+            if sig in seen_sigs:
+                continue
+            seen_sigs.add(sig)
+            n = header_counts.get(instr, 0)
+            header_counts[instr] = n + 1
+            header = f"Extra: {instr}" if n == 0 else f"Extra: {instr} ({n + 1})"
+            groups.append((header, enames))
+        return standard, groups
 
-    def _series_for(self, ds):
-        """Return the numeric series for a dataset's chosen metric, or None."""
-        metric = self.metric.currentText()
-        if metric == "Total concentration":
-            s = ds.obj.total_concentration
-        elif metric in ds.obj.data.columns:
-            s = ds.obj.data[metric]
-        elif ds.obj.extra_data is not None and metric in ds.obj.extra_data.columns:
-            s = ds.obj.extra_data[metric]
-        else:
-            return None
-        return pd.to_numeric(s, errors="coerce")
+    def _series_for(self, ds, metric: str, basis: str):
+        """Return ``(series, name, unit)`` for a dataset's metric, or None.
 
-    def _name_unit_for(self, ds):
-        """Return the ``(name, unit)`` label pair for ``ds`` under the metric.
-
-        Units are only resolved for the total-concentration metric (where they
-        drive the per-unit axes); a named column keeps a single shared axis.
+        Only the "Total concentration" metric honours ``basis``: on dM/dS/dV it
+        is converted on a copy (size-resolved data only — 1D datasets return
+        None so they are simply omitted on a mass/surface/volume basis).
         """
-        if self.metric.currentText() == "Total concentration":
-            return helpers.measurement_label(ds.obj)
-        return self.metric.currentText(), ""
+        obj = ds.obj
+        if metric == "Total concentration":
+            if basis and basis != "dN":
+                if not helpers.is_2d(obj):
+                    return None
+                conv = obj.copy_self()
+                conv.dtype_converter(basis)
+                _dtype, unit = helpers.describe(conv)
+                s = pd.to_numeric(conv.total_concentration, errors="coerce")
+                return s, f"Total conc ({basis})", unit
+            name, unit = helpers.measurement_label(obj)
+            s = pd.to_numeric(obj.total_concentration, errors="coerce")
+            return s, name, unit
+        if metric in obj.data.columns:
+            _dtype, unit = helpers.describe(obj, metric)
+            return pd.to_numeric(obj.data[metric], errors="coerce"), metric, unit
+        if obj.extra_data is not None and metric in obj.extra_data.columns:
+            _dtype, unit = helpers.describe(obj, metric)
+            return pd.to_numeric(obj.extra_data[metric], errors="coerce"), metric, unit
+        return None
 
-    def _gather_units(self) -> list:
-        """Distinct units among the currently included, non-empty series (≤3)."""
-        if self.normalize.isChecked():
-            return []
-        units: list = []
-        for ds in self._datasets:
-            if not ds.overlay_on:
-                continue
-            s = self._series_for(ds)
-            if s is None or s.empty:
-                continue
-            u = self._name_unit_for(ds)[1]
-            if u not in units:
-                units.append(u)
-        return units
+    def _dataset_color(self, ds, cycle):
+        """Stable colour for a dataset (its own colour, else by project order)."""
+        if ds.color:
+            return ds.color
+        ids = [d.id for d in self._datasets]
+        return cycle[ids.index(ds.id) % len(cycle)]
 
-    # -- table sync --------------------------------------------------------
-    def _sync_metric(self) -> None:
-        """Repopulate the metric combo (grouped), preserving the selection."""
-        current = self.metric.currentText()
-        self.metric.blockSignals(True)
-        self.metric.clear()
-        standard, extra_groups = self._metric_groups()
-        for name in standard:
-            self.metric.addItem(name)
-        for header, names in extra_groups:
-            self._add_metric_header(f"── {header} ──")
-            for name in names:
-                self.metric.addItem(name)
-        idx = self.metric.findText(current)
-        self.metric.setCurrentIndex(idx if idx >= 0 else 0)
-        self.metric.blockSignals(False)
+    # -- selectors sync ----------------------------------------------------
+    def _sync_metrics(self) -> None:
+        """Repopulate the three metric combos (grouped), preserving selections."""
+        standard, groups = self._metric_options()
+        for slot, combo in enumerate(self.metric_combos):
+            current = combo.currentText()
+            combo.blockSignals(True)
+            combo.clear()
+            combo.addItem(_NONE)
+            for name in standard:
+                combo.addItem(name)
+            for header, names in groups:
+                self._add_header(combo, f"── {header} ──")
+                for name in names:
+                    combo.addItem(name)
+            idx = combo.findText(current)
+            if idx >= 0:
+                combo.setCurrentIndex(idx)
+            elif slot == 0:
+                combo.setCurrentIndex(combo.findText("Total concentration"))
+            else:
+                combo.setCurrentIndex(0)  # — none —
+            combo.blockSignals(False)
 
-    def _add_metric_header(self, text: str) -> None:
-        """Add a non-selectable section header to the metric combo."""
-        self.metric.addItem(text)
-        item = self.metric.model().item(self.metric.count() - 1)
+    @staticmethod
+    def _add_header(combo, text: str) -> None:
+        """Add a non-selectable section header to a combo."""
+        combo.addItem(text)
+        item = combo.model().item(combo.count() - 1)
         if item is not None:
             item.setEnabled(False)
 
-    def _sync_log_controls(self) -> None:
-        """Rebuild the per-unit 'Log' checkboxes for the currently shown units."""
-        while self._log_layout.count():
-            w = self._log_layout.takeAt(0).widget()
-            if w is not None:
-                w.deleteLater()
-        self._log_checks = {}
-        units = self._gather_units()
-        self.log_box.setVisible(bool(units))
-        for u in units:
-            cb = QtWidgets.QCheckBox(f"Log {u}" if u else "Log Y")
-            cb.setChecked(u in self._log_units)
-            cb.toggled.connect(lambda on, unit=u: self._on_log_toggle(unit, on))
-            self._log_layout.addWidget(cb)
-            self._log_checks[u] = cb
+    def _active_metrics(self):
+        """Chosen ``(slot, metric, uaxis)`` triples for slots with a real metric."""
+        out = []
+        for slot, combo in enumerate(self.metric_combos):
+            metric = combo.currentText()
+            if not metric or metric == _NONE or metric.startswith("──"):
+                continue
+            uaxis = self.axis_combos[slot].currentIndex() + 1
+            out.append((slot, metric, uaxis))
+        return out
 
     def _sync_table(self) -> None:
         """Rebuild the include/shift table from the datasets."""
@@ -311,17 +431,8 @@ class OverlayTab(_PlotTab):
 
     # -- interaction -------------------------------------------------------
     def _on_normalize(self) -> None:
-        """Redraw for a normalize toggle (units become irrelevant)."""
-        self._sync_log_controls()
+        """Redraw for a normalize toggle (axis assignment/limits become moot)."""
         self._draw()
-
-    def _on_log_toggle(self, unit: str, on: bool) -> None:
-        """Persist a unit's log-scale choice and redraw (keeping the view)."""
-        if on:
-            self._log_units.add(unit)
-        else:
-            self._log_units.discard(unit)
-        self._draw(preserve=True)
 
     def _on_item_changed(self, item) -> None:
         """Persist a dataset's overlay-include flag and redraw."""
@@ -330,10 +441,6 @@ class OverlayTab(_PlotTab):
         ds = self.main.project.get(item.data(QtCore.Qt.UserRole))
         if ds is not None:
             ds.overlay_on = item.checkState() == QtCore.Qt.Checked
-            # Rescale to the now-visible datasets so the axis limits (and the
-            # "reset view" target) follow the shown data instead of stretching to
-            # cover a dataset that was just hidden.
-            self._sync_log_controls()
             self._draw()
 
     def _on_shift_edit(self, ds, edit) -> None:
@@ -348,8 +455,6 @@ class OverlayTab(_PlotTab):
         edit.blockSignals(True)
         edit.setText(_format_hms(td))  # normalise the display
         edit.blockSignals(False)
-        # Preserve the current view so the user can zoom in, then slide a
-        # dataset and watch it move within the same window.
         self._draw(preserve=True)
 
     def _on_shift_step(self, ds, edit, direction: int, coarse: bool) -> None:
@@ -393,14 +498,23 @@ class OverlayTab(_PlotTab):
         self.main.project.plot_thresholds[self.export_tag] = self.threshold.state()
         self._draw(preserve=True)
 
+    def _cap(self, edit) -> float | None:
+        """Parse an axis-limit field, returning None when blank or invalid."""
+        text = edit.text().strip()
+        if not text:
+            return None
+        try:
+            return float(text)
+        except ValueError:
+            return None
+
     # -- rendering ---------------------------------------------------------
     def refresh(self) -> None:
-        """Re-sync the metric combo, table and log controls, then redraw."""
+        """Re-sync the metric combos and table, then redraw."""
         if not self._datasets:
             return
-        self._sync_metric()
+        self._sync_metrics()
         self._sync_table()
-        self._sync_log_controls()
         self._draw()
 
     def _clear_extra_axes(self) -> None:
@@ -413,41 +527,56 @@ class OverlayTab(_PlotTab):
         self._extra_axes = []
 
     def _gather_entries(self, normalize: bool) -> list:
-        """Collect ``(ds, x, y, name, unit)`` for each included, non-empty series."""
+        """Collect one entry dict per (dataset × active metric slot) series."""
+        basis = self.basis.currentData()
         entries = []
-        for ds in self._datasets:
-            if not ds.overlay_on:
-                continue
-            s = self._series_for(ds)
-            if s is None or s.empty:
-                continue
-            name, unit = self._name_unit_for(ds)
-            x = mdates.date2num((s.index + ds.view_shift).to_pydatetime())
-            y = s.to_numpy(dtype=float)
-            if normalize:
-                lo, hi = np.nanmin(y), np.nanmax(y)
-                if np.isfinite(lo) and np.isfinite(hi) and hi > lo:
-                    y = (y - lo) / (hi - lo)
-            label = ds.label
-            if ds.view_shift != pd.Timedelta(0):
-                label += f" ({_format_hms(ds.view_shift)})"
-            entries.append((ds, x, y, label, name, unit))
+        for slot, metric, uaxis in self._active_metrics():
+            for ds in self._datasets:
+                if not ds.overlay_on:
+                    continue
+                res = self._series_for(ds, metric, basis)
+                if res is None:
+                    continue
+                s, name, unit = res
+                if s is None or s.empty:
+                    continue
+                x = mdates.date2num((s.index + ds.view_shift).to_pydatetime())
+                y = s.to_numpy(dtype=float)
+                if normalize:
+                    lo, hi = np.nanmin(y), np.nanmax(y)
+                    if np.isfinite(lo) and np.isfinite(hi) and hi > lo:
+                        y = (y - lo) / (hi - lo)
+                entries.append(
+                    {
+                        "ds": ds,
+                        "slot": slot,
+                        "uaxis": uaxis,
+                        "x": x,
+                        "y": y,
+                        "name": name,
+                        "unit": unit,
+                    }
+                )
         return entries
 
     def _draw_on(self, ax) -> None:
-        """Draw each included dataset's series, grouping units onto their axes."""
+        """Draw each included dataset's series, grouping metrics onto their axes."""
         ax.clear()
         self._clear_extra_axes()
         normalize = self.normalize.isChecked()
         entries = self._gather_entries(normalize)
         cycle = _active_color_cycle()
 
+        # Axis-limit controls only apply to the multi-axis view.
+        for group in self.axis_groups:
+            group.setVisible(not normalize)
+
         if not entries:
             ax.set_xlabel("Time")
             ax.text(
                 0.5,
                 0.5,
-                "Tick one or more datasets to overlay.",
+                "Pick a metric and tick one or more datasets to overlay.",
                 ha="center",
                 va="center",
                 transform=ax.transAxes,
@@ -455,13 +584,13 @@ class OverlayTab(_PlotTab):
             return
 
         if normalize:
-            self._draw_single(ax, entries, cycle)
+            self._draw_normalized(ax, entries, cycle)
         else:
             self._draw_multi_axis(ax, entries, cycle)
 
         # x-range from all series (the twin axes share this axis), then activity
-        # shading and a combined legend spanning every axis.
-        xs = np.concatenate([e[1] for e in entries])
+        # shading and a combined, per-axis-grouped legend.
+        xs = np.concatenate([e["x"] for e in entries])
         xs = xs[np.isfinite(xs)]
         if xs.size:
             ax.set_xlim(float(xs.min()), float(xs.max()))
@@ -475,92 +604,149 @@ class OverlayTab(_PlotTab):
             selected = _shading.resolve_activities(periods, True)
             _shading.shade_activities(ax, periods, selected, zorder=1, legend=False)
 
-        # Threshold line on the primary axis, then one legend across all axes.
-        helpers.draw_threshold(
-            ax, self.threshold.threshold_value(), self.threshold.legend_text()
-        )
-        handles, labels = ax.get_legend_handles_labels()
-        for extra in self._extra_axes:
-            h, ll = extra.get_legend_handles_labels()
-            handles += h
-            labels += ll
-        if handles:
-            ax.legend(handles, labels, loc="upper right", fontsize=8)
+        # Threshold line on the primary axis (drawn without its own legend).
+        tv = self.threshold.threshold_value()
+        threshold_handle = None
+        if tv is not None and np.isfinite(tv):
+            ax.axhline(
+                tv,
+                color=helpers.THRESHOLD_COLOR,
+                linestyle="--",
+                linewidth=1.6,
+                zorder=5,
+            )
+            text = self.threshold.legend_text() or f"Threshold ({tv:g})"
+            threshold_handle = (
+                Line2D([], [], color=helpers.THRESHOLD_COLOR, ls="--", lw=1.6),
+                text,
+            )
+        self._build_legend(ax, entries, normalize, threshold_handle)
 
-    def _draw_single(self, ax, entries, cycle) -> None:
-        """Draw all series on one axis (the normalized 0–1 view)."""
-        for i, (ds, x, y, label, _name, _unit) in enumerate(entries):
-            ax.plot(x, y, lw=1.4, label=label, color=ds.color or cycle[i % len(cycle)])
+    def _draw_normalized(self, ax, entries, cycle) -> None:
+        """Draw all series on one axis, scaled to 0–1 (colour=dataset, style=slot)."""
+        for e in entries:
+            color = self._dataset_color(e["ds"], cycle)
+            ax.plot(e["x"], e["y"], lw=1.4, ls=_METRIC_STYLES[e["slot"]], color=color)
         ax.set_ylabel("Normalized (0–1)")
         ylim = _autoscale.y_limits([ax], log_y=False, anchor_zero=True)
         if ylim is not None:
             ax.set_ylim(*ylim)
 
     def _draw_multi_axis(self, ax, entries, cycle) -> None:
-        """Draw series with one y-axis per unit (up to three), style = axis."""
-        unit_order: list = []
-        for _ds, _x, _y, _label, _name, unit in entries:
-            if unit not in unit_order:
-                unit_order.append(unit)
-        if len(unit_order) > 3:
-            shown = ", ".join(u or "(dimensionless)" for u in unit_order[:3])
-            extra = ", ".join(u or "(dimensionless)" for u in unit_order[3:])
-            QtWidgets.QMessageBox.warning(
-                self,
-                "Too many units",
-                "The overlay can show at most three different units at once "
-                f"(one per y-axis). Showing: {shown}.\nNot shown: {extra}.\n\n"
-                "Untick some datasets to reduce the number of distinct units.",
-            )
-            unit_order = unit_order[:3]
-
-        # Build one axis per unit: left, right, then an offset right spine.
-        axis_for = {}
-        for idx, unit in enumerate(unit_order):
-            if idx == 0:
-                axis_for[unit] = ax
+        """Draw series with one y-axis per *assigned* axis (up to three)."""
+        used = sorted({e["uaxis"] for e in entries})
+        # Map each used axis number to a Matplotlib axis: first used axis to the
+        # left spine, then right, then an outward 2nd-right spine (so skipping an
+        # axis number never leaves an empty middle spine).
+        axis_for: dict = {}
+        self._axis_position: dict = {}
+        for pos, uaxis in enumerate(used):
+            if pos == 0:
+                target = ax
             else:
-                twin = ax.twinx()
-                if idx == 2:
-                    twin.spines["right"].set_position(("outward", 60))
-                self._extra_axes.append(twin)
-                axis_for[unit] = twin
+                target = ax.twinx()
+                if pos == 2:
+                    target.spines["right"].set_position(("outward", 60))
+                self._extra_axes.append(target)
+            axis_for[uaxis] = target
+            self._axis_position[uaxis] = pos
 
-        names_by_axis: dict = {u: set() for u in unit_order}
-        for i, (ds, x, y, label, name, unit) in enumerate(entries):
-            if unit not in axis_for:
-                continue  # a 4th+ unit that was dropped above
-            aidx = unit_order.index(unit)
-            target = axis_for[unit]
-            color = ds.color or cycle[i % len(cycle)]
-            target.plot(x, y, lw=1.4, ls=_AXIS_STYLES[aidx], label=label, color=color)
-            names_by_axis[unit].add(name)
+        for e in entries:
+            target = axis_for[e["uaxis"]]
+            color = self._dataset_color(e["ds"], cycle)
+            e["_color"] = color
+            e["_style"] = _METRIC_STYLES[e["slot"]]
+            target.plot(e["x"], e["y"], lw=1.4, ls=e["_style"], color=color)
 
-        # Label each axis by its (shared) measurement + unit and its style hint,
-        # and apply that unit's own log scale and autoscaled limits.
-        for aidx, unit in enumerate(unit_order):
-            axis = axis_for[unit]
-            names = names_by_axis[unit]
-            base = next(iter(names)) if len(names) == 1 else "Concentration"
-            unit_part = f" [{unit}]" if unit else ""
-            axis.set_ylabel(f"{base}{unit_part} ({_AXIS_WORDS[aidx]})")
-            is_log = unit in self._log_units
-            axis.set_yscale("log" if is_log else "linear")
-            ylim = _autoscale.y_limits([axis], log_y=is_log, anchor_zero=not is_log)
-            if ylim is not None:
-                axis.set_ylim(*ylim)
+        # Label each axis by its metric(s) + unit, and apply its log/limits.
+        for uaxis, target in axis_for.items():
+            ax_entries = [e for e in entries if e["uaxis"] == uaxis]
+            names = list(dict.fromkeys(e["name"] for e in ax_entries))
+            canon = {_canon_unit(e["unit"]) for e in ax_entries}
+            unit = next(iter(canon)) if len(canon) == 1 else ""
+            label = ", ".join(names[:2]) + ("…" if len(names) > 2 else "")
+            target.set_ylabel(f"{label} [{unit}]" if unit else label)
+            is_log = self.axis_log[uaxis - 1].isChecked()
+            target.set_yscale("log" if is_log else "linear")
+            self._apply_axis_limits(target, uaxis, is_log)
+
+    def _apply_axis_limits(self, target, uaxis: int, is_log: bool) -> None:
+        """Autoscale an axis to its data, then apply any explicit min/max caps."""
+        ylim = _autoscale.y_limits([target], log_y=is_log, anchor_zero=not is_log)
+        if ylim is None:
+            return
+        lo, hi = ylim
+        umin = self._cap(self.axis_min[uaxis - 1])
+        umax = self._cap(self.axis_max[uaxis - 1])
+        if umin is not None:
+            lo = umin
+        if umax is not None:
+            hi = umax
+        target.set_ylim(lo, hi)
+
+    def _build_legend(self, ax, entries, normalize: bool, threshold_handle) -> None:
+        """Build one legend, grouped under a header for each y-axis.
+
+        Each axis gets a "── Left/Right axis — <metric> ──" separator header,
+        then one entry per dataset drawn on it (labelled with the metric too when
+        the axis carries more than one). This keeps the axis *labels* clean while
+        still making it obvious which lines belong to which axis.
+        """
+        multi_metric = len({e["slot"] for e in entries}) > 1
+        handles: list = []
+        labels: list = []
+        if threshold_handle is not None:
+            handles.append(threshold_handle[0])
+            labels.append(threshold_handle[1])
+
+        def _entry_label(e) -> str:
+            lbl = e["ds"].label
+            if e["ds"].view_shift != pd.Timedelta(0):
+                lbl += f" ({_format_hms(e['ds'].view_shift)})"
+            if multi_metric:
+                lbl += f" — {e['name']}"
+            return lbl
+
+        if normalize:
+            for e in entries:
+                handles.append(
+                    Line2D(
+                        [],
+                        [],
+                        color=self._dataset_color(e["ds"], _active_color_cycle()),
+                        ls=_METRIC_STYLES[e["slot"]],
+                        lw=1.4,
+                    )
+                )
+                labels.append(_entry_label(e))
+        else:
+            for uaxis in sorted({e["uaxis"] for e in entries}):
+                pos = self._axis_position.get(uaxis, 0)
+                ax_entries = [e for e in entries if e["uaxis"] == uaxis]
+                names = list(dict.fromkeys(e["name"] for e in ax_entries))
+                head = _POSITION_WORDS[pos] if pos < len(_POSITION_WORDS) else "Axis"
+                metric_part = names[0] if len(names) == 1 else ", ".join(names[:2])
+                handles.append(Line2D([], [], ls="none", marker="none"))
+                labels.append(f"── {head}: {metric_part} ──")
+                for e in ax_entries:
+                    handles.append(
+                        Line2D([], [], color=e["_color"], ls=e["_style"], lw=1.4)
+                    )
+                    labels.append(_entry_label(e))
+        if handles:
+            ax.legend(handles, labels, loc="upper right", fontsize=8)
 
     def _draw(self, preserve: bool = False) -> None:
         """Redraw onto the embedded axis, reporting any error inline.
 
         Args:
-            preserve: When True, keep the current axis limits (zoom/pan) across
-                the redraw instead of autoscaling — used for view-only shifts and
-                include toggles so the user's zoom survives.
+            preserve: When True, keep the current *time* (x) view across the
+                redraw so a view-only shift or toggle does not snap the zoom
+                back. The y-axes always follow the per-axis autoscale + caps.
         """
-        prev = None
+        prev_x = None
         if preserve and self.ax.has_data():
-            prev = (self.ax.get_xlim(), self.ax.get_ylim())
+            prev_x = self.ax.get_xlim()
         try:
             self._draw_on(self.ax)
         except Exception:
@@ -568,9 +754,8 @@ class OverlayTab(_PlotTab):
                 "Could not draw overlay:\n" + traceback.format_exc(limit=1)
             )
             return
-        if prev is not None:
-            self.ax.set_xlim(prev[0])
-            self.ax.set_ylim(prev[1])
+        if prev_x is not None:
+            self.ax.set_xlim(prev_x)
         else:
             self._sync_toolbar_home()
         self.canvas.draw_idle()
