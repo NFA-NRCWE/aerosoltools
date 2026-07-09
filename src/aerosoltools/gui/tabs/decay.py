@@ -206,10 +206,27 @@ class DecayTab(_PlotTab):
         )
         self.result_label.setWordWrap(True)
         self.result_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-        self._layout.addWidget(self.result_label)
 
-        # Results table + export, below the (shortened) plot.
-        self._layout.addWidget(self._build_table_panel())
+        # Put the plot (toolbar + canvas + status) above the results table in a
+        # draggable vertical splitter, so the user can trade figure height for
+        # table height (e.g. a short, wide figure with a tall table).
+        self._layout.removeWidget(self.toolbar)
+        self._layout.removeWidget(self.canvas)
+        plot_area = QtWidgets.QWidget()
+        pv = QtWidgets.QVBoxLayout(plot_area)
+        pv.setContentsMargins(0, 0, 0, 0)
+        pv.addWidget(self.toolbar)
+        pv.addWidget(self.canvas, stretch=1)
+        pv.addWidget(self.result_label)
+
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        splitter.addWidget(plot_area)
+        splitter.addWidget(self._build_table_panel())
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 0)
+        splitter.setChildrenCollapsible(False)
+        splitter.setSizes([460, 180])
+        self._layout.addWidget(splitter, stretch=1)
 
         # -- fit state --------------------------------------------------------
         self._cols_obj = None
@@ -221,13 +238,16 @@ class DecayTab(_PlotTab):
         self._region_patches: list = []
         self._dragging = None  # "t0" | "peak" | "bg" | "peakval" while dragging
 
+        # ``interactive=False``: the drag rectangle is transient (it vanishes on
+        # release). Each fit's region is drawn by us as an ``axvspan`` instead, so
+        # an interactive/persistent selection would otherwise linger over the
+        # last-marked window and survive deleting that fit.
         self.span = SpanSelector(
             self.ax,
             self._on_span,
             "horizontal",
             useblit=True,
-            interactive=True,
-            drag_from_anywhere=True,
+            interactive=False,
             props=dict(alpha=0.12, facecolor=_REGION_COLOR),
             button=1,
         )
@@ -334,8 +354,8 @@ class DecayTab(_PlotTab):
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.table.setMinimumHeight(130)
-        self.table.setMaximumHeight(240)
+        # Only a small floor; the vertical splitter governs the actual height.
+        self.table.setMinimumHeight(80)
         v.addWidget(self.table)
         return box
 
