@@ -52,6 +52,84 @@ def _clean_psd_fits(psd_fits: dict) -> dict:
     return out
 
 
+def _ts_or_none(value):
+    """ISO string for a timestamp-like value, or None."""
+    if value is None:
+        return None
+    try:
+        return pd.Timestamp(value).isoformat()
+    except (ValueError, TypeError):
+        return None
+
+
+def _clean_decay_fits(decay_fits: list) -> list:
+    """Coerce stored decay-fit specs to plain JSON types for serialization."""
+    out: list = []
+    for rec in decay_fits or []:
+        window = rec.get("window")
+        if not window or len(window) != 2:
+            continue
+        ov = rec.get("overrides", {}) or {}
+        out.append(
+            {
+                "window": [_ts_or_none(window[0]), _ts_or_none(window[1])],
+                "metric": str(rec.get("metric", "PNC")),
+                "model": str(rec.get("model", "auto")),
+                "optimized": bool(rec.get("optimized", True)),
+                "per_bin": bool(rec.get("per_bin", False)),
+                "overrides": {
+                    "t0": _ts_or_none(ov.get("t0")),
+                    "peak_time": _ts_or_none(ov.get("peak_time")),
+                    "background": _num_or_none(ov.get("background")),
+                    "peakval": _num_or_none(ov.get("peakval")),
+                    "rate": _num_or_none(ov.get("rate")),
+                },
+            }
+        )
+    return out
+
+
+def _num_or_none(value):
+    """float(value) or None when missing/unparseable."""
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def _restore_decay_fits(stored: list) -> list:
+    """Rebuild in-memory decay-fit specs (timestamps parsed) from JSON."""
+    out: list = []
+    for rec in stored or []:
+        window = rec.get("window")
+        if not window or len(window) != 2 or None in window:
+            continue
+        ov = rec.get("overrides", {}) or {}
+
+        def _ts(v):
+            return pd.Timestamp(v) if v else None
+
+        out.append(
+            {
+                "window": (pd.Timestamp(window[0]), pd.Timestamp(window[1])),
+                "metric": rec.get("metric", "PNC"),
+                "model": rec.get("model", "auto"),
+                "optimized": bool(rec.get("optimized", True)),
+                "per_bin": bool(rec.get("per_bin", False)),
+                "overrides": {
+                    "t0": _ts(ov.get("t0")),
+                    "peak_time": _ts(ov.get("peak_time")),
+                    "background": _num_or_none(ov.get("background")),
+                    "peakval": _num_or_none(ov.get("peakval")),
+                    "rate": _num_or_none(ov.get("rate")),
+                },
+            }
+        )
+    return out
+
+
 def save_project(project: Project, folder: str, theme: str = "dark") -> None:
     """Write ``project`` into ``folder`` (created if needed).
 
@@ -156,6 +234,7 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
                 "calibration_enabled": ds.calibration_enabled,
                 "calibration_baseline": cal_rel,
                 "psd_fits": _clean_psd_fits(ds.psd_fits),
+                "decay_fits": _clean_decay_fits(ds.decay_fits),
                 "activity_colors": dict(ds.activity_colors),
             }
         )
@@ -218,6 +297,7 @@ def load_project(folder: str) -> tuple[Project, str]:
             ds.contributing_files = [os.path.join(folder, r) for r in contributing]
         ds.color = entry.get("color")  # None for pre-colour projects
         ds.psd_fits = _clean_psd_fits(entry.get("psd_fits", {}))
+        ds.decay_fits = _restore_decay_fits(entry.get("decay_fits", []))
         ds.activity_colors = dict(entry.get("activity_colors", {}) or {})
         # Restore the calibration spec/state and its uncalibrated baseline (the
         # pickled obj above already reflects the on/off state). Older projects

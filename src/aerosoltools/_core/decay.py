@@ -353,6 +353,8 @@ class DecayFitMixin:
         decay_rate: Optional[float] = None,
         optimize: bool = True,
         snap_to_samples: bool = True,
+        series: Optional[pd.Series] = None,
+        unit: Optional[str] = None,
     ) -> dict:
         """Description:
             Fit a single-zone emission + decay peak to one time window of a
@@ -418,6 +420,13 @@ class DecayFitMixin:
                 the emission duration ``tp`` and the drawn markers vary smoothly
                 rather than jumping from sample to sample. Only affects the two
                 timing overrides; detection (when they are ``None``) is unchanged.
+            series (pandas.Series | None): Optional precomputed, time-indexed
+                concentration series to fit instead of the named ``metric`` —
+                used to fit an arbitrary series such as a single size bin (for
+                per-bin decay fitting) with the same window and overrides. When
+                given, ``metric`` is used only for labelling.
+            unit (str | None): Unit string for ``series``; when ``series`` is
+                given but ``unit`` is ``None`` the named metric's unit is used.
 
         Returns:
             dict: With keys including "model", "unit", "metric", "r_squared"
@@ -453,7 +462,14 @@ class DecayFitMixin:
                 "'first_order', 'second_order' or 'combined'."
             )
 
-        series, unit = self._get_metric_series(metric)
+        # A caller may supply its own precomputed series (e.g. a single size
+        # bin, for per-bin decay fitting) to bypass the metric lookup; otherwise
+        # resolve the named metric as usual.
+        if series is not None:
+            if unit is None:
+                _s, unit = self._get_metric_series(metric)
+        else:
+            series, unit = self._get_metric_series(metric)
         times, values = self._decay_window(period, series)
 
         finite = np.isfinite(values)

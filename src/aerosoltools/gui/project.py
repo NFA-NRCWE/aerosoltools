@@ -133,6 +133,13 @@ class Dataset:
         # instrument's PSD for one activity; persisted in the project file and
         # dropped when the activity is edited or removed (see Project).
         self.psd_fits: Dict[str, dict] = {}
+        # Decay / source fits for the Decay pane. Each entry is a persisted spec
+        # ``{"window": (start, end), "metric": str, "model": str,
+        # "optimized": bool, "overrides": {...}, "per_bin": bool}`` describing one
+        # marked region; the fit results themselves are recomputed on load so
+        # they track density/calibration changes. Stored per dataset and saved
+        # with the project.
+        self.decay_fits: List[dict] = []
         # Per-activity plot colours for the PSD-comparison pane, keyed by
         # activity name. Empty by default: each activity then auto-shades the
         # dataset's base colour; a user override is stored here and persisted.
