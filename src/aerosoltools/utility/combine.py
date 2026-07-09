@@ -175,18 +175,24 @@ def combine_size_ranges(
     up_edges = np.asarray(upper.bin_edges, dtype=float)
 
     # --- range-extension guard ----------------------------------------------
-    # A meaningful stitch needs the lower instrument to reach below the upper
-    # one and the upper to reach above the lower one, with a shared overlap. Two
-    # instruments covering essentially the same range (e.g. ELPI + SMPS) are
-    # rejected — there is no sensible single crossover.
-    extends = up_edges[-1] > lo_edges[-1] and lo_edges[0] < up_edges[0]
+    # A meaningful stitch needs the upper instrument to reach above the lower
+    # one, and a shared overlap wide enough to place a crossover. The lower
+    # instrument supplies the fine (small-diameter) end below the crossover and
+    # the upper supplies the coarse end above it. It is fine for one
+    # instrument's range to *contain* the other's (e.g. an ELPI spanning
+    # 6-9890 nm combined with a NanoScan spanning 10-420 nm): the portion of the
+    # wider instrument below the crossover is simply discarded in favour of the
+    # finer instrument. Only two instruments reaching the *same* top size (no
+    # coarse extension at all) are rejected — there is no sensible crossover.
+    extends = up_edges[-1] > lo_edges[-1]
     overlaps = lo_edges[-1] > up_edges[0]
     if not (extends and overlaps):
         raise ValueError(
             "These two instruments do not form a size-range extension with a "
             f"shared overlap (lower {lo_edges[0]:.1f}-{lo_edges[-1]:.1f} nm, "
-            f"upper {up_edges[0]:.1f}-{up_edges[-1]:.1f} nm). Combining "
-            "instruments that cover the same range is not supported."
+            f"upper {up_edges[0]:.1f}-{up_edges[-1]:.1f} nm). One instrument "
+            "must reach larger sizes than the other, with an overlap to cross "
+            "over in."
         )
 
     if crossover is None:
