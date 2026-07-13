@@ -106,20 +106,8 @@ def describe(obj: Aerosol1D, column: str | None = None) -> Tuple[str, str]:
     Returns:
         A ``(dtype, unit)`` tuple of display strings.
     """
-    dtype = obj.dtype
-    unit = obj.unit
-
-    def _resolve(meta):
-        """Return ``meta`` as a display string, indexing by ``column`` if it is a dict."""
-        if isinstance(meta, dict):
-            if column is not None and column in meta:
-                return str(meta[column])
-            if meta:
-                return str(next(iter(meta.values())))
-            return ""
-        return str(meta)
-
-    return _resolve(dtype), _resolve(unit)
+    # Delegate to the core per-column-aware accessors (single source of truth).
+    return obj.dtype_of(column), obj.unit_of(column)
 
 
 def measurement_label(obj: Aerosol1D, column: str | None = None) -> Tuple[str, str]:

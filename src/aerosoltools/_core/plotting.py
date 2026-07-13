@@ -147,16 +147,9 @@ class Plot1DMixin:
 
         ax.set_xlabel("Time")
 
-        # Resolve dtype/unit for the chosen parameter (can be scalar or per-column).
-        if isinstance(self.dtype, str):
-            Dtype = self.dtype
-        else:
-            Dtype = self.dtype[parameter]
-
-        if isinstance(self.unit, str):
-            Unit = self.unit
-        else:
-            Unit = self.unit[parameter]  # type: ignore[index]
+        # Resolve dtype/unit for the chosen parameter (scalar-or-per-column aware).
+        Dtype = self.dtype_of(parameter)
+        Unit = self.unit_of(parameter)
 
         ax.set_ylabel(f"{base_dtype(Dtype)}, {Unit}")
         ax.grid(True)

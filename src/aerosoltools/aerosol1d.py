@@ -280,13 +280,61 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
         Returns:
             str: Unit string, for example ``"#/cm³"`` for number concentration
             or ``"µg/m³"`` for mass concentration. Falls back to
-            ``"Unknown unit"`` if not set in the metadata.
+            ``"Unknown unit"`` if not set in the metadata. May be a per-column
+            ``dict`` for multi-channel instruments — prefer :meth:`unit_of` for
+            a resolved per-column string.
         """
         return self._meta.get("unit", "Unknown unit")
 
     ###########################################################################
     """########################### Core helpers ###########################"""
     ###########################################################################
+
+    @staticmethod
+    def _resolve_meta(meta, column):
+        """Resolve a scalar-or-dict ``_meta`` value to a display string.
+
+        ``unit``/``dtype`` metadata is a plain string for single-quantity
+        instruments (CPC, size-resolved counters) but a per-column ``dict`` for
+        multi-channel instruments (DiSCmini, DustTrak, aethalometer, …). This
+        collapses either form to one string, indexing by ``column`` when a dict
+        is given (falling back to the first entry).
+        """
+        if isinstance(meta, dict):
+            if column is not None and column in meta:
+                return str(meta[column])
+            if meta:
+                return str(next(iter(meta.values())))
+            return ""
+        return str(meta)
+
+    def unit_of(self, column: str | None = None) -> str:
+        """Return the unit for ``column`` as a string (per-column aware).
+
+        Handles both scalar and per-column-``dict`` ``unit`` metadata. With
+        ``column=None`` (or an unknown column) returns the scalar unit, or the
+        first per-column unit for a multi-channel instrument.
+
+        Args:
+            column: Column/channel name to look up; ``None`` for the default.
+
+        Returns:
+            str: The resolved unit string.
+        """
+        return self._resolve_meta(self._meta.get("unit", "Unknown unit"), column)
+
+    def dtype_of(self, column: str | None = None) -> str:
+        """Return the dtype descriptor for ``column`` as a string.
+
+        The per-column-aware counterpart of :attr:`dtype` (see :meth:`unit_of`).
+
+        Args:
+            column: Column/channel name to look up; ``None`` for the default.
+
+        Returns:
+            str: The resolved dtype string (e.g. ``"dN"``, ``"dM"``).
+        """
+        return self._resolve_meta(self._meta.get("dtype", "Unknown dtype"), column)
 
     def _ensure_data_robustness(self, vals) -> pd.Series:
         """Validity mask from the original object (keeps alignment with self.time)

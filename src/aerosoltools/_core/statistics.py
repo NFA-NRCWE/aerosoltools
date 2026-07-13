@@ -80,7 +80,7 @@ class SummaryMixin:
 
         if mu == "PNC":
             series = self._primary.astype(float)
-            return series, self.unit
+            return series, self.unit_of(getattr(self._primary, "name", None))
 
         # Look up in main data first, then extra_data
         if metric_name in self._data.select_dtypes(exclude="bool").columns:
@@ -92,8 +92,8 @@ class SummaryMixin:
                 f"Metric '{metric_name}' not found in main data or extra_data."
             )
 
-        # For 1D, we do not have per-metric units, so we reuse self.unit.
-        return series, self.unit
+        # Per-column unit (multi-channel instruments carry a per-column dict).
+        return series, self.unit_of(metric_name)
 
     def summarize_activities(
         self,
