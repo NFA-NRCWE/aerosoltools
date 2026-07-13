@@ -14,6 +14,7 @@ import pandas as pd
 
 from .._core import _shading
 from .._core._labels import base_dtype  # re-exported for GUI use
+from .._core.nonparticle import _NonParticleMixin
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
 
@@ -22,6 +23,7 @@ __all__ = [
     "THRESHOLD_COLOR",
     "base_dtype",
     "is_2d",
+    "is_particle",
     "describe",
     "measurement_label",
     "plottable_columns",
@@ -76,6 +78,17 @@ def draw_threshold(ax, value, label: str | None = None) -> None:
 def is_2d(obj) -> bool:
     """Return True if ``obj`` is a size-resolved :class:`Aerosol2D`."""
     return isinstance(obj, Aerosol2D)
+
+
+def is_particle(obj) -> bool:
+    """Return True if ``obj`` measures a particle quantity.
+
+    Particle instruments have a meaningful ``total_concentration``; the
+    non-particle classes (gases, black carbon, environmental, LDSA-only) do not,
+    so callers should offer/serve the generic "Total concentration" metric only
+    when this is True.
+    """
+    return not isinstance(obj, _NonParticleMixin)
 
 
 def describe(obj: Aerosol1D, column: str | None = None) -> Tuple[str, str]:
@@ -148,10 +161,14 @@ def plottable_columns(obj: Aerosol1D) -> List[Tuple[str, str, str]]:
 
     Returns:
         A list of ``(label, kind, name)`` tuples where ``kind`` is one of
-        ``"total"``, ``"data"`` or ``"extra"``. The first entry is always the
-        canonical total concentration series.
+        ``"total"``, ``"data"`` or ``"extra"``. For particle instruments the
+        first entry is the canonical total concentration series; non-particle
+        instruments (gas, black carbon, LDSA, T/RH) have no total concentration,
+        so their named channels are listed directly instead.
     """
-    cols: List[Tuple[str, str, str]] = [("Total concentration", "total", TOTAL)]
+    cols: List[Tuple[str, str, str]] = []
+    if is_particle(obj):
+        cols.append(("Total concentration", "total", TOTAL))
 
     activities = set(getattr(obj, "activities", []))
     size_headers = set(getattr(obj, "_sizebin_headers", [])) if is_2d(obj) else set()
@@ -207,7 +224,9 @@ def series_for(obj: Aerosol1D, kind: str, name: str) -> pd.Series:
     a column stored as text still plots and can never raise on conversion.
     """
     if kind == "total":
-        return obj.total_concentration
+        # ``_primary`` is the total concentration for particle instruments and
+        # the main channel for non-particle ones, so this never raises.
+        return obj._primary
     series = obj.extra_data[name] if kind == "extra" else obj.data[name]
     return pd.to_numeric(series, errors="coerce")
 

@@ -140,7 +140,11 @@ class OverlayTab(_PlotTab):
         * **Line style** identifies the metric slot (solid / dash-dot / dotted).
         * Each metric is drawn against a **user-assigned y-axis** (1/2/3), which
           become the left, right and 2nd-right spines. Per-axis min/max and log
-          controls live in a second controls row.
+          controls live in a second controls row. Series with **different units
+          never share an axis**: if two are assigned to the same axis, the
+          conflicting one is moved to a free/compatible axis automatically so a
+          real unit label can always be shown (same-unit series may still be
+          split across axes on purpose, e.g. very different scales).
 
     A per-dataset **view-only** time shift lets the user slide instruments in
     time to line up peaks; "Apply shifts permanently" bakes those shifts into the
@@ -178,7 +182,11 @@ class OverlayTab(_PlotTab):
             ax_combo = QtWidgets.QComboBox()
             ax_combo.addItems(["→1", "→2", "→3"])
             ax_combo.setCurrentIndex(slot)  # default M1→axis1, M2→axis2, M3→axis3
-            ax_combo.setToolTip("Which y-axis (1=left, 2=right, 3=2nd right).")
+            ax_combo.setToolTip(
+                "Which y-axis (1=left, 2=right, 3=2nd right). Metrics with "
+                "different units are never placed on the same axis — a conflict "
+                "is moved to a free/compatible axis automatically."
+            )
             ax_combo.setMaximumWidth(48)
             ax_combo.currentIndexChanged.connect(lambda *_: self._draw())
             self.controls.addWidget(ax_combo)
@@ -327,7 +335,10 @@ class OverlayTab(_PlotTab):
             if meas:
                 if meas not in measurements:
                     measurements.append(meas)
-            else:
+            elif helpers.is_particle(obj):
+                # Only genuine particle instruments contribute to the generic
+                # "Total concentration" totals; non-particle datasets expose
+                # their named channels below instead.
                 has_number = True
                 if helpers.is_2d(obj):
                     has_2d = True
@@ -366,6 +377,11 @@ class OverlayTab(_PlotTab):
         obj = ds.obj
         meas = self._measurement_of(obj)
         if metric.startswith("Total concentration (") and metric.endswith(")"):
+            if not helpers.is_particle(obj):
+                # Non-particle instruments (gas, black carbon, LDSA, T/RH) are
+                # never a generic particle total; they appear under their own
+                # named channel/measurement instead.
+                return None
             basis = metric[metric.index("(") + 1 : -1]
             if meas:  # a named measurement is not a generic particle total
                 return None
@@ -382,7 +398,9 @@ class OverlayTab(_PlotTab):
             return s, "Total concentration", unit
         if meas is not None and metric == meas:
             _dtype, unit = helpers.describe(obj)
-            return pd.to_numeric(obj.total_concentration, errors="coerce"), metric, unit
+            # ``_primary`` is total_concentration for particle instruments and
+            # the dataset's main channel for non-particle ones (e.g. a gas).
+            return pd.to_numeric(obj._primary, errors="coerce"), metric, unit
         if metric in obj.data.columns:
             _dtype, unit = helpers.describe(obj, metric)
             return pd.to_numeric(obj.data[metric], errors="coerce"), metric, unit
@@ -681,9 +699,46 @@ class OverlayTab(_PlotTab):
         if ylim is not None:
             ax.set_ylim(*ylim)
 
+    def _resolve_axis_units(self, entries) -> tuple:
+        """Assign each entry a physical axis so no axis mixes canonical units.
+
+        Honours each entry's requested axis (its ``uaxis``) when the unit is
+        compatible with what is already there; otherwise moves it to the lowest
+        numbered axis that is free or already carries that same unit. This keeps
+        the user's freedom to spread *same-unit* series across axes (e.g. two
+        cm⁻³ datasets far apart in scale) while never rendering two different
+        units on one axis. Entries that cannot be placed (all three axes already
+        hold other units) are returned as ``overflow`` and not drawn.
+
+        Sets ``entry["_uaxis"]`` on each drawn entry. Returns
+        ``(drawn, overflow)``.
+        """
+        axis_unit: dict = {}  # physical axis number -> canonical unit on it
+        drawn: list = []
+        overflow: list = []
+        for e in entries:
+            want = e["uaxis"]
+            cu = _canon_unit(e["unit"])
+            placed = None
+            if axis_unit.get(want, cu) == cu:
+                placed = want
+            else:
+                for cand in (1, 2, 3):
+                    if axis_unit.get(cand, cu) == cu:
+                        placed = cand
+                        break
+            if placed is None:
+                overflow.append(e)
+                continue
+            axis_unit[placed] = cu
+            e["_uaxis"] = placed
+            drawn.append(e)
+        return drawn, overflow
+
     def _draw_multi_axis(self, ax, entries, cycle) -> None:
-        """Draw series with one y-axis per *assigned* axis (up to three)."""
-        used = sorted({e["uaxis"] for e in entries})
+        """Draw series with one y-axis per unit (up to three); never mix units."""
+        drawn, overflow = self._resolve_axis_units(entries)
+        used = sorted({e["_uaxis"] for e in drawn})
         # Map each used axis number to a Matplotlib axis: first used axis to the
         # left spine, then right, then an outward 2nd-right spine (so skipping an
         # axis number never leaves an empty middle spine).
@@ -700,16 +755,17 @@ class OverlayTab(_PlotTab):
             axis_for[uaxis] = target
             self._axis_position[uaxis] = pos
 
-        for e in entries:
-            target = axis_for[e["uaxis"]]
+        for e in drawn:
+            target = axis_for[e["_uaxis"]]
             color = self._dataset_color(e["ds"], cycle)
             e["_color"] = color
             e["_style"] = _METRIC_STYLES[e["slot"]]
             target.plot(e["x"], e["y"], lw=1.4, ls=e["_style"], color=color)
 
-        # Label each axis by its metric(s) + unit, and apply its log/limits.
+        # Label each axis by its metric(s) + unit, and apply its log/limits. Each
+        # axis now carries exactly one canonical unit, so the unit always shows.
         for uaxis, target in axis_for.items():
-            ax_entries = [e for e in entries if e["uaxis"] == uaxis]
+            ax_entries = [e for e in drawn if e["_uaxis"] == uaxis]
             names = list(dict.fromkeys(e["name"] for e in ax_entries))
             canon = {_canon_unit(e["unit"]) for e in ax_entries}
             unit = next(iter(canon)) if len(canon) == 1 else ""
@@ -718,6 +774,26 @@ class OverlayTab(_PlotTab):
             is_log = self.axis_log[uaxis - 1].isChecked()
             target.set_yscale("log" if is_log else "linear")
             self._apply_axis_limits(target, uaxis, is_log)
+
+        # Warn (on the plot) about any metric that could not get its own unit
+        # axis because all three axes are already taken by other units.
+        if overflow:
+            dropped = list(
+                dict.fromkeys(
+                    f"{e['name']} [{_canon_unit(e['unit'])}]" for e in overflow
+                )
+            )
+            ax.text(
+                0.5,
+                0.99,
+                "⚠ Only 3 y-axes: no room for " + ", ".join(dropped),
+                transform=ax.transAxes,
+                ha="center",
+                va="top",
+                fontsize=8,
+                color=helpers.THRESHOLD_COLOR,
+                zorder=6,
+            )
 
     def _apply_axis_limits(self, target, uaxis: int, is_log: bool) -> None:
         """Autoscale an axis to its data, then apply any explicit min/max caps."""
@@ -769,9 +845,12 @@ class OverlayTab(_PlotTab):
                 )
                 labels.append(_entry_label(e))
         else:
-            for uaxis in sorted({e["uaxis"] for e in entries}):
+            # Group by the *resolved* physical axis (``_uaxis``), set on the
+            # entries that were actually drawn; overflow entries are skipped.
+            drawn = [e for e in entries if "_uaxis" in e]
+            for uaxis in sorted({e["_uaxis"] for e in drawn}):
                 pos = self._axis_position.get(uaxis, 0)
-                ax_entries = [e for e in entries if e["uaxis"] == uaxis]
+                ax_entries = [e for e in drawn if e["_uaxis"] == uaxis]
                 names = list(dict.fromkeys(e["name"] for e in ax_entries))
                 head = _POSITION_WORDS[pos] if pos < len(_POSITION_WORDS) else "Axis"
                 metric_part = names[0] if len(names) == 1 else ", ".join(names[:2])

@@ -555,15 +555,13 @@ class SummaryTab(QtWidgets.QWidget):
         """A cheap, stable summary of a dataset's state for staleness checks.
 
         Captures size/shape, time span, dtype, density and a numeric checksum of
-        the total concentration, so cropping, rebinning, a density change or a
+        the primary series, so cropping, rebinning, a density change or a
         calibration all change the fingerprint and mark the summary stale.
         """
         obj = ds.obj
         span = ds.time_span()
         try:
-            checksum = round(
-                float(np.nansum(np.asarray(obj.total_concentration, dtype=float))), 3
-            )
+            checksum = round(float(np.nansum(np.asarray(obj._primary, dtype=float))), 3)
         except Exception:
             checksum = None
         return {
