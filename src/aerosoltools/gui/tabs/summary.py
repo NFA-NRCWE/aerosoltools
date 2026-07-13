@@ -11,12 +11,14 @@ from __future__ import annotations
 
 import contextlib
 import io
+import re
 
 import numpy as np
 import pandas as pd
 
 from ..._core import _stats
-from .. import helpers
+from ..._core.metrics import canonical_unit, convert_value, unit_key
+from ..metric_picker import MetricPickerDialog, default_keys, metric_catalog
 from ..models import PandasTableModel
 from ..qt import QtCore, QtWidgets
 from ._base import _export_table, _tune_table
@@ -33,8 +35,6 @@ class SummaryTab(QtWidgets.QWidget):
     It is compute-on-demand (a ``Compute`` button) rather than recomputing on
     every refresh, since exposure stats over many datasets can be costly.
     """
-
-    _FRACTION_KINDS = ("PM", "PN", "PS", "PV")
 
     def __init__(self, main):
         """Build the dataset checklist, summary controls and table."""
@@ -75,24 +75,26 @@ class SummaryTab(QtWidgets.QWidget):
         bar.addWidget(QtWidgets.QLabel("Type:"))
         bar.addWidget(self.kind)
 
-        # Metric selector (exposure only): a kind drop-down plus a cut-off
-        # drop-down shown only for the size-selective fractions (PM/PN/PS/PV).
-        self.metric_label = QtWidgets.QLabel("Metric:")
-        bar.addWidget(self.metric_label)
-        self.metric_kind = QtWidgets.QComboBox()
-        self.metric_kind.setToolTip(
-            "Quantity to summarise exposure for: total number (PNC), total mass "
-            "(MASS), a size-selective fraction (PM/PN/PS/PV at the chosen cut-off), "
-            "or any extra channel the datasets carry."
+        # Metric selection: a picker dialog (grouped by instrument, primary
+        # metrics pre-checked) replaces the old free-text / kind+cut controls, so
+        # only metrics an instrument actually measures can be chosen and the same
+        # metric at different unit scales merges into one column.
+        self.metric_btn = QtWidgets.QPushButton("Choose metrics…")
+        self.metric_btn.setToolTip(
+            "Pick which metrics to summarise, grouped by instrument. Each metric "
+            "is computed only for datasets that provide it; comparable quantities "
+            "at different unit scales (e.g. ng/m³ and µg/m³) merge into one column."
         )
-        self.metric_kind.currentTextChanged.connect(self._on_metric_kind_change)
-        bar.addWidget(self.metric_kind)
-        self.metric_cut = QtWidgets.QComboBox()
-        self.metric_cut.setEditable(True)
-        self.metric_cut.setFixedWidth(80)
-        bar.addWidget(self.metric_cut)
-        self.metric_cut_label = QtWidgets.QLabel("µm")
-        bar.addWidget(self.metric_cut_label)
+        self.metric_btn.clicked.connect(self._open_metric_picker)
+        bar.addWidget(self.metric_btn)
+        self.metric_summary = QtWidgets.QLabel("")
+        self.metric_summary.setStyleSheet("color: palette(mid);")
+        bar.addWidget(self.metric_summary, stretch=1)
+        # Selected metric keys, kept per kind so each summary remembers its own.
+        self._metric_keys_by_kind: dict[str, list[str]] = {
+            "Activity summary": [],
+            "Exposure summary": [],
+        }
 
         self.compute = QtWidgets.QPushButton("Compute")
         self.compute.setObjectName("primary")
@@ -108,21 +110,9 @@ class SummaryTab(QtWidgets.QWidget):
         bar.addWidget(self.export_btn)
         right.addLayout(bar)
 
-        # Second row (activity-only): which metrics and stats to report,
-        # instead of being locked to a fixed PM1/2.5/4/10 mean+std set.
+        # Second row (activity-only): which per-activity statistics to report.
+        # (Which metrics is chosen via the shared "Choose metrics…" picker above.)
         self.act_bar = QtWidgets.QHBoxLayout()
-        self.act_metrics_label = QtWidgets.QLabel("Metrics:")
-        self.act_bar.addWidget(self.act_metrics_label)
-        self.act_metrics = QtWidgets.QLineEdit()
-        self.act_metrics.setPlaceholderText(
-            "PNC, PM1, PM2.5, PM4, PM10, MASS, MODE, MEDIAN, GMD (blank = default)"
-        )
-        self.act_metrics.setToolTip(
-            "Comma-separated metrics to summarize, e.g. 'PNC, PM2.5, PM7'. Any "
-            "cut-off works for PM/PN/PS/PV, not just 1/2.5/4/10. Leave blank to "
-            "use each dataset's own default set."
-        )
-        self.act_bar.addWidget(self.act_metrics, stretch=1)
         self.act_stats_label = QtWidgets.QLabel("Stats:")
         self.act_bar.addWidget(self.act_stats_label)
         self.act_stat_boxes: dict[str, QtWidgets.QCheckBox] = {}
@@ -171,13 +161,10 @@ class SummaryTab(QtWidgets.QWidget):
         self.exp_bar.addStretch(1)
         right.addLayout(self.exp_bar)
 
-        # Editing any limit/metric makes the shown (cached) table no longer match
-        # the inputs, so re-evaluate staleness as the user types.
+        # Editing any limit makes the shown (cached) table no longer match the
+        # inputs, so re-evaluate staleness as the user types.
         for field in self._limit_fields():
             field.editingFinished.connect(self._recheck_stale)
-        self.metric_kind.currentTextChanged.connect(self._recheck_stale)
-        self.metric_cut.currentTextChanged.connect(self._recheck_stale)
-        self.act_metrics.editingFinished.connect(self._recheck_stale)
         for box in self.act_stat_boxes.values():
             box.stateChanged.connect(self._recheck_stale)
 
@@ -245,12 +232,7 @@ class SummaryTab(QtWidgets.QWidget):
 
     def _exposure_widgets(self):
         """Widgets (and their labels) shown only in Exposure mode."""
-        widgets = [
-            self.metric_label,
-            self.metric_kind,
-            self.metric_cut,
-            self.metric_cut_label,
-        ]
+        widgets = []
         for field in self._limit_fields():
             widgets.append(field)
             label = getattr(field, "_label", None)
@@ -260,12 +242,7 @@ class SummaryTab(QtWidgets.QWidget):
 
     def _activity_widgets(self):
         """Widgets shown only in Activity summary mode."""
-        return [
-            self.act_metrics_label,
-            self.act_metrics,
-            self.act_stats_label,
-            *self.act_stat_boxes.values(),
-        ]
+        return [self.act_stats_label, *self.act_stat_boxes.values()]
 
     def _selected_stats(self) -> list[str]:
         """Ticked stat names, in a fixed order; falls back to ["mean"]."""
@@ -273,86 +250,93 @@ class SummaryTab(QtWidgets.QWidget):
         stats = [s for s in order if self.act_stat_boxes[s].isChecked()]
         return stats or ["mean"]
 
-    def _parsed_metrics(self) -> list[str] | None:
-        """Metrics from the comma-separated field, or None to use the default."""
-        text = self.act_metrics.text().strip()
-        if not text:
-            return None
-        return [m.strip() for m in text.split(",") if m.strip()]
+    # -- metric selection --------------------------------------------------
+    def _current_metric_keys(self) -> list[str]:
+        """Selected metric keys for the current kind (instrument defaults if none)."""
+        keys = self._metric_keys_by_kind.get(self.kind.currentText()) or []
+        return list(keys) if keys else default_keys(self._selected_datasets())
 
-    # -- metric options ----------------------------------------------------
-    def _ensure_metric_options(self) -> None:
-        """Populate the metric drop-downs from the union of selected datasets."""
-        selected = self._selected_datasets()
-        any_2d = any(helpers.is_2d(d.obj) for d in selected)
-        cur_kind = self.metric_kind.currentText()
-        cur_cut = self.metric_cut.currentText()
-
-        self.metric_kind.blockSignals(True)
-        self.metric_cut.blockSignals(True)
-        self.metric_kind.clear()
-        self.metric_cut.clear()
-
-        kinds = ["PNC"]
-        if any_2d:
-            kinds += ["MASS", "PM", "PN", "PS", "PV"]
-        for d in selected:  # add any extra numeric channels present
-            for _label, kind, name in helpers.plottable_columns(d.obj):
-                if kind in ("data", "extra") and name not in kinds:
-                    kinds.append(name)
-        self.metric_kind.addItems(kinds)
-        self.metric_cut.addItems(["0.1", "0.25", "0.5", "1", "2.5", "4", "4.2", "10"])
-
-        # Preserve the user's selection across rebuilds where still valid.
-        ki = self.metric_kind.findText(cur_kind)
-        self.metric_kind.setCurrentText(
-            cur_kind if ki >= 0 else ("PM" if any_2d else "PNC")
+    def _open_metric_picker(self) -> None:
+        """Open the grouped metric picker and store the chosen keys."""
+        datasets = self._selected_datasets()
+        if not datasets:
+            QtWidgets.QMessageBox.information(
+                self, "Choose metrics", "Tick at least one dataset first."
+            )
+            return
+        single = self.kind.currentText() == "Exposure summary"
+        dlg = MetricPickerDialog(
+            datasets, self._current_metric_keys(), single=single, parent=self
         )
-        self.metric_cut.setCurrentText(cur_cut or "4.2")
-        self.metric_kind.blockSignals(False)
-        self.metric_cut.blockSignals(False)
-        self._on_metric_kind_change()
+        if dlg.exec_() != QtWidgets.QDialog.Accepted:
+            return
+        keys = dlg.selected_keys()
+        if single:
+            keys = keys[:1]
+        self._metric_keys_by_kind[self.kind.currentText()] = keys
+        self._update_metric_summary()
+        self._recheck_stale()
 
-    def _on_metric_kind_change(self, *_args) -> None:
-        """Show the cut-off field only for the size-selective fractions."""
-        exposure = self.kind.currentText() == "Exposure summary"
-        is_fraction = self.metric_kind.currentText().strip() in self._FRACTION_KINDS
-        show_cut = exposure and is_fraction
-        self.metric_cut.setVisible(show_cut)
-        self.metric_cut_label.setVisible(show_cut)
+    def _update_metric_summary(self) -> None:
+        """Refresh the label describing the current metric selection."""
+        chosen = self._metric_keys_by_kind.get(self.kind.currentText()) or []
+        keys = self._current_metric_keys()
+        prefix = "" if chosen else "default — "
+        self.metric_summary.setText(
+            "Metrics: " + (prefix + ", ".join(keys) if keys else "none available")
+        )
 
-    def _build_metric(self) -> str:
-        """Assemble the metric string (kind plus cut-off where relevant)."""
-        kind = self.metric_kind.currentText().strip()
-        if kind in self._FRACTION_KINDS:
-            return f"{kind}{self.metric_cut.currentText().strip()}"
-        return kind
+    def _canonical_units(self, datasets) -> dict:
+        """Map each available metric key → its canonical unit across ``datasets``."""
+        canon: dict = {}
+        for _instr, specs in metric_catalog(datasets):
+            for m in specs:
+                canon.setdefault(m.key, m.canonical_unit)
+        return canon
 
-    #: Gas mixing-ratio units — a "total concentration" in these is not a
-    #: particle number concentration, so it must not sit under the "PNC" column.
-    _MIXING_RATIO_UNITS = ("ppm", "ppb", "ppt")
+    #: Parse a "key [unit] stat" activity-summary value column.
+    _COL_RE = re.compile(
+        r"^(?P<key>.+) \[(?P<unit>.+)\] (?P<stat>mean|std|min|max|median)$"
+    )
+
+    def _unify_activity_units(self, df: pd.DataFrame, canon: dict) -> pd.DataFrame:
+        """Convert each metric column to its canonical unit and relabel it.
+
+        So the *same* metric reported by different instruments at different unit
+        scales (e.g. black carbon in ng/m³ and µg/m³) lands in one column.
+        """
+        keep = {"Segment", "Duration (HH:MM)"}
+        rename: dict = {}
+        for col in df.columns:
+            if col in keep:
+                continue
+            m = self._COL_RE.match(str(col))
+            if not m:
+                continue
+            key, unit, stat = m["key"], m["unit"], m["stat"]
+            target = canon.get(key) or canonical_unit(unit)
+            if unit_key(unit) != unit_key(target):
+                df[col] = convert_value(
+                    pd.to_numeric(df[col], errors="coerce"), unit, target
+                )
+            rename[col] = f"{key} [{target}] {stat}"
+        return df.rename(columns=rename) if rename else df
 
     @staticmethod
-    def _relabel_total_metric(df: pd.DataFrame, obj) -> pd.DataFrame:
-        """Rename the ``PNC`` total-concentration columns for non-particle data.
-
-        ``summarize_activities`` labels the total-concentration metric ``PNC``
-        (particle number concentration). For a gas sensor (e.g. the Ranger's
-        Cl₂ in ppm) that total is not a particle count, so it must not be pooled
-        into the shared ``PNC`` column when several instruments are combined.
-        Here the ``PNC`` token is swapped for the dataset's own quantity (its
-        dtype, e.g. ``Cl₂``), giving it a separate column; instruments without
-        that quantity simply leave those cells blank.
-        """
-        _dtype, unit = helpers.describe(obj)
-        if unit.strip().lower() not in SummaryTab._MIXING_RATIO_UNITS:
+    def _unify_exposure_units(
+        df: pd.DataFrame, native: str, target: str
+    ) -> pd.DataFrame:
+        """Convert an exposure table's metric-unit columns to the canonical unit."""
+        if not native or not target or unit_key(native) == unit_key(target):
             return df
-        name = helpers.base_dtype(_dtype).strip() or "Concentration"
-        rename = {
-            col: f"{name} {col[len('PNC '):]}"
-            for col in df.columns
-            if col.startswith("PNC ")
-        }
+        scale = convert_value(1.0, native, target)
+        nk = unit_key(native)
+        rename: dict = {}
+        for col in df.columns:
+            m = re.search(r"\[(.+)\]$", str(col))
+            if m and unit_key(m.group(1)) == nk:
+                df[col] = pd.to_numeric(df[col], errors="coerce") * scale
+                rename[col] = str(col)[: m.start(1)] + target + "]"
         return df.rename(columns=rename) if rename else df
 
     @staticmethod
@@ -383,8 +367,7 @@ class SummaryTab(QtWidgets.QWidget):
             widget.setVisible(exposure)
         for widget in self._activity_widgets():
             widget.setVisible(not exposure)
-        if exposure:
-            self._on_metric_kind_change()
+        self._update_metric_summary()
 
     def _on_kind_change(self) -> None:
         """Rebuild options for the chosen kind, then show its cached table.
@@ -394,11 +377,9 @@ class SummaryTab(QtWidgets.QWidget):
         whether the shown values are now stale.
         """
         kind = self.kind.currentText()
-        exposure = kind == "Exposure summary"
-        if exposure:
-            self._ensure_metric_options()
         self._apply_kind_visibility()
         self._restore_params_from_cache(kind)
+        self._update_metric_summary()
         self._show_cache()
 
     @staticmethod
@@ -433,10 +414,9 @@ class SummaryTab(QtWidgets.QWidget):
         ds = self.main.project.get(item.data(QtCore.Qt.UserRole))
         if ds is not None:
             ds.summary_on = item.checkState() == QtCore.Qt.Checked
-        # The available metrics may change with the selection (e.g. a 2D
-        # dataset added/removed), so keep the metric drop-downs in step.
-        if self.kind.currentText() == "Exposure summary":
-            self._ensure_metric_options()
+        # The available metrics may change with the selection (e.g. a dataset
+        # added/removed), so refresh the metric-summary label.
+        self._update_metric_summary()
         # A different dataset selection means the shown table no longer matches.
         self._recheck_stale()
 
@@ -461,22 +441,29 @@ class SummaryTab(QtWidgets.QWidget):
                 # kind's params + table and checks staleness.
                 self.kind.setCurrentText(active)
                 return
-        if self.kind.currentText() == "Exposure summary":
-            self._ensure_metric_options()
+        self._update_metric_summary()
         self._show_cache()
 
     # -- compute -----------------------------------------------------------
     def _compute(self) -> None:
-        """Run the summary per ticked dataset and concatenate the tables."""
+        """Run the summary per ticked dataset and concatenate the tables.
+
+        Each selected metric is computed only for datasets that actually provide
+        it (via ``available_metrics``); a metric is then converted to its
+        canonical unit so the *same* quantity reported at different unit scales
+        merges into one column, and datasets that don't provide it leave blanks.
+        """
         datasets = self._selected_datasets()
         if not datasets:
             self.model.set_dataframe(pd.DataFrame())
             self.status.setText("Tick at least one dataset to include.")
             return
         exposure = self.kind.currentText() == "Exposure summary"
-        metric = self._build_metric() if exposure else None
-        act_metrics = self._parsed_metrics()
+        keys = self._current_metric_keys()
+        if exposure:
+            keys = keys[:1]  # exposure summarises one metric at a time
         act_stats = self._selected_stats()
+        canon = self._canonical_units(datasets)
 
         frames: list[pd.DataFrame] = []
         skipped: list[str] = []
@@ -486,23 +473,35 @@ class SummaryTab(QtWidgets.QWidget):
         # encoding error mid-method. Swallow that console output during compute.
         with contextlib.redirect_stdout(io.StringIO()):
             for ds in datasets:
+                obj = ds.obj
+                try:
+                    ds_specs = obj.available_metrics()
+                except Exception:
+                    ds_specs = []
+                native = {m.key: m.unit for m in ds_specs}
+                applicable = [k for k in keys if k in native]
+                if not applicable:
+                    continue  # this dataset provides none of the chosen metrics
                 try:
                     if exposure:
-                        df = ds.obj.summarize_exposure(
-                            metric=metric,
+                        key = applicable[0]
+                        df = obj.summarize_exposure(
+                            metric=key,
                             short_limit=self._to_float(self.short_limit.text(), 1.0),
                             long_limit=self._to_float(self.long_limit.text(), 1.0),
                             short_window=self.short_window.text().strip() or "15min",
                             twa_window=self.twa_window.text().strip() or "8h",
                         )
+                        df = self._unify_exposure_units(
+                            df, native.get(key), canon.get(key)
+                        )
                     else:
-                        kwargs = {"stats": act_stats}
-                        if act_metrics is not None:
-                            kwargs["metrics"] = act_metrics
-                        df = ds.obj.summarize_activities(**kwargs)
+                        df = obj.summarize_activities(
+                            metrics=applicable, stats=act_stats
+                        )
                         df = self._clarify_activity_columns(df)
-                        df = self._relabel_total_metric(df, ds.obj)
-                except Exception as exc:  # e.g. a PM metric on a 1D instrument
+                        df = self._unify_activity_units(df, canon)
+                except Exception as exc:
                     skipped.append(f"{ds.label} ({exc})")
                     continue
                 if df is None or df.empty:
@@ -578,9 +577,9 @@ class SummaryTab(QtWidgets.QWidget):
     def _exposure_params(self) -> dict:
         """Current exposure-limit inputs (stored so they restore on reload)."""
         return {
-            "metric": self._build_metric(),
-            "metric_kind": self.metric_kind.currentText(),
-            "metric_cut": self.metric_cut.currentText(),
+            "metric_keys": list(
+                self._metric_keys_by_kind.get("Exposure summary") or []
+            ),
             "short_limit": self.short_limit.text().strip(),
             "short_window": self.short_window.text().strip(),
             "long_limit": self.long_limit.text().strip(),
@@ -590,7 +589,9 @@ class SummaryTab(QtWidgets.QWidget):
     def _activity_params(self) -> dict:
         """Current activity-summary inputs (stored so they restore on reload)."""
         return {
-            "metrics_text": self.act_metrics.text().strip(),
+            "metric_keys": list(
+                self._metric_keys_by_kind.get("Activity summary") or []
+            ),
             "stats": self._selected_stats(),
         }
 
@@ -622,7 +623,7 @@ class SummaryTab(QtWidgets.QWidget):
             sig["params"] = {
                 k: p[k]
                 for k in (
-                    "metric",
+                    "metric_keys",
                     "short_limit",
                     "short_window",
                     "long_limit",
@@ -697,10 +698,9 @@ class SummaryTab(QtWidgets.QWidget):
         params = entry.get("params") if entry else None
         if not params:
             return
+        # Restore the saved metric selection for this kind.
+        self._metric_keys_by_kind[kind] = list(params.get("metric_keys") or [])
         if kind == "Activity summary":
-            self.act_metrics.blockSignals(True)
-            self.act_metrics.setText(str(params.get("metrics_text") or ""))
-            self.act_metrics.blockSignals(False)
             wanted = set(params.get("stats") or ["mean", "std"])
             for stat, box in self.act_stat_boxes.items():
                 box.blockSignals(True)
@@ -717,19 +717,6 @@ class SummaryTab(QtWidgets.QWidget):
                 widget.blockSignals(True)
                 widget.setText(str(value))
                 widget.blockSignals(False)
-        mk = params.get("metric_kind")
-        if mk:
-            self.metric_kind.blockSignals(True)
-            idx = self.metric_kind.findText(mk)
-            if idx >= 0:
-                self.metric_kind.setCurrentIndex(idx)
-            self.metric_kind.blockSignals(False)
-        mc = params.get("metric_cut")
-        if mc is not None:
-            self.metric_cut.blockSignals(True)
-            self.metric_cut.setCurrentText(str(mc))
-            self.metric_cut.blockSignals(False)
-        self._on_metric_kind_change()
 
     def _export(self) -> None:
         """Save the combined table to an .xlsx or .csv file."""
