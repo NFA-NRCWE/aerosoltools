@@ -411,7 +411,10 @@ class ActivityMixin:
         Data_return = self.copy_self()
 
         if metric is None:
-            metric = Data_return.data.columns[0]
+            # Default to the dataset's primary channel (total concentration for
+            # particle instruments, the main channel otherwise) — matching
+            # Peak_finder and removing the "first column = primary" assumption.
+            metric = str(getattr(self._primary, "name", None) or self.data.columns[0])
 
         if metric in self._data.select_dtypes(exclude="bool").columns:
             Data_return = Data_return._data[metric]
