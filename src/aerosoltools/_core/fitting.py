@@ -4,6 +4,45 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 
+_SQRT_2PI = np.sqrt(2.0 * np.pi)
+
+
+def lognormal_modes(dp_nm, modes):
+    """Evaluate a sum of lognormal modes (dx/dlogDp) at diameters ``dp_nm``.
+
+    This is the exact model :meth:`Aerosol2D.fit_psd` fits, exposed as a public
+    helper so a script (or the GUI) can reconstruct the fitted curve from the
+    modes ``fit_psd`` returns and plot it against the measured PSD::
+
+        modes, err = data.fit_psd("Task 1", mu=[80, 200])
+        triples = list(zip(modes["mu"], modes["sigma"], modes["factor"]))
+        total, per_mode = at.lognormal_modes(data.bin_mids, triples)
+
+    Args:
+        dp_nm: Diameters (nm) to evaluate at.
+        modes: Iterable of ``(mu, sigma, factor)`` triples — the peak diameter
+            (nm), geometric standard deviation, and scaling factor of each mode,
+            as returned by :meth:`fit_psd`.
+
+    Returns:
+        tuple[numpy.ndarray, list[numpy.ndarray]]: ``(total, per_mode)`` where
+        ``total`` is the summed dx/dlogDp curve and ``per_mode`` holds each
+        mode's individual curve, all in the same order as ``modes``.
+    """
+    x = np.log10(np.asarray(dp_nm, dtype=float))
+    total = np.zeros_like(x)
+    per_mode = []
+    for mu, sigma, factor in modes:
+        s = np.log10(sigma)
+        comp = (
+            factor
+            * (1.0 / (_SQRT_2PI * s))
+            * np.exp(-((x - np.log10(mu)) ** 2) / (2.0 * s**2))
+        )
+        per_mode.append(comp)
+        total = total + comp
+    return total, per_mode
+
 
 class FitMixin:
     """Fit one or more lognormal modes to a mean PSD."""
@@ -119,39 +158,17 @@ class FitMixin:
 
         """
 
-        def Lognormal(bin_mid, *params):
-
-            bin_mid = np.log10(bin_mid)
-            mu = np.log10(np.array(params[0::3]))
-            sigma = np.log10(np.array(params[1::3]))
-            factor = np.array(params[2::3])
-
-            population = 0
-            for i in range(0, len(mu)):
-
-                population += (
-                    (1 / (np.sqrt(2 * np.pi) * sigma[i]))
-                    * np.exp(-((bin_mid - mu[i]) ** 2) / (2 * sigma[i] ** 2))
-                ) * factor[i]
-
-            return np.log10(population)
-
         def Normal(bin_mid, *params):
+            # The measured-space model: the shared lognormal evaluator so the
+            # fit, the public helper, and the GUI overlay are one implementation.
+            triples = list(zip(params[0::3], params[1::3], params[2::3]))
+            total, _ = lognormal_modes(bin_mid, triples)
+            return total
 
-            bin_mid = np.log10(bin_mid)
-            mu = np.log10(np.array(params[0::3]))
-            sigma = np.log10(np.array(params[1::3]))
-            factor = np.array(params[2::3])
-
-            population = 0
-            for i in range(0, len(mu)):
-
-                population += (
-                    (1 / (np.sqrt(2 * np.pi) * sigma[i]))
-                    * np.exp(-((bin_mid - mu[i]) ** 2) / (2 * sigma[i] ** 2))
-                ) * factor[i]
-
-            return population
+        def Lognormal(bin_mid, *params):
+            # log10 of the same model, so modes of very different population get
+            # comparable leverage in the least-squares fit.
+            return np.log10(Normal(bin_mid, *params))
 
         ###
         data = self.copy_self()
@@ -166,7 +183,7 @@ class FitMixin:
                 ),
                 dtype="float64",
             )
-        elif type(period) == tuple:
+        elif isinstance(period, tuple):
             ydata = np.array(
                 pd.DataFrame(
                     data.timecrop(start=period[0], end=period[1], inplace=False).data,
@@ -260,18 +277,18 @@ class FitMixin:
             binding = []
 
         for i in range(0, len(binding)):
-            if binding[i] == True:
+            if binding[i]:
                 low_bounds[i] = init_guess[i] * (1 - tolerance)
                 up_bounds[i] = init_guess[i] * (1 + tolerance)
 
         # Build the model and the (optional) per-bin weights. log_scaling fits
         # log10(dx/dlogDp) so modes of very different population get comparable
         # leverage; otherwise the raw values are fit.
-        if log_scaling == True:
+        if log_scaling:
             model, yfit = Lognormal, np.log10(ymean)
             sigma_y = np.nanstd(ydata_masked, axis=0, ddof=1) / np.sqrt(n)
             sigma_fit = sigma_y / (ymean * np.log(10))
-        elif log_scaling == False:
+        elif not log_scaling:
             model, yfit = Normal, ymean
             sigma_fit = np.nanstd(ydata_masked, axis=0, ddof=1) / np.sqrt(n)
         else:

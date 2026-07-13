@@ -106,6 +106,7 @@ Typical usage example
     >>> combined = at.combine_size_ranges(ns, ops, crossover=400)
 """
 
+from ._core.fitting import lognormal_modes
 from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
 from .aerosol3d import Aerosol3d
@@ -165,6 +166,8 @@ __all__ = [
     "plot_correlation",
     "combine_measurements",
     "calibrate_against_reference",
+    # Size-distribution fitting
+    "lognormal_modes",
     # Loaders
     "load_aps_file",
     "load_aethalometer_file",

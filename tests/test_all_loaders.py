@@ -344,6 +344,26 @@ def test_calibration_rejects_incompatible():
         fit_calibration(ops, cpc, basis="per_bin")
 
 
+def test_psd_fit_and_evaluator_single_sourced():
+    """fit_psd + the public lognormal_modes are the one model the GUI also uses."""
+    import numpy as np
+
+    import aerosoltools as at
+    from aerosoltools.gui.tabs import _psdfit
+
+    # The GUI overlay evaluator is literally the API function (one implementation).
+    assert _psdfit.lognormal_modes is at.lognormal_modes
+
+    ops = load_ops_file(_data_path("Sample_OPS.csv"))
+    period = (ops.time[0], ops.time[-1])
+    modes, err = ops.fit_psd(period=period, mu=[500], sigma=[2.0], factor=[1000.0])
+    triples = list(zip(modes["mu"], modes["sigma"], modes["factor"]))
+    total, per_mode = at.lognormal_modes(ops.bin_mids, triples)
+    assert len(total) == len(ops.bin_mids)
+    assert np.all(np.isfinite(total))
+    assert len(per_mode) == len(modes["mu"])
+
+
 def test_calibration_gui_and_script_agree():
     """The GUI applies the very same model the scripting API produces."""
     import aerosoltools as at
