@@ -125,6 +125,9 @@ from .intercomparison import (
     plot_correlation,
 )
 from .loaders import (
+    INSTRUMENT_LOADERS,
+    LoaderError,
+    detect_instrument,
     load_aethalometer_file,
     load_aps_file,
     load_cpc_file,
@@ -134,6 +137,7 @@ from .loaders import (
     load_discmini_raw_file,
     load_dusttrak_file,
     load_elpi_file,
+    load_file,
     load_fmps_file,
     load_fourtec_file,
     load_grimm_file,
@@ -168,7 +172,12 @@ __all__ = [
     "calibrate_against_reference",
     # Size-distribution fitting
     "lognormal_modes",
-    # Loaders
+    # Loading: auto-detect entry point + registry + error base
+    "load_file",
+    "detect_instrument",
+    "INSTRUMENT_LOADERS",
+    "LoaderError",
+    # Per-instrument loaders
     "load_aps_file",
     "load_aethalometer_file",
     "load_cpc_file",

@@ -381,6 +381,28 @@ def test_calibration_gui_and_script_agree():
     assert a.sub(b).abs().max() < 1e-9
 
 
+def test_public_load_file_autodetects():
+    """at.load_file auto-detects the instrument and matches the explicit loader."""
+    import aerosoltools as at
+    from aerosoltools.loaders import InstrumentDetectionError
+
+    auto = at.load_file(_data_path("Sample_OPS.csv"))
+    explicit = load_ops_file(_data_path("Sample_OPS.csv"))
+    assert type(auto) is type(explicit)
+    assert auto.data.shape == explicit.data.shape
+
+    # Explicit instrument name routes to that loader.
+    assert type(at.load_file(_data_path("Sample_CPC_Direct.txt"), instrument="CPC"))
+
+    # detect_instrument returns the canonical registry key (or None).
+    assert at.detect_instrument(_data_path("Sample_OPS.csv")) == "OPS"
+    assert at.detect_instrument(_data_path("Sample_Ranger.csv")) == "Ranger"
+
+    # An unknown instrument name is a domain error, not a KeyError.
+    with pytest.raises(InstrumentDetectionError):
+        at.load_file(_data_path("Sample_OPS.csv"), instrument="NoSuchDevice")
+
+
 def test_discmini_serial_normalization():
     """The serial normalizer strips the inconsistent 'SN' prefix."""
     assert _normalize_serial("SN101923") == "101923"

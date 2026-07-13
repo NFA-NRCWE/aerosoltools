@@ -55,6 +55,12 @@ from .OPCN3 import load_opcn3_file
 from .OPS import load_ops_file
 from .Partector import load_partector_file
 from .Ranger import load_ranger_file
+from .registry import (
+    INSTRUMENT_LOADERS,
+    detect_instrument,
+    load_file,
+    supported_instruments,
+)
 from .SMPS import load_smps_file
 
 __all__ = [
@@ -76,6 +82,11 @@ __all__ = [
     "load_smps_file",
     "load_data_from_folder",
     "load_devlabs_file",
+    # Registry / auto-detection
+    "load_file",
+    "detect_instrument",
+    "supported_instruments",
+    "INSTRUMENT_LOADERS",
     # Exception hierarchy
     "LoaderError",
     "FileAccessError",
