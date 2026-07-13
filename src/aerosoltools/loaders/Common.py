@@ -10,6 +10,12 @@ from tqdm.auto import tqdm
 
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
+from .exceptions import (
+    DelimiterDetectionError,
+    EmptyFileError,
+    EncodingError,
+    LoaderError,
+)
 
 __all__ = ["file_list", "load_data_from_folder"]
 
@@ -58,8 +64,9 @@ def _detect_delimiter(
         encoding and delimiter.
 
     Raises:
-        UnicodeDecodeError: If none of the candidate encodings can decode the file.
-        ValueError: If no reliable delimiter can be inferred from the sampled lines.
+        EncodingError: If none of the candidate encodings can decode the file.
+        EmptyFileError: If the file has no usable lines to analyse.
+        DelimiterDetectionError: If no reliable delimiter can be inferred.
     """
     # Use default sets if not provided
     encodings = encodings or [
@@ -80,8 +87,8 @@ def _detect_delimiter(
         except UnicodeError:
             continue
     else:
-        raise UnicodeDecodeError(
-            "utf-8", b"", 0, 1, "Could not decode file with given encodings."
+        raise EncodingError(
+            f"Could not decode '{file_path}' with any of: {', '.join(encodings)}."
         )
 
     # Keep only non-empty, non-comment lines (from the bottom up)
@@ -92,7 +99,10 @@ def _detect_delimiter(
     ]
     lines = list(reversed(valid_lines[:sample_lines]))
     if not lines:
-        raise ValueError("No valid lines found to analyze for delimiter detection.")
+        raise EmptyFileError(
+            f"No usable (non-empty, non-comment) lines in '{file_path}' to "
+            "analyse for delimiter detection."
+        )
 
     best_delim: str | None = None
     best_score = 0
@@ -113,7 +123,10 @@ def _detect_delimiter(
                 best_delim = delim
 
     if best_delim is None:
-        raise ValueError("Could not reliably detect a delimiter from sampled lines.")
+        raise DelimiterDetectionError(
+            f"Could not reliably detect a field delimiter in '{file_path}' from "
+            f"the sampled lines (tried: {', '.join(repr(d) for d in delimiters)})."
+        )
 
     return encoding, best_delim  # type: ignore[name-defined]
 
@@ -510,6 +523,7 @@ def load_data_from_folder(
                 summary_log.append({"file": fname, "status": "Loaded", "reason": "-"})
 
         except (
+            LoaderError,
             FileNotFoundError,
             ValueError,
             KeyError,

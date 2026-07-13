@@ -36,6 +36,17 @@ from .Dev_weather import load_devlabs_file
 from .Discmini import load_discmini_file, load_discmini_raw_file
 from .DustTrak import load_dusttrak_file
 from .ELPI import load_elpi_file
+from .exceptions import (
+    DelimiterDetectionError,
+    EmptyFileError,
+    EncodingError,
+    FileAccessError,
+    FileFormatError,
+    InstrumentDetectionError,
+    LoaderError,
+    MetadataParseError,
+    TimestampError,
+)
 from .FMPS import load_fmps_file
 from .Fourtec import load_fourtec_file
 from .Grimm import load_grimm_file
@@ -65,4 +76,14 @@ __all__ = [
     "load_smps_file",
     "load_data_from_folder",
     "load_devlabs_file",
+    # Exception hierarchy
+    "LoaderError",
+    "FileAccessError",
+    "EmptyFileError",
+    "EncodingError",
+    "DelimiterDetectionError",
+    "FileFormatError",
+    "MetadataParseError",
+    "TimestampError",
+    "InstrumentDetectionError",
 ]
