@@ -20,7 +20,7 @@ from aerosoltools.loaders import (
     load_ranger_file,
     load_smps_file,
 )
-from aerosoltools.loaders.Discmini import (
+from aerosoltools.loaders.discmini import (
     _extract_serial_and_firmware,
     _normalize_serial,
 )
@@ -556,7 +556,7 @@ def test_discmini_raw_matches_processed_size_and_number():
 
 def test_discmini_zero_offset_correction_recovers_and_applies():
     """Zero-offset correction reads the idle-period zeros and shifts the currents."""
-    from aerosoltools.loaders.Discmini import _parse_raw_header, _zero_offset_series
+    from aerosoltools.loaders.discmini import _parse_raw_header, _zero_offset_series
 
     raw = _data_path("Sample_Discmini_raw.txt")
     on = load_discmini_raw_file(raw, zero_offset_correction=True)
@@ -655,7 +655,7 @@ def test_discmini_ldsa_correction_scales_with_size():
     """The optional LDSA correction raises LDSA and grows with particle size."""
     import numpy as np
 
-    from aerosoltools.loaders.Discmini import _ldsa_size_factor
+    from aerosoltools.loaders.discmini import _ldsa_size_factor
 
     # Factor is ~1 for small particles and increases with size (bounded).
     assert _ldsa_size_factor(np.array([20.0]))[0] == pytest.approx(1.0, abs=0.01)

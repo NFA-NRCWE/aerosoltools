@@ -24,6 +24,6 @@ class ELPI(Aerosol2D):
 
     def _recompute_diameters_for_density(self, density: float, old: float) -> bool:
         # Lazy import avoids a circular import (the loader imports this class).
-        from .loaders.ELPI import recalculate_ELPI_density
+        from .loaders.elpi import recalculate_ELPI_density
 
         return bool(recalculate_ELPI_density(self, density))

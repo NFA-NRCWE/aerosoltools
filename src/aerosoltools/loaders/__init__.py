@@ -28,14 +28,14 @@ for batch-loading and concatenating multiple compatible files from a
 directory into a single aerosol object.
 """
 
-from .Aethalometer import load_aethalometer_file
-from .APS import load_aps_file
+from .aethalometer import load_aethalometer_file
+from .aps import load_aps_file
 from .Common import load_data_from_folder
-from .CPC import load_cpc_file
-from .Dev_weather import load_devlabs_file
-from .Discmini import load_discmini_file, load_discmini_raw_file
-from .DustTrak import load_dusttrak_file
-from .ELPI import load_elpi_file
+from .cpc import load_cpc_file
+from .dev_weather import load_devlabs_file
+from .discmini import load_discmini_file, load_discmini_raw_file
+from .dusttrak import load_dusttrak_file
+from .elpi import load_elpi_file
 from .exceptions import (
     DelimiterDetectionError,
     EmptyFileError,
@@ -47,21 +47,21 @@ from .exceptions import (
     MetadataParseError,
     TimestampError,
 )
-from .FMPS import load_fmps_file
-from .Fourtec import load_fourtec_file
-from .Grimm import load_grimm_file
-from .NS import load_ns_file
-from .OPCN3 import load_opcn3_file
-from .OPS import load_ops_file
-from .Partector import load_partector_file
-from .Ranger import load_ranger_file
+from .fmps import load_fmps_file
+from .fourtec import load_fourtec_file
+from .grimm import load_grimm_file
+from .ns import load_ns_file
+from .opcn3 import load_opcn3_file
+from .ops import load_ops_file
+from .partector import load_partector_file
+from .ranger import load_ranger_file
 from .registry import (
     INSTRUMENT_LOADERS,
     detect_instrument,
     load_file,
     supported_instruments,
 )
-from .SMPS import load_smps_file
+from .smps import load_smps_file
 
 __all__ = [
     "load_aps_file",
