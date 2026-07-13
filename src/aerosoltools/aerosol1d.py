@@ -339,19 +339,20 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
     def _ensure_data_robustness(self, vals) -> pd.Series:
         """Validity mask from the original object (keeps alignment with self.time)
 
-        This returns a cleaned serires, so that no new data is generated,
-        where before the total_conc was NaN.
+        This returns a cleaned series, so that no new data is generated,
+        where before the primary channel was NaN.
         Args:
             vals (np.array):
                 array of data structured as a column of data from either data
                 extra data.
         Returns:
-            pd.Series: Time series of the requested Pₓ metric, indexed by
-            :attr:`time`. Empty or invalid time steps (where
-            :attr:`total_concentration` is NaN) are returned as NaN.
+            pd.Series: Time series aligned to :attr:`time`. Time steps where the
+            dataset's primary channel is NaN are returned as NaN. Uses
+            :attr:`_primary` (total concentration for particle instruments, the
+            main channel otherwise) so it works for every data class.
         """
 
-        valid_mask = self.total_concentration.notna()
+        valid_mask = self._primary.notna()
         series = pd.Series(vals, index=self.time)
 
         return series.where(valid_mask, np.nan)
@@ -362,29 +363,48 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
     """############################# Functions #############################"""
     ###########################################################################
 
-    def calibrate(self, m: float = 1, b: float = 0):
+    def calibrate(self, m: float = 1, b: float = 0, *, parameter=None, inplace=True):
+        """Apply a linear correction ``x_cor = m * x + b`` to one channel.
+
+        Args:
+            m (float): Gain multiplied onto the data.
+            b (float): Additive offset. Defaults to ``0`` (use with care).
+            parameter (int | str | None): Which channel to calibrate. ``None``
+                (default) calibrates the dataset's **primary** channel — total
+                concentration for particle instruments, the main channel for
+                others — preserving the historical single-quantity behaviour. An
+                ``int`` is a positional index into :attr:`data` columns; a
+                ``str`` is a column label in :attr:`data` or :attr:`extra_data`.
+            inplace (bool): Modify this object (default) or a deep copy.
+
+        Returns:
+            Aerosol1D: The calibrated object (``self`` when ``inplace``).
         """
-        Apply a correction to the total conc and mark the data as calibrated
-        by a linear function
+        out = self if inplace else self.copy_self()
 
-        Parameters
-        ----------
-        m : float
-            The calibration value to be multiplied to the data for correction.
-        b : float
-            A constant offset to be removed. By default is zero and should be
-            used cautionsly.
+        # Resolve which channel to calibrate.
+        if parameter is None:
+            column = getattr(out._primary, "name", None) or "Total_conc"
+        elif isinstance(parameter, int):
+            if parameter >= len(out.data.columns):
+                raise LookupError("Chosen parameter is invalid")
+            column = out.data.columns[parameter]
+        elif isinstance(parameter, str):
+            column = parameter
+        else:
+            raise LookupError("Chosen parameter is invalid")
 
-        Returns
-        -------
-        None
+        if column in out._data.columns:
+            out._data[column] = out._ensure_data_robustness(out._data[column] * m + b)
+        elif out._extra_data is not None and column in out._extra_data.columns:
+            out._extra_data[column] = out._ensure_data_robustness(
+                out._extra_data[column] * m + b
+            )
+        else:
+            raise KeyError(f"Parameter '{column}' not found in data or extra_data")
 
-        """
-        self._data["Total_conc"] = self._ensure_data_robustness(
-            self._data["Total_conc"] * m + b
-        )
-
-        self._meta["calibrated"] = {"m": m, "b": b}
+        out._meta.setdefault("calibrated", {})[column] = {"m": m, "b": b}
+        return out
 
     ###########################################################################
 
