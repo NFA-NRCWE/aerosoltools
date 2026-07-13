@@ -12,8 +12,8 @@ from .Common import _detect_delimiter
 
 def Load_Partector_file(file: str, extra_data: bool = False) -> Partector:
     """Description:
-        Load a Partector LDSA text export and return it as an
-        :class:`AerosolAlt` time series with TEM sampling metadata.
+        Load a Partector LDSA text export and return it as a
+        :class:`Partector` time series with TEM sampling metadata.
 
     Args:
         file (str):
@@ -24,7 +24,7 @@ def Load_Partector_file(file: str, extra_data: bool = False) -> Partector:
             Defaults to ``False``.
 
     Returns:
-        AerosolAlt:
+        Partector:
             Partector LDSA time series with a datetime index, LDSA, TEM flag,
             flow, and associated metadata (including a TEM sampling summary).
 

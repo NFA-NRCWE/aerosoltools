@@ -9,7 +9,7 @@ from .Common import _detect_delimiter
 def Load_Aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
     """Description:
         Load time-resolved black carbon data from an Aethalometer export file
-        into an :class:`aerosoltools.AerosolAlt` object.
+        into an :class:`aerosoltools.Aethalometer` object.
 
     Args:
         file (str):
@@ -22,8 +22,8 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
             measurement channels are kept in ``.data``.
 
     Returns:
-        AerosolAlt:
-            An :class:`~aerosoltools.aerosolalt.AerosolAlt` instance with:
+        Aethalometer:
+            An :class:`~aerosoltools.aethalometer.Aethalometer` instance with:
 
             - ``.data`` containing the primary BC concentration channels
               (at least IR/UV/blue/green/red) indexed by ``Datetime``.

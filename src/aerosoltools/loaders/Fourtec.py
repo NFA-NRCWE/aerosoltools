@@ -12,14 +12,14 @@ from .Common import _detect_delimiter
 def Load_Fourtec_file(file: str) -> Environmental1D:
     """Description:
         Load a Fourtec Bluefish CSV or Excel export and return temperature and
-        relative humidity as an :class:`AerosolAlt` time series.
+        relative humidity as an :class:`Environmental1D` time series.
 
     Args:
         file (str):
             Path to the Fourtec export file (``.csv`` or ``.xlsx``).
 
     Returns:
-        AerosolAlt:
+        Environmental1D:
             Fourtec measurements with a datetime index and columns for
             temperature (°C) and relative humidity (%), plus basic metadata.
 

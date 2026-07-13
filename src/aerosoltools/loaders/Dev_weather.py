@@ -1,10 +1,9 @@
-import datetime
 
 import numpy as np
 import pandas as pd
 
 from ..environmental import Environmental1D
-from .Common import _detect_delimiter,  Load_data_from_folder
+from .Common import Load_data_from_folder, _detect_delimiter
 
 ###############################################################################
 
@@ -107,7 +106,7 @@ def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> En
               fig, ax = fourtec.plot_timeseries()
     """
     Parameters=["Temp","RH","W_speed","W_direction","PM2.5","CO2","CO","NO2"]
-    
+
     Search_words={"Temp"    : "temperature",
                   "RH"      : "relative_humidity",
                   "W_speed" : "wind_speed",
@@ -126,12 +125,12 @@ def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> En
     for param in Parameters:
         if Data[param]._meta["serial_number"]!= SN:
             raise ValueError("Trying to combine data from multiple sensors")
-            
+
     if start is None :
         start   = min([Data[i ].time[0] for i in Parameters])
     if end is None :
         end     = max([Data[i ].time[-1] for i in Parameters])
-    
+
     df={}
     data=Data.copy()
     for param in Parameters:
@@ -139,8 +138,8 @@ def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> En
 
     for param in Parameters:
         df[param]=data[param].timerebin(freq,start,end).data[param]
-    
-    Combined_df=pd.concat(df.values(),axis=1) 
+
+    Combined_df=pd.concat(df.values(),axis=1)
 
     # Build Environmental1D with core variables only
     devlabs = Environmental1D(Combined_df)
