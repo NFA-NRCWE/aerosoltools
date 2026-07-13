@@ -37,6 +37,8 @@ class Aethalometer(_NonParticleMixin, Aerosol1D):
     """
 
     _primary_column = "IR BCc"
+    #: Primary summary metric (see ``available_metrics``): IR-equivalent BC.
+    _primary_metric_keys = ("IR BCc",)
 
     @property
     def ir_bcc(self) -> pd.Series:

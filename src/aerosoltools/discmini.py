@@ -25,6 +25,9 @@ class DiSCmini(Aerosol1D):
         ldsa (pandas.Series): Lung-deposited surface area (nm²/cm³).
     """
 
+    #: Primary summary metrics (see ``available_metrics``): number + LDSA.
+    _primary_metric_keys = ("PNC", "LDSA")
+
     @property
     def size(self) -> pd.Series:
         """Mean particle size (nm)."""

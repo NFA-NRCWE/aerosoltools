@@ -34,6 +34,8 @@ class Partector(_NonParticleMixin, Aerosol1D):
     """
 
     _primary_column = "LDSA"
+    #: Primary summary metric (see ``available_metrics``): LDSA.
+    _primary_metric_keys = ("LDSA",)
 
     @property
     def ldsa(self) -> pd.Series:

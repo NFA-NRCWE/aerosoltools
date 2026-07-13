@@ -10,10 +10,93 @@ import pandas as pd
 from tabulate import tabulate
 
 from . import _stats
+from ._labels import base_dtype
+from .metrics import MetricSpec, classify_unit, unit_key
 
 
 class SummaryMixin:
     """Per-activity and exposure (STEL/TWA) summaries."""
+
+    #: Class hint: metric keys that form the instrument's *primary* (default)
+    #: summary set. ``None`` (the default) falls back to a heuristic — PNC for a
+    #: number-concentration instrument, else the first available channel.
+    _primary_metric_keys: tuple[str, ...] | None = None
+
+    #: dtype bases / unit dimensions that rule out a particle *number* primary.
+    _NON_NUMBER_DTYPES = frozenset({"dM", "dS", "dV"})
+    _NON_NUMBER_DIMS = frozenset(
+        {"mass", "mixing_ratio", "surface", "volume", "temperature", "humidity"}
+    )
+
+    def _has_number_primary(self) -> bool:
+        """True if the primary channel can be read as a particle *number* concentration.
+
+        A plain :class:`Aerosol1D` (the particle base) qualifies even with unset
+        metadata — number concentration is its historical default. Only a
+        *clearly* non-number quantity disqualifies it: a mass/surface/volume
+        dtype (``dM``/``dS``/``dV``) or a non-number unit dimension (mass, gas
+        mixing ratio, surface, volume, temperature, humidity). This is what keeps
+        ``PNC`` valid for CPC/size-resolved data but raising for gases, black
+        carbon, LDSA and PM-mass instruments.
+        """
+        name = getattr(self._primary, "name", None)
+        dt = base_dtype(self.dtype_of(name))
+        dim = classify_unit(self.unit_of(name))[0]
+        if dt in self._NON_NUMBER_DTYPES or dim in self._NON_NUMBER_DIMS:
+            return False
+        return True
+
+    def available_metrics(self) -> list[MetricSpec]:
+        """List the quantities this dataset can be summarised on.
+
+        Each entry is a :class:`~aerosoltools._core.metrics.MetricSpec` whose
+        ``key`` is accepted by :meth:`summarize_activities` /
+        :meth:`summarize_exposure`. The ``default=True`` entries are the
+        instrument's primary metrics (used when no ``metrics=`` is given, and
+        pre-selected in the GUI picker). Size-resolved classes override this to
+        add derived PNC/MASS/Pₓ metrics.
+
+        Returns:
+            list[MetricSpec]: The dataset's compatible metrics.
+        """
+        activities = set(getattr(self, "_activities", []))
+        primary_name = getattr(self._primary, "name", None)
+        number_primary = self._has_number_primary()
+
+        entries: list[tuple[str, str, str, str]] = []  # (key, label, unit, dim)
+        seen: set[str] = set()
+        if number_primary:
+            unit = self.unit_of(primary_name)
+            entries.append(
+                ("PNC", "Number concentration", unit, classify_unit(unit)[0])
+            )
+            seen.add("PNC")
+        for col in self._data.select_dtypes(exclude="bool").columns:
+            if col in activities or col in seen:
+                continue
+            if number_primary and col == primary_name:
+                continue  # already represented by PNC
+            unit = self.unit_of(col)
+            if unit_key(unit) == "bool":
+                continue  # flags (e.g. Partector TEM) are not summary metrics
+            entries.append((str(col), str(col), unit, classify_unit(unit)[0]))
+            seen.add(str(col))
+
+        dk = self._primary_metric_keys
+        specs: list[MetricSpec] = []
+        for i, (key, label, unit, dim) in enumerate(entries):
+            if dk is not None:
+                default = key in dk
+            elif number_primary:
+                default = key == "PNC"
+            else:
+                default = i == 0
+            specs.append(MetricSpec(key, label, unit, dim, default))
+        return specs
+
+    def _metric_keys(self) -> list[str]:
+        """The metric keys available for this dataset (for error messages)."""
+        return [m.key for m in self.available_metrics()]
 
     @staticmethod
     def _format_hhmm(total_minutes: float) -> str:
@@ -55,23 +138,11 @@ class SummaryMixin:
     def _default_metrics(self) -> list[str]:
         """Default metric set for :meth:`summarize_activities`.
 
-        * Multi-channel instruments (per-column ``unit`` dict): every numeric
-          channel (boolean flags/activity masks excluded).
-        * Particle single-quantity data (has a ``"Total_conc"`` column):
-          ``["PNC"]`` (the historical default).
-        * Other single-quantity data (e.g. a gas): the primary channel by name,
-          so it is labelled by what it measures rather than "PNC".
+        The instrument's *primary* metrics — the ``default=True`` entries of
+        :meth:`available_metrics`. See that method for the full compatible set.
         """
-        unit_meta = self._meta.get("unit")
-        if isinstance(unit_meta, dict):
-            return [
-                c
-                for c in unit_meta
-                if c in self._data.columns and self._data[c].dtype != bool
-            ]
-        if "Total_conc" in self._data.columns:
-            return ["PNC"]
-        return [str(self._primary.name)]
+        defaults = [m.key for m in self.available_metrics() if m.default]
+        return defaults or ["PNC"]
 
     def summarize(self, filename: Optional[str] = None, *, parameter=0) -> pd.DataFrame:
         """Summarise basic statistics of one channel by activity.
@@ -155,6 +226,14 @@ class SummaryMixin:
         mu = metric_name.upper()
 
         if mu == "PNC":
+            # "PNC" only means something for a genuine number concentration —
+            # not a gas, black carbon, LDSA or PM-mass primary.
+            if not self._has_number_primary():
+                raise ValueError(
+                    f"'PNC' (particle number concentration) is not available for "
+                    f"this {type(self).__name__}. Available metrics: "
+                    f"{', '.join(self._metric_keys())}."
+                )
             series = self._primary.astype(float)
             return series, self.unit_of(getattr(self._primary, "name", None))
 
@@ -165,7 +244,9 @@ class SummaryMixin:
             series = self._extra_data[metric_name].astype(float)
         else:
             raise ValueError(
-                f"Metric '{metric_name}' not found in main data or extra_data."
+                f"Metric '{metric_name}' is not available for this "
+                f"{type(self).__name__}. Available metrics: "
+                f"{', '.join(self._metric_keys())}."
             )
 
         # Per-column unit (multi-channel instruments carry a per-column dict).

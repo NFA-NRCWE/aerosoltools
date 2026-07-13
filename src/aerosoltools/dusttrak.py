@@ -25,6 +25,9 @@ class DustTrak(Aerosol1D):
             total PM mass (µg/m³).
     """
 
+    #: Primary summary metrics (see ``available_metrics``): the PM fractions.
+    _primary_metric_keys = ("PM1", "PM2.5", "PM4", "PM10", "Total")
+
     @property
     def total_concentration(self) -> pd.Series:
         """Total PM mass concentration — the DustTrak ``"Total"`` channel."""

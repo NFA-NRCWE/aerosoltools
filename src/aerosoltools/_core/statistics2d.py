@@ -8,6 +8,7 @@ import pandas as pd
 from tabulate import tabulate
 
 from . import _stats
+from .metrics import MetricSpec
 
 try:
     from typing import override  # Python 3.12+
@@ -17,6 +18,25 @@ except ImportError:  # pragma: no cover - typing_extensions fallback
 
 class Summary2DMixin:
     """Activity and exposure summaries for size-resolved (2D) data."""
+
+    def available_metrics(self) -> list[MetricSpec]:
+        """Size-resolved concentration metrics available for a summary/picker.
+
+        Lists the metrics that flow through :meth:`_get_metric_series` (bulk
+        ``PNC``/``MASS`` and the size-selective Pₓ families at common cutoffs).
+        Arbitrary cutoffs still work when a metric string like ``"PM4.2"`` or
+        ``"PN0.3-1"`` is passed directly. (The distribution-shape stats
+        ``MODE``/``MEDIAN``/``GMD`` remain available via
+        :meth:`summarize_activities` but are not combinable columns, so they are
+        not listed here.)
+        """
+        specs = [
+            MetricSpec("PNC", "Number concentration", "cm⁻³", "number", True),
+            MetricSpec("MASS", "Mass concentration", "µg/m³", "mass", False),
+        ]
+        for cut in ("1", "2.5", "4", "10"):
+            specs.append(MetricSpec(f"PM{cut}", f"PM{cut}", "µg/m³", "mass", False))
+        return specs
 
     @override
     def summarize_activities(

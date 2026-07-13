@@ -33,6 +33,9 @@ class Environmental1D(_NonParticleMixin, Aerosol1D):
         pressure (pandas.Series): Air pressure, when present.
     """
 
+    #: Primary summary metrics (see ``available_metrics``): T and RH.
+    _primary_metric_keys = ("Temperature", "RH")
+
     def _primary_name(self) -> str:
         for candidate in ("Temperature", "Temp"):
             if candidate in self._data.columns:
