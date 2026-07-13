@@ -52,6 +52,82 @@ class SummaryMixin:
         dt.iloc[-1] = med
         return dt / 60.0
 
+    def _default_metrics(self) -> list[str]:
+        """Default metric set for :meth:`summarize_activities`.
+
+        * Multi-channel instruments (per-column ``unit`` dict): every numeric
+          channel (boolean flags/activity masks excluded).
+        * Particle single-quantity data (has a ``"Total_conc"`` column):
+          ``["PNC"]`` (the historical default).
+        * Other single-quantity data (e.g. a gas): the primary channel by name,
+          so it is labelled by what it measures rather than "PNC".
+        """
+        unit_meta = self._meta.get("unit")
+        if isinstance(unit_meta, dict):
+            return [
+                c
+                for c in unit_meta
+                if c in self._data.columns and self._data[c].dtype != bool
+            ]
+        if "Total_conc" in self._data.columns:
+            return ["PNC"]
+        return [str(self._primary.name)]
+
+    def summarize(self, filename: Optional[str] = None, *, parameter=0) -> pd.DataFrame:
+        """Summarise basic statistics of one channel by activity.
+
+        Reports ``Min / Max / Mean / Std / N`` per activity (including
+        ``"All data"``) for the selected channel. Works for any dataset — for a
+        single-quantity instrument ``parameter=0`` is the primary series; for a
+        multi-channel instrument pick the channel by index or name.
+
+        Args:
+            filename (str | None): Optional ``.xlsx`` path to write the table to.
+            parameter (int | str): Channel to summarise — positional index into
+                :attr:`data` columns (``int``) or a column label (``str``).
+
+        Returns:
+            pandas.DataFrame: Columns
+            ``["Segment", "Min", "Max", "Mean", "Std", "N datapoints"]``.
+
+        Raises:
+            LookupError: If ``parameter`` is not a valid index or column label.
+        """
+        if isinstance(parameter, int):
+            if parameter >= len(self.data.columns):
+                raise LookupError("Chosen parameter is invalid")
+            parameter = self.data.columns[parameter]
+        elif not isinstance(parameter, str):
+            raise LookupError("Chosen parameter is invalid")
+
+        rows: list[list[Any]] = []
+        for activity in self.activities:
+            subset = self.data[self.data[activity].astype(bool)][parameter]
+            if not subset.empty:
+                rows.append(
+                    [
+                        activity,
+                        subset.min(),
+                        subset.max(),
+                        subset.mean(),
+                        subset.std(),
+                        len(subset),
+                    ]
+                )
+
+        summary = pd.DataFrame(
+            rows, columns=["Segment", "Min", "Max", "Mean", "Std", "N datapoints"]
+        ).round(3)
+
+        print(f"\nSummary of {parameter}:\n")
+        print(tabulate(summary, headers="keys", tablefmt="pretty", floatfmt=".3f"))  # type: ignore
+
+        if filename:
+            summary.to_excel(filename, index=False)
+            print(f"\nSummary saved to: {filename}")
+
+        return summary
+
     def _get_metric_series(self, metric_name: str) -> tuple[pd.Series, str]:
         """Return a time series and unit for a named 1D metric.
 
@@ -111,9 +187,13 @@ class SummaryMixin:
                 (creating it if it does not exist). If None, nothing is
                 written to disk.
             metrics (list[str] | None): List of metric names to summarize.
-                If None, a default set is used: ["PNC"].
+                If None, the dataset's natural set is used (see
+                :meth:`_default_metrics`): ``["PNC"]`` for particle data, every
+                numeric channel for a multi-channel instrument, or the named
+                primary channel otherwise.
 
-                * "PNC" refers to total_concentration.
+                * "PNC" refers to the primary channel (total_concentration for
+                  particle instruments).
                 * Any other name is looked up in data or extra_data
                   (numeric columns only).
             stats (Sequence[str] | None): Which per-activity statistics to
@@ -147,9 +227,10 @@ class SummaryMixin:
                 data.summarize_activities(stats=["mean", "min", "max"])
         """
 
-        # Defaults: only PNC if nothing else is specified
+        # Defaults: the dataset's natural metric set (PNC for particle data, the
+        # per-channel set for multi-channel instruments, the named primary else).
         if metrics is None:
-            metrics = ["PNC"]
+            metrics = self._default_metrics()
         if stats is None:
             stats = ["mean", "std"]
 
