@@ -426,6 +426,70 @@ def test_discmini_zero_offset_correction_recovers_and_applies():
     assert off_d[0] == pytest.approx(meta["offsets"][0])
 
 
+def test_nonparticle_classes_exported():
+    """The four non-particle classes are part of the public top-level API."""
+    import aerosoltools as at
+
+    for name in ("Gas1D", "Aethalometer", "Environmental1D", "Partector"):
+        assert hasattr(at, name), f"{name} not exported"
+        assert name in at.__all__
+
+
+def test_aethalometer_class_and_channels():
+    """Aethalometer loads as its own class with per-wavelength BCc accessors."""
+    from aerosoltools import Aethalometer
+
+    aeth = Load_Aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    assert isinstance(aeth, Aethalometer)
+    # Per-wavelength direct accessors resolve to the matching BCc column.
+    assert aeth.ir_bcc.name == "IR BCc"
+    assert aeth.uv_bcc.name == "UV BCc"
+    # The internal primary hook is the IR-equivalent channel.
+    assert aeth._primary.name == "IR BCc"
+    # 'total_concentration' does not apply to black carbon.
+    with pytest.raises(AttributeError):
+        _ = aeth.total_concentration
+
+
+def test_partector_class_and_ldsa():
+    """Partector loads as its own class exposing LDSA and no total concentration."""
+    from aerosoltools import Partector
+
+    par = Load_Partector_file(_data_path("Sample_Partector.txt"))
+    assert isinstance(par, Partector)
+    assert par.ldsa.name == "LDSA"
+    assert par._primary.name == "LDSA"
+    assert par.tem_samples is not None
+    with pytest.raises(AttributeError):
+        _ = par.total_concentration
+
+
+def test_environmental_class_and_channels():
+    """Fourtec loads as Environmental1D with temperature/RH accessors."""
+    from aerosoltools import Environmental1D
+
+    ft = Load_Fourtec_file(_data_path("Sample_Fourtec.xlsx"))
+    assert isinstance(ft, Environmental1D)
+    assert ft.temperature.name == "Temperature"
+    assert ft.rh.name == "RH"
+    # Temperature is the default primary channel.
+    assert ft._primary.name == "Temperature"
+    with pytest.raises(AttributeError):
+        _ = ft.total_concentration
+
+
+def test_nonparticle_summary_uses_selected_channel():
+    """AltMixin summaries work on a non-particle channel without total_concentration."""
+    import contextlib
+    import io
+
+    par = Load_Partector_file(_data_path("Sample_Partector.txt"))
+    with contextlib.redirect_stdout(io.StringIO()):
+        summary = par.summarize(parameter="LDSA")
+    assert "Mean" in summary.columns
+    assert (summary["N datapoints"] >= 0).all()
+
+
 def test_discmini_ldsa_correction_scales_with_size():
     """The optional LDSA correction raises LDSA and grows with particle size."""
     import numpy as np
