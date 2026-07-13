@@ -24,7 +24,7 @@ the Metadata pane and no calibrated value is ever negative.
 
 Time-alignment between the two instruments reuses the Correlation tab's settings
 (exact / nearest / rebin, tolerance, and the optional activity restriction) via
-the library's own :func:`~aerosoltools.utility._align_series`, so the fit is
+the library's own :func:`~aerosoltools.intercomparison._align_series`, so the fit is
 computed on exactly the points the correlation plot shows.
 """
 
@@ -34,7 +34,7 @@ from typing import Optional
 
 import numpy as np
 
-from ..utility import _align_series
+from ..intercomparison import _align_series
 from . import helpers
 from .qt import QtCore, QtWidgets
 

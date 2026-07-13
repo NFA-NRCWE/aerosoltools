@@ -10,7 +10,7 @@ from typing import List, Optional
 import pandas as pd
 
 from ..aerosol3d import Aerosol3d
-from ..utility import combine_measurements, combine_size_ranges
+from ..intercomparison import combine_measurements, combine_size_ranges
 from . import helpers, theme
 from .adjustments import AdjustmentsBox
 from .assets import icon_path

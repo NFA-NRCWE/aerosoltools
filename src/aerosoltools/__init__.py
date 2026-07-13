@@ -82,21 +82,28 @@ load_data_from_folder / Load_data_from_folder
     Dispatch the appropriate loader over all files in a folder and
     return the combined dataset(s).
 
-Utilities
----------
-combine_ns_ops / Combine_NS_OPS
-    Combine NanoScan and OPS measurements into a single size-resolved
-    dataset with harmonized bin structure.
-plot_correlation / Plot_correlation
+Intercomparison (multi-dataset) workflows
+-----------------------------------------
+combine_size_ranges
+    Stitch two range-extending instruments (e.g. NanoScan + OPS) into a
+    single size-resolved dataset with a chosen crossover diameter.
+combine_measurements
+    Concatenate several runs of the same instrument into one time series.
+plot_correlation
     Plot and fit correlations between two aerosol time series (e.g.,
     instrument inter-comparisons).
+bland_altman_analysis
+    Bland-Altman (difference) agreement plot between two datasets.
+
+Advanced multi-dataset workflows live under
+:mod:`aerosoltools.intercomparison`.
 
 Typical usage example
 ---------------------
     >>> import aerosoltools as at
     >>> ns = at.load_ns_file("nanoscan_example.txt")
     >>> ops = at.load_ops_file("ops_example.txt")
-    >>> combined = at.combine_ns_ops(ns, ops)
+    >>> combined = at.combine_size_ranges(ns, ops, crossover=400)
 """
 
 from .aerosol1d import Aerosol1D
@@ -108,6 +115,13 @@ from .dusttrak import DustTrak
 from .elpi import ELPI
 from .environmental import Environmental1D
 from .gas1d import Gas1D
+from .intercomparison import (
+    bland_altman_analysis,
+    combine_measurements,
+    combine_size_ranges,
+    fit_data,
+    plot_correlation,
+)
 from .loaders import (
     Load_Aethalometer_file,
     Load_APS_file,
@@ -129,20 +143,8 @@ from .loaders import (
     Load_SMPS_file,
 )
 from .partector import Partector
-from .utility import (
-    Combine_NS_OPS,
-    Plot_correlation,
-    bland_altman_analysis,
-    combine_measurements,
-    combine_size_ranges,
-    fit_data,
-)
 
 # snake_case aliases for PEP 8 consistency
-combine_ns_ops = Combine_NS_OPS
-Combine_size_ranges = combine_size_ranges  # PascalCase alias
-plot_correlation = Plot_correlation
-Combine_measurements = combine_measurements  # PascalCase alias
 load_aps_file = Load_APS_file
 load_aethalometer_file = Load_Aethalometer_file
 load_cpc_file = Load_CPC_file
@@ -175,17 +177,12 @@ __all__ = [
     "Environmental1D",
     "Gas1D",
     "Partector",
-    # Utilities
+    # Intercomparison (multi-dataset) workflows
     "bland_altman_analysis",
-    "Combine_NS_OPS",
     "combine_size_ranges",
-    "Combine_size_ranges",
     "fit_data",
-    "Plot_correlation",
-    "combine_ns_ops",
     "plot_correlation",
     "combine_measurements",
-    "Combine_measurements",
     # Loaders (original names)
     "Load_APS_file",
     "Load_Aethalometer_file",

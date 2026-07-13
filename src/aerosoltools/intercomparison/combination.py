@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import warnings
 from typing import Callable
 
 import numpy as np
 import pandas as pd
 
 from ..aerosol2d import Aerosol2D
-from ._common import _coarser, _infer_freq, _ts
+from ._alignment import _coarser, _infer_freq, _ts
 
 
 def _align_two_in_time(
@@ -269,174 +268,6 @@ def combine_size_ranges(
     return res
 
 
-def Combine_NS_OPS(
-    NS_data: Aerosol2D,
-    OPS_data: Aerosol2D,
-    start: pd.Timestamp | str | None = None,
-    end: pd.Timestamp | str | None = None,
-    *,
-    match: str = "rebin",  # "exact" | "nearest" | "rebin"
-    tolerance: str | pd.Timedelta = "30s",
-    rebin_freq: str | None = None,
-    rebin_method: str | Callable = "mean",
-) -> Aerosol2D:
-    """Description:
-        Combine data from two instruments of overlapping number size distributions,
-        commonly NanoScan (NS) and OPS, into one time-aligned Aerosol2D spectrum.
-        The function can also combine FMPS + OPS or NS + APS with the smallest
-        bin of the instrument with the larger size range being the cutting point
-        of the instrument with smaller size range.
-
-    Args:
-        NS_data (Aerosol2D):
-            Measurements from the instrument with the smaller size range as an
-            :class:`~aerosoltools.aerosol2d.Aerosol2D` instance, containing
-            a time-resolved size distribution.
-        OPS_data (Aerosol2D):
-            Measurements from the instrument with the larger size range as an
-            :class:`~aerosoltools.aerosol2d.Aerosol2D` instance, containing
-            a time-resolved size distribution.
-        start (pandas.Timestamp | str | None, optional):
-            Start time of the period used for combining the two instruments.
-            If ``None``, the later of the two available start times
-            (NS vs OPS) is used. Strings are parsed with
-            :func:`pandas.to_datetime`. Default is None.
-        end (pandas.Timestamp | str | None, optional):
-            End time of the period used for combining the two instruments.
-            If ``None``, the earlier of the two available end times
-            (NS vs OPS) is used. Default is None.
-        match (str, optional):
-            Strategy for aligning the two time series in time. Default is
-            ``\"rebin\"``. Options are:
-
-            * ``\"rebin\"`` (default): Rebin both instruments to a common
-              time step using :meth:`Aerosol2D.timerebin`, then intersect
-              timestamps.
-            * ``\"exact\"``: Use only timestamps that are present in both
-              datasets without resampling.
-            * ``\"nearest\"``: Match OPS values to NS timestamps using the
-              nearest available OPS point within ``tolerance``.
-
-        tolerance (str | pandas.Timedelta, optional):
-            Maximum allowed separation between NS and OPS timestamps when
-            ``match=\"nearest\"`` is used. Can be a pandas offset string
-            (e.g. ``\"30s\"``) or a :class:`pandas.Timedelta`. Ignored
-            for other ``match`` modes. Default is 30s.
-        rebin_freq (str | None, optional):
-            Target resampling rule for ``match=\"rebin\"`` (e.g. ``\"1min\"``).
-            If ``None``, the coarser of the inferred NS and OPS cadences is
-            chosen automatically. Default is None.
-        rebin_method (str | Callable, optional):
-            Aggregation method passed to :meth:`Aerosol2D.timerebin` when
-            ``match=\"rebin\"`` is used (e.g. ``\"mean\"``, ``\"median\"``,
-            or a custom function). Default is ``\"mean\"``.
-
-    Returns:
-        Aerosol2D:
-            A new :class:`~aerosoltools.aerosol2d.Aerosol2D` object containing
-            the merged NS+OPS number size distribution.
-
-    Raises:
-        ValueError:
-            If the requested time interval has no overlap between NS and OPS,
-            or if the chosen ``match`` strategy produces no common timestamps.
-            Also raised if the lowest OPS bin edge falls outside the NS bin
-            range so that no consistent splice point can be defined.
-        TypeError:
-            If ``NS_data`` or ``OPS_data`` does not behave like an
-            :class:`Aerosol2D` instance (e.g. missing required attributes such
-            as ``time``, ``bin_edges``, or ``timerebin``).
-
-    Notes:
-        Detailed description:
-            This function is intended for combining data from a NanoScan SMPS
-            and an OPS into a single, continuous number size distribution in
-            diameter space. Internally, the following steps are carried out:
-
-            * Both inputs are copied to avoid modifying the originals.
-            * Each dataset is converted to number concentration (dN) in
-              ``cm⁻³`` and de-normalized from ``/dlogDp`` if needed.
-            * The time series from NS and OPS are aligned using the specified
-              ``match`` mode and the chosen time window (``start``/``end``).
-            * The overlapping size range is determined from the NS and OPS
-              bin edges. The OPS lower bin edge defines the splice point.
-            * The NanoScan bin that overlaps the OPS lower edge is truncated,
-              and its concentration is scaled by the fraction of bin width
-              that remains below the splice point.
-            * All NS bins below the splice point and all OPS bins are
-              concatenated to form a new set of bin edges and midpoints.
-            * The size-resolved concentrations are merged, and the total
-              number concentration is recomputed from the combined size bins
-              for each aligned timestamp.
-            * NanoScan activities and metadata are propagated to the result,
-              and the instrument metadata is set to ``\"NS_OPS\"``.
-
-            The resulting class object includes:
-
-            * Combined size-bin edges and midpoints covering the NS+OPS range.
-            * Recomputed total number concentration in ``cm⁻³`` for each
-              timestamp.
-            * Propagated NanoScan activities and metadata, with the instrument
-              set to ``\"NS_OPS\"``.
-
-        Theory:
-            The function assumes both instruments measure size-resolved
-            particle number concentration and uses a simple geometric
-            bin-splicing approach:
-
-            * Number concentration per bin is first expressed as dN (cm⁻³)
-              without ``/dlogDp`` normalization.
-            * The shared diameter range is determined from the reported bin
-              edges; a single splice bin in the NanoScan is truncated so that
-              the OPS lower edge becomes the exact boundary between NS and OPS.
-            * Conservation of particle number within the truncated bin is
-              approximated by scaling with the retained width fraction.
-
-            This produces a piecewise distribution that is directly usable for
-            further number-based metrics (e.g. total PNC, modal fits, etc.).
-
-    Examples:
-        A typical use case is combining co-located NanoScan and OPS
-        measurements into a single spectrum before analysis or reporting:
-
-        .. code-block:: python
-
-            import aerosoltools as at
-
-            NS = at.Load_NS_file("nanoscan.csv")
-            OPS = at.Load_OPS_file("ops.csv")
-
-            # Combine on a 1-minute grid using time rebinning
-            combined = at.Combine_NS_OPS(
-                NS, OPS,
-                start="2023-10-01 08:00",
-                end="2023-10-01 16:00",
-            )
-
-            # Plot the resulting size distribution
-            fig, ax = combined.plot_timeseries()
-    """
-
-    warnings.warn(
-        "Combine_NS_OPS is deprecated; use combine_size_ranges (it works for "
-        "any pair of range-extending instruments and lets you set the "
-        "crossover diameter).",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return combine_size_ranges(
-        NS_data,
-        OPS_data,
-        crossover=None,
-        start=start,
-        end=end,
-        match=match,
-        tolerance=tolerance,
-        rebin_freq=rebin_freq,
-        rebin_method=rebin_method,
-    )
-
-
 def combine_measurements(datasets, *, require_same_serial: bool = True):
     """Description:
         Concatenate several measurements from the *same* instrument into one
@@ -511,7 +342,7 @@ def combine_measurements(datasets, *, require_same_serial: bool = True):
             if edges.shape != base_edges.shape or not np.allclose(edges, base_edges):
                 raise ValueError(
                     "Size-bin structure differs between datasets; cannot "
-                    "concatenate. (Use Combine_NS_OPS for different instruments.)"
+                    "concatenate. (Use combine_size_ranges for different instruments.)"
                 )
 
     def _concat_sorted(frames):

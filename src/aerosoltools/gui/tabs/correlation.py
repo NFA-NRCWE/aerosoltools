@@ -7,7 +7,7 @@ import io
 
 import matplotlib.colors as mcolors
 
-from ...utility import Plot_correlation, bland_altman_analysis
+from ...intercomparison import bland_altman_analysis, plot_correlation
 from .. import theme
 from ..qt import QtWidgets
 from ._base import _PlotTab
@@ -18,8 +18,8 @@ class CorrelationTab(_PlotTab):
 
     A two-dataset comparison: pick an **X** and a **Y** dataset and a parameter
     they share, and the tab draws the library's own
-    :func:`~aerosoltools.utility.Plot_correlation` (scatter + 1:1 + regression +
-    R²) or :func:`~aerosoltools.utility.bland_altman_analysis` (difference plot)
+    :func:`~aerosoltools.intercomparison.plot_correlation` (scatter + 1:1 +
+    regression + R²) or :func:`~aerosoltools.intercomparison.bland_altman_analysis`
     on the embedded axis. Time alignment between the two instruments is delegated
     to the core via ``match`` ("exact"/"nearest"/"rebin") + ``tolerance``. The
     plot is built on **Compute** (alignment can be costly), so a plain ``refresh``
@@ -318,7 +318,7 @@ class CorrelationTab(_PlotTab):
         # plot is the output the GUI shows), as the summary tabs do.
         with contextlib.redirect_stdout(io.StringIO()):
             if self.analysis.currentText() == "Correlation":
-                Plot_correlation(
+                plot_correlation(
                     xds.obj,
                     yds.obj,
                     ax_in=ax,
