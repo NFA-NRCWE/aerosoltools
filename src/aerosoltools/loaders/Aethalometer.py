@@ -17,7 +17,7 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
             ``.txt``) containing time-resolved concentration data.
         extra_data (bool, optional):
             If ``True``, non-core variables (e.g. diagnostics, sensor status
-            or quality flags) are stored in ``AerosolAlt.extra_data`` with
+            or quality flags) are stored in ``Aethalometer.extra_data`` with
             a ``Datetime`` index. If ``False`` (default), only the main
             measurement channels are kept in ``.data``.
 
@@ -82,7 +82,7 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
               them along with ``"AAE"`` as core channels. For narrower
               exports, only the main spectral BC channels are treated as
               core.
-            - Builds a new :class:`AerosolAlt` object from these core
+            - Builds a new :class:`Aethalometer` object from these core
               columns, with ``Datetime`` as the time index.
             - Optionally collects all remaining non-core columns into
               ``.extra_data`` if ``extra_data=True``.
@@ -178,7 +178,7 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
             "Red BCc",
         ]
 
-    # Attach per-channel unit/dtype metadata (the AerosolAlt convention: a
+    # Attach per-channel unit/dtype metadata (the multi-channel convention: a
     # name→value dict keyed by channel). The BC channels are mass
     # concentrations in ng/m³; the Ångström exponent (AAE) is dimensionless.
     channels = core_cols[1:]  # everything except "Datetime"

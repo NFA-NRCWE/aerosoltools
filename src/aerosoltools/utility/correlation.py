@@ -49,7 +49,7 @@ def _resolve_unit(obj, parameter: str | None = None) -> str:
     """Return the display unit for ``parameter`` as a plain string.
 
     ``obj.unit`` is a single string for :class:`Aerosol1D`/:class:`Aerosol2D`
-    but a ``{column: unit}`` dict for :class:`AerosolAlt` (e.g. DiSCmini). This
+    but a ``{column: unit}`` dict for multi-channel instruments (e.g. DiSCmini). This
     resolves the per-parameter unit so axis labels never render a whole dict.
 
     Args:
@@ -881,7 +881,7 @@ def bland_altman_analysis(
     if method == "Eu":
         diffs = x - y
 
-    # Per-parameter unit strings (X.unit may be a dict on AerosolAlt).
+    # Per-parameter unit strings (X.unit may be a per-column dict).
     unit_x = _resolve_unit(X, p_X)
     diff_label = f"Difference ({unit_x})" if unit_x else "Difference"
 

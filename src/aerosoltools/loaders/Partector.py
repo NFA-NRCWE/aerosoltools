@@ -85,7 +85,7 @@ def Load_Partector_file(file: str, extra_data: bool = False) -> Partector:
             - Packages this information into a small ``TEM_samples`` table with
               columns ``"Start"``, ``"End"`` and ``"Sample_vol [ml]"`` and
               stores it in ``metadata["TEM_samples"]``.
-            - Constructs an :class:`AerosolAlt` object using the core columns:
+            - Constructs a :class:`Partector` object using the core columns:
 
               - ``Datetime``,
               - ``LDSA``,

@@ -149,7 +149,7 @@ def _build_object(
     serial: str,
     extra_data: bool,
 ) -> RangerObject:
-    """Turn a per-component frame into a Gas1D (gas) or AerosolAlt (PM)."""
+    """Turn a per-component frame into a Gas1D (gas) or Aerosol1D (PM)."""
     time_col = "Local time" if "Local time" in frame.columns else frame.columns[0]
     datetimes = pd.to_datetime(frame[time_col], errors="coerce")
 
@@ -224,13 +224,13 @@ def Load_Ranger_file(
             ``False``.
 
     Returns:
-        Aerosol1D | AerosolAlt | list:
+        Gas1D | Aerosol1D | list:
             - A **gas** head (a single ``"<GAS> (PPM)"`` column such as
               ``CL2`` or ``NO2``) becomes an :class:`Aerosol1D` with a
               ``"Total_conc"`` column, ``unit`` (``"ppm"``/``"ppb"``) and
               ``dtype`` set to the subscripted gas name (e.g. ``"Cl₂"``).
             - A **PM** head (several ``"PMx (ug/m3)"`` columns) becomes an
-              :class:`AerosolAlt` with one column per fraction, per-channel
+              :class:`Aerosol1D` with one column per fraction, per-channel
               ``unit`` (``"µg/m³"``) and ``dtype`` (``"dM"``).
             - If the file holds **more than one** component, a list of such
               objects is returned (in first-appearance order). A file with a
@@ -260,7 +260,7 @@ def Load_Ranger_file(
             (e.g. a Cl₂ head that was paused and resumed) are concatenated into
             one continuous, de-duplicated, time-sorted series.
 
-            Because the results are plain :class:`Aerosol1D` / :class:`AerosolAlt`
+            Because the results are plain :class:`Gas1D` / :class:`Aerosol1D`
             objects, all the usual time-series operations — cropping,
             resampling, smoothing, activity marking and exposure summaries —
             work unchanged.

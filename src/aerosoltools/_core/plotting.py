@@ -23,7 +23,7 @@ class Plot1DMixin:
         parameter: Union[int, str] = 0,
     ) -> tuple[Figure, Axes]:
         """Description:
-            Plot a selected scalar channel versus time for an :class:`AerosolAlt`
+            Plot a selected scalar channel versus time for a multi-channel
             object.
 
         Args:
@@ -91,14 +91,14 @@ class Plot1DMixin:
 
         Examples:
             A typical use is to visualise one of several channels stored in
-            an :class:`AerosolAlt` object, optionally with activity periods
+            a multi-channel object, optionally with activity periods
             highlighted:
 
             .. code-block:: python
 
                 import aerosoltools as at
 
-                # Suppose 'alt' is an AerosolAlt with columns: ["LDSA", "Flow", "Flag"]
+                # Suppose 'alt' is a multi-channel object with columns: ["LDSA", "Flow", "Flag"]
                 alt = at.Load_Partector_file("data/Partector_log.txt")
 
                 # Plot LDSA with activity shading

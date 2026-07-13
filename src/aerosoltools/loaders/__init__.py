@@ -5,7 +5,7 @@ This subpackage provides a collection of functions for reading and parsing
 raw exports from common aerosol instruments. Each loader normalizes the
 instrument-specific file format into one of the core classes in
 :mod:`aerosoltools` (:class:`Aerosol1D`, :class:`Aerosol2D`,
-or :class:`AerosolAlt`).
+or an instrument subclass).
 
 Supported instruments include:
 

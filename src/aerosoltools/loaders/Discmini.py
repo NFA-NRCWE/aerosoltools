@@ -93,7 +93,7 @@ def _extract_serial_and_firmware(
 def Load_DiSCmini_file(file: str, extra_data: bool = False) -> DiSCmini:
     """Description:
         Load a converted DiSCmini export file and return total number
-        concentration, mean size, and LDSA as an :class:`AerosolAlt` time
+        concentration, mean size, and LDSA as a :class:`DiSCmini` time
         series.
 
     Args:
@@ -107,8 +107,8 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> DiSCmini:
             DataFrames, indexed by ``Datetime``. Defaults to ``False``.
 
     Returns:
-        AerosolAlt:
-            An :class:`~aerosoltools.aerosolalt.AerosolAlt` instance with
+        DiSCmini:
+            A :class:`~aerosoltools.DiSCmini` instance with
             the loaded data
 
     Raises:
@@ -174,7 +174,7 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> DiSCmini:
               prefix so files from the same instrument match regardless of the
               export's serial-format convention.
 
-            - Builds the core :class:`AerosolAlt` object from the subset of
+            - Builds the core :class:`DiSCmini` object from the subset of
               columns that includes
 
               - ``"Datetime"`` — measurement timestamps.
@@ -618,8 +618,8 @@ def Load_DiSCmini_raw_file(
             for closer agreement with the vendor LDSA.
 
     Returns:
-        AerosolAlt:
-            An :class:`~aerosoltools.aerosolalt.AerosolAlt` with
+        DiSCmini:
+            A :class:`~aerosoltools.DiSCmini` with
             ``Total_conc`` (cm⁻³), ``Size`` (nm) and ``LDSA`` (nm²/cm³) at the
             chosen averaging period, indexed by **real** timestamps (unlike the
             vendor output, which renumbers time contiguously across gaps).

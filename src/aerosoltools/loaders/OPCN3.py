@@ -13,7 +13,7 @@ from .Common import _detect_delimiter
 def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False):
     """Description:
         Load an OPC-N3 export and return either a size-resolved distribution
-        (:class:`Aerosol2D`) or PM-focused time series (:class:`AerosolAlt`)
+        (:class:`Aerosol2D`) or PM-focused time series (:class:`Aerosol1D`)
         with metadata.
 
     Args:
@@ -24,13 +24,13 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
             channels) are stored in ``extra_data`` when supported by the
             underlying loader. Defaults to ``False``.
         PM_focus (bool, optional):
-            If ``True``, return a compact PM-focused :class:`AerosolAlt` with
+            If ``True``, return a compact PM-focused :class:`Aerosol1D` with
             total number concentration and PM1/PM2.5/PM10 mass as reported
             by the instrument. If ``False`` (default), return a fully
             size-resolved :class:`Aerosol2D` with binned number concentrations.
 
     Returns:
-        Aerosol2D | AerosolAlt:
+        Aerosol2D | Aerosol1D:
             Parsed OPC-N3 dataset as either a size-resolved number-size
             distribution or a PM-only time series, depending on ``PM_focus``
             and the detected file format.
@@ -81,7 +81,7 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
 
                   - computes ``Total_conc`` from the size bins,
                   - extracts PM1, PM2.5 and PM10 mass concentrations,
-                  - returns an :class:`AerosolAlt` with ``Datetime``,
+                  - returns an :class:`Aerosol1D` with ``Datetime``,
                     ``Total_conc``, ``PM1``, ``PM2.5`` and ``PM10``.
 
               - Newer format (AIM-like structure, trailing ``"OPC"`` in
@@ -102,7 +102,7 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
                   :func:`_Load_OPCN3_file_PM_new`, which:
 
                   - computes ``Total_conc`` from the size bins,
-                  - returns an :class:`AerosolAlt`` with ``Datetime``,
+                  - returns an :class:`Aerosol1D` with ``Datetime``,
                     ``Total_conc``, ``PM1``, ``PM2.5`` and ``PM10``.
 
             - If neither legacy nor newer patterns match, an ``Exception`` is
@@ -134,7 +134,7 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
             print(opcn_dist.bin_edges)
             print(opcn_dist.metadata)
 
-            # 2) Load only total and PM metrics (AerosolAlt)
+            # 2) Load only total and PM metrics (multi-channel Aerosol1D)
             opcn_pm = at.Load_OPCN3_file(
                 "data/OPCN3_legacy.csv",
                 extra_data=True,
@@ -472,7 +472,7 @@ def _Load_OPCN3_file_PM_old(
     """Load legacy OPC-N3 CSV exports focusing on total and PM metrics only.
 
     This loader handles older OPC-N3 formats but returns a compact
-    :class:`AerosolAlt` object containing only:
+    :class:`Aerosol1D` object containing only:
 
     * ``Total_conc`` (number concentration)
     * ``PM1`` (µg/m³)
@@ -493,7 +493,7 @@ def _Load_OPCN3_file_PM_old(
             encoding and delimiter are auto-detected together.
 
     Returns:
-        AerosolAlt: Object with columns:
+        Aerosol1D: Object with columns:
 
         * ``Datetime``
         * ``Total_conc`` (cm⁻³)
@@ -602,7 +602,7 @@ def _Load_OPCN3_file_PM_new(
     """Load newer OPC-N3 CSV exports focusing on total and PM metrics only.
 
     This loader handles updated OPC-N3 formats and returns a compact
-    :class:`AerosolAlt` object containing only:
+    :class:`Aerosol1D` object containing only:
 
     * ``Total_conc`` (number concentration)
     * ``PM1`` (µg/m³)
@@ -623,7 +623,7 @@ def _Load_OPCN3_file_PM_new(
             encoding and delimiter are auto-detected together.
 
     Returns:
-        AerosolAlt: Object with columns:
+        Aerosol1D: Object with columns:
 
         * ``Datetime``
         * ``Total_conc`` (cm⁻³)

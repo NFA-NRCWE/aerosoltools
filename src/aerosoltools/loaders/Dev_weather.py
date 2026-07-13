@@ -11,14 +11,14 @@ from .Common import Load_data_from_folder, _detect_delimiter
 def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> Environmental1D:
     """Description:
         Load a Fourtec Bluefish CSV or Excel export and return temperature and
-        relative humidity as an :class:`AerosolAlt` time series.
+        relative humidity as an :class:`Environmental1D` time series.
 
     Args:
         file (str):
             Path to the Fourtec export file (``.csv`` or ``.xlsx``).
 
     Returns:
-        AerosolAlt:
+        Environmental1D:
             Fourtec measurements with a datetime index and columns for
             temperature (°C) and relative humidity (%), plus basic metadata.
 
@@ -73,7 +73,7 @@ def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> En
                 - Extracts the serial number from the second row in the header
                   area with a small :func:`pandas.read_excel` call.
 
-            - Constructs an :class:`AerosolAlt` object using the core columns
+            - Constructs an :class:`Environmental1D` object using the core columns
               ``"Datetime"``, ``"Temperature"``, and ``"RH"``.
             - Populates metadata with:
 
@@ -171,14 +171,14 @@ def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> En
 def load_parameter (file: str,parameter) -> Environmental1D:
     """Description:
         Load a Fourtec Bluefish CSV or Excel export and return temperature and
-        relative humidity as an :class:`AerosolAlt` time series.
+        relative humidity as an :class:`Environmental1D` time series.
 
     Args:
         file (str):
             Path to the Fourtec export file (``.csv`` or ``.xlsx``).
 
     Returns:
-        AerosolAlt:
+        Environmental1D:
             Fourtec measurements with a datetime index and columns for
             temperature (°C) and relative humidity (%), plus basic metadata.
 
@@ -233,7 +233,7 @@ def load_parameter (file: str,parameter) -> Environmental1D:
                 - Extracts the serial number from the second row in the header
                   area with a small :func:`pandas.read_excel` call.
 
-            - Constructs an :class:`AerosolAlt` object using the core columns
+            - Constructs an :class:`Environmental1D` object using the core columns
               ``"Datetime"``, ``"Temperature"``, and ``"RH"``.
             - Populates metadata with:
 

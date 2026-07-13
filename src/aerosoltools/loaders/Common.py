@@ -317,7 +317,7 @@ def Load_data_from_folder(
         load_function (Callable[..., Aerosol1D]):
             Function that loads a single file and returns an aerosol object,
             typically an instance of :class:`Aerosol1D`,
-            :class:`Aerosol2D`, or :class:`AerosolAlt`.
+            :class:`Aerosol2D`, or an instrument subclass.
         search_word (str, optional):
             Substring that must appear in the filename for a file to be
             considered. If an empty string (default), all files in the
@@ -346,7 +346,7 @@ def Load_data_from_folder(
             ``extra_data=True`` or loader-specific options).
 
     Returns:
-        Aerosol1D | Aerosol2D | AerosolAlt:
+        Aerosol1D | Aerosol2D:
             A combined aerosol object of the same concrete class as the first
             successfully loaded file. The returned object has:
 
@@ -357,7 +357,7 @@ def Load_data_from_folder(
             Check the folder path, search pattern, and file permissions.
         TypeError:
             If ``load_function`` returns an object that is not an instance of
-            :class:`Aerosol1D`, :class:`Aerosol2D`, or :class:`AerosolAlt`.
+            :class:`Aerosol1D`, :class:`Aerosol2D`, or an instrument subclass.
         RuntimeError:
             If an internal inconsistency occurs during concatenation (e.g.
             ``Combined_raw_data`` unexpectedly remains ``None``). This should
@@ -389,7 +389,7 @@ def Load_data_from_folder(
               DataFrame using an internal helper, keeping the first occurrence
               for each timestamp.
             - Determines the concrete output class based on the type of the
-              first loaded object (Aerosol1D, Aerosol2D, or AerosolAlt) and
+              first loaded object (its concrete class) and
               instantiates the combined object accordingly.
             - Merges metadata entries such as ``"TEM_samples"`` if present in
               multiple files (relevant for the PartectorTEM).
@@ -554,7 +554,7 @@ def Load_data_from_folder(
     # resolved data is rebuilt as Aerosol2D (dual-distribution Aerosol3d is
     # flattened, as before). Any 1D family object is rebuilt as its *own*
     # concrete type via ``type(Initial_data)`` so the non-particle classes
-    # (Gas1D / Aethalometer / Environmental1D / Partector) and AerosolAlt
+    # (Gas1D / Aethalometer / DiSCmini / DustTrak / ...) and plain Aerosol1D
     # survive combining instead of collapsing to a base class.
     if isinstance(Initial_data, Aerosol2D):
         Combined_data: Aerosol1D = Aerosol2D(Combined_raw_data)

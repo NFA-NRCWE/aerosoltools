@@ -12,7 +12,7 @@ from .Common import _detect_delimiter
 def Load_DustTrak_file(file: str, extra_data: bool = False) -> DustTrak:
     """Description:
         Load a DustTrak DRX export file and return PM mass concentrations and
-        total mass as an :class:`AerosolAlt` time series.
+        total mass as a :class:`DustTrak` time series.
 
     Args:
         file (str):
@@ -22,7 +22,7 @@ def Load_DustTrak_file(file: str, extra_data: bool = False) -> DustTrak:
             are stored in ``extra_data``. Defaults to ``False``.
 
     Returns:
-        AerosolAlt:
+        DustTrak:
             DustTrak measurements with a datetime index and PM channels
             (PM1, PM2.5, PM4, PM10, Total) in µg/m³.
 
@@ -62,7 +62,7 @@ def Load_DustTrak_file(file: str, extra_data: bool = False) -> DustTrak:
             - Converts the elapsed seconds in ``"Datetime"`` to absolute
               timestamps by adding a time delta to the parsed start datetime.
             - Converts all PM channels from mg/m³ to µg/m³.
-            - Creates an :class:`AerosolAlt` object using ``Datetime`` and the
+            - Creates a :class:`DustTrak` object using ``Datetime`` and the
               PM channels as the main data frame, and attaches metadata:
 
               - ``instrument``, ``model_number``, ``serial_number``,

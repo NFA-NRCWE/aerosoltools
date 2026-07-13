@@ -74,7 +74,7 @@ def Load_Fourtec_file(file: str) -> Environmental1D:
                 - Extracts the serial number from the second row in the header
                   area with a small :func:`pandas.read_excel` call.
 
-            - Constructs an :class:`AerosolAlt` object using the core columns
+            - Constructs an :class:`Environmental1D` object using the core columns
               ``"Datetime"``, ``"Temperature"``, and ``"RH"``.
             - Populates metadata with:
 

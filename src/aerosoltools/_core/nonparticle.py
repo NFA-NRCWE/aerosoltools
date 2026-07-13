@@ -7,10 +7,9 @@ whose primary quantity is **not** a particle number/size concentration — gases
 (:class:`~aerosoltools.Environmental1D`) and LDSA-only dosimeters
 (:class:`~aerosoltools.Partector`).
 
-These classes reuse the reusable time-series / activity / plotting / summary
-machinery of :class:`~aerosoltools.Aerosol1D` (via
-:class:`~aerosoltools.AerosolAlt`), but the "total concentration" concept does
-not apply to them. This mixin therefore:
+These classes reuse the time-series / activity / plotting / summary machinery of
+:class:`~aerosoltools.Aerosol1D`, but the "total concentration" concept does not
+apply to them. This mixin therefore:
 
 * removes :attr:`total_concentration` (it raises with a pointer to the correct
   accessor), and

@@ -574,3 +574,60 @@ def test_discmini_sniffer_distinguishes_raw_and_processed():
     assert is_DiSCmini_file(processed) is True
     assert identify_instrument(raw) == "DiSCmini (raw)"
     assert identify_instrument(processed) == "DiSCmini"
+
+
+def test_aerosolalt_removed_from_public_api():
+    """The legacy AerosolAlt catch-all is gone from the package namespace."""
+    import aerosoltools as at
+
+    assert not hasattr(at, "AerosolAlt")
+    assert "AerosolAlt" not in at.__all__
+
+
+def test_discmini_is_own_class_with_accessors():
+    """DiSCmini loads as its own particle class with .size/.ldsa accessors."""
+    from aerosoltools import Aerosol1D, DiSCmini
+
+    dm = Load_DiSCmini_file(_data_path("Sample_Discmini.txt"))
+    assert isinstance(dm, DiSCmini) and isinstance(dm, Aerosol1D)
+    # Still a particle instrument: total_concentration works.
+    assert float(dm.total_concentration.dropna().iloc[0]) > 0
+    assert dm.size.name == "Size"
+    assert dm.ldsa.name == "LDSA"
+
+
+def test_dusttrak_class_accessors_and_primary():
+    """DustTrak exposes PM accessors and its primary is the total PM mass."""
+    from aerosoltools import DustTrak
+
+    t = pd.date_range("2024-01-01", periods=4, freq="1min")
+    df = pd.DataFrame(
+        {
+            "Datetime": t,
+            "PM1": [1.0] * 4,
+            "PM2.5": [2.0] * 4,
+            "PM4": [3.0] * 4,
+            "PM10": [4.0] * 4,
+            "Total": [5.0] * 4,
+        }
+    )
+    d = DustTrak(df)
+    # Primary / total_concentration is the "Total" channel, not the first column.
+    assert float(d.total_concentration.iloc[0]) == 5.0
+    assert float(d._primary.iloc[0]) == 5.0
+    assert float(d.pm2_5.iloc[0]) == 2.0
+    assert float(d.total.iloc[0]) == 5.0
+
+
+def test_elpi_is_own_class_and_density_hook_recomputes_diameters():
+    """ELPI loads as its own 2D subclass; set_density recomputes the size axis."""
+    from aerosoltools import ELPI, Aerosol2D
+
+    elpi = Load_ELPI_file(_data_path("Sample_ELPI.txt"))
+    assert isinstance(elpi, ELPI) and isinstance(elpi, Aerosol2D)
+    mids_before = [float(x) for x in elpi.bin_mids]
+    elpi.set_density(2.0)
+    mids_after = [float(x) for x in elpi.bin_mids]
+    # The density-dependent diameters must move (the ELPI hook fired).
+    assert mids_before != mids_after
+    assert float(elpi.density) == 2.0

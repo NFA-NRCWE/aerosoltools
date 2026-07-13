@@ -2,7 +2,7 @@
 
 These functions adapt the aerosoltools data classes to the needs of the GUI:
 resolving per-column dtype/unit metadata (which may be scalars *or* dicts on
-:class:`AerosolAlt`), enumerating plottable columns, shading activity spans on
+multi-channel instruments), enumerating plottable columns, shading activity spans on
 a Matplotlib axis, and adding/removing activities interactively.
 """
 
@@ -95,7 +95,7 @@ def describe(obj: Aerosol1D, column: str | None = None) -> Tuple[str, str]:
     """Resolve the (dtype, unit) pair for a column.
 
     Both ``obj.dtype`` and ``obj.unit`` may be plain strings (Aerosol1D /
-    Aerosol2D) or per-column dicts (AerosolAlt). This helper returns sensible
+    Aerosol2D) or per-column dicts (multi-channel instruments). This helper returns sensible
     strings in either case.
 
     Args:
@@ -117,7 +117,7 @@ def measurement_label(obj: Aerosol1D, column: str | None = None) -> Tuple[str, s
     :attr:`~aerosoltools.Aerosol1D.measurement` (e.g. ``"Cl₂"``) when set, else
     the selected/primary channel name for a multi-channel object, else the
     generic ``"Total concentration"``. ``unit`` comes from :func:`describe`, so
-    per-channel dict units on :class:`AerosolAlt` are handled. This lets panes
+    per-channel dict units on multi-channel instruments are handled. This lets panes
     label a gas or black-carbon series correctly instead of always writing
     "Total concentration".
 
