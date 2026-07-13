@@ -213,33 +213,152 @@ def test_aethalometer_per_channel_units():
         aeth.summarize_activities()
 
 
-def test_calibration_never_negative():
-    """Applying a calibration clamps concentrations at 0 (total and per-bin)."""
-    from aerosoltools.gui import calibration as calib
+def _scaled_copy(obj, factor):
+    """A deep copy of ``obj`` with every numeric channel multiplied by ``factor``.
 
-    # 1D total-concentration calibration with a large negative offset.
+    Because the copy shares the original timestamps, ``match='exact'`` aligns
+    every sample and the fitted gain recovers ``factor`` (through the origin).
+    """
+    import pandas as _pd
+
+    ref = obj.copy_self()
+    for c in ref._data.columns:
+        if _pd.api.types.is_numeric_dtype(ref._data[c]):
+            ref._data[c] = ref._data[c] * factor
+    return ref
+
+
+def test_calibrate_against_reference_total():
+    """High-level total calibration recovers the gain and does not mutate target."""
+    import aerosoltools as at
+
+    target = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    reference = _scaled_copy(target, 2.0)
+    original = target.total_concentration.copy()
+
+    calibrated, model = at.calibrate_against_reference(target, reference)
+
+    assert model.basis == "total"
+    assert model.gains[0] == pytest.approx(2.0, rel=1e-3)
+    assert model.r_squared[0] == pytest.approx(1.0, abs=1e-3)
+    # inplace=False leaves the target untouched and returns a new object.
+    assert calibrated is not target
+    assert target.total_concentration.equals(original)
+    # The calibrated total now matches the reference (2x the original).
+    ref_total = reference.total_concentration.dropna()
+    cal_total = calibrated.total_concentration.dropna()
+    assert cal_total.reindex(ref_total.index).sub(ref_total).abs().max() < 1e-6
+    # Metadata records the applied model.
+    assert calibrated._meta["calibration"]["basis"] == "total"
+
+
+def test_calibrate_inplace_mutates():
+    """inplace=True corrects the target itself."""
+    import aerosoltools as at
+
+    target = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    reference = _scaled_copy(target, 3.0)
+    out, model = at.calibrate_against_reference(target, reference, inplace=True)
+    assert out is target
+    assert model.gains[0] == pytest.approx(3.0, rel=1e-3)
+
+
+def test_calibration_model_roundtrip():
+    """CalibrationModel serializes and restores identically."""
+    from aerosoltools.intercomparison import CalibrationModel, fit_calibration
+
+    target = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    reference = _scaled_copy(target, 2.0)
+    model = fit_calibration(target, reference, include_offset=True)
+    restored = CalibrationModel.from_dict(model.to_dict())
+    assert restored.to_dict() == model.to_dict()
+    assert restored.gains == model.gains
+
+
+def test_calibration_per_bin():
+    """Per-bin calibration fits an independent gain per size bin."""
+    from aerosoltools.intercomparison import calibrate_against_reference
+
+    target = Load_OPS_file(_data_path("Sample_OPS.csv"))
+    reference = _scaled_copy(target, 1.5)
+    calibrated, model = calibrate_against_reference(target, reference, basis="per_bin")
+    assert model.basis == "per_bin"
+    assert len(model.gains) == len(target.size_data.columns)
+    applied_gains = [g for g, ok in zip(model.gains, model.applied) if ok]
+    assert applied_gains, "expected at least one bin to be calibrated"
+    for g in applied_gains:
+        assert g == pytest.approx(1.5, rel=1e-2)
+
+
+def test_calibration_clips_negative():
+    """clip_negative keeps calibrated concentrations >= 0 (total and per-bin)."""
+    from aerosoltools.intercomparison import CalibrationModel
+
     cpc = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
-    calib._apply_spec_to_obj(
-        cpc,
-        {"basis": "Total concentration", "m": 1.0, "b": -1e12, "include_offset": True},
+    total_model = CalibrationModel(
+        basis="total",
+        gains=[1.0],
+        offsets=[-1e12],
+        r_squared=[1.0],
+        n_obs=[10],
+        applied=[True],
+        include_offset=True,
     )
-    assert (cpc.total_concentration.dropna() >= 0).all()
+    out = cpc.apply_calibration(total_model)
+    assert (out.total_concentration.dropna() >= 0).all()
 
-    # 2D per-bin calibration with negative offsets on every bin.
     ops = Load_OPS_file(_data_path("Sample_OPS.csv"))
     n = len(ops.size_data.columns)
-    calib._apply_spec_to_obj(
-        ops,
-        {
-            "basis": "Per size bin",
-            "ms": [1.0] * n,
-            "bs": [-1e12] * n,
-            "applied": [True] * n,
-            "include_offset": True,
-        },
+    bin_model = CalibrationModel(
+        basis="per_bin",
+        gains=[1.0] * n,
+        offsets=[-1e12] * n,
+        r_squared=[1.0] * n,
+        n_obs=[10] * n,
+        applied=[True] * n,
+        include_offset=True,
     )
-    assert (ops.size_data.to_numpy() >= 0).all()
-    assert (ops.total_concentration.dropna() >= 0).all()
+    out2 = ops.apply_calibration(bin_model)
+    assert (out2.size_data.to_numpy() >= 0).all()
+    assert (out2.total_concentration.dropna() >= 0).all()
+
+
+def test_calibration_rejects_incompatible():
+    """Domain errors for unit / basis / bin-count mismatches."""
+    from aerosoltools.intercomparison import CalibrationError, fit_calibration
+
+    cpc = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    ops = Load_OPS_file(_data_path("Sample_OPS.csv"))
+
+    # Per-bin needs both datasets size-resolved.
+    with pytest.raises(CalibrationError):
+        fit_calibration(cpc, _scaled_copy(cpc, 2.0), basis="per_bin")
+
+    # Unknown basis.
+    with pytest.raises(CalibrationError):
+        fit_calibration(cpc, _scaled_copy(cpc, 2.0), basis="nonsense")
+
+    # A CPC (number) and an OPS (size-resolved) do not share a unit contract for
+    # a per-bin calibration — mismatched bin counts are rejected too.
+    with pytest.raises(CalibrationError):
+        fit_calibration(ops, cpc, basis="per_bin")
+
+
+def test_calibration_gui_and_script_agree():
+    """The GUI applies the very same model the scripting API produces."""
+    import aerosoltools as at
+    from aerosoltools.intercomparison import fit_calibration
+
+    target = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    reference = _scaled_copy(target, 2.0)
+
+    model = fit_calibration(target, reference)
+    via_method = target.apply_calibration(model)
+    via_highlevel, _ = at.calibrate_against_reference(target, reference)
+
+    a = via_method.total_concentration.dropna()
+    b = via_highlevel.total_concentration.dropna()
+    assert a.sub(b).abs().max() < 1e-9
 
 
 def test_discmini_serial_normalization():

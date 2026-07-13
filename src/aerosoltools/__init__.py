@@ -94,9 +94,12 @@ plot_correlation
     instrument inter-comparisons).
 bland_altman_analysis
     Bland-Altman (difference) agreement plot between two datasets.
+calibrate_against_reference
+    Fit and apply a calibration of one dataset against a reference, returning
+    ``(calibrated, model)``.
 
-Advanced multi-dataset workflows live under
-:mod:`aerosoltools.intercomparison`.
+Advanced multi-dataset workflows (``fit_calibration``, ``apply_calibration``,
+``CalibrationModel``, …) live under :mod:`aerosoltools.intercomparison`.
 
 Typical usage example
 ---------------------
@@ -117,6 +120,7 @@ from .environmental import Environmental1D
 from .gas1d import Gas1D
 from .intercomparison import (
     bland_altman_analysis,
+    calibrate_against_reference,
     combine_measurements,
     combine_size_ranges,
     fit_data,
@@ -183,6 +187,7 @@ __all__ = [
     "fit_data",
     "plot_correlation",
     "combine_measurements",
+    "calibrate_against_reference",
     # Loaders (original names)
     "Load_APS_file",
     "Load_Aethalometer_file",

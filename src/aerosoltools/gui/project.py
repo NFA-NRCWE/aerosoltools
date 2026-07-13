@@ -121,7 +121,7 @@ class Dataset:
         # until assigned by the owning Project (or the user); see DEFAULT_PALETTE.
         self.color: Optional[str] = None
         # Reversible calibration state (see gui/calibration.py). ``calibration``
-        # is the applied spec (basis, factors, per-bin R²) or None; ``_cal_baseline``
+        # is a CalibrationModel.to_dict() (JSON-safe) or None; ``_cal_baseline``
         # is a snapshot of the uncalibrated object taken when calibration was first
         # applied, so the correction can be toggled on/off or reset from any pane.
         self.calibration: Optional[dict] = None

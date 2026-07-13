@@ -1,31 +1,27 @@
-"""Per-instrument calibration derived from a two-dataset correlation.
+"""GUI glue for calibrating one dataset (the *target*) against another.
 
-Calibrates **one** dataset (the *target*) so it agrees with another (the
-*reference*) — e.g. two identical OPS run side-by-side before an experiment,
-marked as a task period: pick one as the reference and calibrate the other to
-match it. The correction is applied to that **single dataset only** (never the
-whole project) via the core ``calibrate`` methods.
+Calibrates **one** dataset so it agrees with a *reference* — e.g. two identical
+OPS run side-by-side before an experiment: pick one as the reference and
+calibrate the other to match it. Only that single dataset changes.
 
-Two bases are offered, mirroring what the core ``calibrate`` supports:
+All of the science — validating the pair, time-aligning them, fitting the
+gain(s)/offset(s), and applying them — lives in the public
+:mod:`aerosoltools.intercomparison.calibration` module and on the data object as
+``apply_calibration``. A scripting user reproduces exactly what this dialog does
+with::
 
-* **Total concentration** — one gain (and an optional offset) fitted from the
-  total-concentration correlation. For a size-resolved (2D) target it corrects
-  only the total-concentration series and leaves the individual size bins
-  untouched, so a total-only calibration never distorts the distribution.
-* **Per size bin** — a separate gain (optionally offset) is fitted for each size
-  bin and applied bin-by-bin, so a size-dependent disagreement between two
-  otherwise-identical instruments can be corrected. Only bins whose fit clears
-  an R² threshold are corrected; weaker bins are left unchanged. Available only
-  when both datasets are size-resolved with the same number of bins.
+    calibrated, model = at.calibrate_against_reference(target, reference)
 
-The correction is stored on the dataset as a reversible spec applied to a
-snapshot of the uncalibrated object, so it can be toggled on/off or reset from
-the Metadata pane and no calibrated value is ever negative.
+This module adds only GUI conveniences on top of that API:
 
-Time-alignment between the two instruments reuses the Correlation tab's settings
-(exact / nearest / rebin, tolerance, and the optional activity restriction) via
-the library's own :func:`~aerosoltools.intercomparison._align_series`, so the fit is
-computed on exactly the points the correlation plot shows.
+* a reference / basis / offset dialog with a fit **preview**;
+* reversible per-dataset state — apply, toggle on/off, reset — built on a
+  snapshot of the uncalibrated object, so a correction can be undone without
+  re-fitting and survives project save/load (the model is stored as a JSON-safe
+  :meth:`CalibrationModel.to_dict` dict).
+
+Time-alignment reuses the Correlation tab's settings so the fit is computed on
+exactly the points the correlation plot shows.
 """
 
 from __future__ import annotations
@@ -34,136 +30,40 @@ from typing import Optional
 
 import numpy as np
 
-from ..intercomparison import _align_series
+from ..intercomparison.calibration import (
+    BASIS_PER_BIN,
+    BASIS_TOTAL,
+    DEFAULT_MIN_R2,
+    CalibrationModel,
+    fit_calibration,
+)
+from ..intercomparison.calibration import apply_calibration as _apply_model
 from . import helpers
 from .qt import QtCore, QtWidgets
 
-_BASIS_TOTAL = "Total concentration"
-_BASIS_BINS = "Per size bin"
-
-# A per-bin fit is only trustworthy above this coefficient of determination;
-# bins whose fit is weaker are left uncorrected (item 4).
-_R2_MIN = 0.5
-
-
-# -- numerics -----------------------------------------------------------------
-def _fit_gain(x, y, include_offset: bool):
-    """Fit ``y ≈ m·x (+ b)`` by least squares; return ``(m, b, r2, n)``.
-
-    Without an offset the gain is the best-fit slope through the origin
-    (``Σxy / Σx²``) — the natural correction for two instruments that should
-    read the same. ``n`` is the number of aligned points used.
-    """
-    x = np.asarray(x, dtype=float)
-    y = np.asarray(y, dtype=float)
-    n = int(x.size)
-    if n < 2:
-        return 1.0, 0.0, float("nan"), n
-    if include_offset:
-        m, b = np.polyfit(x, y, 1)
-    else:
-        denom = float(np.dot(x, x))
-        m = float(np.dot(x, y) / denom) if denom > 0 else 1.0
-        b = 0.0
-    yhat = m * x + b
-    ss_res = float(np.sum((y - yhat) ** 2))
-    ss_tot = float(np.sum((y - float(np.mean(y))) ** 2))
-    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
-    return float(m), float(b), float(r2), n
-
-
-def _bin_headers(obj) -> list:
-    """Size-bin column names of a 2D object, in bin order."""
-    return list(obj.size_data.columns)
+# Display labels for the two bases (the API uses the machine strings).
+_BASIS_LABELS = {BASIS_TOTAL: "Total concentration", BASIS_PER_BIN: "Per size bin"}
+_R2_MIN = DEFAULT_MIN_R2
 
 
 def bins_compatible(a, b) -> bool:
     """True when both objects are size-resolved with the same number of bins."""
     if not (helpers.is_2d(a) and helpers.is_2d(b)):
         return False
-    return len(_bin_headers(a)) == len(_bin_headers(b))
+    return len(a._sizebin_headers) == len(b._sizebin_headers)
 
 
-def compute_total(target, ref, include_offset: bool, align_kwargs: dict):
-    """Fit a single total-concentration gain mapping ``target`` onto ``ref``."""
-    x, y = _align_series(target, ref, "Total_conc", None, None, **align_kwargs)
-    return _fit_gain(x, y, include_offset)
+# -- reversible, per-dataset state --------------------------------------------
+# The calibration is stored on the dataset wrapper as a JSON-safe model dict and
+# (re)applied to a snapshot of the uncalibrated object, so it can be toggled
+# on/off or reset from any pane without re-fitting, and persists with the project.
 
 
-def compute_per_bin(target, ref, include_offset: bool, align_kwargs: dict):
-    """Fit one gain per size bin mapping ``target`` onto ``ref``.
-
-    Returns ``(m_list, b_list, r2_list, n_failed)``. Bins whose fit fails (no
-    overlap, too few points, non-positive gain) are left unchanged (m=1, b=0)
-    and counted in ``n_failed`` so the caller can warn.
-    """
-    th, rh = _bin_headers(target), _bin_headers(ref)
-    if len(th) != len(rh):
-        raise ValueError("The two datasets have different numbers of size bins.")
-    ms, bs, r2s, failed = [], [], [], 0
-    for tcol, rcol in zip(th, rh):
-        try:
-            x, y = _align_series(target, ref, (tcol, rcol), None, None, **align_kwargs)
-            m, b, r2, n = _fit_gain(x, y, include_offset)
-            if not np.isfinite(m) or m <= 0 or n < 2:
-                raise ValueError("unusable bin fit")
-        except Exception:
-            m, b, r2, failed = 1.0, 0.0, float("nan"), failed + 1
-        ms.append(m)
-        bs.append(b)
-        r2s.append(r2)
-    return ms, bs, r2s, failed
-
-
-# -- reversible, spec-based application ---------------------------------------
-# Calibration is stored on the dataset as a *spec* and (re)applied to a snapshot
-# of the uncalibrated object, so it can be toggled on/off or reset from any pane
-# without re-fitting. The spec is a plain dict (JSON-safe) so it also persists.
-
-
-def _clip_nonnegative(obj, recompute_total: bool) -> None:
-    """Clip calibrated data at zero so no negative concentrations remain (item 5).
-
-    For a per-bin calibration the total is re-summed from the clipped bins; for a
-    total-only calibration the (independent) total series is clipped directly and
-    the bins are left as they are.
-    """
-    if helpers.is_2d(obj):
-        cols = obj._sizebin_headers
-        obj._data[cols] = obj._data[cols].clip(lower=0.0)
-        if recompute_total:
-            obj._data["Total_conc"] = obj._data[cols].sum(axis=1)
-        elif "Total_conc" in obj._data:
-            obj._data["Total_conc"] = obj._data["Total_conc"].clip(lower=0.0)
-    elif "Total_conc" in obj._data:
-        obj._data["Total_conc"] = obj._data["Total_conc"].clip(lower=0.0)
-
-
-def _apply_spec_to_obj(obj, spec: dict) -> None:
-    """Apply a calibration ``spec`` to ``obj`` in place (with zero-clipping)."""
-    include_offset = bool(spec.get("include_offset"))
-    if spec["basis"] == _BASIS_BINS:
-        # Only bins whose fit cleared the R² gate are corrected; the rest keep a
-        # unit gain / zero offset so a weak per-bin fit never distorts the data.
-        applied = spec["applied"]
-        ms = [float(m) if ok else 1.0 for m, ok in zip(spec["ms"], applied)]
-        variables = {"m": ms}
-        if include_offset:
-            variables["b"] = [
-                float(b) if ok else 0.0 for b, ok in zip(spec["bs"], applied)
-            ]
-        obj.calibrate(parameter="bins", Variables=variables)
-        _clip_nonnegative(obj, recompute_total=True)
-    else:
-        # Total-concentration calibration must NOT touch the individual bins
-        # (item 4): calibrate only the total series for 2D data.
-        m = float(spec["m"])
-        b = float(spec["b"]) if include_offset else 0.0
-        if helpers.is_2d(obj):
-            obj.calibrate(parameter="Total_conc", Variables={"m": m, "b": b})
-        else:
-            obj.calibrate(m=m, b=b)
-        _clip_nonnegative(obj, recompute_total=False)
+def _model_of(ds) -> Optional[CalibrationModel]:
+    """Reconstruct the dataset's :class:`CalibrationModel`, or ``None``."""
+    if not ds.calibration:
+        return None
+    return CalibrationModel.from_dict(ds.calibration)
 
 
 def _rebuild(ds) -> None:
@@ -171,21 +71,22 @@ def _rebuild(ds) -> None:
     if ds._cal_baseline is None:
         return
     obj = ds._cal_baseline.copy_self()
-    if ds.calibration_enabled and ds.calibration is not None:
-        _apply_spec_to_obj(obj, ds.calibration)
+    model = _model_of(ds)
+    if ds.calibration_enabled and model is not None:
+        obj = _apply_model(obj, model, inplace=True)
     ds.obj = obj
 
 
-def apply_calibration(ds, spec: dict) -> None:
-    """Apply a calibration spec to a dataset, snapshotting the baseline once.
+def apply_to_dataset(ds, model: CalibrationModel) -> None:
+    """Apply a fitted model to a dataset, snapshotting the baseline once.
 
     The first calibration captures the current (uncalibrated) object as the
-    baseline; further calibrations replace the spec but keep that baseline, so
+    baseline; further calibrations replace the model but keep that baseline, so
     the correction never compounds and can always be reset to the original.
     """
     if ds.calibration is None or ds._cal_baseline is None:
         ds._cal_baseline = ds.obj.copy_self()
-    ds.calibration = spec
+    ds.calibration = model.to_dict()
     ds.calibration_enabled = True
     _rebuild(ds)
 
@@ -207,7 +108,7 @@ def reset_calibration(ds) -> None:
     ds._cal_baseline = None
 
 
-# -- human-readable summaries (Metadata pane, item 6) -------------------------
+# -- human-readable summaries (Metadata pane) ---------------------------------
 def _fmt_fn(m: float, b: float, include_offset: bool) -> str:
     """Render a linear calibration as ``y = m·x (+ b)`` with 2-decimal params."""
     text = f"y = {float(m):.2f}·x"
@@ -222,20 +123,20 @@ def calibration_summary(ds) -> Optional[str]:
     Returned for a total-concentration calibration (shown beneath the metadata);
     per-bin calibrations are described row-by-row via :func:`bin_calibration_texts`.
     """
-    spec = ds.calibration
-    if not spec:
+    model = _model_of(ds)
+    if model is None:
         return None
     state = "on" if ds.calibration_enabled else "off"
-    if spec["basis"] == _BASIS_TOTAL:
-        fn = _fmt_fn(spec["m"], spec.get("b", 0.0), spec.get("include_offset"))
-        r2 = spec.get("r2")
+    if model.basis == BASIS_TOTAL:
+        fn = _fmt_fn(model.gains[0], model.offsets[0], model.include_offset)
+        r2 = model.r_squared[0] if model.r_squared else None
         r2txt = f", R² = {r2:.2f}" if r2 is not None and np.isfinite(r2) else ""
         return f"Total concentration: {fn}{r2txt}  [{state}]"
-    n_ok = sum(1 for a in spec.get("applied", []) if a)
-    n_tot = len(spec.get("applied", []))
+    n_ok = model.n_applied
+    n_tot = len(model.applied)
     return (
-        f"Per size bin: {n_ok}/{n_tot} bins corrected (R² > {_R2_MIN})  [{state}] — "
-        "see the per-bin table"
+        f"Per size bin: {n_ok}/{n_tot} bins corrected "
+        f"(R² > {model.minimum_r_squared:g})  [{state}] — see the per-bin table"
     )
 
 
@@ -245,13 +146,12 @@ def bin_calibration_texts(ds) -> Optional[list]:
     Each entry is the bin's ``y = m·x (+ b)`` when its fit cleared the R² gate,
     or a short ``—`` note when the bin was left uncorrected.
     """
-    spec = ds.calibration
-    if not spec or spec["basis"] != _BASIS_BINS:
+    model = _model_of(ds)
+    if model is None or model.basis != BASIS_PER_BIN:
         return None
-    include_offset = bool(spec.get("include_offset"))
     out = []
-    for m, b, ok in zip(spec["ms"], spec["bs"], spec["applied"]):
-        out.append(_fmt_fn(m, b, include_offset) if ok else "— (R² too low)")
+    for m, b, ok in zip(model.gains, model.offsets, model.applied):
+        out.append(_fmt_fn(m, b, model.include_offset) if ok else "— (R² too low)")
     return out
 
 
@@ -259,9 +159,9 @@ def bin_calibration_texts(ds) -> Optional[list]:
 class CalibrationDialog(QtWidgets.QDialog):
     """Choose a reference, preview the fitted factors, and apply the calibration.
 
-    The non-reference dataset is the *target*: it is modified in place (the core
-    ``calibrate`` marks it ``calibrated`` in its metadata). Only that one dataset
-    changes — calibration is per instrument, not project-wide.
+    The non-reference dataset is the *target*: only it changes. The dialog is a
+    thin front end over :func:`aerosoltools.intercomparison.fit_calibration` and
+    ``apply_calibration`` — it fits nothing itself.
     """
 
     def __init__(self, tab, xds, yds, align_kwargs: dict):
@@ -305,7 +205,8 @@ class CalibrationDialog(QtWidgets.QDialog):
         # Basis + offset.
         form = QtWidgets.QFormLayout()
         self.basis = QtWidgets.QComboBox()
-        self.basis.addItems([_BASIS_TOTAL, _BASIS_BINS])
+        self.basis.addItem(_BASIS_LABELS[BASIS_TOTAL], BASIS_TOTAL)
+        self.basis.addItem(_BASIS_LABELS[BASIS_PER_BIN], BASIS_PER_BIN)
         if not self._bins_ok:
             # Disable the per-bin option when the datasets aren't both
             # size-resolved with matching bins.
@@ -347,7 +248,7 @@ class CalibrationDialog(QtWidgets.QDialog):
         btns.addWidget(self.apply_btn)
         outer.addLayout(btns)
 
-        self._result = None  # cached (basis, factors) from the last preview
+        self._model: Optional[CalibrationModel] = None  # cached last-preview model
         self._on_change()
 
     # -- helpers -----------------------------------------------------------
@@ -358,19 +259,20 @@ class CalibrationDialog(QtWidgets.QDialog):
         return self.xds, self.yds
 
     def _basis(self) -> str:
-        return self.basis.currentText()
+        """The machine basis string (``"total"`` / ``"per_bin"``) selected."""
+        return self.basis.currentData()
 
     def _on_change(self, *_a) -> None:
         """React to a reference/basis change: fix the offset rule, clear preview."""
         target, _ref = self._target_ref()
         self.offset.setEnabled(True)
-        if self._basis() == _BASIS_BINS and helpers.is_2d(target.obj):
+        if self._basis() == BASIS_PER_BIN and helpers.is_2d(target.obj):
             # A per-bin offset is generally ill-posed, but still allowed.
             self.offset.setToolTip(
                 "Fit an intercept as well as a gain, per size bin (off by "
                 "default: identical instruments should agree through the origin)."
             )
-        elif self._basis() == _BASIS_TOTAL and helpers.is_2d(target.obj):
+        elif self._basis() == BASIS_TOTAL and helpers.is_2d(target.obj):
             # Total-conc offset can't be distributed across bins, so it is
             # applied to the total series while the bins take the gain only.
             self.offset.setToolTip(
@@ -387,12 +289,11 @@ class CalibrationDialog(QtWidgets.QDialog):
         self._clear_preview()
 
     def _clear_preview(self) -> None:
-        self._result = None
+        self._model = None
         self.preview.setText("Click Preview to fit the calibration factors.")
 
-    # -- preview / apply ---------------------------------------------------
-    def _preview(self):
-        """Fit the factors for the current settings and describe them; cache them."""
+    def _fit(self) -> CalibrationModel:
+        """Fit a model for the current settings against the uncalibrated baseline."""
         target, ref = self._target_ref()
         include_offset = self.offset.isChecked() and self.offset.isEnabled()
         # Fit against the uncalibrated baseline when the target already carries a
@@ -400,59 +301,62 @@ class CalibrationDialog(QtWidgets.QDialog):
         tgt_obj = (
             target._cal_baseline if target._cal_baseline is not None else target.obj
         )
+        return fit_calibration(
+            tgt_obj,
+            ref.obj,
+            basis=self._basis(),
+            include_offset=include_offset,
+            minimum_r_squared=_R2_MIN,
+            **self.align_kwargs,
+        )
+
+    # -- preview / apply ---------------------------------------------------
+    def _preview(self):
+        """Fit the factors for the current settings and describe them; cache them."""
+        target, ref = self._target_ref()
         try:
-            if self._basis() == _BASIS_BINS:
-                ms, bs, r2s, failed = compute_per_bin(
-                    tgt_obj, ref.obj, include_offset, self.align_kwargs
-                )
-                self._result = {
-                    "basis": _BASIS_BINS,
-                    "ms": ms,
-                    "bs": bs,
-                    "r2s": r2s,
-                    "include_offset": include_offset,
-                }
-                arr = np.asarray(ms, dtype=float)
-                r2arr = np.asarray([r for r in r2s if np.isfinite(r)], dtype=float)
-                n_ok = sum(1 for r in r2s if np.isfinite(r) and r > _R2_MIN)
-                note = (
-                    f"Per-bin gain across {len(ms)} bins: "
-                    f"{arr.min():.3g}–{arr.max():.3g} (median {np.median(arr):.3g})."
-                )
-                if r2arr.size:
-                    note += f"  Median R² = {np.median(r2arr):.3f}."
-                note += (
-                    f"  {n_ok}/{len(ms)} bins clear R² > {_R2_MIN} and will be "
-                    "corrected; the rest are left unchanged."
-                )
-                if failed:
-                    note += f"  ({failed} bin(s) had too little overlap.)"
-            else:
-                m, b, r2, n = compute_total(
-                    tgt_obj, ref.obj, include_offset, self.align_kwargs
-                )
-                self._result = {
-                    "basis": _BASIS_TOTAL,
-                    "m": m,
-                    "b": b,
-                    "r2": r2,
-                    "include_offset": include_offset,
-                }
-                eqn = f"y = {m:.4g}·x" + (f" + {b:.4g}" if include_offset else "")
-                note = f"Total-concentration fit ({n} points): {eqn},  R² = {r2:.3f}."
+            model = self._fit()
         except Exception as exc:
-            self._result = None
+            self._model = None
             self.preview.setText(f"Could not fit: {exc}")
             return
+        self._model = model
+
+        if model.basis == BASIS_PER_BIN:
+            gains = np.asarray(model.gains, dtype=float)
+            r2arr = np.asarray(
+                [r for r in model.r_squared if np.isfinite(r)], dtype=float
+            )
+            n_ok = model.n_applied
+            n = len(model.gains)
+            note = (
+                f"Per-bin gain across {n} bins: "
+                f"{gains.min():.3g}–{gains.max():.3g} (median {np.median(gains):.3g})."
+            )
+            if r2arr.size:
+                note += f"  Median R² = {np.median(r2arr):.3f}."
+            note += (
+                f"  {n_ok}/{n} bins clear R² > {model.minimum_r_squared:g} and will "
+                "be corrected; the rest are left unchanged."
+            )
+            failed = sum(1 for nobs in model.n_obs if nobs < 2)
+            if failed:
+                note += f"  ({failed} bin(s) had too little overlap.)"
+        else:
+            m, b = model.gains[0], model.offsets[0]
+            r2, n = model.r_squared[0], model.n_obs[0]
+            eqn = f"y = {m:.4g}·x" + (f" + {b:.4g}" if model.include_offset else "")
+            note = f"Total-concentration fit ({n} points): {eqn},  R² = {r2:.3f}."
+
         self.preview.setText(
             f"Calibrating <b>{target.label}</b> to match <b>{ref.label}</b>.<br>{note}"
         )
 
     def _apply(self):
-        """Confirm, apply the cached (or freshly fitted) factors, refresh the GUI."""
-        if self._result is None:
+        """Confirm, apply the cached (or freshly fitted) model, refresh the GUI."""
+        if self._model is None:
             self._preview()
-            if self._result is None:
+            if self._model is None:
                 return
         target, ref = self._target_ref()
         if target.calibration is not None:
@@ -474,16 +378,10 @@ class CalibrationDialog(QtWidgets.QDialog):
         if ans != QtWidgets.QMessageBox.Yes:
             return
         try:
-            spec = dict(self._result)
-            spec["target"] = target.label
-            spec["ref"] = ref.label
-            if spec["basis"] == _BASIS_BINS:
-                # Record which bins clear the R² gate, so both the applied
-                # correction and the per-bin display agree on what was used.
-                spec["applied"] = [
-                    bool(np.isfinite(r) and r > _R2_MIN) for r in spec["r2s"]
-                ]
-            apply_calibration(target, spec)
+            model = self._model
+            model.target_name = target.label
+            model.reference_name = ref.label
+            apply_to_dataset(target, model)
             # The object was rebuilt, so re-project the shared tasks onto it.
             self.tab.main.project._apply_activities(target)
         except Exception as exc:

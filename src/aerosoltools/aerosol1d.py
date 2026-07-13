@@ -363,47 +363,89 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
     """############################# Functions #############################"""
     ###########################################################################
 
-    def calibrate(self, m: float = 1, b: float = 0, *, parameter=None, inplace=True):
-        """Apply a linear correction ``x_cor = m * x + b`` to one channel.
+    def apply_calibration(self, model, *, inplace: bool = False):
+        """Apply a fitted calibration model to this dataset.
+
+        This is the single-dataset *application* half of the calibration
+        workflow: the cross-dataset fitting lives in
+        :func:`aerosoltools.intercomparison.fit_calibration`, which produces the
+        :class:`~aerosoltools.intercomparison.calibration.CalibrationModel`
+        applied here. Fit once, apply to as many datasets as you like.
 
         Args:
-            m (float): Gain multiplied onto the data.
-            b (float): Additive offset. Defaults to ``0`` (use with care).
-            parameter (int | str | None): Which channel to calibrate. ``None``
-                (default) calibrates the dataset's **primary** channel — total
-                concentration for particle instruments, the main channel for
-                others — preserving the historical single-quantity behaviour. An
-                ``int`` is a positional index into :attr:`data` columns; a
-                ``str`` is a column label in :attr:`data` or :attr:`extra_data`.
-            inplace (bool): Modify this object (default) or a deep copy.
+            model (CalibrationModel | dict): A model from ``fit_calibration``
+                (or its :meth:`~...CalibrationModel.to_dict` form). A
+                ``"total"`` model scales the total/primary series by ``gain``
+                (plus ``offset`` when the model includes one); a ``"per_bin"``
+                model scales each size bin by its own gain and re-sums the total,
+                applying only the bins the fit accepted.
+            inplace (bool): Modify this object (``True``) or a deep copy
+                (``False``, the default — calibration returns a new object).
 
         Returns:
             Aerosol1D: The calibrated object (``self`` when ``inplace``).
+
+        Raises:
+            ValueError: If a per-bin model is applied to non-size-resolved data,
+                or the model's bin count does not match the dataset.
         """
+        from .intercomparison.calibration import (
+            BASIS_PER_BIN,
+            CalibrationModel,
+        )
+
+        if isinstance(model, dict):
+            model = CalibrationModel.from_dict(model)
+
         out = self if inplace else self.copy_self()
 
-        # Resolve which channel to calibrate.
-        if parameter is None:
-            column = getattr(out._primary, "name", None) or "Total_conc"
-        elif isinstance(parameter, int):
-            if parameter >= len(out.data.columns):
-                raise LookupError("Chosen parameter is invalid")
-            column = out.data.columns[parameter]
-        elif isinstance(parameter, str):
-            column = parameter
-        else:
-            raise LookupError("Chosen parameter is invalid")
-
-        if column in out._data.columns:
-            out._data[column] = out._ensure_data_robustness(out._data[column] * m + b)
-        elif out._extra_data is not None and column in out._extra_data.columns:
-            out._extra_data[column] = out._ensure_data_robustness(
-                out._extra_data[column] * m + b
+        if model.basis == BASIS_PER_BIN:
+            headers = list(getattr(out, "_sizebin_headers", []) or [])
+            if not headers:
+                raise ValueError(
+                    "A per-bin calibration can only be applied to size-resolved "
+                    "(2D) data."
+                )
+            if len(model.gains) != len(headers):
+                raise ValueError(
+                    f"Model has {len(model.gains)} bin gains but the dataset has "
+                    f"{len(headers)} size bins."
+                )
+            for header, m, b, ok in zip(
+                headers, model.gains, model.offsets, model.applied
+            ):
+                if not ok:
+                    continue
+                out._data[header] = out._ensure_data_robustness(
+                    out._data[header] * m + b
+                )
+            if model.clip_negative:
+                out._data[headers] = out._data[headers].clip(lower=0.0)
+            out._data["Total_conc"] = out._ensure_data_robustness(
+                out._data[headers].sum(axis=1)
             )
-        else:
-            raise KeyError(f"Parameter '{column}' not found in data or extra_data")
+        else:  # total / primary series only
+            m = float(model.gains[0])
+            b = float(model.offsets[0]) if model.include_offset else 0.0
+            column = (
+                "Total_conc"
+                if "Total_conc" in out._data.columns
+                else (getattr(out._primary, "name", None) or out._data.columns[0])
+            )
+            if column in out._data.columns:
+                out._data[column] = out._ensure_data_robustness(
+                    out._data[column] * m + b
+                )
+                if model.clip_negative:
+                    out._data[column] = out._data[column].clip(lower=0.0)
+            elif out._extra_data is not None and column in out._extra_data.columns:
+                out._extra_data[column] = out._ensure_data_robustness(
+                    out._extra_data[column] * m + b
+                )
+            else:
+                raise KeyError(f"Parameter '{column}' not found in data or extra_data")
 
-        out._meta.setdefault("calibrated", {})[column] = {"m": m, "b": b}
+        out._meta["calibration"] = model.to_dict()
         return out
 
     ###########################################################################

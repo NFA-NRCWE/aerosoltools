@@ -17,6 +17,13 @@ themselves (``data.timecrop(...)``, ``data.summarize(...)``, …).
 """
 
 from ._alignment import _align_series as _align_series  # re-exported for the GUI
+from .calibration import (
+    CalibrationError,
+    CalibrationModel,
+    apply_calibration,
+    calibrate_against_reference,
+    fit_calibration,
+)
 from .combination import combine_measurements, combine_size_ranges
 from .correlation import bland_altman_analysis, fit_data, plot_correlation
 
@@ -26,4 +33,10 @@ __all__ = [
     "plot_correlation",
     "bland_altman_analysis",
     "fit_data",
+    # Calibration workflow
+    "calibrate_against_reference",
+    "fit_calibration",
+    "apply_calibration",
+    "CalibrationModel",
+    "CalibrationError",
 ]

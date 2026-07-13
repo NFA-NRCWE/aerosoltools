@@ -19,9 +19,9 @@ from ..qt import QtWidgets
 #: Metadata keys shown via the dedicated size-bin table instead of a raw dump.
 _BIN_KEYS = {"bin_edges", "bin_mids"}
 #: Keys not shown in the general metadata dump (surfaced elsewhere in the pane):
-#: the bin arrays go to the size table, and the raw ``calibrated`` dict is shown
-#: as human-readable functions via the calibration controls (items 6/7).
-_HIDDEN_KEYS = _BIN_KEYS | {"calibrated"}
+#: the bin arrays go to the size table, and the raw ``calibration`` model dict is
+#: shown as human-readable functions via the calibration controls.
+_HIDDEN_KEYS = _BIN_KEYS | {"calibration"}
 
 
 def _format_value(value) -> str:
