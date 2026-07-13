@@ -10,7 +10,7 @@ from .Common import _detect_delimiter
 ###############################################################################
 
 
-def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False):
+def load_opcn3_file(file: str, extra_data: bool = False, PM_focus: bool = False):
     """Description:
         Load an OPC-N3 export and return either a size-resolved distribution
         (:class:`Aerosol2D`) or PM-focused time series (:class:`Aerosol1D`)
@@ -66,7 +66,7 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
 
                 - Detected when ``len(first_line) <= 34``.
                 - If ``PM_focus=False`` (default), the file is passed to
-                  :func:`_Load_OPCN3_file_old`, which:
+                  :func:`_load_opcn3_file_old`, which:
 
                   - parses ISO datetime strings into a ``Datetime`` column,
                   - interprets legacy bin labels (``Bin1``, ``Bin2``, …),
@@ -77,7 +77,7 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
                     bin.
 
                 - If ``PM_focus=True``, the file is passed to
-                  :func:`_Load_OPCN3_file_PM_old`, which:
+                  :func:`_load_opcn3_file_pm_old`, which:
 
                   - computes ``Total_conc`` from the size bins,
                   - extracts PM1, PM2.5 and PM10 mass concentrations,
@@ -89,7 +89,7 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
 
                 - Detected when ``first_line[-1] == "OPC"``.
                 - If ``PM_focus=False``, the file is passed to
-                  :func:`_Load_OPCN3_file_new`, which:
+                  :func:`_load_opcn3_file_new`, which:
 
                   - parses ISO datetime strings from a ``Date`` column,
                   - uses a fixed set of bin edges from the OPC-N3 specification,
@@ -99,7 +99,7 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
                     ``Total_conc`` and size-bin columns.
 
                 - If ``PM_focus=True``, the file is passed to
-                  :func:`_Load_OPCN3_file_PM_new`, which:
+                  :func:`_load_opcn3_file_pm_new`, which:
 
                   - computes ``Total_conc`` from the size bins,
                   - returns an :class:`Aerosol1D` with ``Datetime``,
@@ -128,14 +128,14 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
             import aerosoltools as at
 
             # 1) Load full size-resolved distribution (Aerosol2D)
-            opcn_dist = at.Load_OPCN3_file("data/OPCN3_legacy.csv")
+            opcn_dist = at.load_opcn3_file("data/OPCN3_legacy.csv")
 
             print(opcn_dist.data.head())
             print(opcn_dist.bin_edges)
             print(opcn_dist.metadata)
 
             # 2) Load only total and PM metrics (multi-channel Aerosol1D)
-            opcn_pm = at.Load_OPCN3_file(
+            opcn_pm = at.load_opcn3_file(
                 "data/OPCN3_legacy.csv",
                 extra_data=True,
                 PM_focus=True,
@@ -161,20 +161,20 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
 
     if len(first_line) <= 34:
         if PM_focus:
-            return _Load_OPCN3_file_PM_old(
+            return _load_opcn3_file_pm_old(
                 file, extra_data=extra_data, encoding=encoding, delimiter=delimiter
             )
         else:
-            return _Load_OPCN3_file_old(
+            return _load_opcn3_file_old(
                 file, extra_data=extra_data, encoding=encoding, delimiter=delimiter
             )
     elif first_line[-1] == "OPC":
         if PM_focus:
-            return _Load_OPCN3_file_PM_new(
+            return _load_opcn3_file_pm_new(
                 file, extra_data=extra_data, encoding=encoding, delimiter=delimiter
             )
         else:
-            return _Load_OPCN3_file_new(
+            return _load_opcn3_file_new(
                 file, extra_data=extra_data, encoding=encoding, delimiter=delimiter
             )
     else:
@@ -184,7 +184,7 @@ def Load_OPCN3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
 ###############################################################################
 
 
-def _Load_OPCN3_file_old(
+def _load_opcn3_file_old(
     file: str,
     extra_data: bool = False,
     encoding: Optional[str] = None,
@@ -307,7 +307,7 @@ def _Load_OPCN3_file_old(
 ###############################################################################
 
 
-def _Load_OPCN3_file_new(
+def _load_opcn3_file_new(
     file: str,
     extra_data: bool = False,
     encoding: Optional[str] = None,
@@ -463,7 +463,7 @@ def _Load_OPCN3_file_new(
 ###############################################################################
 
 
-def _Load_OPCN3_file_PM_old(
+def _load_opcn3_file_pm_old(
     file: str,
     extra_data: bool = False,
     encoding: Optional[str] = None,
@@ -593,7 +593,7 @@ def _Load_OPCN3_file_PM_old(
 ###############################################################################
 
 
-def _Load_OPCN3_file_PM_new(
+def _load_opcn3_file_pm_new(
     file: str,
     extra_data: bool = False,
     encoding: Optional[str] = None,

@@ -99,7 +99,7 @@ class Plot1DMixin:
                 import aerosoltools as at
 
                 # Suppose 'alt' is a multi-channel object with columns: ["LDSA", "Flow", "Flag"]
-                alt = at.Load_Partector_file("data/Partector_log.txt")
+                alt = at.load_partector_file("data/Partector_log.txt")
 
                 # Plot LDSA with activity shading
                 fig, ax = alt.plot_total_conc(

@@ -9,7 +9,7 @@ from .Common import _detect_delimiter
 ###############################################################################
 
 
-def Load_FMPS_file(file: str) -> Aerosol2D:
+def load_fmps_file(file: str) -> Aerosol2D:
     """Description:
         Load an FMPS size-distribution export and return it as an
         :class:`Aerosol2D` number-size distribution with metadata.
@@ -96,7 +96,7 @@ def Load_FMPS_file(file: str) -> Aerosol2D:
             import aerosoltools as at
 
             # Load FMPS data as a 2D number-size distribution
-            fmps = at.Load_FMPS_file("data/FMPS_export.txt")
+            fmps = at.load_fmps_file("data/FMPS_export.txt")
 
             # Inspect the data
             print(fmps.data)
@@ -213,7 +213,7 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
                 dtype=str,
             )[2]
         )[-8:]
-    except:
+    except Exception:
         serial_number = str(
             np.genfromtxt(
                 file,
@@ -377,7 +377,9 @@ def _parse_standard_datetime(
     # Read the main date/time tokens from the header
     fmps_date = np.genfromtxt(
         file, delimiter=delimiter, encoding=encoding, max_rows=1, dtype=str
-    )[1].split(",")[1:]#[2:]
+    )[1].split(",")[
+        1:
+    ]  # [2:]
     month_map = {
         k: v
         for v, k in enumerate(
@@ -433,5 +435,3 @@ def _parse_standard_datetime(
         return pd.DataFrame(
             [start_dt + i * step for i in range(len(times))], columns=["Datetime"]
         )
-
-

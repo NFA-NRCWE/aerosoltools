@@ -152,8 +152,8 @@ def combine_size_ranges(
 
             import aerosoltools as at
 
-            ns = at.Load_NS_file("nanoscan.csv")
-            ops = at.Load_OPS_file("ops.csv")
+            ns = at.load_ns_file("nanoscan.csv")
+            ops = at.load_ops_file("ops.csv")
             combined = at.combine_size_ranges(ns, ops, crossover=400)
             fig, ax = combined.plot_timeseries()
     """
@@ -305,9 +305,9 @@ def combine_measurements(datasets, *, require_same_serial: bool = True):
 
             import aerosoltools as at
 
-            d1 = at.Load_OPS_file("ops_day1.txt")
-            d2 = at.Load_OPS_file("ops_day2.txt")
-            d3 = at.Load_OPS_file("ops_day3.txt")
+            d1 = at.load_ops_file("ops_day1.txt")
+            d2 = at.load_ops_file("ops_day2.txt")
+            d3 = at.load_ops_file("ops_day3.txt")
             full = at.combine_measurements([d1, d2, d3])
     """
     datasets = list(datasets)

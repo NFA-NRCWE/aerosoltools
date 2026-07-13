@@ -1,14 +1,15 @@
-
 import numpy as np
 import pandas as pd
 
 from ..environmental import Environmental1D
-from .Common import Load_data_from_folder, _detect_delimiter
+from .Common import _detect_delimiter, load_data_from_folder
 
 ###############################################################################
 
 
-def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> Environmental1D:
+def load_devlabs_file(
+    folder_path: str, freq="1min", start=None, end=None
+) -> Environmental1D:
     """Description:
         Load a Fourtec Bluefish CSV or Excel export and return temperature and
         relative humidity as an :class:`Environmental1D` time series.
@@ -94,7 +95,7 @@ def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> En
               import aerosoltools as at
 
               # Load Fourtec data from CSV or Excel
-              fourtec = at.Load_Fourtec_file("data/Fourtec_export.csv")
+              fourtec = at.load_fourtec_file("data/Fourtec_export.csv")
 
               # Inspect the data
               print(fourtec.data.head())
@@ -105,70 +106,85 @@ def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> En
               # Plot temperature and RH over time
               fig, ax = fourtec.plot_timeseries()
     """
-    Parameters=["Temp","RH","W_speed","W_direction","PM2.5","CO2","CO","NO2"]
+    Parameters = ["Temp", "RH", "W_speed", "W_direction", "PM2.5", "CO2", "CO", "NO2"]
 
-    Search_words={"Temp"    : "temperature",
-                  "RH"      : "relative_humidity",
-                  "W_speed" : "wind_speed",
-                  "W_direction" : "wind_direction",
-                  "PM2.5"   : "pm2.5",
-                  "CO2"     : "carbon_dioxide",
-                  "CO"      : "carbon_monoxide",
-                  "NO2"     : "nitrogen_dioxide"}
-    Data={}
+    Search_words = {
+        "Temp": "temperature",
+        "RH": "relative_humidity",
+        "W_speed": "wind_speed",
+        "W_direction": "wind_direction",
+        "PM2.5": "pm2.5",
+        "CO2": "carbon_dioxide",
+        "CO": "carbon_monoxide",
+        "NO2": "nitrogen_dioxide",
+    }
+    Data = {}
     for param in Parameters:
-        Data[param]=Load_data_from_folder(folder_path, load_parameter, search_word = Search_words[param], parameter=param)
-        Data[param]._data[param]=pd.to_numeric(Data[param].data[param],errors='coerce')
+        Data[param] = load_data_from_folder(
+            folder_path,
+            load_parameter,
+            search_word=Search_words[param],
+            parameter=param,
+        )
+        Data[param]._data[param] = pd.to_numeric(
+            Data[param].data[param], errors="coerce"
+        )
 
     # Extract serial number from header
     SN = Data["Temp"]._meta["serial_number"]
     for param in Parameters:
-        if Data[param]._meta["serial_number"]!= SN:
+        if Data[param]._meta["serial_number"] != SN:
             raise ValueError("Trying to combine data from multiple sensors")
 
-    if start is None :
-        start   = min([Data[i ].time[0] for i in Parameters])
-    if end is None :
-        end     = max([Data[i ].time[-1] for i in Parameters])
+    if start is None:
+        start = min([Data[i].time[0] for i in Parameters])
+    if end is None:
+        end = max([Data[i].time[-1] for i in Parameters])
 
-    df={}
-    data=Data.copy()
+    df = {}
+    data = Data.copy()
     for param in Parameters:
-        data[param]._data[param]=pd.to_numeric(data[param].data[param],errors='coerce')
+        data[param]._data[param] = pd.to_numeric(
+            data[param].data[param], errors="coerce"
+        )
 
     for param in Parameters:
-        df[param]=data[param].timerebin(freq,start,end).data[param]
+        df[param] = data[param].timerebin(freq, start, end).data[param]
 
-    Combined_df=pd.concat(df.values(),axis=1)
+    Combined_df = pd.concat(df.values(), axis=1)
 
     # Build Environmental1D with core variables only
     devlabs = Environmental1D(Combined_df)
     devlabs._meta["instrument"] = "DevLabs Weatherstation"
     devlabs._meta["serial_number"] = SN
     devlabs._meta["unit"] = {
-        "Temperature"  : "°C",
-        "RH"           : "%",
-        "W_speed"      : "m/s",
-        "W_direc"      : "°",
-        "PM2.5"        : "µg/m3",
-        "CO2"          : "ppm",
-        "CO"           : "ppm",
-        "NO2"          : "ppb"}
+        "Temperature": "°C",
+        "RH": "%",
+        "W_speed": "m/s",
+        "W_direc": "°",
+        "PM2.5": "µg/m3",
+        "CO2": "ppm",
+        "CO": "ppm",
+        "NO2": "ppb",
+    }
     devlabs._meta["dtype"] = {
-        "Temperature"  : "Temp",
-        "RH"           : "RH",
-        "W_speed"      : "W-speed",
-        "W_direc"      : "W-direc",
-        "PM2.5"        : "PM2.5",
-        "CO2"          : "CO$_2$",
-        "CO"           : "CO",
-        "NO2"          : "NO$_2$"}
+        "Temperature": "Temp",
+        "RH": "RH",
+        "W_speed": "W-speed",
+        "W_direc": "W-direc",
+        "PM2.5": "PM2.5",
+        "CO2": "CO$_2$",
+        "CO": "CO",
+        "NO2": "NO$_2$",
+    }
 
     return devlabs
 
+
 ###############################################################################
 
-def load_parameter (file: str,parameter) -> Environmental1D:
+
+def load_parameter(file: str, parameter) -> Environmental1D:
     """Description:
         Load a Fourtec Bluefish CSV or Excel export and return temperature and
         relative humidity as an :class:`Environmental1D` time series.
@@ -254,7 +270,7 @@ def load_parameter (file: str,parameter) -> Environmental1D:
               import aerosoltools as at
 
               # Load Fourtec data from CSV or Excel
-              fourtec = at.Load_Fourtec_file("data/Fourtec_export.csv")
+              fourtec = at.load_fourtec_file("data/Fourtec_export.csv")
 
               # Inspect the data
               print(fourtec.data.head())

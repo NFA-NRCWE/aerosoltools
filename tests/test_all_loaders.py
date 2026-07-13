@@ -4,21 +4,21 @@ import pandas as pd
 import pytest
 
 from aerosoltools.loaders import (
-    Load_Aethalometer_file,
-    Load_APS_file,
-    Load_CPC_file,
-    Load_DiSCmini_file,
-    Load_DiSCmini_raw_file,
-    Load_ELPI_file,
-    Load_FMPS_file,
-    Load_Fourtec_file,
-    Load_Grimm_file,
-    Load_NS_file,
-    Load_OPCN3_file,
-    Load_OPS_file,
-    Load_Partector_file,
-    Load_Ranger_file,
-    Load_SMPS_file,
+    load_aethalometer_file,
+    load_aps_file,
+    load_cpc_file,
+    load_discmini_file,
+    load_discmini_raw_file,
+    load_elpi_file,
+    load_fmps_file,
+    load_fourtec_file,
+    load_grimm_file,
+    load_ns_file,
+    load_opcn3_file,
+    load_ops_file,
+    load_partector_file,
+    load_ranger_file,
+    load_smps_file,
 )
 from aerosoltools.loaders.Discmini import (
     _extract_serial_and_firmware,
@@ -29,24 +29,24 @@ from aerosoltools.loaders.Discmini import (
 @pytest.mark.parametrize(
     "loader_func, filename",
     [
-        (Load_Aethalometer_file, "Sample_Aetholometer.csv"),
-        (Load_APS_file, "Sample_APS_aero.txt"),
-        (Load_APS_file, "Sample_APS_correlated.txt"),
-        (Load_CPC_file, "Sample_CPC_Direct.txt"),
-        (Load_DiSCmini_file, "Sample_Discmini.txt"),
-        (Load_ELPI_file, "Sample_ELPI.txt"),
-        (Load_ELPI_file, "Sample_ELPI2.txt"),
-        (Load_FMPS_file, "Sample_FMPS.txt"),
-        (Load_FMPS_file, "Sample_FMPS2.txt"),
-        (Load_Fourtec_file, "Sample_Fourtec.xlsx"),
-        (Load_Grimm_file, "Sample_Grimm.txt"),
-        (Load_NS_file, "Sample_NS.csv"),
-        (Load_OPCN3_file, "Sample_OPCN3.txt"),
-        (Load_OPS_file, "Sample_OPS.csv"),
-        (Load_OPS_file, "Sample_OPS2.txt"),
-        (Load_Partector_file, "Sample_Partector.txt"),
-        (Load_Ranger_file, "Sample_Ranger.csv"),
-        (Load_SMPS_file, "Sample_SMPS.txt"),
+        (load_aethalometer_file, "Sample_Aetholometer.csv"),
+        (load_aps_file, "Sample_APS_aero.txt"),
+        (load_aps_file, "Sample_APS_correlated.txt"),
+        (load_cpc_file, "Sample_CPC_Direct.txt"),
+        (load_discmini_file, "Sample_Discmini.txt"),
+        (load_elpi_file, "Sample_ELPI.txt"),
+        (load_elpi_file, "Sample_ELPI2.txt"),
+        (load_fmps_file, "Sample_FMPS.txt"),
+        (load_fmps_file, "Sample_FMPS2.txt"),
+        (load_fourtec_file, "Sample_Fourtec.xlsx"),
+        (load_grimm_file, "Sample_Grimm.txt"),
+        (load_ns_file, "Sample_NS.csv"),
+        (load_opcn3_file, "Sample_OPCN3.txt"),
+        (load_ops_file, "Sample_OPS.csv"),
+        (load_ops_file, "Sample_OPS2.txt"),
+        (load_partector_file, "Sample_Partector.txt"),
+        (load_ranger_file, "Sample_Ranger.csv"),
+        (load_smps_file, "Sample_SMPS.txt"),
     ],
 )
 def test_loader_smoke(loader_func, filename):
@@ -67,14 +67,14 @@ def test_aps_correlated_and_aero_only():
     data_dir = os.path.join(os.path.dirname(__file__), "data")
 
     # Aerodynamic-only export loads as a plain 2D distribution.
-    aero = Load_APS_file(os.path.join(data_dir, "Sample_APS_aero.txt"))
+    aero = load_aps_file(os.path.join(data_dir, "Sample_APS_aero.txt"))
     assert isinstance(aero, Aerosol2D)
     assert not isinstance(aero, Aerosol3d)
     assert len(aero.bin_mids) == 52
     assert aero.unit == "cm⁻³"
 
     # Correlated export carries both size axes plus their matrix.
-    cor = Load_APS_file(os.path.join(data_dir, "Sample_APS_correlated.txt"))
+    cor = load_aps_file(os.path.join(data_dir, "Sample_APS_correlated.txt"))
     assert isinstance(cor, Aerosol3d)
     assert cor.is_correlated
     assert len(cor.bin_mids) == 52
@@ -107,7 +107,7 @@ def test_ranger_single_component_returns_single_object():
     """A Cl₂-only file loads as one Gas1D with ppm / Cl₂ metadata."""
     from aerosoltools import Gas1D
 
-    data = Load_Ranger_file(_data_path("Sample_Ranger.csv"))
+    data = load_ranger_file(_data_path("Sample_Ranger.csv"))
     assert isinstance(data, Gas1D)
     assert "Concentration" in data.data.columns
     assert data.metadata["unit"] == "ppm"
@@ -150,7 +150,7 @@ def test_ranger_multi_header_splits_by_component(tmp_path):
         ],
     )
 
-    result = Load_Ranger_file(str(path))
+    result = load_ranger_file(str(path))
     assert isinstance(result, list) and len(result) == 3
 
     by_measure = {o.metadata["measurement"]: o for o in result}
@@ -197,7 +197,7 @@ def test_aethalometer_per_channel_units():
     import contextlib
     import io
 
-    aeth = Load_Aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    aeth = load_aethalometer_file(_data_path("Sample_Aetholometer.csv"))
     unit, dtype = aeth.metadata["unit"], aeth.metadata["dtype"]
     assert isinstance(unit, dict) and isinstance(dtype, dict)
     channels = [c for c in aeth.data.columns if c != "All data"]
@@ -232,7 +232,7 @@ def test_calibrate_against_reference_total():
     """High-level total calibration recovers the gain and does not mutate target."""
     import aerosoltools as at
 
-    target = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    target = load_cpc_file(_data_path("Sample_CPC_Direct.txt"))
     reference = _scaled_copy(target, 2.0)
     original = target.total_concentration.copy()
 
@@ -256,7 +256,7 @@ def test_calibrate_inplace_mutates():
     """inplace=True corrects the target itself."""
     import aerosoltools as at
 
-    target = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    target = load_cpc_file(_data_path("Sample_CPC_Direct.txt"))
     reference = _scaled_copy(target, 3.0)
     out, model = at.calibrate_against_reference(target, reference, inplace=True)
     assert out is target
@@ -267,7 +267,7 @@ def test_calibration_model_roundtrip():
     """CalibrationModel serializes and restores identically."""
     from aerosoltools.intercomparison import CalibrationModel, fit_calibration
 
-    target = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    target = load_cpc_file(_data_path("Sample_CPC_Direct.txt"))
     reference = _scaled_copy(target, 2.0)
     model = fit_calibration(target, reference, include_offset=True)
     restored = CalibrationModel.from_dict(model.to_dict())
@@ -279,7 +279,7 @@ def test_calibration_per_bin():
     """Per-bin calibration fits an independent gain per size bin."""
     from aerosoltools.intercomparison import calibrate_against_reference
 
-    target = Load_OPS_file(_data_path("Sample_OPS.csv"))
+    target = load_ops_file(_data_path("Sample_OPS.csv"))
     reference = _scaled_copy(target, 1.5)
     calibrated, model = calibrate_against_reference(target, reference, basis="per_bin")
     assert model.basis == "per_bin"
@@ -294,7 +294,7 @@ def test_calibration_clips_negative():
     """clip_negative keeps calibrated concentrations >= 0 (total and per-bin)."""
     from aerosoltools.intercomparison import CalibrationModel
 
-    cpc = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    cpc = load_cpc_file(_data_path("Sample_CPC_Direct.txt"))
     total_model = CalibrationModel(
         basis="total",
         gains=[1.0],
@@ -307,7 +307,7 @@ def test_calibration_clips_negative():
     out = cpc.apply_calibration(total_model)
     assert (out.total_concentration.dropna() >= 0).all()
 
-    ops = Load_OPS_file(_data_path("Sample_OPS.csv"))
+    ops = load_ops_file(_data_path("Sample_OPS.csv"))
     n = len(ops.size_data.columns)
     bin_model = CalibrationModel(
         basis="per_bin",
@@ -327,8 +327,8 @@ def test_calibration_rejects_incompatible():
     """Domain errors for unit / basis / bin-count mismatches."""
     from aerosoltools.intercomparison import CalibrationError, fit_calibration
 
-    cpc = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
-    ops = Load_OPS_file(_data_path("Sample_OPS.csv"))
+    cpc = load_cpc_file(_data_path("Sample_CPC_Direct.txt"))
+    ops = load_ops_file(_data_path("Sample_OPS.csv"))
 
     # Per-bin needs both datasets size-resolved.
     with pytest.raises(CalibrationError):
@@ -349,7 +349,7 @@ def test_calibration_gui_and_script_agree():
     import aerosoltools as at
     from aerosoltools.intercomparison import fit_calibration
 
-    target = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    target = load_cpc_file(_data_path("Sample_CPC_Direct.txt"))
     reference = _scaled_copy(target, 2.0)
 
     model = fit_calibration(target, reference)
@@ -417,7 +417,7 @@ def test_discmini_raw_loader_pipeline(tmp_path):
     _write_synthetic_raw(str(raw))
     # Disable the zero-offset correction here so the exact cal-formula values
     # below are checked without the (separately tested) offset subtraction.
-    dm = Load_DiSCmini_raw_file(
+    dm = load_discmini_raw_file(
         str(raw), extra_data=True, period=10, zero_offset_correction=False
     )
 
@@ -463,7 +463,7 @@ def test_discmini_raw_window_gap_handling(tmp_path):
     with open(raw, "w", encoding="utf-8") as fh:
         fh.write("\n".join(header + rows) + "\n")
 
-    dm = Load_DiSCmini_raw_file(str(raw), period=10)
+    dm = load_discmini_raw_file(str(raw), period=10)
     # Windows 0, 1, 3 kept (window 2 has only 5 valid rows -> dropped).
     assert dm.data.shape[0] == 3
     elapsed = (dm.time - dm.time[0]).total_seconds().to_numpy()
@@ -477,7 +477,7 @@ def _data_path(name):
 
 def test_discmini_raw_loader_on_sample_file():
     """Load a real (truncated) raw DiSCmini file and sanity-check the output."""
-    dm = Load_DiSCmini_raw_file(_data_path("Sample_Discmini_raw.txt"), extra_data=True)
+    dm = load_discmini_raw_file(_data_path("Sample_Discmini_raw.txt"), extra_data=True)
     assert dm.serial_number == "101923"  # "SN101923" in the CalData line
     assert dm._meta.get("firmware") == "3.42"
     assert dm._meta.get("size_inversion") == "cubic_ratio_polynomial"
@@ -492,7 +492,7 @@ def test_discmini_raw_matches_processed_size_and_number():
     """Raw-loader Size & Number reproduce the vendor output (< 3% median)."""
     import numpy as np
 
-    dm = Load_DiSCmini_raw_file(
+    dm = load_discmini_raw_file(
         _data_path("Sample_Discmini_raw.txt"), zero_offset_correction=False
     )
     proc = pd.read_csv(
@@ -517,8 +517,8 @@ def test_discmini_zero_offset_correction_recovers_and_applies():
     from aerosoltools.loaders.Discmini import _parse_raw_header, _zero_offset_series
 
     raw = _data_path("Sample_Discmini_raw.txt")
-    on = Load_DiSCmini_raw_file(raw, zero_offset_correction=True)
-    off = Load_DiSCmini_raw_file(raw, zero_offset_correction=False)
+    on = load_discmini_raw_file(raw, zero_offset_correction=True)
+    off = load_discmini_raw_file(raw, zero_offset_correction=False)
     # The flag is recorded and the correction changes the computed currents.
     assert on._meta.get("zero_offset_correction") is True
     assert off._meta.get("zero_offset_correction") is False
@@ -558,7 +558,7 @@ def test_aethalometer_class_and_channels():
     """Aethalometer loads as its own class with per-wavelength BCc accessors."""
     from aerosoltools import Aethalometer
 
-    aeth = Load_Aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    aeth = load_aethalometer_file(_data_path("Sample_Aetholometer.csv"))
     assert isinstance(aeth, Aethalometer)
     # Per-wavelength direct accessors resolve to the matching BCc column.
     assert aeth.ir_bcc.name == "IR BCc"
@@ -574,7 +574,7 @@ def test_partector_class_and_ldsa():
     """Partector loads as its own class exposing LDSA and no total concentration."""
     from aerosoltools import Partector
 
-    par = Load_Partector_file(_data_path("Sample_Partector.txt"))
+    par = load_partector_file(_data_path("Sample_Partector.txt"))
     assert isinstance(par, Partector)
     assert par.ldsa.name == "LDSA"
     assert par._primary.name == "LDSA"
@@ -587,7 +587,7 @@ def test_environmental_class_and_channels():
     """Fourtec loads as Environmental1D with temperature/RH accessors."""
     from aerosoltools import Environmental1D
 
-    ft = Load_Fourtec_file(_data_path("Sample_Fourtec.xlsx"))
+    ft = load_fourtec_file(_data_path("Sample_Fourtec.xlsx"))
     assert isinstance(ft, Environmental1D)
     assert ft.temperature.name == "Temperature"
     assert ft.rh.name == "RH"
@@ -602,7 +602,7 @@ def test_nonparticle_summary_uses_selected_channel():
     import contextlib
     import io
 
-    par = Load_Partector_file(_data_path("Sample_Partector.txt"))
+    par = load_partector_file(_data_path("Sample_Partector.txt"))
     with contextlib.redirect_stdout(io.StringIO()):
         summary = par.summarize(parameter="LDSA")
     assert "Mean" in summary.columns
@@ -624,8 +624,8 @@ def test_discmini_ldsa_correction_scales_with_size():
     assert _ldsa_size_factor(np.array([1000.0]))[0] <= 1.06
 
     raw = _data_path("Sample_Discmini_raw.txt")
-    on = Load_DiSCmini_raw_file(raw, ldsa_correction=True)
-    off = Load_DiSCmini_raw_file(raw, ldsa_correction=False)
+    on = load_discmini_raw_file(raw, ldsa_correction=True)
+    off = load_discmini_raw_file(raw, ldsa_correction=False)
     assert on._meta.get("ldsa_correction") is True
     assert off._meta.get("ldsa_correction") is False
     # The correction is a >= 1 multiplier, so corrected LDSA is never smaller.
@@ -637,7 +637,7 @@ def test_discmini_processed_has_no_phantom_column_and_only_numeric_series():
     """The trailing-tab 'Unnamed' column is dropped and never offered as a series."""
     from aerosoltools.gui.helpers import plottable_columns
 
-    dm = Load_DiSCmini_file(_data_path("Sample_Discmini.txt"), extra_data=True)
+    dm = load_discmini_file(_data_path("Sample_Discmini.txt"), extra_data=True)
     # No phantom/empty column survives the loader.
     assert not any(str(c).startswith("Unnamed") for c in dm.extra_data.columns)
     # Extra currents are coerced to numbers, and the series picker offers them.
@@ -656,7 +656,7 @@ def test_discmini_raw_matches_processed_ldsa():
 
     # Compare the pure inversion (no zero-offset correction) against the vendor;
     # the offset correction is exercised separately.
-    dm = Load_DiSCmini_raw_file(
+    dm = load_discmini_raw_file(
         _data_path("Sample_Discmini_raw.txt"), zero_offset_correction=False
     )
     proc = pd.read_csv(
@@ -707,7 +707,7 @@ def test_discmini_is_own_class_with_accessors():
     """DiSCmini loads as its own particle class with .size/.ldsa accessors."""
     from aerosoltools import Aerosol1D, DiSCmini
 
-    dm = Load_DiSCmini_file(_data_path("Sample_Discmini.txt"))
+    dm = load_discmini_file(_data_path("Sample_Discmini.txt"))
     assert isinstance(dm, DiSCmini) and isinstance(dm, Aerosol1D)
     # Still a particle instrument: total_concentration works.
     assert float(dm.total_concentration.dropna().iloc[0]) > 0
@@ -742,7 +742,7 @@ def test_elpi_is_own_class_and_density_hook_recomputes_diameters():
     """ELPI loads as its own 2D subclass; set_density recomputes the size axis."""
     from aerosoltools import ELPI, Aerosol2D
 
-    elpi = Load_ELPI_file(_data_path("Sample_ELPI.txt"))
+    elpi = load_elpi_file(_data_path("Sample_ELPI.txt"))
     assert isinstance(elpi, ELPI) and isinstance(elpi, Aerosol2D)
     mids_before = [float(x) for x in elpi.bin_mids]
     elpi.set_density(2.0)
@@ -775,37 +775,37 @@ def test_metric_unit_registry_converts_within_dimension():
 
 def test_available_metrics_are_instrument_aware():
     """Each class advertises only the metrics it actually measures."""
-    cpc = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    cpc = load_cpc_file(_data_path("Sample_CPC_Direct.txt"))
     assert [m.key for m in cpc.available_metrics()] == ["PNC"]
 
-    ops = Load_OPS_file(_data_path("Sample_OPS.csv"))
+    ops = load_ops_file(_data_path("Sample_OPS.csv"))
     ops_keys = [m.key for m in ops.available_metrics()]
     assert "PNC" in ops_keys and "MASS" in ops_keys and "PM2.5" in ops_keys
 
-    dm = Load_DiSCmini_file(_data_path("Sample_Discmini.txt"))
+    dm = load_discmini_file(_data_path("Sample_Discmini.txt"))
     assert {m.key for m in dm.available_metrics()} == {"PNC", "Size", "LDSA"}
     assert set(dm._default_metrics()) == {"PNC", "LDSA"}
 
-    par = Load_Partector_file(_data_path("Sample_Partector.txt"))
+    par = load_partector_file(_data_path("Sample_Partector.txt"))
     par_keys = {m.key for m in par.available_metrics()}
     assert "LDSA" in par_keys and "TEM" not in par_keys  # bool flag excluded
     assert par._default_metrics() == ["LDSA"]
 
-    aeth = Load_Aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    aeth = load_aethalometer_file(_data_path("Sample_Aetholometer.csv"))
     assert "IR BCc" in [m.key for m in aeth.available_metrics()]
     assert aeth._default_metrics() == ["IR BCc"]
 
 
 def test_pnc_metric_is_rejected_for_non_number_instruments():
     """'PNC' works on number instruments and raises on gas/BC/LDSA (the leak fix)."""
-    cpc = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
-    ops = Load_OPS_file(_data_path("Sample_OPS.csv"))
+    cpc = load_cpc_file(_data_path("Sample_CPC_Direct.txt"))
+    ops = load_ops_file(_data_path("Sample_OPS.csv"))
     # No exception, and a number unit.
     assert cpc._get_metric_series("PNC")[1] == "cm⁻³"
     assert ops._get_metric_series("PNC")[1] == "cm⁻³"
 
-    aeth = Load_Aethalometer_file(_data_path("Sample_Aetholometer.csv"))
-    par = Load_Partector_file(_data_path("Sample_Partector.txt"))
+    aeth = load_aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    par = load_partector_file(_data_path("Sample_Partector.txt"))
     for obj in (aeth, par):
         with pytest.raises(ValueError):
             obj._get_metric_series("PNC")
@@ -813,7 +813,7 @@ def test_pnc_metric_is_rejected_for_non_number_instruments():
 
 def test_gas_metric_keyed_by_species():
     """A gas dataset advertises (and summarises) its species, not a generic key."""
-    heads = Load_Ranger_file(_data_path("Ranger_2605-1000088-A_20260612-0603.csv"))
+    heads = load_ranger_file(_data_path("Ranger_2605-1000088-A_20260612-0603.csv"))
     gas = next(o for o in heads if type(o).__name__ == "Gas1D")
     keys = [m.key for m in gas.available_metrics()]
     assert keys == [str(gas.dtype)]  # e.g. "Cl₂"

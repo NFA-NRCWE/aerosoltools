@@ -6,7 +6,7 @@ from .Common import _detect_delimiter
 ###############################################################################
 
 
-def Load_Aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
+def load_aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
     """Description:
         Load time-resolved black carbon data from an Aethalometer export file
         into an :class:`aerosoltools.Aethalometer` object.
@@ -109,7 +109,7 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
             import aerosoltools as at
 
             # Load Aethalometer data with core BC channels only
-            aeth = at.Load_Aethalometer_file("data/aeth_export.csv")
+            aeth = at.load_aethalometer_file("data/aeth_export.csv")
     """
     # Detect file encoding and delimiter (comma, semicolon, etc.)
     enc, delim = _detect_delimiter(file)

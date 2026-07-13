@@ -90,7 +90,7 @@ def _extract_serial_and_firmware(
 ###############################################################################
 
 
-def Load_DiSCmini_file(file: str, extra_data: bool = False) -> DiSCmini:
+def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
     """Description:
         Load a converted DiSCmini export file and return total number
         concentration, mean size, and LDSA as a :class:`DiSCmini` time
@@ -138,7 +138,7 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> DiSCmini:
 
     Notes:
         Detailed description:
-            ``Load_DiSCmini_file`` is designed for DiSCmini data that have
+            ``load_discmini_file`` is designed for DiSCmini data that have
             already been converted by the vendor software to a tab-delimited
             text format.
 
@@ -203,7 +203,7 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> DiSCmini:
             import aerosoltools as at
 
             # Load DiSCmini data with core metrics only
-            dm = at.Load_DiSCmini_file("data/discmini_converted.txt")
+            dm = at.load_discmini_file("data/discmini_converted.txt")
 
             # Quick look at total concentration and LDSA
             print(dm.data[["Total_conc", "LDSA"]])
@@ -576,7 +576,7 @@ def _zero_offset_series(raw: pd.DataFrame, offsets_hdr) -> tuple:
     )
 
 
-def Load_DiSCmini_raw_file(
+def load_discmini_raw_file(
     file: str,
     extra_data: bool = False,
     period: int = 10,
@@ -686,7 +686,7 @@ def Load_DiSCmini_raw_file(
 
             import aerosoltools as at
 
-            dm = at.Load_DiSCmini_raw_file("data/6605G55D.TXT")
+            dm = at.load_discmini_raw_file("data/6605G55D.TXT")
             print(dm.data[["Total_conc", "Size", "LDSA"]])
     """
     enc, _ = _detect_delimiter(file, sample_lines=25)

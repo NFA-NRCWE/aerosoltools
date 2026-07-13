@@ -7,7 +7,7 @@ from .Common import _detect_delimiter
 ###############################################################################
 
 
-def Load_NS_file(file: str, extra_data: bool = False) -> Aerosol2D:
+def load_ns_file(file: str, extra_data: bool = False) -> Aerosol2D:
     """Description:
         Load a NanoScan SMPS (NS) CSV export and return it as an
         :class:`Aerosol2D` number-size distribution with metadata.
@@ -116,7 +116,7 @@ def Load_NS_file(file: str, extra_data: bool = False) -> Aerosol2D:
               import aerosoltools as at
 
               # Load NanoScan data (keep extra metadata columns)
-              ns = at.Load_NS_file("data/NanoScan_export.csv", extra_data=True)
+              ns = at.load_ns_file("data/NanoScan_export.csv", extra_data=True)
 
               # Inspect the first few rows
               print(ns.data.head())

@@ -11,7 +11,7 @@ from tqdm.auto import tqdm
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
 
-__all__ = ["file_list", "Load_data_from_folder"]
+__all__ = ["file_list", "load_data_from_folder"]
 
 ###############################################################################
 
@@ -297,7 +297,7 @@ def _duplicate_remover(combined_data: pd.DataFrame) -> pd.DataFrame:
 ###############################################################################
 
 
-def Load_data_from_folder(
+def load_data_from_folder(
     folder_path: str,
     load_function: Callable[..., "Aerosol1D"],
     search_word: str = "",
@@ -366,7 +366,7 @@ def Load_data_from_folder(
 
     Notes:
         Detailed description:
-            ``Load_data_from_folder`` automates the otherwise repetitive task
+            ``load_data_from_folder`` automates the otherwise repetitive task
             of loading many similarly formatted files, checking that they
             belong together, and combining them into one continuous time
             series. Internally, it:
@@ -410,14 +410,14 @@ def Load_data_from_folder(
             import aerosoltools as at
 
             # Combine all SMPS files for a given campaign folder
-            smps_combined = at.Load_data_from_folder(
+            smps_combined = at.load_data_from_folder(
                 folder_path="C:/data/SMPS_campaign",
-                load_function=Load_SMPS_file,
+                load_function=load_smps_file,
                 search_word=".txt",
                 max_subfolder=1,
                 meta_checklist=("serial_number", "instrument"),
                 time_rebin="5min",   # reduce resolution for long campaigns
-                extra_data=True,     # forward to Load_SMPS_file
+                extra_data=True,     # forward to load_smps_file
             )
     """
     meta_checklist = tuple(meta_checklist or ("serial_number",))
@@ -450,7 +450,7 @@ def Load_data_from_folder(
                 # concatenated into a single series here; load them individually.
                 raise ValueError(
                     "Loader returned multiple datasets for this file; load it "
-                    "individually rather than via Load_data_from_folder."
+                    "individually rather than via load_data_from_folder."
                 )
 
             if time_rebin:

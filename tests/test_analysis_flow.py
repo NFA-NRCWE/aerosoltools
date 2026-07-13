@@ -6,13 +6,13 @@ import pandas as pd
 
 from aerosoltools import Aerosol1D
 from aerosoltools._core import decay as _decay
-from aerosoltools.loaders import Load_CPC_file, Load_ELPI_file
+from aerosoltools.loaders import load_cpc_file, load_elpi_file
 
 
 def test_full_elpi_pipeline_with_plotting():
     """End-to-end ELPI pipeline + basic checks on core 2D methods."""
     test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
-    data = Load_ELPI_file(test_file)
+    data = load_elpi_file(test_file)
 
     activity_periods = {
         "Background": [("2023/09/07 09:06:50", "2023/09/07 09:07:50")],
@@ -74,7 +74,7 @@ def test_full_elpi_pipeline_with_plotting():
 def test_pm_calc_creates_and_reuses_px_columns():
     """Check that PM_calc adds P{x} columns once and reuses them on second call."""
     test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
-    data = Load_ELPI_file(test_file)
+    data = load_elpi_file(test_file)
 
     old_cols = set(data.extra_data.columns)
 
@@ -111,7 +111,7 @@ def test_pm_calc_creates_and_reuses_px_columns():
 def test_aerosol2d_summarize_exposure_pm42_with_background_activity():
     """Test summarize_exposure on Aerosol2D with PM4.2 and background as activity."""
     test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
-    data = Load_ELPI_file(test_file)
+    data = load_elpi_file(test_file)
 
     activity_periods = {
         "Background": [("2023/09/07 09:06:50", "2023/09/07 09:07:50")],
@@ -189,7 +189,7 @@ def test_aerosol2d_summarize_exposure_pm42_with_background_activity():
 def test_aerosol1d_summarize_and_exposure_pnc():
     """Test summarize_activities and summarize_exposure on a 1D CPC dataset."""
     test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_CPC_Direct.txt")
-    data = Load_CPC_file(test_file)
+    data = load_cpc_file(test_file)
 
     # Simple artificial activity: first half vs second half
     times = data.time

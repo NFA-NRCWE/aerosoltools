@@ -23,46 +23,46 @@ Supported instruments include:
 * Partector – Partector / PartectorTEM (Naneos)
 * SMPS – Scanning Mobility Particle Sizer (TSI)
 
-In addition, :func:`Load_data_from_folder` provides a convenience wrapper
+In addition, :func:`load_data_from_folder` provides a convenience wrapper
 for batch-loading and concatenating multiple compatible files from a
 directory into a single aerosol object.
 """
 
-from .Aethalometer import Load_Aethalometer_file
-from .APS import Load_APS_file
-from .Common import Load_data_from_folder
-from .CPC import Load_CPC_file
-from .Dev_weather import Load_Devlabs_file
-from .Discmini import Load_DiSCmini_file, Load_DiSCmini_raw_file
-from .DustTrak import Load_DustTrak_file
-from .ELPI import Load_ELPI_file
-from .FMPS import Load_FMPS_file
-from .Fourtec import Load_Fourtec_file
-from .Grimm import Load_Grimm_file
-from .NS import Load_NS_file
-from .OPCN3 import Load_OPCN3_file
-from .OPS import Load_OPS_file
-from .Partector import Load_Partector_file
-from .Ranger import Load_Ranger_file
-from .SMPS import Load_SMPS_file
+from .Aethalometer import load_aethalometer_file
+from .APS import load_aps_file
+from .Common import load_data_from_folder
+from .CPC import load_cpc_file
+from .Dev_weather import load_devlabs_file
+from .Discmini import load_discmini_file, load_discmini_raw_file
+from .DustTrak import load_dusttrak_file
+from .ELPI import load_elpi_file
+from .FMPS import load_fmps_file
+from .Fourtec import load_fourtec_file
+from .Grimm import load_grimm_file
+from .NS import load_ns_file
+from .OPCN3 import load_opcn3_file
+from .OPS import load_ops_file
+from .Partector import load_partector_file
+from .Ranger import load_ranger_file
+from .SMPS import load_smps_file
 
 __all__ = [
-    "Load_APS_file",
-    "Load_Aethalometer_file",
-    "Load_CPC_file",
-    "Load_DiSCmini_file",
-    "Load_DiSCmini_raw_file",
-    "Load_DustTrak_file",
-    "Load_ELPI_file",
-    "Load_FMPS_file",
-    "Load_Fourtec_file",
-    "Load_Grimm_file",
-    "Load_NS_file",
-    "Load_OPCN3_file",
-    "Load_OPS_file",
-    "Load_Partector_file",
-    "Load_Ranger_file",
-    "Load_SMPS_file",
-    "Load_data_from_folder",
-    "Load_Devlabs_file",
+    "load_aps_file",
+    "load_aethalometer_file",
+    "load_cpc_file",
+    "load_discmini_file",
+    "load_discmini_raw_file",
+    "load_dusttrak_file",
+    "load_elpi_file",
+    "load_fmps_file",
+    "load_fourtec_file",
+    "load_grimm_file",
+    "load_ns_file",
+    "load_opcn3_file",
+    "load_ops_file",
+    "load_partector_file",
+    "load_ranger_file",
+    "load_smps_file",
+    "load_data_from_folder",
+    "load_devlabs_file",
 ]

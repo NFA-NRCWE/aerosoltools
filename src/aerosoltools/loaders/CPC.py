@@ -9,7 +9,7 @@ from .Common import _detect_delimiter
 ###############################################################################
 
 
-def Load_CPC_file(file: str, extra_data: bool = False) -> Aerosol1D:
+def load_cpc_file(file: str, extra_data: bool = False) -> Aerosol1D:
     """Description:
         Load a TSI CPC (Condensation Particle Counter) export file, automatically
         detect its format, and return a time series of total particle number
@@ -63,7 +63,7 @@ def Load_CPC_file(file: str, extra_data: bool = False) -> Aerosol1D:
 
     Notes:
         Detailed description:
-            ``Load_CPC_file`` is the main entry point for reading CPC data.
+            ``load_cpc_file`` is the main entry point for reading CPC data.
             It is designed to handle at least two common export layouts:
 
             - Focused format directly from the instrument (compact output):
@@ -90,7 +90,7 @@ def Load_CPC_file(file: str, extra_data: bool = False) -> Aerosol1D:
             import aerosoltools as at
 
             # Load a CPC export (focused or full format)
-            cpc = at.Load_CPC_file("data/CPC_2023-10-01.txt", extra_data=True)
+            cpc = at.load_cpc_file("data/CPC_2023-10-01.txt", extra_data=True)
 
             # Inspect the main total concentration time series
             print(cpc.data)
@@ -111,9 +111,9 @@ def Load_CPC_file(file: str, extra_data: bool = False) -> Aerosol1D:
     )
 
     if col_count == 4:
-        return _Load_CPC_focused(file, encoding, delimiter)
+        return _load_cpc_focused(file, encoding, delimiter)
     elif col_count == 14:
-        return _Load_CPC_full(file, extra_data, encoding, delimiter)
+        return _load_cpc_full(file, extra_data, encoding, delimiter)
     else:
         raise Exception("Error in determining CPC data structure")
 
@@ -121,7 +121,7 @@ def Load_CPC_file(file: str, extra_data: bool = False) -> Aerosol1D:
 ###############################################################################
 
 
-def _Load_CPC_focused(file: str, encoding: str, delimiter: str) -> Aerosol1D:
+def _load_cpc_focused(file: str, encoding: str, delimiter: str) -> Aerosol1D:
     """Load and parse CPC data exported in *focused* format.
 
     Focused CPC exports contain a compact layout with only time and total
@@ -186,7 +186,7 @@ def _Load_CPC_focused(file: str, encoding: str, delimiter: str) -> Aerosol1D:
 ###############################################################################
 
 
-def _Load_CPC_full(
+def _load_cpc_full(
     file: str, extra_data: bool, encoding: str, delimiter: str
 ) -> Aerosol1D:
     """Load and parse CPC data exported in *full* format.

@@ -493,25 +493,25 @@ def recalculate_ELPI_density(elpi, new_density: float) -> bool:
 # Public loaders
 
 
-def Load_ELPI_file(file: str, extra_data: bool = False) -> ELPI:
+def load_elpi_file(file: str, extra_data: bool = False) -> ELPI:
     """Load an ELPI file and return an Aerosol2D object.
 
     This is the routing function. Already-converted Dekati exports are handled
-    by :func:`Load_ELPI_file_txt`. Raw-current .dat files with
+    by :func:`load_elpi_file_txt`. Raw-current .dat files with
     ``CalculatedMoment=Current (fA)`` are converted by
-    :func:`Load_ELPI_file_dat` before constructing the Aerosol2D object.
+    :func:`load_elpi_file_dat` before constructing the Aerosol2D object.
     """
     encoding, delimiter = _detect_delimiter(file)
     meta = _load_ELPI_metadata(file, delimiter, encoding)
     calculated_moment = str(meta.get("CalculatedMoment", ""))
 
     if calculated_moment.lower().startswith("current"):
-        return Load_ELPI_file_dat(file, extra_data=extra_data)
+        return load_elpi_file_dat(file, extra_data=extra_data)
 
-    return Load_ELPI_file_txt(file, extra_data=extra_data)
+    return load_elpi_file_txt(file, extra_data=extra_data)
 
 
-def Load_ELPI_file_txt(file: str, extra_data: bool = False) -> ELPI:
+def load_elpi_file_txt(file: str, extra_data: bool = False) -> ELPI:
     """Load an already-converted ELPI size-distribution export."""
     encoding, delimiter = _detect_delimiter(file)
     meta = _load_ELPI_metadata(file, delimiter, encoding)
@@ -543,7 +543,7 @@ def Load_ELPI_file_txt(file: str, extra_data: bool = False) -> ELPI:
     except (KeyError, TypeError) as e:
         raise Exception(
             "Unit and/or data type does not match the expected values. "
-            "If this is raw current (fA), load it through Load_ELPI_file so "
+            "If this is raw current (fA), load it through load_elpi_file so "
             "the raw-current conversion route can be used."
         ) from e
 
@@ -564,7 +564,7 @@ def Load_ELPI_file_txt(file: str, extra_data: bool = False) -> ELPI:
     )
 
 
-def Load_ELPI_file_dat(file: str, extra_data: bool = False) -> ELPI:
+def load_elpi_file_dat(file: str, extra_data: bool = False) -> ELPI:
     """Load a raw ELPI .dat current file and convert it to number dN.
 
     The raw .dat file contains the measured channels and a main CAL Stage1-14

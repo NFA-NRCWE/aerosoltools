@@ -9,7 +9,7 @@ from .Common import _detect_delimiter
 ###############################################################################
 
 
-def Load_Fourtec_file(file: str) -> Environmental1D:
+def load_fourtec_file(file: str) -> Environmental1D:
     """Description:
         Load a Fourtec Bluefish CSV or Excel export and return temperature and
         relative humidity as an :class:`Environmental1D` time series.
@@ -95,7 +95,7 @@ def Load_Fourtec_file(file: str) -> Environmental1D:
               import aerosoltools as at
 
               # Load Fourtec data from CSV or Excel
-              fourtec = at.Load_Fourtec_file("data/Fourtec_export.csv")
+              fourtec = at.load_fourtec_file("data/Fourtec_export.csv")
 
               # Inspect the data
               print(fourtec.data.head())

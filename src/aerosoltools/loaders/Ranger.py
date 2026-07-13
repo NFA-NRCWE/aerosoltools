@@ -203,7 +203,7 @@ def _build_object(
 ###############################################################################
 
 
-def Load_Ranger_file(
+def load_ranger_file(
     file: str, extra_data: bool = False
 ) -> Union[RangerObject, List[RangerObject]]:
     """Description:

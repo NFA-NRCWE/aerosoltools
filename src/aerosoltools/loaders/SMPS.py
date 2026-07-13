@@ -65,7 +65,7 @@ def _load_SMPS_metadata(
 ###############################################################################
 
 
-def Load_SMPS_file(file: str, extra_data: bool = False) -> Aerosol2D:
+def load_smps_file(file: str, extra_data: bool = False) -> Aerosol2D:
     """Description:
         Load an SMPS size-distribution export and return it as an
         :class:`Aerosol2D` number-size distribution with metadata.
@@ -227,7 +227,7 @@ def Load_SMPS_file(file: str, extra_data: bool = False) -> Aerosol2D:
             import aerosoltools as at
 
             # Load SMPS data as a 2D number-size distribution
-            smps = at.Load_SMPS_file("data/SMPS_export.txt", extra_data=True)
+            smps = at.load_smps_file("data/SMPS_export.txt", extra_data=True)
 
             # Inspect the data
             print(smps.data.head())

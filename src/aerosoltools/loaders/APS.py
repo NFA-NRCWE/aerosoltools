@@ -49,7 +49,7 @@ def _aps_bins_nm(headers, lower_um, upper_um):
     return np.round(mids_um * 1000.0, 1), np.round(edges_um * 1000.0, 1)
 
 
-def Load_APS_file(file: str) -> Aerosol2D:
+def load_aps_file(file: str) -> Aerosol2D:
     """Description:
         Load a TSI APS 3321 AIM text export and return the size distribution.
 

@@ -16,22 +16,22 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from ..loaders import (
-    Load_Aethalometer_file,
-    Load_APS_file,
-    Load_CPC_file,
-    Load_DiSCmini_file,
-    Load_DiSCmini_raw_file,
-    Load_DustTrak_file,
-    Load_ELPI_file,
-    Load_FMPS_file,
-    Load_Fourtec_file,
-    Load_Grimm_file,
-    Load_NS_file,
-    Load_OPCN3_file,
-    Load_OPS_file,
-    Load_Partector_file,
-    Load_Ranger_file,
-    Load_SMPS_file,
+    load_aethalometer_file,
+    load_aps_file,
+    load_cpc_file,
+    load_discmini_file,
+    load_discmini_raw_file,
+    load_dusttrak_file,
+    load_elpi_file,
+    load_fmps_file,
+    load_fourtec_file,
+    load_grimm_file,
+    load_ns_file,
+    load_opcn3_file,
+    load_ops_file,
+    load_partector_file,
+    load_ranger_file,
+    load_smps_file,
 )
 from ..loaders.Common import _detect_delimiter
 
@@ -42,22 +42,22 @@ class UnrecognizedInstrumentError(ValueError):
 
 # Display name -> loader function. Order is preserved in the combo box.
 LOADERS: dict[str, Callable] = {
-    "CPC": Load_CPC_file,
-    "DiSCmini": Load_DiSCmini_file,
-    "DiSCmini (raw)": Load_DiSCmini_raw_file,
-    "ELPI": Load_ELPI_file,
-    "FMPS": Load_FMPS_file,
-    "Fourtec": Load_Fourtec_file,
-    "Grimm": Load_Grimm_file,
-    "NanoScan (NS)": Load_NS_file,
-    "OPC-N3": Load_OPCN3_file,
-    "OPS": Load_OPS_file,
-    "Partector": Load_Partector_file,
-    "SMPS": Load_SMPS_file,
-    "Aethalometer": Load_Aethalometer_file,
-    "DustTrak": Load_DustTrak_file,
-    "Ranger": Load_Ranger_file,
-    "APS": Load_APS_file,
+    "CPC": load_cpc_file,
+    "DiSCmini": load_discmini_file,
+    "DiSCmini (raw)": load_discmini_raw_file,
+    "ELPI": load_elpi_file,
+    "FMPS": load_fmps_file,
+    "Fourtec": load_fourtec_file,
+    "Grimm": load_grimm_file,
+    "NanoScan (NS)": load_ns_file,
+    "OPC-N3": load_opcn3_file,
+    "OPS": load_ops_file,
+    "Partector": load_partector_file,
+    "SMPS": load_smps_file,
+    "Aethalometer": load_aethalometer_file,
+    "DustTrak": load_dusttrak_file,
+    "Ranger": load_ranger_file,
+    "APS": load_aps_file,
 }
 
 # Lower-case filename substrings -> display name.
@@ -220,7 +220,7 @@ def is_OPS_file(path: str | Path) -> bool:
     """Detect TSI OPS exports.
 
     The first cell is "Sample File" or "Instrument Name" (the two branches
-    :func:`Load_OPS_file` expects). TSI **CPC** exports *also* start with
+    :func:`load_ops_file` expects). TSI **CPC** exports *also* start with
     "Sample File", so an OPS-specific marker (the "Optical Particle Sizer" name
     or an instrument-model line) is additionally required to avoid grabbing CPC
     files (which are model 3007, with no such marker).

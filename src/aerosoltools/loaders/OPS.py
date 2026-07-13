@@ -11,7 +11,7 @@ from .Common import _detect_delimiter
 ###############################################################################
 
 
-def Load_OPS_file(file: str, extra_data: bool = False):
+def load_ops_file(file: str, extra_data: bool = False):
     """Description:
         Load a TSI OPS spectrometer export and return it as an
         :class:`Aerosol2D` number-size distribution with metadata.
@@ -57,7 +57,7 @@ def Load_OPS_file(file: str, extra_data: bool = False):
               and inspects the first token:
 
               - If the line starts with ``"Sample File"``, the file is treated
-                as an AIM export and passed to :func:`_Load_OPS_AIM`, which:
+                as an AIM export and passed to :func:`_load_ops_aim`, which:
 
                 - reads the main data table starting at the AIM header,
                 - reconstructs a single ``Datetime`` column from ``"Date"`` and
@@ -78,7 +78,7 @@ def Load_OPS_file(file: str, extra_data: bool = False):
 
               - If the line starts with ``"Instrument Name"``, the file is
                 treated as a direct OPS export and passed to
-                :func:`_Load_OPS_Direct`, which:
+                :func:`_load_ops_direct`, which:
 
                 - reads a metadata block from the top of the file (including
                   test start date/time, sample interval, bin cutpoints, flow
@@ -143,7 +143,7 @@ def Load_OPS_file(file: str, extra_data: bool = False):
             import aerosoltools as at
 
             # Load OPS data (AIM or direct export)
-            ops = at.Load_OPS_file("data/OPS_export.csv", extra_data=True)
+            ops = at.load_ops_file("data/OPS_export.csv", extra_data=True)
 
             # Inspect the first few rows
             print(ops.data.head())
@@ -168,11 +168,11 @@ def Load_OPS_file(file: str, extra_data: bool = False):
     )[0]
 
     if first_line == "Sample File":
-        return _Load_OPS_AIM(
+        return _load_ops_aim(
             file, extra_data=extra_data, encoding=encoding, delimiter=delimiter
         )
     elif first_line == "Instrument Name":
-        return _Load_OPS_Direct(
+        return _load_ops_direct(
             file, extra_data=extra_data, encoding=encoding, delimiter=delimiter
         )
     else:
@@ -182,7 +182,7 @@ def Load_OPS_file(file: str, extra_data: bool = False):
 ###############################################################################
 
 
-def _Load_OPS_AIM(
+def _load_ops_aim(
     file: str,
     extra_data: bool = False,
     encoding: Optional[str] = None,
@@ -350,7 +350,7 @@ def _Load_OPS_AIM(
 ###############################################################################
 
 
-def _Load_OPS_Direct(
+def _load_ops_direct(
     file: str,
     extra_data: bool = False,
     encoding: Optional[str] = None,

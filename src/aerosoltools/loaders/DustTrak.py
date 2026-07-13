@@ -9,7 +9,7 @@ from .Common import _detect_delimiter
 ###############################################################################
 
 
-def Load_DustTrak_file(file: str, extra_data: bool = False) -> DustTrak:
+def load_dusttrak_file(file: str, extra_data: bool = False) -> DustTrak:
     """Description:
         Load a DustTrak DRX export file and return PM mass concentrations and
         total mass as a :class:`DustTrak` time series.
@@ -82,7 +82,7 @@ def Load_DustTrak_file(file: str, extra_data: bool = False) -> DustTrak:
             import aerosoltools as at
 
             # Load core PM fractions
-            dust = at.Load_DustTrak_file("data/DustTrak_DRX_2023-10-01.csv")
+            dust = at.load_dusttrak_file("data/DustTrak_DRX_2023-10-01.csv")
 
             # Inspect PM2.5 and PM10 time series
             print(dust.data[["PM2.5", "PM10"]].head())

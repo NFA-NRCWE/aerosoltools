@@ -10,7 +10,7 @@ from .Common import _detect_delimiter
 ###############################################################################
 
 
-def Load_Partector_file(file: str, extra_data: bool = False) -> Partector:
+def load_partector_file(file: str, extra_data: bool = False) -> Partector:
     """Description:
         Load a Partector LDSA text export and return it as a
         :class:`Partector` time series with TEM sampling metadata.
@@ -139,7 +139,7 @@ def Load_Partector_file(file: str, extra_data: bool = False) -> Partector:
               import aerosoltools as at
 
               # Load Partector LDSA and TEM information
-              par = at.Load_Partector_file("data/Partector_export.txt",
+              par = at.load_partector_file("data/Partector_export.txt",
                                             extra_data=True)
 
               # Inspect the main time series

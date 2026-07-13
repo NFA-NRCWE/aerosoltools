@@ -9,7 +9,7 @@ from .Common import _detect_delimiter
 ###############################################################################
 
 
-def Load_Grimm_file(file: str) -> Aerosol2D:
+def load_grimm_file(file: str) -> Aerosol2D:
     """Description:
         Load a Grimm spectrometer export and return it as an
         :class:`Aerosol2D` number-size distribution with metadata.
@@ -52,7 +52,7 @@ def Load_Grimm_file(file: str) -> Aerosol2D:
 
                 - Identified when the first header cell contains
                   ``"File name"``.
-                - The file is passed to :func:`_Load_Grimm_inst`, which:
+                - The file is passed to :func:`_load_grimm_inst`, which:
 
                   - reads the main data table (header near the top of the file),
                   - parses timestamps from US-style date/time strings,
@@ -69,7 +69,7 @@ def Load_Grimm_file(file: str) -> Aerosol2D:
               - Software export:
 
                 - Identified when the first header cell is ``"<Header>"``.
-                - The file is passed to :func:`_Load_Grimm_soft`, which:
+                - The file is passed to :func:`_load_grimm_soft`, which:
 
                   - reads the software-exported table with date/time in the
                     first column and one column per size bin,
@@ -130,7 +130,7 @@ def Load_Grimm_file(file: str) -> Aerosol2D:
             import aerosoltools as at
 
             # Load Grimm data as a 2D number-size distribution
-            grimm = at.Load_Grimm_file("data/Grimm_export.txt")
+            grimm = at.load_grimm_file("data/Grimm_export.txt")
 
             # Inspect the data
             print(grimm.data.head())
@@ -152,11 +152,11 @@ def Load_Grimm_file(file: str) -> Aerosol2D:
 
     # Instrument-direct export: header contains "File name"
     if isinstance(first, str) and "File name" in first:
-        return _Load_Grimm_inst(file, encoding, delimiter)
+        return _load_grimm_inst(file, encoding, delimiter)
 
     # Software export: header often starts with "<Header>"
     if isinstance(first, str) and first.strip() == "<Header>":
-        return _Load_Grimm_soft(file, encoding, delimiter)
+        return _load_grimm_soft(file, encoding, delimiter)
 
     raise ValueError("Unrecognised Grimm file format.")
 
@@ -164,7 +164,7 @@ def Load_Grimm_file(file: str) -> Aerosol2D:
 ###############################################################################
 
 
-def _Load_Grimm_soft(file: str, encoding: str, delimiter: str) -> Aerosol2D:
+def _load_grimm_soft(file: str, encoding: str, delimiter: str) -> Aerosol2D:
     """Load Grimm data exported via the Grimm software.
 
     This loader parses software-exported Grimm files, extracts the datetime,
@@ -255,7 +255,7 @@ def _Load_Grimm_soft(file: str, encoding: str, delimiter: str) -> Aerosol2D:
 ###############################################################################
 
 
-def _Load_Grimm_inst(file: str, encoding: str, delimiter: str) -> Aerosol2D:
+def _load_grimm_inst(file: str, encoding: str, delimiter: str) -> Aerosol2D:
     """Load Grimm data exported directly from the instrument.
 
     This loader handles instrument-direct Grimm exports, where the header

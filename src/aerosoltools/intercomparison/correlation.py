@@ -294,8 +294,8 @@ def plot_correlation(
             import aerosoltools as at
 
             # Load two datasets measuring total number concentration
-            smps = at.Load_SMPS_file("smps_data.txt")
-            ops = at.Load_OPS_file("ops_data.txt")
+            smps = at.load_smps_file("smps_data.txt")
+            ops = at.load_ops_file("ops_data.txt")
 
             # Plot correlation of total concentration over a work shift
             fig, ax = at.plot_correlation(
