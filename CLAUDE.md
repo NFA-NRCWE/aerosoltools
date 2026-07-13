@@ -11,9 +11,17 @@ provides consistent data structures for time-resolved and size-resolved particle
 measurements, activity/task segmentation, exposure assessment (8 h TWA, STEL,
 peaks), and an optional **PyQt5 desktop GUI** for a point-and-click workflow.
 
-The three public data classes are `Aerosol1D` (1D time series, e.g. total
-concentration), `Aerosol2D` (size-resolved), and `AerosolAlt` (alternative/
-legacy channels). All are exported from the top-level `aerosoltools` package.
+Data classes are organised by **shape**, composed from topic mixins in `_core/`.
+Particle instruments: `Aerosol1D` (1D time series — single- *or* multi-channel),
+`Aerosol2D` (size-resolved), `Aerosol3d` (dual-distribution, APS), plus thin
+subclasses where an instrument has its own physics/accessors — `DiSCmini`,
+`DustTrak`, `ELPI`. Non-particle instruments (no `total_concentration`; they
+override it to raise and expose domain accessors via `_core/nonparticle`):
+`Gas1D`, `Aethalometer`, `Environmental1D`, `Partector`. All are exported from
+the top-level package. (The former `AerosolAlt` catch-all has been removed —
+multi-channel instruments now use `Aerosol1D` or a dedicated subclass; a generic
+per-channel `unit`/`dtype` dict + the internal `_primary` hook make multi-channel
+work on the base class.)
 
 ## Language, tooling & main packages
 
@@ -35,7 +43,10 @@ src/aerosoltools/
   __init__.py        Public API: classes, loaders, utilities, + snake_case aliases.
   aerosol1d.py       Aerosol1D  — thin public facade; data model + properties.
   aerosol2d.py       Aerosol2D  — size-resolved facade (extends Aerosol1D).
-  aerosolalt.py      AerosolAlt — alternative/legacy-channel facade.
+  aerosol3d.py       Aerosol3d  — dual-distribution (APS) facade (extends 2D).
+  discmini.py / dusttrak.py / elpi.py   thin particle-instrument subclasses.
+  gas1d.py / aethalometer.py / environmental.py / partector.py
+                     non-particle facades (compose _core/nonparticle mixin).
   _core/             Internal topic mixins composed by the facades (NOT public API):
                        activities, time_ops, statistics, statistics2d, fractions,
                        size_distribution, corrections, fitting, plotting, plotting2d,

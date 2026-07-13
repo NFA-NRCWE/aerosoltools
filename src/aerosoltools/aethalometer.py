@@ -12,13 +12,13 @@ from __future__ import annotations
 import pandas as pd
 
 from ._core.nonparticle import _NonParticleMixin
-from .aerosolalt import AerosolAlt
+from .aerosol1d import Aerosol1D
 
 
-class Aethalometer(_NonParticleMixin, AerosolAlt):
+class Aethalometer(_NonParticleMixin, Aerosol1D):
     """Wavelength-resolved black-carbon mass concentration.
 
-    Reuses the :class:`AerosolAlt` machinery but does **not** expose
+    Reuses the :class:`Aerosol1D` machinery but does **not** expose
     ``total_concentration`` (black carbon is not a particle number
     concentration). The conventional primary channel is IR-equivalent BC
     (:attr:`ir_bcc`).

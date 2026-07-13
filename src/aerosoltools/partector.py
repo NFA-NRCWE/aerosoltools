@@ -12,13 +12,13 @@ from typing import Optional
 import pandas as pd
 
 from ._core.nonparticle import _NonParticleMixin
-from .aerosolalt import AerosolAlt
+from .aerosol1d import Aerosol1D
 
 
-class Partector(_NonParticleMixin, AerosolAlt):
+class Partector(_NonParticleMixin, Aerosol1D):
     """Partector LDSA time series with TEM sampling metadata.
 
-    Reuses the :class:`AerosolAlt` machinery but does **not** expose
+    Reuses the :class:`Aerosol1D` machinery but does **not** expose
     ``total_concentration`` (the Partector reports no particle number). The
     primary channel is :attr:`ldsa`.
 

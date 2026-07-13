@@ -760,6 +760,25 @@ class SizeConversionMixin:
 
         return target
 
+    def _recompute_diameters_for_density(self, density: float, old: float) -> bool:
+        """Hook: recompute the size axis for a new density (default: no-op).
+
+        Instruments whose reported diameter is density-dependent (e.g. the ELPI)
+        override this to rebuild the diameters — and, where needed, the per-bin
+        number — for the new density. Return ``True`` if the recompute was
+        handled here (in which case :meth:`set_density` only applies the residual
+        mass rescale); return ``False`` (the default) to fall through to the
+        standard mass-only rescale.
+
+        Args:
+            density (float): The new particle density (g/cm³).
+            old (float): The previous density (g/cm³).
+
+        Returns:
+            bool: Whether this hook handled the diameter recompute.
+        """
+        return False
+
     def set_density(self, density: Union[float, int] = 1.0):
         """Description:
             Set or update the assumed particle density (g/cm³).
@@ -806,21 +825,18 @@ class SizeConversionMixin:
         density = float(density)
         old = float(self.density)
 
-        # ELPI: the particle size it reports is density-dependent, so a density
-        # change recomputes the diameters (and, for raw-current data, the number
-        # concentration) instead of only rescaling mass. This works the same
-        # whether called from the GUI or a plain script.
-        if str(self._meta.get("instrument", "")).upper() == "ELPI":
-            from ..loaders.ELPI import recalculate_ELPI_density
-
-            if recalculate_ELPI_density(self, density):
-                # Mass still also scales with density (M ∝ ρ·V) when mass-based.
-                if "dM" in str(self.dtype) and old > 0:
-                    factor = density / old
-                    self._data[self._sizebin_headers] *= factor
-                    if "Total_conc" in self._data.columns:
-                        self._data["Total_conc"] *= factor
-                return self
+        # Some instruments report a density-dependent particle size, so a density
+        # change must recompute the diameters (and possibly the number) rather
+        # than only rescaling mass. Those classes override the hook below (e.g.
+        # ELPI); the default is a no-op, so the standard mass rescale runs.
+        if self._recompute_diameters_for_density(density, old):
+            # Mass still also scales with density (M ∝ ρ·V) when mass-based.
+            if "dM" in str(self.dtype) and old > 0:
+                factor = density / old
+                self._data[self._sizebin_headers] *= factor
+                if "Total_conc" in self._data.columns:
+                    self._data["Total_conc"] *= factor
+            return self
 
         if "dM" in str(self.dtype):
             if old <= 0:

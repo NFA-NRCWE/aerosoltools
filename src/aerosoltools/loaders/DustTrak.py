@@ -3,13 +3,13 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from ..aerosolalt import AerosolAlt
+from ..dusttrak import DustTrak
 from .Common import _detect_delimiter
 
 ###############################################################################
 
 
-def Load_DustTrak_file(file: str, extra_data: bool = False) -> AerosolAlt:
+def Load_DustTrak_file(file: str, extra_data: bool = False) -> DustTrak:
     """Description:
         Load a DustTrak DRX export file and return PM mass concentrations and
         total mass as an :class:`AerosolAlt` time series.
@@ -130,8 +130,8 @@ def Load_DustTrak_file(file: str, extra_data: bool = False) -> AerosolAlt:
     data_columns = ["PM1", "PM2.5", "PM4", "PM10", "Total"]
     df[data_columns] = df[data_columns] * 1000.0
 
-    # Build AerosolAlt object on the core columns (Datetime + 5 PM channels)
-    Dust = AerosolAlt(df[["Datetime", *data_columns]])
+    # Build DustTrak object on the core columns (Datetime + 5 PM channels)
+    Dust = DustTrak(df[["Datetime", *data_columns]])
 
     # Core metadata
     Dust._meta["instrument"] = str(meta_lines[0, 1])

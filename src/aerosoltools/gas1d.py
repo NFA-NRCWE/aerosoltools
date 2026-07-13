@@ -11,14 +11,14 @@ from __future__ import annotations
 import pandas as pd
 
 from ._core.nonparticle import _NonParticleMixin
-from .aerosolalt import AerosolAlt
+from .aerosol1d import Aerosol1D
 
 
-class Gas1D(_NonParticleMixin, AerosolAlt):
+class Gas1D(_NonParticleMixin, Aerosol1D):
     """Time-resolved single-gas concentration.
 
     Reuses the time-series / activity / plotting / summary machinery of
-    :class:`AerosolAlt`, but does **not** expose ``total_concentration`` (gases
+    :class:`Aerosol1D`, but does **not** expose ``total_concentration`` (gases
     are not a particle number concentration).
 
     Args:

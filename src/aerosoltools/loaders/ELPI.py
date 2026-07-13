@@ -6,7 +6,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from ..aerosol2d import Aerosol2D
+from ..elpi import ELPI
 from .Common import _detect_delimiter
 
 ###############################################################################
@@ -493,7 +493,7 @@ def recalculate_ELPI_density(elpi, new_density: float) -> bool:
 # Public loaders
 
 
-def Load_ELPI_file(file: str, extra_data: bool = False) -> Aerosol2D:
+def Load_ELPI_file(file: str, extra_data: bool = False) -> ELPI:
     """Load an ELPI file and return an Aerosol2D object.
 
     This is the routing function. Already-converted Dekati exports are handled
@@ -511,7 +511,7 @@ def Load_ELPI_file(file: str, extra_data: bool = False) -> Aerosol2D:
     return Load_ELPI_file_txt(file, extra_data=extra_data)
 
 
-def Load_ELPI_file_txt(file: str, extra_data: bool = False) -> Aerosol2D:
+def Load_ELPI_file_txt(file: str, extra_data: bool = False) -> ELPI:
     """Load an already-converted ELPI size-distribution export."""
     encoding, delimiter = _detect_delimiter(file)
     meta = _load_ELPI_metadata(file, delimiter, encoding)
@@ -564,7 +564,7 @@ def Load_ELPI_file_txt(file: str, extra_data: bool = False) -> Aerosol2D:
     )
 
 
-def Load_ELPI_file_dat(file: str, extra_data: bool = False) -> Aerosol2D:
+def Load_ELPI_file_dat(file: str, extra_data: bool = False) -> ELPI:
     """Load a raw ELPI .dat current file and convert it to number dN.
 
     The raw .dat file contains the measured channels and a main CAL Stage1-14
@@ -613,7 +613,7 @@ def _build_ELPI_aerosol2d(
     dtype: str,
     extra_data: bool,
     source_quantity: str,
-) -> Aerosol2D:
+) -> ELPI:
     """Construct an Aerosol2D object from parsed ELPI distribution data."""
     dist_data = dist_data.copy()
     total_conc = pd.DataFrame(
@@ -625,7 +625,7 @@ def _build_ELPI_aerosol2d(
     dist_data.columns = [str(mid) for mid in bin_mids]
 
     final_df = pd.concat([df["Datetime"], total_conc, dist_data], axis=1)
-    elpi = Aerosol2D(final_df)
+    elpi = ELPI(final_df)
 
     meta = dict(meta)
     meta["density"] = meta.pop("Density(g/cm^3)", np.nan)

@@ -120,7 +120,7 @@ def test_ranger_single_component_returns_single_object():
 
 def test_ranger_multi_header_splits_by_component(tmp_path):
     """Interleaved heads (PM/Cl₂/NO₂) split into one object per component."""
-    from aerosoltools import AerosolAlt, Gas1D
+    from aerosoltools import Aerosol1D, Gas1D
 
     pm_header = (
         "UTC time,Local time,LocationID,PM1 (ug/m3),PM2.5 (ug/m3),"
@@ -156,9 +156,9 @@ def test_ranger_multi_header_splits_by_component(tmp_path):
     by_measure = {o.metadata["measurement"]: o for o in result}
     assert set(by_measure) == {"PM", "Cl₂", "NO₂"}
 
-    # PM head -> AerosolAlt with one column per fraction.
+    # PM head -> plain multi-channel Aerosol1D with one column per fraction.
     pm = by_measure["PM"]
-    assert isinstance(pm, AerosolAlt)
+    assert isinstance(pm, Aerosol1D) and not isinstance(pm, Gas1D)
     for col in ("PM1", "PM2.5", "PMrsp", "PM10", "TSP"):
         assert col in pm.data.columns
     assert pm.metadata["unit"]["PM10"] == "µg/m³"

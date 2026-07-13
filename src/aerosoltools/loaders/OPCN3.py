@@ -3,8 +3,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
+from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
-from ..aerosolalt import AerosolAlt
 from .Common import _detect_delimiter
 
 ###############################################################################
@@ -468,7 +468,7 @@ def _Load_OPCN3_file_PM_old(
     extra_data: bool = False,
     encoding: Optional[str] = None,
     delimiter: Optional[str] = None,
-) -> AerosolAlt:
+) -> Aerosol1D:
     """Load legacy OPC-N3 CSV exports focusing on total and PM metrics only.
 
     This loader handles older OPC-N3 formats but returns a compact
@@ -570,7 +570,7 @@ def _Load_OPCN3_file_PM_old(
 
     final_df = pd.concat([df["Datetime"], total_df, PM_df], axis=1)
 
-    OPCN = AerosolAlt(final_df)
+    OPCN = Aerosol1D(final_df)
     OPCN._meta = {
         "instrument": "OPCN",
         "density": 1.65,
@@ -598,7 +598,7 @@ def _Load_OPCN3_file_PM_new(
     extra_data: bool = False,
     encoding: Optional[str] = None,
     delimiter: Optional[str] = None,
-) -> AerosolAlt:
+) -> Aerosol1D:
     """Load newer OPC-N3 CSV exports focusing on total and PM metrics only.
 
     This loader handles updated OPC-N3 formats and returns a compact
@@ -697,7 +697,7 @@ def _Load_OPCN3_file_PM_new(
 
     final_df = pd.concat([df["Datetime"], total_df, PM_df], axis=1)
 
-    OPCN = AerosolAlt(final_df)
+    OPCN = Aerosol1D(final_df)
     OPCN._meta = {
         "instrument": "OPCN",
         "density": 1.65,

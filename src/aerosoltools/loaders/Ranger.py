@@ -7,7 +7,7 @@ from typing import List, Union
 
 import pandas as pd
 
-from ..aerosolalt import AerosolAlt
+from ..aerosol1d import Aerosol1D
 from ..gas1d import Gas1D
 from .Common import _detect_delimiter
 
@@ -31,7 +31,7 @@ _GAS_NAMES = {
     "HF": "HF",
 }
 
-RangerObject = Union[Gas1D, AerosolAlt]
+RangerObject = Union[Gas1D, Aerosol1D]
 
 
 def _is_meta_col(name: str) -> bool:
@@ -168,14 +168,14 @@ def _build_object(
         obj._meta["unit"] = unit or "ppm"
         obj._meta["dtype"] = display
     else:
-        # Multi-channel head (PM fractions) -> AerosolAlt, one column per
-        # fraction (mirrors the DustTrak loader).
+        # Multi-channel head (PM fractions) -> plain multi-channel Aerosol1D,
+        # one column per fraction (mirrors the DustTrak loader).
         names, units = zip(*(_parse_measure_column(c) for c in measure_cols))
         out = pd.DataFrame({"Datetime": datetimes})
         for src, name in zip(measure_cols, names):
             out[name] = pd.to_numeric(frame[src], errors="coerce")
 
-        obj = AerosolAlt(out.dropna(subset=["Datetime"]).copy())
+        obj = Aerosol1D(out.dropna(subset=["Datetime"]).copy())
         obj._meta["unit"] = {n: u for n, u in zip(names, units)}
         obj._meta["dtype"] = {n: "dM" for n in names}
         display = "PM"

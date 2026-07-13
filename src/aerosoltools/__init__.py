@@ -23,9 +23,12 @@ Aerosol2D
     Time- and size-resolved aerosol data (e.g., particle size distributions).
 Aerosol3d
     Dual-distribution size-resolved data (e.g., APS aerodynamic + optical).
-AerosolAlt
-    Time-resolved data for particle instruments with several scalar channels
-    (e.g., DiSCmini number/size/LDSA, DustTrak PM fractions).
+DiSCmini
+    DiSCmini number/size/LDSA dosimeter; see ``.size`` / ``.ldsa``.
+DustTrak
+    DustTrak PM mass fractions; see ``.pm1`` / ``.pm2_5`` / … / ``.total``.
+ELPI
+    Electrical low-pressure impactor (density-dependent size axis).
 
 Non-particle instruments (no ``total_concentration``; use their domain
 accessors and ``.dtype`` / ``.unit`` metadata instead):
@@ -38,6 +41,9 @@ Environmental1D
     Environmental / weather channels; see ``.temperature``/``.rh``/….
 Partector
     Lung-deposited surface area (LDSA) dosimeter; see ``.ldsa``.
+
+The legacy ``AerosolAlt`` catch-all has been removed; instruments that used it
+now have dedicated classes (above).
 
 Loader functions
 ----------------
@@ -96,11 +102,12 @@ Typical usage example
 from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
 from .aerosol3d import Aerosol3d
-from .aerosolalt import AerosolAlt
 from .aethalometer import Aethalometer
+from .discmini import DiSCmini
+from .dusttrak import DustTrak
+from .elpi import ELPI
 from .environmental import Environmental1D
 from .gas1d import Gas1D
-from .partector import Partector
 from .loaders import (
     Load_Aethalometer_file,
     Load_APS_file,
@@ -121,6 +128,7 @@ from .loaders import (
     Load_Ranger_file,
     Load_SMPS_file,
 )
+from .partector import Partector
 from .utility import (
     Combine_NS_OPS,
     Plot_correlation,
@@ -159,7 +167,9 @@ __all__ = [
     "Aerosol1D",
     "Aerosol2D",
     "Aerosol3d",
-    "AerosolAlt",
+    "DiSCmini",
+    "DustTrak",
+    "ELPI",
     # Non-particle classes
     "Aethalometer",
     "Environmental1D",

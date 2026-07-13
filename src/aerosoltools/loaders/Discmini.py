@@ -6,7 +6,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from ..aerosolalt import AerosolAlt
+from ..discmini import DiSCmini
 from .Common import _detect_delimiter
 
 ###############################################################################
@@ -90,7 +90,7 @@ def _extract_serial_and_firmware(
 ###############################################################################
 
 
-def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
+def Load_DiSCmini_file(file: str, extra_data: bool = False) -> DiSCmini:
     """Description:
         Load a converted DiSCmini export file and return total number
         concentration, mean size, and LDSA as an :class:`AerosolAlt` time
@@ -339,12 +339,12 @@ def Load_DiSCmini_file(file: str, extra_data: bool = False) -> AerosolAlt:
         first_lines = [ln for _, ln in zip(range(10), fh)]
     serial_number, firmware = _extract_serial_and_firmware(first_lines)
 
-    # Build AerosolAlt on the core four columns (order: Datetime, Total_conc, Size, LDSA)
+    # Build DiSCmini on the core four columns (order: Datetime, Total_conc, Size, LDSA)
     needed = ["Datetime", "Total_conc", "Size", "LDSA"]
     present = [c for c in needed if c in df.columns]
     if present[:1] != ["Datetime"]:
         raise Exception("Datetime column missing after parsing.")
-    DM = AerosolAlt(df[present])
+    DM = DiSCmini(df[present])
 
     # Metadata
     DM._meta["instrument"] = "DiSCmini"
@@ -582,7 +582,7 @@ def Load_DiSCmini_raw_file(
     period: int = 10,
     zero_offset_correction: bool = True,
     ldsa_correction: bool = False,
-) -> AerosolAlt:
+) -> DiSCmini:
     """Description:
         Load a **raw** DiSCmini ``.TXT`` file and reproduce the vendor
         software's processed output (total number concentration, mean size
@@ -777,7 +777,7 @@ def Load_DiSCmini_raw_file(
         }
     )
 
-    DM = AerosolAlt(out)
+    DM = DiSCmini(out)
     DM._meta["instrument"] = "DiSCmini"
     DM._meta["serial_number"] = meta["serial"]
     if meta["firmware"] is not None:

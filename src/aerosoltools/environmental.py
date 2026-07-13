@@ -11,13 +11,13 @@ from __future__ import annotations
 import pandas as pd
 
 from ._core.nonparticle import _NonParticleMixin
-from .aerosolalt import AerosolAlt
+from .aerosol1d import Aerosol1D
 
 
-class Environmental1D(_NonParticleMixin, AerosolAlt):
+class Environmental1D(_NonParticleMixin, Aerosol1D):
     """Multi-channel environmental time series.
 
-    Reuses the :class:`AerosolAlt` machinery but does **not** expose
+    Reuses the :class:`Aerosol1D` machinery but does **not** expose
     ``total_concentration``. The primary channel defaults to temperature when
     present, else the first data column.
 
