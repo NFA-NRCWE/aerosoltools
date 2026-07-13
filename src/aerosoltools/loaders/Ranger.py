@@ -7,8 +7,8 @@ from typing import List, Union
 
 import pandas as pd
 
-from ..aerosol1d import Aerosol1D
 from ..aerosolalt import AerosolAlt
+from ..gas1d import Gas1D
 from .Common import _detect_delimiter
 
 ###############################################################################
@@ -31,7 +31,7 @@ _GAS_NAMES = {
     "HF": "HF",
 }
 
-RangerObject = Union[Aerosol1D, AerosolAlt]
+RangerObject = Union[Gas1D, AerosolAlt]
 
 
 def _is_meta_col(name: str) -> bool:
@@ -149,22 +149,22 @@ def _build_object(
     serial: str,
     extra_data: bool,
 ) -> RangerObject:
-    """Turn a per-component frame into an Aerosol1D (gas) or AerosolAlt (PM)."""
+    """Turn a per-component frame into a Gas1D (gas) or AerosolAlt (PM)."""
     time_col = "Local time" if "Local time" in frame.columns else frame.columns[0]
     datetimes = pd.to_datetime(frame[time_col], errors="coerce")
 
     if len(measure_cols) == 1:
-        # Single-channel head (a gas such as Cl₂ / NO₂) -> Aerosol1D.
+        # Single-channel head (a gas such as Cl₂ / NO₂) -> Gas1D.
         name, unit = _parse_measure_column(measure_cols[0])
         display = _gas_display_name(name)
 
         out = pd.DataFrame(
             {
                 "Datetime": datetimes,
-                "Total_conc": pd.to_numeric(frame[measure_cols[0]], errors="coerce"),
+                "Concentration": pd.to_numeric(frame[measure_cols[0]], errors="coerce"),
             }
         )
-        obj: RangerObject = Aerosol1D(out.dropna(subset=["Datetime"]).copy())
+        obj: RangerObject = Gas1D(out.dropna(subset=["Datetime"]).copy())
         obj._meta["unit"] = unit or "ppm"
         obj._meta["dtype"] = display
     else:

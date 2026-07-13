@@ -104,20 +104,23 @@ def _write_ranger(path, blocks):
 
 
 def test_ranger_single_component_returns_single_object():
-    """A Cl₂-only file loads as one Aerosol1D with ppm / Cl₂ metadata."""
-    from aerosoltools import Aerosol1D
+    """A Cl₂-only file loads as one Gas1D with ppm / Cl₂ metadata."""
+    from aerosoltools import Gas1D
 
     data = Load_Ranger_file(_data_path("Sample_Ranger.csv"))
-    assert isinstance(data, Aerosol1D)
-    assert "Total_conc" in data.data.columns
+    assert isinstance(data, Gas1D)
+    assert "Concentration" in data.data.columns
     assert data.metadata["unit"] == "ppm"
     assert data.metadata["dtype"] == "Cl₂"
     assert data.metadata["measurement"] == "Cl₂"
+    # 'total_concentration' does not apply to a gas monitor any more.
+    with pytest.raises(AttributeError):
+        _ = data.total_concentration
 
 
 def test_ranger_multi_header_splits_by_component(tmp_path):
     """Interleaved heads (PM/Cl₂/NO₂) split into one object per component."""
-    from aerosoltools import Aerosol1D, AerosolAlt
+    from aerosoltools import AerosolAlt, Gas1D
 
     pm_header = (
         "UTC time,Local time,LocationID,PM1 (ug/m3),PM2.5 (ug/m3),"
@@ -160,11 +163,11 @@ def test_ranger_multi_header_splits_by_component(tmp_path):
         assert col in pm.data.columns
     assert pm.metadata["unit"]["PM10"] == "µg/m³"
 
-    # Gas heads -> Aerosol1D; the two Cl₂ blocks are concatenated (2 + 1 rows).
+    # Gas heads -> Gas1D; the two Cl₂ blocks are concatenated (2 + 1 rows).
     cl2 = by_measure["Cl₂"]
-    assert isinstance(cl2, Aerosol1D)
+    assert isinstance(cl2, Gas1D)
     assert cl2.metadata["unit"] == "ppm"
-    assert cl2.data["Total_conc"].notna().sum() == 3
+    assert cl2.concentration.notna().sum() == 3
 
     assert by_measure["NO₂"].metadata["dtype"] == "NO₂"
 

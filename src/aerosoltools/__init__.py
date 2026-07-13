@@ -15,13 +15,29 @@ equivalent; the snake_case names are preferred for new code.
 
 Classes
 -------
+Particle instruments (expose ``total_concentration``):
+
 Aerosol1D
     Time-resolved scalar aerosol data (e.g., total particle concentration).
 Aerosol2D
     Time- and size-resolved aerosol data (e.g., particle size distributions).
+Aerosol3d
+    Dual-distribution size-resolved data (e.g., APS aerodynamic + optical).
 AerosolAlt
-    Time-resolved data for instruments reporting alternative metrics
-    (e.g., black carbon mass, optical depth, or custom channels).
+    Time-resolved data for particle instruments with several scalar channels
+    (e.g., DiSCmini number/size/LDSA, DustTrak PM fractions).
+
+Non-particle instruments (no ``total_concentration``; use their domain
+accessors and ``.dtype`` / ``.unit`` metadata instead):
+
+Gas1D
+    Single-gas concentration (e.g., Ranger Cl₂/NO₂); see ``.concentration``.
+Aethalometer
+    Wavelength-resolved black-carbon mass; see ``.ir_bcc``/``.uv_bcc``/….
+Environmental1D
+    Environmental / weather channels; see ``.temperature``/``.rh``/….
+Partector
+    Lung-deposited surface area (LDSA) dosimeter; see ``.ldsa``.
 
 Loader functions
 ----------------
@@ -81,6 +97,10 @@ from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
 from .aerosol3d import Aerosol3d
 from .aerosolalt import AerosolAlt
+from .aethalometer import Aethalometer
+from .environmental import Environmental1D
+from .gas1d import Gas1D
+from .partector import Partector
 from .loaders import (
     Load_Aethalometer_file,
     Load_APS_file,
@@ -135,11 +155,16 @@ load_smps_file = Load_SMPS_file
 load_data_from_folder = Load_data_from_folder
 
 __all__ = [
-    # Classes
+    # Particle classes
     "Aerosol1D",
     "Aerosol2D",
     "Aerosol3d",
     "AerosolAlt",
+    # Non-particle classes
+    "Aethalometer",
+    "Environmental1D",
+    "Gas1D",
+    "Partector",
     # Utilities
     "bland_altman_analysis",
     "Combine_NS_OPS",

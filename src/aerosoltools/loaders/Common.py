@@ -10,7 +10,6 @@ from tqdm.auto import tqdm
 
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
-from ..aerosolalt import AerosolAlt
 
 __all__ = ["file_list", "Load_data_from_folder"]
 
@@ -551,13 +550,16 @@ def Load_data_from_folder(
     else:
         Combined_raw_extra_data = pd.DataFrame(index=Combined_raw_data.index)
 
-    # Instantiate the appropriate concrete type based on the first file
+    # Instantiate the appropriate concrete type based on the first file. Size-
+    # resolved data is rebuilt as Aerosol2D (dual-distribution Aerosol3d is
+    # flattened, as before). Any 1D family object is rebuilt as its *own*
+    # concrete type via ``type(Initial_data)`` so the non-particle classes
+    # (Gas1D / Aethalometer / Environmental1D / Partector) and AerosolAlt
+    # survive combining instead of collapsing to a base class.
     if isinstance(Initial_data, Aerosol2D):
         Combined_data: Aerosol1D = Aerosol2D(Combined_raw_data)
-    elif isinstance(Initial_data, AerosolAlt):
-        Combined_data = AerosolAlt(Combined_raw_data)
     elif isinstance(Initial_data, Aerosol1D):
-        Combined_data = Aerosol1D(Combined_raw_data)
+        Combined_data = type(Initial_data)(Combined_raw_data)
     else:
         _print_load_summary(summary_log)
         raise TypeError("Unsupported data type returned by load_function.")

@@ -1,12 +1,12 @@
 import pandas as pd
 
-from ..aerosolalt import AerosolAlt
+from ..aethalometer import Aethalometer
 from .Common import _detect_delimiter
 
 ###############################################################################
 
 
-def Load_Aethalometer_file(file: str, extra_data: bool = False) -> AerosolAlt:
+def Load_Aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
     """Description:
         Load time-resolved black carbon data from an Aethalometer export file
         into an :class:`aerosoltools.AerosolAlt` object.
@@ -185,9 +185,9 @@ def Load_Aethalometer_file(file: str, extra_data: bool = False) -> AerosolAlt:
     meta["unit"] = {c: ("" if "AAE" in c else "ng/m³") for c in channels}
     meta["dtype"] = {c: ("AAE" if "AAE" in c else "dM") for c in channels}
 
-    # Build AerosolAlt object from core channels and attach metadata
+    # Build Aethalometer object from core channels and attach metadata
     data = df[core_cols]
-    aeth = AerosolAlt(data.copy())
+    aeth = Aethalometer(data.copy())
     aeth._meta = meta
 
     # Optionally store all remaining variables as extra_data

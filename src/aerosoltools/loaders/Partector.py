@@ -4,13 +4,13 @@ import numpy as np
 import pandas as pd
 from matplotlib.dates import date2num
 
-from ..aerosolalt import AerosolAlt
+from ..partector import Partector
 from .Common import _detect_delimiter
 
 ###############################################################################
 
 
-def Load_Partector_file(file: str, extra_data: bool = False) -> AerosolAlt:
+def Load_Partector_file(file: str, extra_data: bool = False) -> Partector:
     """Description:
         Load a Partector LDSA text export and return it as an
         :class:`AerosolAlt` time series with TEM sampling metadata.
@@ -195,8 +195,8 @@ def Load_Partector_file(file: str, extra_data: bool = False) -> AerosolAlt:
         "Sample_vol [ml]": [sample_volume_ml],
     }
 
-    # Create AerosolAlt object
-    Par = AerosolAlt(df[["Datetime", "LDSA", "TEM", "Flow"]])
+    # Create Partector object
+    Par = Partector(df[["Datetime", "LDSA", "TEM", "Flow"]])
     Par._meta["instrument"] = "Partector"
     Par._meta["serial_number"] = meta_lines[0][-3:]
     Par._meta["unit"] = {"LDSA": "nm$^{2}$/cm$^{3}$", "TEM": "bool", "Flow": "l/min"}

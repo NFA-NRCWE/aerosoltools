@@ -3,13 +3,13 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from ..aerosolalt import AerosolAlt
+from ..environmental import Environmental1D
 from .Common import _detect_delimiter
 
 ###############################################################################
 
 
-def Load_Fourtec_file(file: str) -> AerosolAlt:
+def Load_Fourtec_file(file: str) -> Environmental1D:
     """Description:
         Load a Fourtec Bluefish CSV or Excel export and return temperature and
         relative humidity as an :class:`AerosolAlt` time series.
@@ -168,8 +168,8 @@ def Load_Fourtec_file(file: str) -> AerosolAlt:
         # Extract serial number from the second row (header area)
         SN = str(pd.read_excel(file, skiprows=0, nrows=1, usecols=[2]).iloc[0, 0])
 
-    # Build AerosolAlt with core variables only
-    fourtec = AerosolAlt(df[["Datetime", "Temperature", "RH"]])
+    # Build Environmental1D with core variables only
+    fourtec = Environmental1D(df[["Datetime", "Temperature", "RH"]])
     fourtec._meta["instrument"] = "Fourtec"
     fourtec._meta["serial_number"] = SN
     fourtec._meta["unit"] = {"Temperature": "°C", "RH": "%"}

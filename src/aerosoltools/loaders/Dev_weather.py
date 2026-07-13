@@ -3,13 +3,13 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from ..aerosolalt import AerosolAlt
+from ..environmental import Environmental1D
 from .Common import _detect_delimiter,  Load_data_from_folder
 
 ###############################################################################
 
 
-def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> AerosolAlt:
+def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> Environmental1D:
     """Description:
         Load a Fourtec Bluefish CSV or Excel export and return temperature and
         relative humidity as an :class:`AerosolAlt` time series.
@@ -142,8 +142,8 @@ def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> Ae
     
     Combined_df=pd.concat(df.values(),axis=1) 
 
-    # Build AerosolAlt with core variables only
-    devlabs = AerosolAlt(Combined_df)
+    # Build Environmental1D with core variables only
+    devlabs = Environmental1D(Combined_df)
     devlabs._meta["instrument"] = "DevLabs Weatherstation"
     devlabs._meta["serial_number"] = SN
     devlabs._meta["unit"] = {
@@ -169,7 +169,7 @@ def Load_Devlabs_file(folder_path: str, freq='1min', start=None, end=None) -> Ae
 
 ###############################################################################
 
-def load_parameter (file: str,parameter) -> AerosolAlt:
+def load_parameter (file: str,parameter) -> Environmental1D:
     """Description:
         Load a Fourtec Bluefish CSV or Excel export and return temperature and
         relative humidity as an :class:`AerosolAlt` time series.
@@ -301,8 +301,8 @@ def load_parameter (file: str,parameter) -> AerosolAlt:
         )[1]
     )
 
-    # Build AerosolAlt with core variables only
-    devlabs = AerosolAlt(df)
+    # Build Environmental1D with core variables only
+    devlabs = Environmental1D(df)
     devlabs._meta["serial_number"] = SN
 
     return devlabs
