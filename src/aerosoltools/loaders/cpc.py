@@ -5,6 +5,7 @@ import pandas as pd
 
 from ..aerosol1d import Aerosol1D
 from .Common import _detect_delimiter
+from .exceptions import FileFormatError
 
 ###############################################################################
 
@@ -115,7 +116,7 @@ def load_cpc_file(file: str, extra_data: bool = False) -> Aerosol1D:
     elif col_count == 14:
         return _load_cpc_full(file, extra_data, encoding, delimiter)
     else:
-        raise Exception("Error in determining CPC data structure")
+        raise FileFormatError("Error in determining CPC data structure")
 
 
 ###############################################################################

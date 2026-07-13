@@ -2,6 +2,7 @@ import pandas as pd
 
 from ..aethalometer import Aethalometer
 from .Common import _detect_delimiter
+from .exceptions import EmptyFileError
 
 ###############################################################################
 
@@ -121,7 +122,7 @@ def load_aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
         .dropna()
     )
     if df.empty:
-        raise Exception("Empty data set")
+        raise EmptyFileError("Empty data set")
 
     # Normalize row index and the datetime column name
     df = df.reset_index(drop=True)

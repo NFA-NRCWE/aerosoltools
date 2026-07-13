@@ -10,28 +10,36 @@ and a script can branch on the specific failure.
 
 from __future__ import annotations
 
+# The specific subclasses also inherit from the builtin exception they
+# semantically replace (mostly ``ValueError``), so existing ``except ValueError``
+# call sites keep catching them — the errors are now *more* specific without
+# breaking any caller that was written against the generic type.
+
 
 class LoaderError(Exception):
-    """Base class for every error raised while loading an instrument file."""
+    """Base class for every error raised while loading an instrument file.
+
+    Catch this to handle any loader failure regardless of stage.
+    """
 
 
-class FileAccessError(LoaderError):
+class FileAccessError(LoaderError, OSError):
     """The file could not be found, opened, or read."""
 
 
-class EmptyFileError(LoaderError):
+class EmptyFileError(LoaderError, ValueError):
     """The file has no usable (non-empty, non-comment) data lines."""
 
 
-class EncodingError(LoaderError):
+class EncodingError(LoaderError, ValueError):
     """The file could not be decoded with any candidate text encoding."""
 
 
-class DelimiterDetectionError(LoaderError):
+class DelimiterDetectionError(LoaderError, ValueError):
     """No consistent field delimiter could be inferred from the file."""
 
 
-class FileFormatError(LoaderError):
+class FileFormatError(LoaderError, ValueError):
     """The file does not match the format the loader expects.
 
     Raised when required header markers, columns, or structure are missing —
@@ -39,15 +47,15 @@ class FileFormatError(LoaderError):
     """
 
 
-class MetadataParseError(LoaderError):
+class MetadataParseError(LoaderError, ValueError):
     """A required metadata field could not be parsed from the file header."""
 
 
-class TimestampError(LoaderError):
+class TimestampError(LoaderError, ValueError):
     """Timestamps could not be parsed, or are missing/inconsistent."""
 
 
-class InstrumentDetectionError(LoaderError):
+class InstrumentDetectionError(LoaderError, ValueError):
     """The instrument type could not be identified from content or filename."""
 
 

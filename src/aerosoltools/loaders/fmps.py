@@ -5,6 +5,7 @@ import pandas as pd
 
 from ..aerosol2d import Aerosol2D
 from .Common import _detect_delimiter
+from .exceptions import FileFormatError
 
 ###############################################################################
 
@@ -124,7 +125,7 @@ def load_fmps_file(file: str) -> Aerosol2D:
     )
 
     if "Raw" in header_check:
-        raise Exception(
+        raise FileFormatError(
             f"{file} is exported as raw and must first be converted using the FMPS software."
         )
 
@@ -236,7 +237,7 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
             dtype = dtype_dict[datatype[:2]]
         unit = unit_dict[dtype[:2]]
     except KeyError as e:
-        raise Exception(
+        raise FileFormatError(
             "Unit and/or data type does not match the expected FMPS format. "
             "Check that the file is an FMPS software export."
         ) from e

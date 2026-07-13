@@ -7,6 +7,7 @@ from numpy.typing import NDArray
 
 from ..aerosol2d import Aerosol2D
 from .Common import _detect_delimiter
+from .exceptions import FileFormatError
 
 ###############################################################################
 
@@ -176,7 +177,7 @@ def load_ops_file(file: str, extra_data: bool = False):
             file, extra_data=extra_data, encoding=encoding, delimiter=delimiter
         )
     else:
-        raise Exception("Unrecognized OPS file format. Unable to parse.")
+        raise FileFormatError("Unrecognized OPS file format. Unable to parse.")
 
 
 ###############################################################################
@@ -324,7 +325,7 @@ def _load_ops_aim(
         else:
             dtype = dtype_dict[weight[:2]]
     except KeyError as e:
-        raise ValueError(
+        raise FileFormatError(
             "Unit and/or data type does not match the expected format."
         ) from e
 

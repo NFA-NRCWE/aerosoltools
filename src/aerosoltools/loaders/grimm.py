@@ -5,6 +5,7 @@ import pandas as pd
 
 from ..aerosol2d import Aerosol2D
 from .Common import _detect_delimiter
+from .exceptions import FileFormatError
 
 ###############################################################################
 
@@ -158,7 +159,7 @@ def load_grimm_file(file: str) -> Aerosol2D:
     if isinstance(first, str) and first.strip() == "<Header>":
         return _load_grimm_soft(file, encoding, delimiter)
 
-    raise ValueError("Unrecognised Grimm file format.")
+    raise FileFormatError("Unrecognised Grimm file format.")
 
 
 ###############################################################################
@@ -226,7 +227,7 @@ def _load_grimm_soft(file: str, encoding: str, delimiter: str) -> Aerosol2D:
         # Counts per litre -> counts per cm³
         norm_vector = 1000.0
     else:
-        raise ValueError("Unsupported data type format in Grimm software export.")
+        raise FileFormatError("Unsupported data type format in Grimm software export.")
 
     # Normalise size-resolved data to number concentration
     raw_data = df.iloc[:, 1:].astype(float).values / norm_vector
@@ -316,7 +317,9 @@ def _load_grimm_inst(file: str, encoding: str, delimiter: str) -> Aerosol2D:
         # Counts per litre -> cm³
         norm_vector = 1000.0
     else:
-        raise ValueError("Unsupported data type format in Grimm instrument export.")
+        raise FileFormatError(
+            "Unsupported data type format in Grimm instrument export."
+        )
 
     # Normalise raw size-resolved data to number concentration
     raw_data = df.iloc[:, 1:].astype(float).values / norm_vector

@@ -8,6 +8,7 @@ import pandas as pd
 
 from ..elpi import ELPI
 from .Common import _detect_delimiter
+from .exceptions import FileFormatError
 
 ###############################################################################
 
@@ -88,7 +89,7 @@ def _find_ELPI_data_section(lines: list[str], delimiter: str) -> tuple[int, list
     try:
         data_idx = next(i for i, line in enumerate(lines) if line.strip() == "[Data]")
     except StopIteration:
-        raise ValueError("Couldn't find the [Data] marker in the ELPI file.")
+        raise FileFormatError("Couldn't find the [Data] marker in the ELPI file.")
 
     j = data_idx - 1
     while j >= 0 and (not lines[j].strip() or lines[j].lstrip().startswith("[")):
@@ -102,7 +103,7 @@ def _find_ELPI_data_section(lines: list[str], delimiter: str) -> tuple[int, list
                 found = True
                 break
         if not found:
-            raise ValueError("Couldn't find the data header line before [Data].")
+            raise FileFormatError("Couldn't find the data header line before [Data].")
 
     header = [
         h.strip() for h in lines[j].lstrip("\ufeff").rstrip("\r\n").split(delimiter)
@@ -541,7 +542,7 @@ def load_elpi_file_txt(file: str, extra_data: bool = False) -> ELPI:
         unit = unit_map[prefix]
         dtype = dtype_map[prefix] + str(meta["CalculatedType"])[2:]
     except (KeyError, TypeError) as e:
-        raise Exception(
+        raise FileFormatError(
             "Unit and/or data type does not match the expected values. "
             "If this is raw current (fA), load it through load_elpi_file so "
             "the raw-current conversion route can be used."

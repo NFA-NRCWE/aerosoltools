@@ -6,6 +6,7 @@ import pandas as pd
 from ..aerosol2d import Aerosol2D
 from ..aerosol3d import Aerosol3d
 from .Common import _detect_delimiter
+from .exceptions import FileFormatError
 
 ###############################################################################
 
@@ -104,11 +105,11 @@ def load_aps_file(file: str) -> Aerosol2D:
         lower_um = float(meta["Lower Channel Bound"])
         upper_um = float(meta["Upper Channel Bound"])
     except (KeyError, ValueError) as exc:
-        raise ValueError("File does not look like an APS AIM export.") from exc
+        raise FileFormatError("File does not look like an APS AIM export.") from exc
 
     df = pd.read_csv(file, delimiter=delimiter, encoding=encoding, header=6)
     if df.shape[1] < 56:
-        raise ValueError("APS export has fewer size columns than expected.")
+        raise FileFormatError("APS export has fewer size columns than expected.")
 
     headers = [str(c) for c in df.columns[_AERO_SLICE]]
     bin_mids, bin_edges = _aps_bins_nm(headers, lower_um, upper_um)

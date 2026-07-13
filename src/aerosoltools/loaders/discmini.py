@@ -8,6 +8,7 @@ import pandas as pd
 
 from ..discmini import DiSCmini
 from .Common import _detect_delimiter
+from .exceptions import EmptyFileError, FileFormatError, TimestampError
 
 ###############################################################################
 
@@ -218,7 +219,7 @@ def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
     try:
         enc, delim = _detect_delimiter(file, sample_lines=25)  # -> (str, str)
     except Exception as e:
-        raise Exception(
+        raise FileFormatError(
             "DiSCmini data has not been converted or delimiter could not be detected."
         ) from e
 
@@ -279,7 +280,7 @@ def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
                 (ln for ln in header_lines if "start time:" in ln), None
             )
             if start_date_line is None or start_time_line is None:
-                raise ValueError("Start date/time not found in header.")
+                raise TimestampError("Start date/time not found in header.")
 
             start_date = dt.datetime.strptime(
                 start_date_line.split("start date: ")[1].split("]")[0], "%Y.%m.%d"
@@ -303,10 +304,10 @@ def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
             )
             sec_f = pd.to_numeric(sec, errors="coerce")
             if sec_f.isna().all():
-                raise ValueError("Elapsed seconds column could not be parsed.")
+                raise TimestampError("Elapsed seconds column could not be parsed.")
             dt_parsed = pd.to_datetime(sec_f, unit="s", origin=start_dt)
         except Exception as e:
-            raise Exception(
+            raise TimestampError(
                 "Datetime does not match expected format. Ensure file is converted correctly."
             ) from e
 
@@ -343,7 +344,7 @@ def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
     needed = ["Datetime", "Total_conc", "Size", "LDSA"]
     present = [c for c in needed if c in df.columns]
     if present[:1] != ["Datetime"]:
-        raise Exception("Datetime column missing after parsing.")
+        raise TimestampError("Datetime column missing after parsing.")
     DM = DiSCmini(df[present])
 
     # Metadata
@@ -725,7 +726,9 @@ def load_discmini_raw_file(
     valid = raw[raw["Status"].str.lower().str.endswith("b", na=False)].copy()
     valid = valid.dropna(subset=["Time", "Diffusion", "Filter"]).reset_index(drop=True)
     if valid.empty:
-        raise ValueError("No valid measurement rows found in the raw DiSCmini file.")
+        raise EmptyFileError(
+            "No valid measurement rows found in the raw DiSCmini file."
+        )
 
     # Average the valid rows into fixed ``period``-second wall-clock windows,
     # grouping on the elapsed-time column (``floor(Time / period)``) exactly as

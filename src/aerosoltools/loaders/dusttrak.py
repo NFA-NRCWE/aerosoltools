@@ -5,6 +5,7 @@ import pandas as pd
 
 from ..dusttrak import DustTrak
 from .Common import _detect_delimiter
+from .exceptions import TimestampError
 
 ###############################################################################
 
@@ -121,7 +122,9 @@ def load_dusttrak_file(file: str, extra_data: bool = False) -> DustTrak:
         start_str = f"{meta_lines[7, 1]} {meta_lines[6, 1]}"
         start_time = datetime.datetime.strptime(start_str, "%d/%m/%Y %H:%M:%S")
     except Exception as e:
-        raise ValueError(f"Unable to parse start datetime from metadata: {e}") from e
+        raise TimestampError(
+            f"Unable to parse start datetime from metadata: {e}"
+        ) from e
 
     # Convert elapsed seconds to absolute datetime
     df["Datetime"] = pd.to_timedelta(df["Datetime"], unit="s") + start_time

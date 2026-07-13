@@ -6,6 +6,7 @@ from matplotlib.dates import date2num
 
 from ..partector import Partector
 from .Common import _detect_delimiter
+from .exceptions import TimestampError
 
 ###############################################################################
 
@@ -167,7 +168,7 @@ def load_partector_file(file: str, extra_data: bool = False) -> Partector:
         start_str = meta_lines[4].split("Start: ")[1].split("\n")[0]
         start_time = datetime.datetime.strptime(start_str, "%d.%m.%Y %H:%M:%S")
     except Exception as e:
-        raise ValueError(f"Unable to parse start datetime from metadata: {e}")
+        raise TimestampError(f"Unable to parse start datetime from metadata: {e}")
 
     # Convert time column to absolute datetime
     df["Datetime"] = pd.to_timedelta(df["Datetime"], unit="s") + start_time

@@ -381,6 +381,29 @@ def test_calibration_gui_and_script_agree():
     assert a.sub(b).abs().max() < 1e-9
 
 
+def test_loader_exception_hierarchy():
+    """Specific loader errors are LoaderError and stay ValueError-compatible."""
+    from aerosoltools.loaders import (
+        DelimiterDetectionError,
+        EmptyFileError,
+        FileFormatError,
+        InstrumentDetectionError,
+        LoaderError,
+        TimestampError,
+    )
+
+    for exc in (
+        FileFormatError,
+        EmptyFileError,
+        TimestampError,
+        DelimiterDetectionError,
+        InstrumentDetectionError,
+    ):
+        assert issubclass(exc, LoaderError)
+        # Back-compat: existing `except ValueError` call sites still catch them.
+        assert issubclass(exc, ValueError)
+
+
 def test_public_load_file_autodetects():
     """at.load_file auto-detects the instrument and matches the explicit loader."""
     import aerosoltools as at

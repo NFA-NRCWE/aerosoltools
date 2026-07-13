@@ -3,6 +3,7 @@ import pandas as pd
 
 from ..aerosol2d import Aerosol2D
 from .Common import _detect_delimiter
+from .exceptions import FileFormatError
 
 ###############################################################################
 
@@ -189,7 +190,7 @@ def load_ns_file(file: str, extra_data: bool = False) -> Aerosol2D:
     try:
         unit = unit_dict[dtype[:2]]
     except KeyError as e:
-        raise ValueError(
+        raise FileFormatError(
             "Unit and/or data type does not match the expected NanoScan format."
         ) from e
 

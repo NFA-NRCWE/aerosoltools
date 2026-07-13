@@ -6,6 +6,7 @@ import pandas as pd
 
 from ..aerosol2d import Aerosol2D
 from .Common import _detect_delimiter
+from .exceptions import FileFormatError
 
 ###############################################################################
 
@@ -282,7 +283,9 @@ def load_smps_file(file: str, extra_data: bool = False) -> Aerosol2D:
         else:
             dtype = dtype_dict[weight_prefix]
     except Exception:
-        raise Exception("Unit and/or data type does not match the expected format.")
+        raise FileFormatError(
+            "Unit and/or data type does not match the expected format."
+        )
 
     # Construct object
     smps = Aerosol2D(final_df)

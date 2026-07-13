@@ -6,6 +6,7 @@ import pandas as pd
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
 from .Common import _detect_delimiter
+from .exceptions import FileFormatError
 
 ###############################################################################
 
@@ -178,7 +179,7 @@ def load_opcn3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
                 file, extra_data=extra_data, encoding=encoding, delimiter=delimiter
             )
     else:
-        raise Exception("Unrecognized OPS file format. Unable to parse.")
+        raise FileFormatError("Unrecognized OPS file format. Unable to parse.")
 
 
 ###############################################################################
