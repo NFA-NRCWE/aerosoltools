@@ -40,7 +40,7 @@ work on the base class.)
 
 ```
 src/aerosoltools/
-  __init__.py        Public API: classes, loaders, utilities, + snake_case aliases.
+  __init__.py        Public API: classes, loaders, intercomparison workflows.
   aerosol1d.py       Aerosol1D  — thin public facade; data model + properties.
   aerosol2d.py       Aerosol2D  — size-resolved facade (extends Aerosol1D).
   aerosol3d.py       Aerosol3d  — dual-distribution (APS) facade (extends 2D).
@@ -52,9 +52,14 @@ src/aerosoltools/
                        size_distribution, corrections, fitting, plotting, plotting2d,
                        alt, + shared helpers _shading (activity shading) / _labels.
   loaders/           One module per instrument + Common.py (delimiter sniffer / parse
-                       helpers) + __init__ registry; Load_<Instr>_file functions.
-  utility/           combine_measurements, Combine_NS_OPS, Plot_correlation,
-                       bland_altman_analysis, fit_data (combine.py, correlation.py).
+                       helpers) + __init__ registry; load_<instr>_file functions.
+  intercomparison/   Public multi-dataset workflows: combination.py
+                       (combine_measurements, combine_size_ranges), correlation.py
+                       (plot_correlation, bland_altman_analysis, fit_data),
+                       calibration.py (CalibrationModel, fit_calibration,
+                       apply_calibration, calibrate_against_reference), and private
+                       _alignment.py (shared time-alignment). Replaced the old
+                       vague `utility/` package.
   gui/               PyQt5 desktop app (see below).
 tests/               pytest suite + tests/data/ sample instrument files.
 docs/                Sphinx documentation sources.
@@ -89,10 +94,14 @@ table helpers). Other modules: `theme.py` (dark/light themes + `export_rc`),
 ## Implementation rules
 
 - **Backward compatibility (core):** the `aerosoltools` core API (loaders,
-  `Aerosol1D/2D/Alt`, `plot_*`, `Combine_NS_OPS`, `Plot_correlation`,
-  `summarize_*`, …) is used by **other people**. Change it **additively** — new
-  optional kwargs / new functions — and do not break existing signatures or
-  behaviour.
+  `Aerosol1D/2D/3d`, `plot_*`, `plot_correlation`, `combine_size_ranges`,
+  `fit_psd`, `summarize_*`, …) is used by **other people**. Change it
+  **additively** — new optional kwargs / new functions — and do not break
+  existing signatures or behaviour. (The 2026-07 restructure was an authorized
+  exception: it removed the `utility/` package and the PascalCase function
+  spellings and replaced `data.calibrate(Variables=)` with
+  `data.apply_calibration(model)`. Those breaks were explicitly sanctioned;
+  the additive default still holds for everything else.)
 - **The GUI may change freely** (single user), as long as it doesn't break the
   core contract it depends on.
 - **Renaming / deprecating:** when an old name or convention must eventually
@@ -100,14 +109,17 @@ table helpers). Other modules: `theme.py` (dark/light themes + `export_rc`),
   the new name, rather than removing it outright. (Exception: if the maintainer
   explicitly says back-compat isn't needed for a specific, rarely-used name,
   rename it directly.)
-- **Naming convention:** public functions exist under both their original
-  `PascalCase` name (e.g. `Load_ELPI_file`, `Mark_threshold`) **and** a
-  PEP 8 `snake_case` alias (`load_elpi_file`, `mark_threshold`). Both are
-  equivalent; snake_case is preferred for new code. Add the alias when you add a
-  public method. Use lowercase parameter names.
+- **Naming convention:** public functions use PEP 8 `snake_case`
+  (`load_elpi_file`, `plot_correlation`, `fit_calibration`); classes use
+  `PascalCase` (`Aerosol2D`, `CalibrationModel`, `DiSCmini`). The legacy
+  PascalCase *function* spellings have been removed. Use lowercase parameter
+  names. (Some older mixins still expose a `PascalCase`/`snake_case` method pair,
+  e.g. `Mark_threshold`/`mark_threshold`; leave those dual names in place unless
+  told otherwise.)
 - **Don't reinvent shared logic:** reuse the existing helpers (e.g. activity
   shading via `_core/_shading`, dtype label via `_core/_labels.base_dtype`,
-  alignment via `utility`) instead of duplicating across modules.
+  cross-dataset alignment via `intercomparison/_alignment`, the lognormal model
+  via `aerosoltools.lognormal_modes`) instead of duplicating across modules.
 - **Docstrings & types:** keep the Google-style docstrings (`Args:`/`Returns:`)
   and type annotations that the codebase uses; add/update them when you touch a
   function.
