@@ -631,3 +631,72 @@ def test_elpi_is_own_class_and_density_hook_recomputes_diameters():
     # The density-dependent diameters must move (the ELPI hook fired).
     assert mids_before != mids_after
     assert float(elpi.density) == 2.0
+
+
+def test_metric_unit_registry_converts_within_dimension():
+    """The unit registry classifies dimensions and converts within a dimension."""
+    from aerosoltools._core.metrics import (
+        canonical_unit,
+        classify_unit,
+        convert_value,
+        unit_key,
+    )
+
+    assert classify_unit("ng/m³")[0] == "mass"
+    assert classify_unit("cm⁻³")[0] == "number"
+    # LaTeX and plain LDSA spellings collapse to one key.
+    assert unit_key("nm$^{2}$/cm$^{3}$") == unit_key("nm²/cm³")
+    # Scale conversions within a dimension.
+    assert convert_value(1000.0, "ng/m³", "µg/m³") == pytest.approx(1.0)
+    assert convert_value(2.0, "ppm", "ppb") == pytest.approx(2000.0)
+    assert canonical_unit("ng/m³") == "µg/m³"
+    # Cross-dimension conversion is a no-op (never fabricates numbers).
+    assert convert_value(5.0, "cm⁻³", "µg/m³") == 5.0
+
+
+def test_available_metrics_are_instrument_aware():
+    """Each class advertises only the metrics it actually measures."""
+    cpc = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    assert [m.key for m in cpc.available_metrics()] == ["PNC"]
+
+    ops = Load_OPS_file(_data_path("Sample_OPS.csv"))
+    ops_keys = [m.key for m in ops.available_metrics()]
+    assert "PNC" in ops_keys and "MASS" in ops_keys and "PM2.5" in ops_keys
+
+    dm = Load_DiSCmini_file(_data_path("Sample_Discmini.txt"))
+    assert {m.key for m in dm.available_metrics()} == {"PNC", "Size", "LDSA"}
+    assert set(dm._default_metrics()) == {"PNC", "LDSA"}
+
+    par = Load_Partector_file(_data_path("Sample_Partector.txt"))
+    par_keys = {m.key for m in par.available_metrics()}
+    assert "LDSA" in par_keys and "TEM" not in par_keys  # bool flag excluded
+    assert par._default_metrics() == ["LDSA"]
+
+    aeth = Load_Aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    assert "IR BCc" in [m.key for m in aeth.available_metrics()]
+    assert aeth._default_metrics() == ["IR BCc"]
+
+
+def test_pnc_metric_is_rejected_for_non_number_instruments():
+    """'PNC' works on number instruments and raises on gas/BC/LDSA (the leak fix)."""
+    cpc = Load_CPC_file(_data_path("Sample_CPC_Direct.txt"))
+    ops = Load_OPS_file(_data_path("Sample_OPS.csv"))
+    # No exception, and a number unit.
+    assert cpc._get_metric_series("PNC")[1] == "cm⁻³"
+    assert ops._get_metric_series("PNC")[1] == "cm⁻³"
+
+    aeth = Load_Aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    par = Load_Partector_file(_data_path("Sample_Partector.txt"))
+    for obj in (aeth, par):
+        with pytest.raises(ValueError):
+            obj._get_metric_series("PNC")
+
+
+def test_gas_metric_keyed_by_species():
+    """A gas dataset advertises (and summarises) its species, not a generic key."""
+    heads = Load_Ranger_file(_data_path("Ranger_2605-1000088-A_20260612-0603.csv"))
+    gas = next(o for o in heads if type(o).__name__ == "Gas1D")
+    keys = [m.key for m in gas.available_metrics()]
+    assert keys == [str(gas.dtype)]  # e.g. "Cl₂"
+    series, unit = gas._get_metric_series(str(gas.dtype))
+    assert unit == gas.unit and len(series) == len(gas.time)

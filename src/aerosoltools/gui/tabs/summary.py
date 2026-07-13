@@ -287,11 +287,18 @@ class SummaryTab(QtWidgets.QWidget):
         )
 
     def _canonical_units(self, datasets) -> dict:
-        """Map each available metric key → its canonical unit across ``datasets``."""
+        """Map each metric key → the unit its merged column should use.
+
+        Uses the **first-seen native unit** for a metric, so a single-scale
+        metric keeps its natural unit (e.g. black carbon stays ng/m³ rather than
+        being force-converted to the dimension's canonical µg/m³); other
+        instruments reporting that same metric at a different scale are converted
+        to this unit so they still share one column.
+        """
         canon: dict = {}
         for _instr, specs in metric_catalog(datasets):
             for m in specs:
-                canon.setdefault(m.key, m.canonical_unit)
+                canon.setdefault(m.key, m.unit)
         return canon
 
     #: Parse a "key [unit] stat" activity-summary value column.
