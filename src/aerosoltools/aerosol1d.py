@@ -256,6 +256,24 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
             return self._data.iloc[:, 0]
 
     @property
+    def _primary(self) -> pd.Series:
+        """The dataset's primary channel (package-internal, not public API).
+
+        This is the generic hook that reusable operations (e.g. default peak
+        detection, default summaries) and the GUI use when they just need "the
+        main channel of this dataset", independent of what that channel *is*.
+
+        For particle classes it is the :attr:`total_concentration`. Non-particle
+        classes (gases, black carbon, environmental, LDSA-only) override this to
+        return their own primary channel, since ``total_concentration`` does not
+        apply to them.
+
+        Returns:
+            pandas.Series: The primary measurement series.
+        """
+        return self.total_concentration
+
+    @property
     def unit(self) -> str:
         """Measurement unit for the primary data.
 

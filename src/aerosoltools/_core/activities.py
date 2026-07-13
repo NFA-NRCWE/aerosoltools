@@ -250,9 +250,10 @@ class ActivityMixin:
             method (str): Aggregation used as the rolling baseline, one of
                 "mean", "median", "sum", "min", "max". Defaults to "median".
             specific_data (str): Optional column name to use for peak
-                detection. If empty, the total_concentration time series is
-                used. Otherwise, the name is looked up first in self.data
-                (numeric columns) and then in extra_data.
+                detection. If empty, the dataset's primary channel is used
+                (total concentration for particle instruments). Otherwise, the
+                name is looked up first in self.data (numeric columns) and then
+                in extra_data.
 
         Returns:
             None: The method adds/updates a boolean "Peak" column in
@@ -299,7 +300,7 @@ class ActivityMixin:
         Data_return = self.copy_self()
 
         if specific_data == "":
-            Data_return = Data_return.total_concentration
+            Data_return = Data_return._primary
         else:
             if specific_data in self._data.select_dtypes(exclude="bool").columns:
                 Data_return = Data_return._data[specific_data]

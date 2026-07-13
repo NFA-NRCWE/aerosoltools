@@ -79,7 +79,7 @@ class SummaryMixin:
         mu = metric_name.upper()
 
         if mu == "PNC":
-            series = self.total_concentration.astype(float)
+            series = self._primary.astype(float)
             return series, self.unit
 
         # Look up in main data first, then extra_data

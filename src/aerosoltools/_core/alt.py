@@ -192,13 +192,11 @@ class AltMixin:
         rows: list[list[object]] = []
 
         # Loop through all activities (including "All data") and collect stats.
+        # ``parameter`` is already resolved to a column label above, so select
+        # that column directly (no reliance on ``total_concentration``, which is
+        # meaningless for non-particle Alt-based classes such as Aethalometer).
         for activity in self.activities:
-            try:
-                subset = self.data[self.data[activity]][
-                    self.total_concentration[parameter].name  # type: ignore[index]
-                ]
-            except KeyError:
-                subset = self.data[self.data[activity]][parameter]
+            subset = self.data[self.data[activity]][parameter]
 
             if not subset.empty:
                 rows.append(
@@ -219,7 +217,7 @@ class AltMixin:
         summary_rounded = summary.round(3)
 
         # Print a nicely formatted version to the console.
-        print("\nSummary of total concentration:\n")
+        print(f"\nSummary of {parameter}:\n")
         print(
             tabulate(
                 summary_rounded,  # type: ignore
