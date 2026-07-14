@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import codecs
 import os
 from collections import Counter
 from typing import Any, Callable, List, Sequence, Union
@@ -44,8 +45,10 @@ def _detect_delimiter(
         file_path:
             Path to the input text or CSV-like file.
         encodings:
-            List of encodings to try in order. If ``None``, a default set of
-            common encodings is used (e.g. ``["latin-1", "utf-8", ...]``).
+            Encodings to try in order. If ``None``, defaults to
+            ``["utf-8", "cp1252", "latin-1"]`` (UTF-8 first, Latin-1 last as the
+            can't-fail fallback). A UTF-8/UTF-16/UTF-32 byte-order mark is
+            detected up front and always takes precedence.
         delimiters:
             Candidate delimiters to test. If ``None``, defaults to
             ``[",", ";", "\\t", "|"]``.
@@ -68,27 +71,42 @@ def _detect_delimiter(
         EmptyFileError: If the file has no usable lines to analyse.
         DelimiterDetectionError: If no reliable delimiter can be inferred.
     """
-    # Use default sets if not provided
-    encodings = encodings or [
-        "latin-1",
-        "utf-8",
-        "utf-16",
-        "iso-8859-1",
-        "windows-1252",
-    ]
+    # Default trial order: strict UTF-8 first (so genuine UTF-8 files decode
+    # correctly), then Windows-1252, then Latin-1 as the guaranteed last resort.
+    # NOTE: Latin-1 decodes *any* byte stream without error, so it must come
+    # last — historically it was first, which meant UTF-8/UTF-16 were never
+    # actually tried and multi-byte UTF-8 files (e.g. "µg/m³") were mis-decoded.
+    encodings = encodings or ["utf-8", "cp1252", "latin-1"]
     delimiters = delimiters or [",", ";", "\t", "|"]
 
-    # Try reading the file with each encoding until one works
-    for encoding in encodings:
+    # A byte-order mark is authoritative — honour it ahead of the trial list.
+    # UTF-16 is intentionally BOM-only: without a BOM it would happily
+    # mis-decode a single-byte (Latin-1) file, so it is never guessed blindly.
+    with open(file_path, "rb") as fb:
+        head = fb.read(4)
+    bom_encoding = None
+    if head.startswith(codecs.BOM_UTF8):
+        bom_encoding = "utf-8-sig"
+    elif head.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        bom_encoding = "utf-16"
+    elif head.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
+        bom_encoding = "utf-32"
+
+    trial = ([bom_encoding] if bom_encoding else []) + list(encodings)
+    if "latin-1" not in trial:  # always keep a can't-fail fallback last
+        trial.append("latin-1")
+
+    # Try reading the file with each encoding until one decodes cleanly.
+    for encoding in trial:
         try:
             with open(file_path, "r", encoding=encoding) as f:
                 lines = f.readlines()
             break
-        except UnicodeError:
+        except (UnicodeError, LookupError):
             continue
     else:
         raise EncodingError(
-            f"Could not decode '{file_path}' with any of: {', '.join(encodings)}."
+            f"Could not decode '{file_path}' with any of: {', '.join(trial)}."
         )
 
     # Keep only non-empty, non-comment lines (from the bottom up)

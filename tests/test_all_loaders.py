@@ -628,6 +628,36 @@ def test_public_load_file_autodetects():
         at.load_file(_data_path("Sample_OPS.csv"), instrument="NoSuchDevice")
 
 
+def test_detect_delimiter_encoding_detection(tmp_path):
+    """The sniffer decodes UTF-8/BOM files correctly, not as Latin-1 mojibake."""
+    from aerosoltools.loaders.support.parsing import _detect_delimiter
+
+    # A genuine UTF-8 file with multi-byte glyphs (µg/m³). Previously the sniffer
+    # tried Latin-1 first (which decodes any bytes), so these were mis-decoded.
+    utf8 = tmp_path / "utf8.csv"
+    utf8.write_text("Conc (µg/m³),Temp\n1.0,20\n2.0,21\n3.0,22\n", encoding="utf-8")
+    enc, delim = _detect_delimiter(str(utf8))
+    assert delim == ","
+    with open(str(utf8), encoding=enc) as fh:
+        assert "µg/m³" in fh.read()  # round-trips, not "Âµg/mÂ³"
+
+    # A UTF-8 BOM is honoured (utf-8-sig strips it).
+    bom = tmp_path / "bom.csv"
+    bom.write_text("A;B;C\n1;2;3\n4;5;6\n7;8;9\n", encoding="utf-8-sig")
+    enc_bom, delim_bom = _detect_delimiter(str(bom))
+    assert delim_bom == ";"
+    with open(str(bom), encoding=enc_bom) as fh:
+        assert fh.readline().startswith("A;B;C")  # no leading BOM char
+
+    # A Latin-1 file with a high byte (µ = 0xB5) still decodes to the right glyph
+    # via the cp1252/latin-1 fallback.
+    latin = tmp_path / "latin.csv"
+    latin.write_bytes("x,\xb5m\n1,2\n3,4\n5,6\n".encode("latin-1"))
+    enc_l, _ = _detect_delimiter(str(latin))
+    with open(str(latin), encoding=enc_l) as fh:
+        assert "\xb5m" in fh.read()
+
+
 def test_discmini_serial_normalization():
     """The serial normalizer strips the inconsistent 'SN' prefix."""
     assert _normalize_serial("SN101923") == "101923"
