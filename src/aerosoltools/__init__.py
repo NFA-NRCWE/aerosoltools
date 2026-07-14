@@ -106,6 +106,7 @@ Typical usage example
     >>> combined = at.combine_size_ranges(ns, ops, crossover=400)
 """
 
+from ._core.decay import DecayResult
 from ._core.fitting import lognormal_modes
 from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
@@ -172,6 +173,8 @@ __all__ = [
     "calibrate_against_reference",
     # Size-distribution fitting
     "lognormal_modes",
+    # Decay fitting
+    "DecayResult",
     # Loading: auto-detect entry point + registry + error base
     "load_file",
     "detect_instrument",

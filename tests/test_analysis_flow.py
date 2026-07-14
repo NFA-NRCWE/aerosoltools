@@ -307,6 +307,20 @@ def test_fit_decay_recovers_first_order_and_source_strength():
     obj = _make_peak_dataset("first_order", [1 / 300.0, 100.0, 50.0, 100.0, 400.0])
     res = obj.fit_decay("Peak", model="first_order", volume=20.0, air_exchange_rate=2.0)
 
+    from collections.abc import Mapping
+
+    from aerosoltools import DecayResult
+
+    # fit_decay returns a typed DecayResult that is *also* a read-only mapping,
+    # so attribute and item access agree and legacy `res[...]` keeps working.
+    assert isinstance(res, DecayResult)
+    assert isinstance(res, Mapping)
+    assert res.r_squared == res["r_squared"]
+    assert res.model == res["model"]
+    # Optional keys appear only when applicable (here: volume + air-exchange given).
+    assert "source_strength" in res and res.source_strength == res["source_strength"]
+    assert res.to_dict()["model"] == "first_order"
+
     assert res["model"] == "first_order"
     assert res["r_squared"] > 0.99
     # Loss rate ~ 12 /h (1/300 s^-1 * 3600).
@@ -333,6 +347,10 @@ def test_fit_decay_auto_selects_and_supports_tuple_window():
     # Model params are echoed with a P0/E and the timing fields.
     for key in ("P0", "E", "t0", "tp"):
         assert key in res["params"]
+    # No volume given -> source-strength fields are omitted from the mapping view
+    # (the attribute is still present and None), matching the historical dict.
+    assert "source_strength" not in res
+    assert res.source_strength is None
 
 
 def test_fit_decay_second_order_recovers_rate():

@@ -57,11 +57,135 @@ of to zero, and the fit is staged so the peak height is respected.
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from collections.abc import Mapping
+from dataclasses import dataclass, fields
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
 from scipy.optimize import brentq, curve_fit
+
+# Keys that only appear for some models / when a chamber volume is given, so the
+# dict view (and the persisted/legacy shape) omits them when they are not set.
+_DECAY_OPTIONAL = (
+    "zeroth_order_rate",
+    "zeroth_order_rate_unit",
+    "loss_rate_per_hour",
+    "half_life_hours",
+    "wall_loss_rate_per_hour",
+    "second_order_rate",
+    "source_strength",
+    "source_strength_unit",
+    "total_emitted",
+    "total_emitted_unit",
+)
+
+
+@dataclass
+class DecayResult(Mapping):
+    """A fitted emission+decay peak: parameters, diagnostics and reporting.
+
+    Returned by :meth:`Aerosol1D.fit_decay`. It is a typed record — read fields
+    as attributes (``result.r_squared``, ``result.source_strength``) — but it is
+    **also a read-only mapping**, so existing ``result["r_squared"]`` /
+    ``result.get(...)`` access keeps working unchanged. Model- or volume-specific
+    fields (see :data:`_DECAY_OPTIONAL`) are ``None`` when not applicable and are
+    then omitted from the mapping view / :meth:`to_dict`, matching the historical
+    dict exactly.
+
+    Reconstruct the modelled curve from :attr:`model` and :attr:`model_popt` via
+    :func:`decay_curve`.
+
+    Attributes:
+        model: Loss model name (``"zeroth_order"``/``"first_order"``/
+            ``"second_order"``/``"combined"``).
+        unit: Concentration unit of the fitted series.
+        metric: Metric that was fitted (e.g. ``"PNC"``).
+        r_squared: R² of the full rise+peak+decay curve.
+        decay_r_squared: R² of the post-peak decay stage alone.
+        n_points: Number of samples in the fitted window.
+        params: Fitted model parameters ``{name: value}``.
+        errors: 1σ uncertainties for the fitted loss parameters ``{name: value}``.
+        background: Fixed background ``P0`` (concentration).
+        peak_concentration: Modelled peak concentration (``background`` + excess).
+        peak_excess: Peak excess over background (``Xmax``).
+        emission_rate: Volumetric emission rate ``E`` (concentration/s).
+        decay_rate / decay_rate_per_hour: First-order-equivalent loss rate.
+        emission_start_s / emission_duration_s / peak_time_s: Timing in seconds
+            from the window start.
+        peak_time / window_start: Absolute timestamps.
+        model_popt: Raw optimised parameters for :func:`decay_curve`.
+        source_strength / total_emitted: Present when a chamber ``volume`` was
+            given; ``wall_loss_rate_per_hour`` present when an air-exchange rate
+            was given.
+    """
+
+    model: str
+    unit: str
+    metric: str
+    r_squared: float
+    decay_r_squared: float
+    n_points: int
+    params: dict
+    errors: dict
+    background: float
+    peak_concentration: float
+    peak_excess: float
+    emission_rate: float
+    emission_rate_unit: str
+    decay_rate: float
+    decay_rate_per_hour: float
+    emission_start_s: float
+    emission_duration_s: float
+    peak_time_s: float
+    peak_time: pd.Timestamp
+    window_start: pd.Timestamp
+    model_popt: list
+    # Optional (model-order / volume / air-exchange dependent).
+    zeroth_order_rate: Optional[float] = None
+    zeroth_order_rate_unit: Optional[str] = None
+    loss_rate_per_hour: Optional[float] = None
+    half_life_hours: Optional[float] = None
+    wall_loss_rate_per_hour: Optional[float] = None
+    second_order_rate: Optional[float] = None
+    source_strength: Optional[float] = None
+    source_strength_unit: Optional[str] = None
+    total_emitted: Optional[float] = None
+    total_emitted_unit: Optional[str] = None
+
+    def _present(self) -> dict:
+        """The fields that are set — optionals appear only when not ``None``."""
+        out: dict = {}
+        for f in fields(self):
+            value = getattr(self, f.name)
+            if f.name in _DECAY_OPTIONAL and value is None:
+                continue
+            out[f.name] = value
+        return out
+
+    # -- read-only Mapping interface (keeps dict-style access working) --------
+    def __getitem__(self, key: str) -> Any:
+        present = self._present()
+        if key not in present:
+            raise KeyError(key)
+        return present[key]
+
+    def __iter__(self):
+        return iter(self._present())
+
+    def __len__(self) -> int:
+        return len(self._present())
+
+    def to_dict(self) -> dict:
+        """Plain dict of the set fields (the historical result shape)."""
+        return dict(self._present())
+
+    @classmethod
+    def from_dict(cls, data: Mapping) -> "DecayResult":
+        """Build a result from a mapping, ignoring unknown keys."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
 
 # Value substituted for any non-finite model output, so curve_fit never sees a
 # NaN/inf (which would abort the fit) but is still strongly steered away from
@@ -770,8 +894,10 @@ class DecayFitMixin:
             return [rate / max(xmax, 1e-9)]
         return [rate, rate / max(xmax, 1e-9)]  # combined
 
-    def _decay_result(self, model, fit, unit, metric, t_start, n, volume, ach) -> dict:
-        """Assemble the public result dict from a two-stage fit outcome."""
+    def _decay_result(
+        self, model, fit, unit, metric, t_start, n, volume, ach
+    ) -> "DecayResult":
+        """Assemble the typed :class:`DecayResult` from a two-stage fit outcome."""
         info = _MODELS[model]
         names = info["params"]
         popt = fit["popt"]
@@ -836,4 +962,4 @@ class DecayFitMixin:
             result["total_emitted"] = strength * tp
             result["total_emitted_unit"] = numerator
 
-        return result
+        return DecayResult.from_dict(result)
