@@ -23,7 +23,7 @@ import pandas as pd
 from matplotlib.widgets import SpanSelector
 
 from ..._core import decay as _decay
-from .. import helpers
+from ..logic import helpers
 from ..qt import QtCore, QtWidgets
 from ._base import _export_table, _PlotTab
 

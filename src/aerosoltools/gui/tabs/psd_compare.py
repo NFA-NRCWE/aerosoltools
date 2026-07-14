@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import traceback
 
-from .. import helpers
-from ..project import shade_of
+from ..app.sidebar import _color_icon
+from ..logic import helpers
 from ..qt import QtCore, QtGui, QtWidgets
-from ..sidebar import _color_icon
+from ..state.project import shade_of
 from . import _psddraw as draw
 from ._base import _active_color_cycle, _PlotTab
 

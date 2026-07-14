@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from .qt import QtCore, QtGui, QtWidgets
+from ..qt import QtCore, QtGui, QtWidgets
 
 _ID_ROLE = QtCore.Qt.UserRole
 

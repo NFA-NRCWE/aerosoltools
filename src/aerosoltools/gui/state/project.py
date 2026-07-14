@@ -20,7 +20,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 
-from . import helpers
+from ..logic import helpers
 from .fit_specs import PsdFitSpec
 
 # Process-wide counter giving every dataset a stable, unique id.

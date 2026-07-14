@@ -214,7 +214,7 @@ def test_ranger_multi_header_splits_by_component(tmp_path):
 
 def test_ranger_sniffer_identifies_non_chlorine_heads(tmp_path):
     """The sniffer recognizes a Ranger export even with no Cl₂ column."""
-    from aerosoltools.gui.loaders import identify_instrument, is_Ranger_file
+    from aerosoltools.gui.logic.loaders import identify_instrument, is_Ranger_file
 
     pm_header = f"UTC time,Local time,LocationID,PM10 (ug/m3),{_RANGER_STATUS}"
     path = tmp_path / "Ranger_pm.csv"
@@ -435,11 +435,11 @@ def test_summary_cache_entry_typed_and_serializable():
     """The Summary-tab cache is a typed SummaryCacheEntry that round-trips JSON."""
     import json
 
-    from aerosoltools.gui.projectio import (
+    from aerosoltools.gui.state.projectio import (
         _restore_summary_state,
         _summary_state_payload,
     )
-    from aerosoltools.gui.summary_cache import SummaryCacheEntry
+    from aerosoltools.gui.state.summary_cache import SummaryCacheEntry
 
     e = SummaryCacheEntry(
         signature={"k": 1},
@@ -473,8 +473,8 @@ def test_psd_fit_spec_typed_and_serializable():
     """Stored PSD fits are typed PsdFitSpec objects that round-trip JSON."""
     import json
 
-    from aerosoltools.gui.fit_specs import PsdFitSpec
-    from aerosoltools.gui.projectio import _dump_psd_fits, _load_psd_fits
+    from aerosoltools.gui.state.fit_specs import PsdFitSpec
+    from aerosoltools.gui.state.projectio import _dump_psd_fits, _load_psd_fits
 
     spec = PsdFitSpec(
         modes=[{"mu": 80.0, "sigma": 1.6, "peak": 1.2e4, "bound": True}],
@@ -503,8 +503,8 @@ def test_decay_fit_spec_typed_and_serializable():
 
     import pandas as pd
 
-    from aerosoltools.gui.fit_specs import DecayFitSpec
-    from aerosoltools.gui.projectio import _dump_decay_fits, _load_decay_fits
+    from aerosoltools.gui.state.fit_specs import DecayFitSpec
+    from aerosoltools.gui.state.projectio import _dump_decay_fits, _load_decay_fits
 
     t0 = pd.Timestamp("2024-01-01 10:00:00")
     live = {
@@ -545,8 +545,8 @@ def test_project_manifest_migration():
     """The manifest carries a schema version; load migrates old and rejects newer."""
     import pytest
 
-    from aerosoltools.gui import projectio
-    from aerosoltools.gui.projectio import VERSION, _migrate_manifest
+    from aerosoltools.gui.state import projectio
+    from aerosoltools.gui.state.projectio import VERSION, _migrate_manifest
 
     # A pre-versioning manifest (no 'version') is treated as v1 and upgraded.
     upgraded = _migrate_manifest({"format": "aerosoltools-project"})
@@ -902,7 +902,7 @@ def test_discmini_ldsa_correction_scales_with_size():
 
 def test_discmini_processed_has_no_phantom_column_and_only_numeric_series():
     """The trailing-tab 'Unnamed' column is dropped and never offered as a series."""
-    from aerosoltools.gui.helpers import plottable_columns
+    from aerosoltools.gui.logic.helpers import plottable_columns
 
     dm = load_discmini_file(_data_path("Sample_Discmini.txt"), extra_data=True)
     # No phantom/empty column survives the loader.
@@ -946,7 +946,7 @@ def test_discmini_raw_matches_processed_ldsa():
 
 def test_discmini_sniffer_distinguishes_raw_and_processed():
     """The content sniffer routes raw vs processed DiSCmini to the right loader."""
-    from aerosoltools.gui.loaders import (
+    from aerosoltools.gui.logic.loaders import (
         identify_instrument,
         is_DiSCmini_file,
         is_DiSCmini_raw_file,

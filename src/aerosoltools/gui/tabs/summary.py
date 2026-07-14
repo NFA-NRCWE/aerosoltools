@@ -18,10 +18,10 @@ import pandas as pd
 
 from ..._core import _stats
 from ..._core.metrics import canonical_unit, convert_value, unit_key
-from ..metric_picker import MetricPickerDialog, default_keys, metric_catalog
-from ..models import PandasTableModel
 from ..qt import QtCore, QtWidgets
-from ..summary_cache import SummaryCacheEntry
+from ..state.summary_cache import SummaryCacheEntry
+from ..view.metric_picker import MetricPickerDialog, default_keys, metric_catalog
+from ..view.models import PandasTableModel
 from ._base import _export_table, _tune_table
 
 

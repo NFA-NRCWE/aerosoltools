@@ -12,11 +12,11 @@ from typing import List, Tuple
 
 import pandas as pd
 
-from .._core import _shading
-from .._core._labels import base_dtype  # re-exported for GUI use
-from .._core.nonparticle import _NonParticleMixin
-from ..aerosol1d import Aerosol1D
-from ..aerosol2d import Aerosol2D
+from ..._core import _shading
+from ..._core._labels import base_dtype  # re-exported for GUI use
+from ..._core.nonparticle import _NonParticleMixin
+from ...aerosol1d import Aerosol1D
+from ...aerosol2d import Aerosol2D
 
 __all__ = [
     "TOTAL",

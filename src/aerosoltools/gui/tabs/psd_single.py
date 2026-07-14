@@ -17,9 +17,9 @@ import traceback
 import numpy as np
 
 from ...aerosol3d import Aerosol3d
-from .. import helpers
-from ..fit_specs import PsdFitSpec
+from ..logic import helpers
 from ..qt import QtCore, QtWidgets
+from ..state.fit_specs import PsdFitSpec
 from . import _psddraw as draw
 from . import _psdfit as fit
 from ._base import _active_color_cycle, _PlotTab

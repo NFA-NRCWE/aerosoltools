@@ -13,7 +13,7 @@ from typing import Iterable, Optional, Tuple
 
 import numpy as np
 
-from .qt import Figure, FigureCanvas, QtCore, QtWidgets
+from ..qt import Figure, FigureCanvas, QtCore, QtWidgets
 
 
 class ThresholdControls(QtWidgets.QWidget):

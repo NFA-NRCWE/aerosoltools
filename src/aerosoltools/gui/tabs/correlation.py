@@ -8,8 +8,8 @@ import io
 import matplotlib.colors as mcolors
 
 from ...intercomparison import bland_altman_analysis, plot_correlation
-from .. import theme
 from ..qt import QtWidgets
+from ..view import theme
 from ._base import _PlotTab
 
 

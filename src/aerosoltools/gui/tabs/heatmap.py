@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import traceback
 
-from .. import helpers
+from ..logic import helpers
 from ..qt import QtCore, QtWidgets
-from ..widgets import ThresholdControls
+from ..view.widgets import ThresholdControls
 from ._base import _PlotTab
 
 #: Lower color-scale limit forced when a log scale is requested but the data

@@ -7,7 +7,7 @@ import traceback
 import matplotlib.dates as mdates
 import numpy as np
 
-from .. import helpers
+from ..logic import helpers
 from ..qt import QtWidgets
 from ._base import _PlotTab
 

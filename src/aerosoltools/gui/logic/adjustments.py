@@ -16,8 +16,8 @@ import traceback
 import matplotlib.dates as mdates
 import pandas as pd
 
-from .qt import QtCore, QtWidgets
-from .tabs import TimeSeriesTab
+from ..qt import QtCore, QtWidgets
+from ..tabs import TimeSeriesTab
 
 
 class AdjustmentsBox(QtWidgets.QGroupBox):

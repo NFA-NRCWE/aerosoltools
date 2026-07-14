@@ -19,8 +19,8 @@ import matplotlib.colors as mcolors
 import numpy as np
 import pandas as pd
 
-from .. import theme
 from ..qt import Figure, FigureCanvas, NavigationToolbar, QtCore, QtWidgets
+from ..view import theme
 
 
 def _export_table(

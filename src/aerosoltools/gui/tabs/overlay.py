@@ -17,9 +17,9 @@ import pandas as pd
 from matplotlib.lines import Line2D
 
 from ..._core import _shading
-from .. import helpers
+from ..logic import helpers
 from ..qt import QtCore, QtWidgets
-from ..widgets import ThresholdControls, WheelLineEdit
+from ..view.widgets import ThresholdControls, WheelLineEdit
 from . import _autoscale
 from ._base import _active_color_cycle, _PlotTab
 

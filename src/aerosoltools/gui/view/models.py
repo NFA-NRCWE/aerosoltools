@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .qt import QtCore
+from ..qt import QtCore
 
 
 class PandasTableModel(QtCore.QAbstractTableModel):

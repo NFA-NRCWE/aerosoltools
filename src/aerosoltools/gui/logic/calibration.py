@@ -30,16 +30,16 @@ from typing import Optional
 
 import numpy as np
 
-from ..intercomparison.calibration import (
+from ...intercomparison.calibration import (
     BASIS_PER_BIN,
     BASIS_TOTAL,
     DEFAULT_MIN_R2,
     CalibrationModel,
     fit_calibration,
 )
-from ..intercomparison.calibration import apply_calibration as _apply_model
+from ...intercomparison.calibration import apply_calibration as _apply_model
+from ..qt import QtCore, QtWidgets
 from . import helpers
-from .qt import QtCore, QtWidgets
 
 # Display labels for the two bases (the API uses the machine strings).
 _BASIS_LABELS = {BASIS_TOTAL: "Total concentration", BASIS_PER_BIN: "Per size bin"}

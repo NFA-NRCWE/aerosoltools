@@ -10,7 +10,7 @@ instrument?"
 
 from __future__ import annotations
 
-from .qt import QtCore, QtWidgets
+from ..qt import QtCore, QtWidgets
 
 
 def metric_catalog(datasets) -> list[tuple[str, list]]:

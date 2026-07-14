@@ -6,9 +6,9 @@ import matplotlib.dates as mdates
 import pandas as pd
 from matplotlib.widgets import SpanSelector
 
-from .. import helpers
+from ..logic import helpers
 from ..qt import QtCore, QtWidgets
-from ..widgets import ThresholdControls
+from ..view.widgets import ThresholdControls
 from ._base import _PlotTab
 
 

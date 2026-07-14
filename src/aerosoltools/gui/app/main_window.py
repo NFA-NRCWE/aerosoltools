@@ -9,17 +9,19 @@ from typing import List, Optional
 
 import pandas as pd
 
-from ..aerosol3d import Aerosol3d
-from ..intercomparison import combine_measurements, combine_size_ranges
-from . import helpers, theme
-from .adjustments import AdjustmentsBox
-from .assets import icon_path
-from .loaders import LOADERS, UnrecognizedInstrumentError, require_identified_instrument
-from .project import Dataset, Project
-from .projectio import load_project, save_project
-from .qt import QtCore, QtGui, QtWidgets
-from .sidebar import DatasetSidebar
-from .tabs import (
+from ...aerosol3d import Aerosol3d
+from ...intercomparison import combine_measurements, combine_size_ranges
+from ..logic import helpers
+from ..logic.adjustments import AdjustmentsBox
+from ..logic.loaders import (
+    LOADERS,
+    UnrecognizedInstrumentError,
+    require_identified_instrument,
+)
+from ..qt import QtCore, QtGui, QtWidgets
+from ..state.project import Dataset, Project
+from ..state.projectio import load_project, save_project
+from ..tabs import (
     AeroOpticalTab,
     ComparisonPSDTab,
     CorrelationTab,
@@ -33,12 +35,15 @@ from .tabs import (
     SummaryTab,
     TimeSeriesTab,
 )
-from .widgets import (
+from ..view import theme
+from ..view.assets import icon_path
+from ..view.widgets import (
     CombineInstrumentsDialog,
     JoinDatasetsDialog,
     KeyboardShortcutsDialog,
     TwoRowTabs,
 )
+from .sidebar import DatasetSidebar
 
 
 class MainWindow(QtWidgets.QMainWindow):

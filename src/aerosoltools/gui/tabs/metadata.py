@@ -12,8 +12,8 @@ import traceback
 
 import numpy as np
 
-from .. import calibration as calib
-from .. import helpers
+from ..logic import calibration as calib
+from ..logic import helpers
 from ..qt import QtWidgets
 
 #: Metadata keys shown via the dedicated size-bin table instead of a raw dump.

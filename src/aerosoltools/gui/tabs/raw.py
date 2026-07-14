@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import os
 
-from .. import helpers
-from ..models import PandasTableModel
+from ..logic import helpers
 from ..qt import QtWidgets
+from ..view.models import PandasTableModel
 from ._base import _export_table, _tune_table
 
 
