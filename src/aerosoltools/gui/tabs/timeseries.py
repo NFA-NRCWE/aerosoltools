@@ -632,11 +632,9 @@ class TimeSeriesTab(_PlotTab):
         if kind == "dtype":
             # Total concentration on a converted basis (dM/dS/dV): convert a copy
             # so the loaded object stays dN, then use its recomputed total.
-            conv = self.obj.copy_self()
-            conv.dtype_converter(name)
+            conv, unit = helpers.converted_copy(self.obj, name)
             series = conv.total_concentration
-            dtype, unit = helpers.describe(conv)
-            ylabel = f"{helpers.base_dtype(dtype)}, {unit}".strip(", ")
+            ylabel = f"{helpers.base_dtype(conv.dtype)}, {unit}".strip(", ")
         elif kind == "total":
             # Name the primary series by its measured quantity (e.g. "Cl₂") so a
             # gas/BC dataset is not mislabelled as a generic "Total concentration".

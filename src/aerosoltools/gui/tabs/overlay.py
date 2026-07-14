@@ -157,6 +157,8 @@ class OverlayTab(_PlotTab):
         """Build the overlay controls and the per-dataset include/shift table."""
         super().__init__(main, nrows=1)
 
+        self._conv_cache: dict = {}  # per-draw basis-conversion memo (see _converted)
+
         # -- metric row (row 1): up to three narrow metric pickers, each with a
         #    small target-axis selector, plus the concentration-basis selector.
         self.metric_combos: list = []
@@ -366,6 +368,22 @@ class OverlayTab(_PlotTab):
         ]
         return standard, groups
 
+    def _converted(self, obj, basis: str):
+        """``(converted_copy, unit)`` for ``obj`` on ``basis``, memoised per draw.
+
+        Several metric slots can request the same dataset on the same basis in
+        one redraw; caching the converted copy for the duration of a single
+        :meth:`_gather_entries` pass avoids re-copying and re-converting the same
+        object N times. The cache is reset each pass, so it never outlives the
+        data it was built from.
+        """
+        key = (id(obj), basis)
+        cached = self._conv_cache.get(key)
+        if cached is None:
+            cached = helpers.converted_copy(obj, basis)
+            self._conv_cache[key] = cached
+        return cached
+
     def _series_for(self, ds, metric: str):
         """Return ``(series, name, unit)`` for a dataset's metric, or None.
 
@@ -388,9 +406,7 @@ class OverlayTab(_PlotTab):
             if basis != "dN":
                 if not helpers.is_2d(obj):
                     return None
-                conv = obj.copy_self()
-                conv.dtype_converter(basis)
-                _dtype, unit = helpers.describe(conv)
+                conv, unit = self._converted(obj, basis)
                 s = pd.to_numeric(conv.total_concentration, errors="coerce")
                 return s, f"Total concentration ({basis})", unit
             _dtype, unit = helpers.describe(obj)
@@ -596,6 +612,7 @@ class OverlayTab(_PlotTab):
 
     def _gather_entries(self, normalize: bool) -> list:
         """Collect one entry dict per (dataset × active metric slot) series."""
+        self._conv_cache: dict = {}  # per-pass basis-conversion memo (see _converted)
         entries = []
         for slot, metric, uaxis in self._active_metrics():
             for ds in self._datasets:

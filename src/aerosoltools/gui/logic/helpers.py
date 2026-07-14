@@ -110,6 +110,27 @@ def describe(obj: Aerosol1D, column: str | None = None) -> Tuple[str, str]:
     return obj.dtype_of(column), obj.unit_of(column)
 
 
+def converted_copy(obj, basis: str):
+    """Deep-copy ``obj``, convert it to ``basis``, and return ``(view, unit)``.
+
+    Centralises the ``copy_self`` + :meth:`dtype_converter` + :func:`describe`
+    the display tabs repeat when showing a dataset on a non-native basis
+    (``dM``/``dS``/``dV``). A fresh copy is always returned, so the caller may
+    mutate it (e.g. add Pₓ columns) without touching the loaded object.
+
+    Args:
+        obj: A size-resolved (:class:`Aerosol2D`) object.
+        basis: Target distribution basis (``"dN"``/``"dS"``/``"dV"``/``"dM"``).
+
+    Returns:
+        A ``(converted_copy, unit)`` tuple.
+    """
+    view = obj.copy_self()
+    view.dtype_converter(basis)
+    _dtype, unit = describe(view)
+    return view, unit
+
+
 def measurement_label(obj: Aerosol1D, column: str | None = None) -> Tuple[str, str]:
     """Resolve a ``(name, unit)`` display pair for a dataset's primary series.
 

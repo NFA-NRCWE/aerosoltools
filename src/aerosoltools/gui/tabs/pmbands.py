@@ -102,14 +102,12 @@ class PMBandsTab(_PlotTab):
 
         dtype = self.dtype.currentText()
         dchar = dtype[-1]
-        work = self.obj.copy_self()
-        work.dtype_converter(dtype=dtype)
+        work, unit = helpers.converted_copy(self.obj, dtype)
         for pm in values:
             work.pm_calc(dtype=dtype, PM=pm)
         activity = self.activity.currentText()
         mask = work.data[activity].astype(bool)
         pm_data = work.extra_data.loc[mask]
-        _, unit = helpers.describe(work)
 
         ax.clear()
         x = pm_data.index
