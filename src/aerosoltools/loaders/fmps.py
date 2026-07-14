@@ -190,9 +190,13 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
         )[0]
     )
     try:
-        datetime_df = _parse_danish_datetime(file, delimiter, encoding, time_format)
+        datetime_df = _parse_danish_datetime(
+            file, delimiter, encoding, time_format, data_array
+        )
     except (IndexError, ValueError, KeyError):
-        datetime_df = _parse_standard_datetime(file, delimiter, encoding, time_format)
+        datetime_df = _parse_standard_datetime(
+            file, delimiter, encoding, time_format, data_array
+        )
 
     # Extract metadata from header (data type string and serial number)
     with open(file, "r", encoding=encoding, newline="") as fh:
@@ -268,7 +272,7 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
 
 
 def _parse_danish_datetime(
-    file: str, delimiter: str, encoding: str, time_format: str
+    file: str, delimiter: str, encoding: str, time_format: str, data_array=None
 ) -> pd.DataFrame:
     """Parse FMPS datetimes written in Danish date format.
 
@@ -324,16 +328,18 @@ def _parse_danish_datetime(
         int(year), months[month_name], int(day.replace(".", "")), hour, minute, second
     )
 
-    # Convert either elapsed seconds or clock times into absolute datetimes
+    # Convert either elapsed seconds or clock times into absolute datetimes.
+    # The elapsed seconds are the first column of the already-read data matrix,
+    # so reuse it instead of parsing the whole data block again.
     if "Elapsed" in time_format:
-        times = np.genfromtxt(
-            file, delimiter=delimiter, encoding=encoding, skip_header=15, dtype=float
-        )[:, 0]
+        times = (
+            data_array[:, 0]
+            if data_array is not None
+            else _time_col_float(file, delimiter, encoding)
+        )
         dt_index = [start_dt + datetime.timedelta(seconds=int(t)) for t in times]
     else:
-        time_list = np.genfromtxt(
-            file, delimiter=delimiter, encoding=encoding, skip_header=15, dtype=str
-        )[:, 0]
+        time_list = _time_col_str(file, delimiter, encoding)
         step = datetime.datetime.strptime(
             time_list[1], "%H:%M:%S"
         ) - datetime.datetime.strptime(time_list[0], "%H:%M:%S")
@@ -345,8 +351,27 @@ def _parse_danish_datetime(
 ###############################################################################
 
 
+def _time_col_float(file: str, delimiter: str, encoding: str) -> np.ndarray:
+    """Read only the first (time) data column as floats."""
+    return np.genfromtxt(
+        file, delimiter=delimiter, encoding=encoding, skip_header=15, usecols=0
+    )
+
+
+def _time_col_str(file: str, delimiter: str, encoding: str) -> np.ndarray:
+    """Read only the first (time) data column as strings."""
+    return np.genfromtxt(
+        file,
+        delimiter=delimiter,
+        encoding=encoding,
+        skip_header=15,
+        usecols=0,
+        dtype=str,
+    )
+
+
 def _parse_standard_datetime(
-    file: str, delimiter: str, encoding: str, time_format: str
+    file: str, delimiter: str, encoding: str, time_format: str, data_array=None
 ) -> pd.DataFrame:
     """Parse FMPS datetimes written in standard English format.
 
@@ -416,19 +441,21 @@ def _parse_standard_datetime(
         base_time.second,
     )
 
-    # Load the time strings for each row and build a regular time grid
+    # Load the time strings for each row and build a regular time grid. Elapsed
+    # seconds are the first column of the already-read data matrix, so reuse it
+    # rather than parsing the whole data block again.
     if "Elapsed" in time_format:
-        times = np.genfromtxt(
-            file, delimiter=delimiter, encoding=encoding, skip_header=15, dtype=float
-        )[:, 0]
+        times = (
+            data_array[:, 0]
+            if data_array is not None
+            else _time_col_float(file, delimiter, encoding)
+        )
         return pd.DataFrame(
             [start_dt + datetime.timedelta(seconds=int(t)) for t in times],
             columns=["Datetime"],
         )
     else:
-        time_strs = np.genfromtxt(
-            file, delimiter=delimiter, encoding=encoding, skip_header=15, dtype=str
-        )[:, 0]
+        time_strs = _time_col_str(file, delimiter, encoding)
         times = [datetime.datetime.strptime(t, "%I:%M:%S %p") for t in time_strs]
         step = times[1] - times[0]
 
