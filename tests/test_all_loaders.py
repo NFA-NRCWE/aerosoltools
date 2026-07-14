@@ -658,6 +658,34 @@ def test_detect_delimiter_encoding_detection(tmp_path):
         assert "\xb5m" in fh.read()
 
 
+def test_detect_delimiter_bounded_tail_read(tmp_path):
+    """A large file is sniffed from a bounded slice, not read whole."""
+    from aerosoltools.loaders.support import parsing
+    from aerosoltools.loaders.support.parsing import _detect_delimiter
+
+    # Build a file well over the 2x sniff-bytes threshold, tab-delimited data
+    # rows with a differently-delimited header block up top.
+    big = tmp_path / "big.tsv"
+    rows = "\n".join(f"{i}\t{i * 2}\t{i * 3}\tµ" for i in range(200_000))
+    big.write_text(
+        "# header,with,commas\nName\tA\tB\tC\n" + rows + "\n", encoding="utf-8"
+    )
+    assert big.stat().st_size > 2 * parsing._SNIFF_BYTES
+
+    enc, delim = _detect_delimiter(str(big))
+    assert delim == "\t"  # sampled from the tab-delimited data tail
+    assert enc.lower() in parsing._TAIL_SAFE
+
+    # The bounded path must agree with a full read (force it via a huge budget).
+    orig = parsing._SNIFF_BYTES
+    try:
+        parsing._SNIFF_BYTES = 10**9  # forces the whole-file branch
+        enc_full, delim_full = _detect_delimiter(str(big))
+    finally:
+        parsing._SNIFF_BYTES = orig
+    assert (enc_full, delim_full) == (enc, delim)
+
+
 def test_discmini_serial_normalization():
     """The serial normalizer strips the inconsistent 'SN' prefix."""
     assert _normalize_serial("SN101923") == "101923"
