@@ -6,8 +6,9 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from ..aerosol2d import Aerosol2D
+from .support.construct import build_2d
 from .support.exceptions import FileFormatError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_cells, read_table, sniff
 
 ###############################################################################
 
@@ -155,16 +156,11 @@ def load_ops_file(file: str, extra_data: bool = False):
             # Plot a time-integrated or mean size distribution
             fig, ax = ops.plot_psd()
     """
-    encoding, delimiter = _detect_delimiter(file)
+    encoding, delimiter = sniff(file)
 
     # Peek at the first line to determine file type
-    first_line = np.genfromtxt(
-        file,
-        delimiter=delimiter,
-        encoding=encoding,
-        skip_header=0,
-        max_rows=1,
-        dtype=str,
+    first_line = read_cells(
+        file, skip_header=0, encoding=encoding, delimiter=delimiter
     )[0]
 
     if first_line == "Sample File":
@@ -226,20 +222,10 @@ def _load_ops_aim(
             cannot be mapped to an expected format.
     """
 
-    # Detect when both are omitted
-    if encoding is None and delimiter is None:
-        encoding, delimiter = _detect_delimiter(file)  # -> Tuple[str, str]
-
-    # If only one was provided, that’s ambiguous
-    if (encoding is None) != (delimiter is None):
-        raise ValueError("Either provide both encoding and delimiter, or neither.")
-
-    # Normalize to concrete strings for type checker
-    enc: str = encoding  # type: ignore[assignment]
-    delim: str = delimiter  # type: ignore[assignment]
+    enc, delim = sniff(file, encoding, delimiter)
 
     # --- main table via pandas ------------------------------------------------
-    df = pd.read_csv(file, header=13, encoding=enc, delimiter=delim)
+    df = read_table(file, header=13, encoding=enc, delimiter=delim)
 
     # OPS: mid diameters are in columns 17..32 (inclusive) in µm -> convert to nm
     bin_mids: NDArray[np.float64] = np.round(
@@ -329,17 +315,16 @@ def _load_ops_aim(
         ) from e
 
     # --- assemble object -----------------------------------------------------
-    OPS = Aerosol2D(final_df)
-    OPS._meta["bin_edges"] = bin_edges
-    OPS._meta["bin_mids"] = bin_mids
-    OPS._meta["density"] = density
-    OPS._meta["instrument"] = "OPS"
-    OPS._meta["serial_number"] = str(meta[1, 1])
-    OPS._meta["unit"] = unit
-    OPS._meta["dtype"] = dtype
-
-    OPS._convert_to_number_concentration()
-    OPS.unnormalize_logdp()
+    OPS = build_2d(
+        final_df,
+        bin_edges=bin_edges,
+        bin_mids=bin_mids,
+        instrument="OPS",
+        serial_number=str(meta[1, 1]),
+        unit=unit,
+        dtype=dtype,
+        density=density,
+    )
 
     if extra_data:
         OPS._extra_data = ops_extra  # type: ignore[assignment]
@@ -397,24 +382,14 @@ def _load_ops_direct(
             provided (both must be given or neither).
         Exception: If the header metadata is malformed or cannot be parsed.
     """
-    # Detect when both are omitted
-    both_missing = encoding is None and delimiter is None
-    if both_missing:
-        encoding, delimiter = _detect_delimiter(file)  # -> Tuple[str, str]
-
-    # If only one was provided, that’s ambiguous
-    if (encoding is None) != (delimiter is None):
-        raise ValueError("Either provide both encoding and delimiter, or neither.")
-
-    enc: str = encoding  # type: ignore[assignment]
-    delim: str = delimiter  # type: ignore[assignment]
+    enc, delim = sniff(file, encoding, delimiter)
 
     # Load measurement data, excluding last header-only bin
-    df = pd.read_csv(file, header=37, encoding=enc, delimiter=delim)
+    df = read_table(file, header=37, encoding=enc, delimiter=delim)
 
     # Extract metadata as key-value dict
     meta = (
-        pd.read_csv(
+        read_table(
             file,
             header=None,
             nrows=35,
@@ -475,15 +450,20 @@ def _load_ops_direct(
     conc_df = pd.DataFrame(conc, columns=bin_mids.astype(str))
     df_final = pd.concat([df["Datetime"], total_conc, conc_df], axis=1)
 
-    # Package into class
-    OPS = Aerosol2D(df_final)
-    OPS._meta["bin_edges"] = bin_edges
-    OPS._meta["bin_mids"] = bin_mids
-    OPS._meta["density"] = float(meta["Density"])
-    OPS._meta["instrument"] = "OPS"
-    OPS._meta["serial_number"] = meta["Serial Number"]
-    OPS._meta["unit"] = "cm⁻³"
-    OPS._meta["dtype"] = "dN"
+    # Package into class. The counts→concentration step above already produced
+    # plain number (dN, cm⁻³), so no post-construction conversion is applied.
+    OPS = build_2d(
+        df_final,
+        bin_edges=bin_edges,
+        bin_mids=bin_mids,
+        instrument="OPS",
+        serial_number=meta["Serial Number"],
+        unit="cm⁻³",
+        dtype="dN",
+        density=float(meta["Density"]),
+        to_number=False,
+        unnormalize=False,
+    )
     if extra_data:
         OPS._extra_data = extra
 
