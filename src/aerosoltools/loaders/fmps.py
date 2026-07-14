@@ -4,8 +4,9 @@ import numpy as np
 import pandas as pd
 
 from ..aerosol2d import Aerosol2D
+from .support.construct import build_2d
 from .support.exceptions import FileFormatError
-from .support.parsing import _detect_delimiter
+from .support.reading import sniff
 
 ###############################################################################
 
@@ -109,7 +110,7 @@ def load_fmps_file(file: str) -> Aerosol2D:
             fig, ax = fmps.plot_psd()
     """
     # Detect encoding and delimiter once for the file
-    encoding, delimiter = _detect_delimiter(file)
+    encoding, delimiter = sniff(file)
 
     # Peek at a header line to decide whether this is a raw or processed export
     header_check = str(
@@ -250,20 +251,17 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
     output_df = pd.concat([datetime_df, total_conc, dist_df], axis=1)
 
     # Create Aerosol2D object and populate metadata
-    FMPS = Aerosol2D(output_df)
-    FMPS._meta = {
-        "instrument": "FMPS",
-        "bin_edges": bin_edges,
-        "bin_mids": bin_mids,
-        "density": 1.0,
-        "serial_number": serial_number,
-        "unit": unit,
-        "dtype": dtype,
-    }
-
-    # Convert to number concentration and undo any dlogDp normalization
-    FMPS._convert_to_number_concentration()
-    FMPS.unnormalize_logdp()
+    # Construct, attach metadata, convert to number and undo /dlogDp.
+    FMPS = build_2d(
+        output_df,
+        bin_edges=bin_edges,
+        bin_mids=bin_mids,
+        instrument="FMPS",
+        serial_number=serial_number,
+        unit=unit,
+        dtype=dtype,
+        density=1.0,
+    )
 
     return FMPS
 
