@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, Optional, Sequence, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -13,8 +13,15 @@ from . import _stats
 from ._labels import base_dtype
 from .metrics import MetricSpec, classify_unit, unit_key
 
+if TYPE_CHECKING:
+    # Typing-only host contract; the runtime base stays ``object`` (see
+    # _core/_protocols.py) so facade composition/MRO is unchanged.
+    from ._protocols import AerosolData as _Host
+else:
+    _Host = object
 
-class SummaryMixin:
+
+class SummaryMixin(_Host):
     """Per-activity and exposure (STEL/TWA) summaries."""
 
     #: Class hint: metric keys that form the instrument's *primary* (default)

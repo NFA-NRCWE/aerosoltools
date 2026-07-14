@@ -429,6 +429,22 @@ def test_summary_cache_entry_typed_and_serializable():
     assert got.dataframe().shape == (2, 2)
 
 
+def test_core_mixin_protocols_are_typing_only():
+    """The _core host Protocols document the contract but never change runtime MRO."""
+    from aerosoltools._core import _protocols
+    from aerosoltools._core.corrections import CorrectionMixin
+    from aerosoltools._core.statistics import SummaryMixin
+
+    assert hasattr(_protocols, "AerosolData")
+    assert hasattr(_protocols, "SizeResolvedData")
+    # TYPE_CHECKING-guarded: at runtime the mixins still subclass only ``object``,
+    # so composing them onto the facades is unaffected.
+    assert SummaryMixin.__bases__ == (object,)
+    assert CorrectionMixin.__bases__ == (object,)
+    assert _protocols.AerosolData not in SummaryMixin.__mro__
+    assert _protocols.SizeResolvedData not in CorrectionMixin.__mro__
+
+
 def test_loader_exception_hierarchy():
     """Specific loader errors are LoaderError and stay ValueError-compatible."""
     from aerosoltools.loaders import (

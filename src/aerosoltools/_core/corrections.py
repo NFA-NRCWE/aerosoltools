@@ -6,10 +6,19 @@ and the cross-dataset fitting in
 :mod:`aerosoltools.intercomparison.calibration`.
 """
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 
+if TYPE_CHECKING:
+    # Typing-only host contract (the size-resolved facade this mixin runs on);
+    # at runtime the base is ``object`` so composition/MRO is unchanged.
+    from ._protocols import SizeResolvedData as _Host
+else:
+    _Host = object
 
-class CorrectionMixin:
+
+class CorrectionMixin(_Host):
     """Apply diffusion-loss transmission corrections to size-resolved data."""
 
     def correct_diffusion_losses(
