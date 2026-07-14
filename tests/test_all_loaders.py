@@ -1064,17 +1064,49 @@ def test_dusttrak_class_accessors_and_primary():
 
 
 def test_elpi_is_own_class_and_density_hook_recomputes_diameters():
-    """ELPI loads as its own 2D subclass; set_density recomputes the size axis."""
+    """ELPI set_density recomputes BOTH the size axis and the concentrations.
+
+    set_density is the single public API hook: the ELPI subclass overrides
+    _recompute_diameters_for_density so a density change moves the (density-
+    dependent) diameters and re-attributes the per-bin number via the charger
+    efficiency. The API and the GUI both go through this one method.
+    """
+    import numpy as np
+
     from aerosoltools import ELPI, Aerosol2D
 
     elpi = load_elpi_file(_data_path("Sample_ELPI.txt"))
     assert isinstance(elpi, ELPI) and isinstance(elpi, Aerosol2D)
+
     mids_before = [float(x) for x in elpi.bin_mids]
+    bins_before = elpi.size_data.to_numpy(dtype=float)
+    total_before = float(np.nansum(bins_before))
+
     elpi.set_density(2.0)
+
     mids_after = [float(x) for x in elpi.bin_mids]
-    # The density-dependent diameters must move (the ELPI hook fired).
+    bins_after = elpi.size_data.to_numpy(dtype=float)
+
+    # (1) The density-dependent diameters must move (the ELPI hook fired).
     assert mids_before != mids_after
     assert float(elpi.density) == 2.0
+    # (2) The per-bin number must be re-attributed, not just relabelled.
+    assert not np.allclose(bins_before, bins_after, equal_nan=True)
+    # (3) Total_conc stays consistent with the (recomputed) size bins.
+    assert float(np.nansum(bins_after)) != total_before
+    np.testing.assert_allclose(
+        elpi.total_concentration.to_numpy(dtype=float),
+        np.nansum(bins_after, axis=1),
+        equal_nan=True,
+    )
+
+    # The hook is a no-op for a non-ELPI 2D object: only the stored density
+    # changes, the size axis does not.
+    ops = load_ops_file(_data_path("Sample_OPS2.txt"))
+    ops_mids = [float(x) for x in ops.bin_mids]
+    ops.set_density(2.0)
+    assert [float(x) for x in ops.bin_mids] == ops_mids
+    assert float(ops.density) == 2.0
 
 
 def test_metric_unit_registry_converts_within_dimension():
