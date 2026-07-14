@@ -381,6 +381,44 @@ def test_calibration_gui_and_script_agree():
     assert a.sub(b).abs().max() < 1e-9
 
 
+def test_summary_cache_entry_typed_and_serializable():
+    """The Summary-tab cache is a typed SummaryCacheEntry that round-trips JSON."""
+    import json
+
+    from aerosoltools.gui.projectio import (
+        _restore_summary_state,
+        _summary_state_payload,
+    )
+    from aerosoltools.gui.summary_cache import SummaryCacheEntry
+
+    e = SummaryCacheEntry(
+        signature={"k": 1},
+        params={"p": "v"},
+        columns=["A", "B"],
+        records=[[1, 2], [3, 4]],
+    )
+    # to_dict/from_dict round-trip and table rebuild.
+    assert SummaryCacheEntry.from_dict(e.to_dict()).to_dict() == e.to_dict()
+    df = e.dataframe()
+    assert list(df.columns) == ["A", "B"] and df.shape == (2, 2)
+    # Staleness compares the stored signature to the current inputs.
+    assert e.is_stale({"k": 2}) and not e.is_stale({"k": 1})
+
+    # projectio serializes to JSON-safe primitives and restores typed entries.
+    class _Proj:
+        summary_state = {
+            "active_kind": "Exposure summary",
+            "cache": {"Exposure summary": e},
+        }
+
+    payload = _summary_state_payload(_Proj())
+    json.dumps(payload)  # must not raise
+    restored = _restore_summary_state(payload)
+    got = restored["cache"]["Exposure summary"]
+    assert isinstance(got, SummaryCacheEntry)
+    assert got.dataframe().shape == (2, 2)
+
+
 def test_loader_exception_hierarchy():
     """Specific loader errors are LoaderError and stay ValueError-compatible."""
     from aerosoltools.loaders import (

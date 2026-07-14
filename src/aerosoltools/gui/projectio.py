@@ -25,6 +25,7 @@ from typing import Optional
 import pandas as pd
 
 from .project import Dataset, Project
+from .summary_cache import SummaryCacheEntry
 
 MANIFEST = "project.json"
 RAW_DIR = "raw_data"
@@ -87,6 +88,31 @@ def _clean_decay_fits(decay_fits: list) -> list:
             }
         )
     return out
+
+
+def _summary_state_payload(project: Project) -> dict:
+    """JSON-safe summary-tab state: active kind + typed cache entries as dicts."""
+    state = getattr(project, "summary_state", None) or {}
+    cache = state.get("cache") or {}
+    return {
+        "active_kind": state.get("active_kind"),
+        "cache": {
+            kind: (entry.to_dict() if isinstance(entry, SummaryCacheEntry) else entry)
+            for kind, entry in cache.items()
+        },
+    }
+
+
+def _restore_summary_state(state) -> dict:
+    """Rebuild the in-memory summary state (cache entries as SummaryCacheEntry)."""
+    if not isinstance(state, dict):
+        return {"active_kind": None, "cache": {}}
+    cache = state.get("cache")
+    entries = {}
+    if isinstance(cache, dict):
+        for kind, entry in cache.items():
+            entries[kind] = SummaryCacheEntry.from_dict(entry)
+    return {"active_kind": state.get("active_kind"), "cache": entries}
 
 
 def _num_or_none(value):
@@ -188,11 +214,9 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
             )
             for name in project.activities
         },
-        # Cached Summary-tab results (table + inputs + staleness signature).
-        # Already built from JSON-safe primitives by the Summary tab.
-        "summary_state": getattr(
-            project, "summary_state", {"active_kind": None, "cache": {}}
-        ),
+        # Cached Summary-tab results (table + inputs + staleness signature),
+        # serialized from the typed SummaryCacheEntry objects.
+        "summary_state": _summary_state_payload(project),
         # Per-plot concentration-threshold (OEL) overlays, keyed by tab tag.
         "plot_thresholds": getattr(project, "plot_thresholds", {}),
         "datasets": [],
@@ -266,10 +290,10 @@ def load_project(folder: str) -> tuple[Project, str]:
         name: [(pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods]
         for name, periods in manifest.get("activities", {}).items()
     }
-    # Restore cached summaries (older projects simply have none).
+    # Restore cached summaries as typed entries (older projects simply have none).
     state = manifest.get("summary_state")
     if isinstance(state, dict) and isinstance(state.get("cache"), dict):
-        project.summary_state = state
+        project.summary_state = _restore_summary_state(state)
     # Restore per-plot threshold overlays (older projects simply have none).
     thresholds = manifest.get("plot_thresholds")
     if isinstance(thresholds, dict):

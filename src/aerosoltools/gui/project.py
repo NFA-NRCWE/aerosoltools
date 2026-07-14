@@ -186,9 +186,10 @@ class Project:
         self.activity_scopes: Dict[str, Optional[Set[int]]] = {}
         # Cached Summary-tab results so reopening a project shows the computed
         # values (and the STEL/OEL/window inputs) directly, without recomputing.
-        # ``cache`` is keyed by summary kind; each entry holds the table plus an
-        # input ``signature`` used to flag the values stale when tasks/data/
-        # settings change. See gui/tabs/summary.py and projectio.py.
+        # ``cache`` is keyed by summary kind; each value is a typed
+        # ``SummaryCacheEntry`` (gui/summary_cache.py) holding the table plus an
+        # input signature used to flag the values stale when tasks/data/settings
+        # change. Serialized by projectio.py. ``active_kind`` is the shown kind.
         self.summary_state: Dict = {"active_kind": None, "cache": {}}
         # Concentration-threshold (e.g. OEL) overlays, keyed by a plot tab's
         # ``export_tag`` ("timeseries"/"overlay"/"heatmap"). Each value is a

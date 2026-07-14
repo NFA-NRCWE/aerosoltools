@@ -96,7 +96,9 @@ def modes_as_triples(modes) -> List[Tuple[float, float, float]]:
     ]
 
 
-def local_mask(x, modes, *, enabled: bool = True, local_sigmas: float = FIT_LOCAL_SIGMAS):
+def local_mask(
+    x, modes, *, enabled: bool = True, local_sigmas: float = FIT_LOCAL_SIGMAS
+):
     """Boolean mask of bins within the local fit window of any mode.
 
     Mirrors ``fit_psd``'s ``local_sigmas`` windowing so a reported R² is scored

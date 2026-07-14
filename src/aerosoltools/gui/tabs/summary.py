@@ -21,6 +21,7 @@ from ..._core.metrics import canonical_unit, convert_value, unit_key
 from ..metric_picker import MetricPickerDialog, default_keys, metric_catalog
 from ..models import PandasTableModel
 from ..qt import QtCore, QtWidgets
+from ..summary_cache import SummaryCacheEntry
 from ._base import _export_table, _tune_table
 
 
@@ -555,7 +556,7 @@ class SummaryTab(QtWidgets.QWidget):
         """Re-flag the shown table stale if the inputs no longer match it."""
         entry = self._cache().get(self.kind.currentText())
         if entry is not None:
-            self._set_stale(self._current_signature() != entry.get("signature"))
+            self._set_stale(entry.is_stale(self._current_signature()))
 
     def _fingerprint(self, ds) -> dict:
         """A cheap, stable summary of a dataset's state for staleness checks.
@@ -672,12 +673,12 @@ class SummaryTab(QtWidgets.QWidget):
         else:
             params = {}
         cols, records = self._table_payload(df)
-        self._cache()[kind] = {
-            "signature": self._current_signature(),
-            "params": params,
-            "columns": cols,
-            "records": records,
-        }
+        self._cache()[kind] = SummaryCacheEntry(
+            signature=self._current_signature(),
+            params=params,
+            columns=cols,
+            records=records,
+        )
         self.main.project.summary_state["active_kind"] = kind
         self._set_stale(False)
 
@@ -692,17 +693,15 @@ class SummaryTab(QtWidgets.QWidget):
                 "Tick datasets and click Compute to build the combined summary."
             )
             return
-        df = pd.DataFrame.from_records(
-            entry.get("records", []), columns=entry.get("columns", [])
-        )
+        df = entry.dataframe()
         self.model.set_dataframe(df)
         self.status.setText(f"Stored summary — {len(df)} row(s). Recompute to refresh.")
-        self._set_stale(self._current_signature() != entry.get("signature"))
+        self._set_stale(entry.is_stale(self._current_signature()))
 
     def _restore_params_from_cache(self, kind: str) -> None:
         """Restore the saved inputs for ``kind`` into the fields."""
         entry = self._cache().get(kind)
-        params = entry.get("params") if entry else None
+        params = entry.params if entry else None
         if not params:
             return
         # Restore the saved metric selection for this kind.
