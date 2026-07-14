@@ -27,7 +27,7 @@ def load_devlabs_file(
             If ``file`` does not exist or cannot be opened.
         UnicodeDecodeError:
             If a ``.csv`` file cannot be decoded using the encodings tried by
-            :func:`_detect_delimiter`.
+            ``_detect_delimiter``.
         ValueError:
             If the date/time fields in the export cannot be parsed into valid
             timestamps. Check that the file uses the expected Fourtec formats.
@@ -46,7 +46,7 @@ def load_devlabs_file(
 
               - For ``.csv`` files:
 
-                - Uses :func:`_detect_delimiter` to infer text encoding and
+                - Uses ``_detect_delimiter`` to infer text encoding and
                   field delimiter.
                 - Reads the main data block with :func:`pandas.read_csv`,
                   skipping the header rows and selecting the expected columns
@@ -201,7 +201,7 @@ def load_parameter(file: str, parameter) -> Environmental1D:
             If ``file`` does not exist or cannot be opened.
         UnicodeDecodeError:
             If a ``.csv`` file cannot be decoded using the encodings tried by
-            :func:`_detect_delimiter`.
+            ``_detect_delimiter``.
         ValueError:
             If the date/time fields in the export cannot be parsed into valid
             timestamps. Check that the file uses the expected Fourtec formats.
@@ -220,7 +220,7 @@ def load_parameter(file: str, parameter) -> Environmental1D:
 
               - For ``.csv`` files:
 
-                - Uses :func:`_detect_delimiter` to infer text encoding and
+                - Uses ``_detect_delimiter`` to infer text encoding and
                   field delimiter.
                 - Reads the main data block with :func:`pandas.read_csv`,
                   skipping the header rows and selecting the expected columns

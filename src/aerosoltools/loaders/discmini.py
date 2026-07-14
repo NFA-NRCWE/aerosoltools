@@ -117,7 +117,7 @@ def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
             and file permissions.
         UnicodeDecodeError:
             If the file cannot be decoded using the encodings tried by
-            :func:`_detect_delimiter`. This usually indicates a corrupted
+            ``_detect_delimiter``. This usually indicates a corrupted
             or non-text file.
         ValueError:
             If timestamps or header-derived start date/time strings are in

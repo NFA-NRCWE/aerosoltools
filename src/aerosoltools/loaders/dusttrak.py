@@ -45,7 +45,7 @@ def load_dusttrak_file(file: str, extra_data: bool = False) -> DustTrak:
             a metadata header followed by a tabular data block. Internally it:
 
             - Tries to infer file encoding and delimiter using
-              :func:`_detect_delimiter`; if this fails, it falls back to
+              ``_detect_delimiter``; if this fails, it falls back to
               ``encoding="latin-1"`` and ``delimiter=","``.
             - Reads the data block starting at row 35 and renames key columns:
 

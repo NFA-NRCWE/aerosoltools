@@ -40,7 +40,7 @@ def load_opcn3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
             If ``file`` does not exist or cannot be opened.
         UnicodeDecodeError:
             If the file cannot be decoded using the encodings tried by
-            :func:`_detect_delimiter`.
+            ``_detect_delimiter``.
         ValueError:
             If the delimiter detection or CSV parsing fails in a way that
             prevents reading the header or main data table.
@@ -57,7 +57,7 @@ def load_opcn3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
 
             Internally, the function:
 
-            - Uses :func:`_detect_delimiter` to infer file encoding and field
+            - Uses ``_detect_delimiter`` to infer file encoding and field
               delimiter.
             - Reads the first line to classify the file:
 

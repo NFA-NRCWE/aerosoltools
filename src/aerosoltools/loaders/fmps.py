@@ -28,7 +28,7 @@ def load_fmps_file(file: str) -> Aerosol2D:
             If ``file`` does not exist or cannot be opened.
         UnicodeDecodeError:
             If the file cannot be decoded using the encodings tried by
-            :func:`_detect_delimiter`.
+            ``_detect_delimiter``.
         FileFormatError:
             If the file appears to be a raw (unconverted) FMPS export, or if
             the detected data type cannot be interpreted as a supported FMPS
@@ -43,7 +43,7 @@ def load_fmps_file(file: str) -> Aerosol2D:
 
             Internally, the function:
 
-            - Uses :func:`_detect_delimiter` to infer file encoding and field
+            - Uses ``_detect_delimiter`` to infer file encoding and field
               delimiter.
             - Reads a header line (after a fixed number of header rows) and
               checks whether it contains the word ``"Raw"``. If so, an
