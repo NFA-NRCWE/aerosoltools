@@ -356,9 +356,19 @@ def test_psd_fit_and_evaluator_single_sourced():
 
     ops = load_ops_file(_data_path("Sample_OPS.csv"))
     period = (ops.time[0], ops.time[-1])
-    modes, err = ops.fit_psd(period=period, mu=[500], sigma=[2.0], factor=[1000.0])
-    triples = list(zip(modes["mu"], modes["sigma"], modes["factor"]))
-    total, per_mode = at.lognormal_modes(ops.bin_mids, triples)
+    res = ops.fit_psd(period=period, mu=[500], sigma=[2.0], factor=[1000.0])
+
+    # fit_psd returns a typed PSDFitResult that is still a plain 2-tuple, so the
+    # historical `modes, err = fit_psd(...)` unpacking keeps working.
+    assert isinstance(res, at.PSDFitResult) and isinstance(res, tuple)
+    modes, err = res
+    assert modes is res[0] is res.modes and err is res[1] is res.errors
+    assert res.n_modes == len(modes["mu"])
+
+    # result.evaluate reproduces the standalone lognormal_modes on the same modes.
+    total, per_mode = res.evaluate(ops.bin_mids)
+    total2, _ = at.lognormal_modes(ops.bin_mids, res.triples())
+    assert np.allclose(total, total2)
     assert len(total) == len(ops.bin_mids)
     assert np.all(np.isfinite(total))
     assert len(per_mode) == len(modes["mu"])

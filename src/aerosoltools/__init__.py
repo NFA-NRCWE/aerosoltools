@@ -107,7 +107,7 @@ Typical usage example
 """
 
 from ._core.decay import DecayResult
-from ._core.fitting import lognormal_modes
+from ._core.fitting import PSDFitResult, lognormal_modes
 from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
 from .aerosol3d import Aerosol3d
@@ -173,6 +173,7 @@ __all__ = [
     "calibrate_against_reference",
     # Size-distribution fitting
     "lognormal_modes",
+    "PSDFitResult",
     # Decay fitting
     "DecayResult",
     # Loading: auto-detect entry point + registry + error base

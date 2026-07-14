@@ -1,5 +1,7 @@
 """Lognormal multi-mode fitting of particle size distributions."""
 
+from typing import NamedTuple
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
@@ -42,6 +44,46 @@ def lognormal_modes(dp_nm, modes):
         per_mode.append(comp)
         total = total + comp
     return total, per_mode
+
+
+class PSDFitResult(NamedTuple):
+    """Typed result of :meth:`Aerosol2D.fit_psd`.
+
+    A ``NamedTuple``, so it stays 100 % backward compatible with the historical
+    ``modes, errors = data.fit_psd(...)`` two-tuple unpacking and ``result[0]`` /
+    ``result[1]`` indexing, while adding self-documenting names and the helpers a
+    script needs to reconstruct the fitted curve.
+
+    Attributes:
+        modes: Fitted parameters ``{"mu": array, "sigma": array, "factor":
+            array}`` (peak diameters nm, geometric SDs, scaling factors), one
+            entry per mode in the same order.
+        errors: 1σ uncertainties in the same ``{"mu"/"sigma"/"factor": array}``
+            shape.
+    """
+
+    modes: dict
+    errors: dict
+
+    @property
+    def n_modes(self) -> int:
+        """Number of fitted modes."""
+        return len(self.modes.get("mu", []))
+
+    def triples(self) -> list:
+        """Modes as ``(mu, sigma, factor)`` triples for evaluation/plotting."""
+        return list(zip(self.modes["mu"], self.modes["sigma"], self.modes["factor"]))
+
+    def evaluate(self, dp_nm):
+        """The fitted dx/dlogDp curve at ``dp_nm``: ``(total, per_mode)``.
+
+        Uses the same :func:`lognormal_modes` model the fit is built on, so a
+        script reproduces exactly the curve the GUI overlays::
+
+            res = data.fit_psd("Task 1", mu=[80, 200])
+            total, per_mode = res.evaluate(data.bin_mids)
+        """
+        return lognormal_modes(dp_nm, self.triples())
 
 
 class FitMixin:
@@ -126,11 +168,12 @@ class FitMixin:
 
         Returns
         -------
-        popt : list
-            A list containing the sorted fitted parameters (mu1, sigma1, factor1, mu2...)
-            either sorted by mode diameter or from most to least populated mode
-        perr : list
-            Error estimates for the fitted parameters in the same order as the fit.
+        PSDFitResult
+            A ``NamedTuple`` ``(modes, errors)`` — so it still unpacks as
+            ``modes, errors = data.fit_psd(...)`` — where ``modes`` and
+            ``errors`` are ``{"mu": array, "sigma": array, "factor": array}``
+            dicts (fitted parameters and their 1σ uncertainties). Use
+            ``result.evaluate(dp)`` to reconstruct the fitted dx/dlogDp curve.
         """
 
         # Added functions for the fitting
@@ -335,5 +378,7 @@ class FitMixin:
         Modes = {"mu": popt[0::3], "sigma": popt[1::3], "factor": popt[2::3]}
         Error = {"mu": perr[0::3], "sigma": perr[1::3], "factor": perr[2::3]}
 
-        # Returns the sorted fitted modes and their uncertainty.
-        return Modes, Error
+        # Typed result (a NamedTuple, so `modes, errors = fit_psd(...)` and
+        # `result[0]`/`result[1]` keep working) carrying the fitted modes, their
+        # uncertainty, and an evaluate() helper for the fitted curve.
+        return PSDFitResult(Modes, Error)
