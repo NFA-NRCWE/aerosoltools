@@ -10,6 +10,7 @@ import matplotlib.colors as mcolors
 from ...intercomparison import bland_altman_analysis, plot_correlation
 from ..qt import QtWidgets
 from ..view import theme
+from ..view.widgets import repopulate_combo
 from ._base import _PlotTab
 
 
@@ -243,13 +244,9 @@ class CorrelationTab(_PlotTab):
 
     def _sync_activities(self) -> None:
         """Repopulate the activity combo from the project's tasks."""
-        self.activity.blockSignals(True)
-        prev = self.activity.currentText()
-        self.activity.clear()
-        self.activity.addItems(["All data"] + self.main.project.user_activities())
-        idx = self.activity.findText(prev)
-        self.activity.setCurrentIndex(idx if idx >= 0 else 0)
-        self.activity.blockSignals(False)
+        repopulate_combo(
+            self.activity, ["All data"] + self.main.project.user_activities()
+        )
 
     def _on_pair_change(self, *_a) -> None:
         """Re-sync the parameter list when X or Y changes."""

@@ -438,8 +438,21 @@ class CombineInstrumentsDialog(QtWidgets.QDialog):
         return a, b, self._crossover, self.match_combo.currentText()
 
 
-# Back-compat alias for the previous name.
-CombineNSOPSDialog = CombineInstrumentsDialog
+def repopulate_combo(combo, items, default_index: int = 0) -> None:
+    """Repopulate a ``QComboBox`` with ``items``, preserving the selection.
+
+    Signals are blocked while the combo is rebuilt (so no spurious
+    ``currentIndexChanged`` fires). The previously-shown text is re-selected if
+    it is still present; otherwise the combo falls back to ``default_index``.
+    Shared by the tabs whose activity picker is refreshed on every redraw.
+    """
+    combo.blockSignals(True)
+    current = combo.currentText()
+    combo.clear()
+    combo.addItems(list(items))
+    idx = combo.findText(current)
+    combo.setCurrentIndex(idx if idx >= 0 else default_index)
+    combo.blockSignals(False)
 
 
 class JoinDatasetsDialog(QtWidgets.QDialog):
