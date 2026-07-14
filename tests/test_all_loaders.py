@@ -541,6 +541,32 @@ def test_decay_fit_spec_typed_and_serializable():
     assert DecayFitSpec.from_dict({"window": ["x"]}) is None
 
 
+def test_project_manifest_migration():
+    """The manifest carries a schema version; load migrates old and rejects newer."""
+    import pytest
+
+    from aerosoltools.gui import projectio
+    from aerosoltools.gui.projectio import VERSION, _migrate_manifest
+
+    # A pre-versioning manifest (no 'version') is treated as v1 and upgraded.
+    upgraded = _migrate_manifest({"format": "aerosoltools-project"})
+    assert upgraded["version"] == VERSION
+
+    # An explicit v1 manifest reaches the current version via the migration chain.
+    assert _migrate_manifest({"version": 1})["version"] == VERSION
+
+    # A manifest already at the current version is unchanged.
+    assert _migrate_manifest({"version": VERSION})["version"] == VERSION
+
+    # A manifest from a newer, forward-incompatible build is rejected clearly.
+    with pytest.raises(ValueError, match="newer version"):
+        _migrate_manifest({"version": VERSION + 1})
+
+    # Every migration step advances the version by exactly one.
+    for src, step in projectio._MIGRATIONS.items():
+        assert step({"version": src}).get("version", src) in (src, src + 1)
+
+
 def test_core_mixin_protocols_are_typing_only():
     """The _core host Protocols document the contract but never change runtime MRO."""
     from aerosoltools._core import _protocols

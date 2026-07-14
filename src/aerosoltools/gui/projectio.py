@@ -32,7 +32,56 @@ MANIFEST = "project.json"
 RAW_DIR = "raw_data"
 DS_DIR = "datasets"
 FORMAT = "aerosoltools-project"
-VERSION = 1
+#: Current on-disk schema version. Bump this whenever the manifest layout
+#: changes in a way older loaders can't read as-is, and add a step to
+#: ``_MIGRATIONS`` (keyed by the *source* version) that upgrades a manifest of
+#: the previous version to the new one.
+VERSION = 2
+
+
+def _migrate_v1_to_v2(manifest: dict) -> dict:
+    """v1 → v2: no field changes (v2 formalizes the versioned/typed fit specs).
+
+    v1 and v2 manifests are byte-compatible — v2 only marks that PSD/decay fits
+    are written by the typed specs — so older files load unchanged. This step
+    exists to establish the migration seam and keep the version monotonic.
+    """
+    return manifest
+
+
+#: Ordered upgrade steps keyed by the manifest version they upgrade *from*. Each
+#: takes a manifest of that version and returns one a single version newer.
+_MIGRATIONS = {1: _migrate_v1_to_v2}
+
+
+def _migrate_manifest(manifest: dict) -> dict:
+    """Upgrade a loaded manifest to the current :data:`VERSION` in place.
+
+    Applies the ordered :data:`_MIGRATIONS` steps until the manifest reaches the
+    current version. A manifest with no ``version`` is treated as v1 (the first
+    schema, before the field existed).
+
+    Raises:
+        ValueError: If the manifest was written by a newer, forward-incompatible
+            build of aerosoltools (its version exceeds :data:`VERSION`).
+    """
+    version = manifest.get("version", 1)
+    if not isinstance(version, int) or version < 1:
+        version = 1
+    if version > VERSION:
+        raise ValueError(
+            "This project was saved by a newer version of aerosoltools "
+            f"(project schema v{version}, this build reads up to v{VERSION}).\n"
+            "Update aerosoltools to open it."
+        )
+    while version < VERSION:
+        step = _MIGRATIONS.get(version)
+        if step is None:  # no path forward; stop rather than loop
+            break
+        manifest = step(manifest)
+        version += 1
+    manifest["version"] = version
+    return manifest
 
 
 def _dump_psd_fits(psd_fits: dict) -> dict:
@@ -228,6 +277,9 @@ def load_project(folder: str) -> tuple[Project, str]:
         manifest = json.load(fh)
     if manifest.get("format") != FORMAT:
         raise ValueError("This folder is not an aerosoltools project.")
+    # Upgrade older manifests (and reject forward-incompatible newer ones) so the
+    # restore code below always sees the current schema.
+    manifest = _migrate_manifest(manifest)
 
     project = Project(name=manifest.get("name", "Untitled project"))
     project.activities = {
