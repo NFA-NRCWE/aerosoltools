@@ -98,6 +98,20 @@ calibrate_against_reference
 Advanced multi-dataset workflows (``fit_calibration``, ``apply_calibration``,
 ``CalibrationModel``, …) live under :mod:`aerosoltools.intercomparison`.
 
+Result types
+------------
+Typed records returned by the fitting/analysis methods (each stays
+back-compatible with the plain container it replaced):
+
+DecayResult
+    Emission+decay fit from ``Aerosol1D.fit_decay`` — attribute access plus a
+    read-only mapping view.
+PSDFitResult
+    Lognormal PSD fit from ``Aerosol2D.fit_psd`` — a ``NamedTuple`` (tuple
+    unpacking still works) with ``.modes`` / ``.errors`` / ``.evaluate(dp)``.
+CorrelationCube
+    Time × optical × aerodynamic cube from ``Aerosol3d.correlation_cube``.
+
 Typical usage example
 ---------------------
     >>> import aerosoltools as at
