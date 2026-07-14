@@ -52,7 +52,6 @@ class AeroOpticalTab(_PlotTab):
         self._obj = None  # currently drawn correlated object
         self._times = None  # correlation time index
         self._total = None  # total concentration per time
-        self._matrix = None  # raw (n_times, n_optical, n_aero)
         self._disp = None  # displayed matrix (raw or dlogDp-normalized)
         self._opt_edges = None
         self._aero_edges = None
@@ -83,29 +82,17 @@ class AeroOpticalTab(_PlotTab):
             self.canvas.draw_idle()
             return
 
-        corr = obj.correlation
         if obj is not self._obj:
             self._sel = 0  # start at the first time for a newly shown dataset
         self._obj = obj
-        self._times = corr.index
-        n_opt = len(obj.optical.bin_mids)
-        n_aero = len(obj.bin_mids)
-        # (n_times, n_optical, n_aero) — matrix columns are (optical, aero).
-        self._matrix = corr.to_numpy(dtype=float).reshape(len(corr), n_opt, n_aero)
-        # Total concentration is always the raw (physical) sum over both axes.
-        self._total = np.nansum(self._matrix, axis=(1, 2))
-        self._opt_edges = np.asarray(obj.optical.bin_edges, dtype=float)
-        self._aero_edges = np.asarray(obj.bin_edges, dtype=float)
-        # Displayed matrix: optionally dN/(dlogDp_optical · dlogDp_aerodynamic),
-        # so unequally sized bins are comparable across both size axes.
-        if self.normalize.isChecked():
-            dlog_opt = np.diff(np.log10(self._opt_edges))  # length n_opt
-            dlog_aero = np.diff(np.log10(self._aero_edges))  # length n_aero
-            self._disp = self._matrix / (
-                dlog_opt[None, :, None] * dlog_aero[None, None, :]
-            )
-        else:
-            self._disp = self._matrix
+        # The data object owns the reshape, the physical total and the optional
+        # dlogDp normalization; the tab only renders the resulting cube.
+        cube = obj.correlation_cube(normalize=self.normalize.isChecked())
+        self._times = cube.times
+        self._total = cube.total
+        self._opt_edges = cube.optical_edges
+        self._aero_edges = cube.aero_edges
+        self._disp = cube.values
         gmax = np.nanmax(self._disp) if self._disp.size else 1.0
         self._norm = Normalize(vmin=0.0, vmax=gmax if gmax > 0 else 1.0)
         self._sel = min(self._sel, len(self._times) - 1)

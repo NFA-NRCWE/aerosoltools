@@ -18,12 +18,42 @@ aerodynamic-only, or optical-only, mode), the object simply behaves as a plain
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import NamedTuple, Optional
 
 import numpy as np
 import pandas as pd
 
 from .aerosol2d import Aerosol2D
+
+
+class CorrelationCube(NamedTuple):
+    """Time-resolved optical×aerodynamic correlation matrix and its size axes.
+
+    The correlated APS record is exposed as a dense 3-D array (one matrix per
+    time step) alongside the physical per-time total and the two sets of size
+    bin edges, so callers (GUI, scripts) render from one consistent source
+    instead of reshaping the raw :attr:`Aerosol3d.correlation` frame themselves.
+
+    Attributes:
+        times (pandas.DatetimeIndex): Time index of the correlation samples.
+        values (numpy.ndarray): ``(n_times, n_optical, n_aero)`` concentrations —
+            raw counts, or ``dN/(dlogDp_opt · dlogDp_aero)`` when
+            :meth:`Aerosol3d.correlation_cube` was called with ``normalize=True``.
+        total (numpy.ndarray): ``(n_times,)`` physical concentration summed over
+            both size axes; always the raw (un-normalized) sum.
+        optical_edges (numpy.ndarray): Optical-diameter bin edges (length
+            ``n_optical + 1``).
+        aero_edges (numpy.ndarray): Aerodynamic-diameter bin edges (length
+            ``n_aero + 1``).
+        normalized (bool): Whether :attr:`values` is dlogDp-normalized.
+    """
+
+    times: pd.DatetimeIndex
+    values: np.ndarray
+    total: np.ndarray
+    optical_edges: np.ndarray
+    aero_edges: np.ndarray
+    normalized: bool
 
 
 def _log_ticks(set_ticks, set_labels, values) -> None:
@@ -75,6 +105,55 @@ class Aerosol3d(Aerosol2D):
     def correlation(self) -> Optional[pd.DataFrame]:
         """The time-indexed optical×aerodynamic matrix (``(optical, aero)`` cols)."""
         return self._correlation
+
+    def correlation_cube(self, normalize: bool = False) -> CorrelationCube:
+        """Return the correlated matrix as a dense time × optical × aero cube.
+
+        Reshapes the flat :attr:`correlation` frame (whose columns run
+        optical-major, aerodynamic-minor) into an ``(n_times, n_optical,
+        n_aero)`` array, computes the physical per-time total, and gathers both
+        size axes' bin edges — the numerics the time-scanning 3-D view and any
+        script need, kept on the data object so they stay consistent.
+
+        Args:
+            normalize: When ``True``, divide each cell by both log bin widths —
+                ``dN / (dlogDp_optical · dlogDp_aerodynamic)`` — so bins of
+                unequal width are comparable across both size axes. The returned
+                :attr:`~CorrelationCube.total` stays the raw physical sum
+                regardless.
+
+        Returns:
+            CorrelationCube: Times, the (optionally normalized) value cube, the
+            raw per-time total, both sets of bin edges, and the ``normalized``
+            flag.
+
+        Raises:
+            ValueError: If the record is not correlated (no optical axis).
+        """
+        if not self.is_correlated:
+            raise ValueError(
+                "correlation_cube needs a correlated APS record (both "
+                "aerodynamic and optical sizing)."
+            )
+        corr = self._correlation
+        n_opt = len(self._optical.bin_mids)
+        n_aero = len(self.bin_mids)
+        # Columns are ordered (optical, aero) with optical varying slowest, so a
+        # straight reshape recovers the per-time optical×aerodynamic matrix.
+        matrix = corr.to_numpy(dtype=float).reshape(len(corr), n_opt, n_aero)
+        # Total is always the raw (physical) sum over both size axes.
+        total = np.nansum(matrix, axis=(1, 2))
+        opt_edges = np.asarray(self._optical.bin_edges, dtype=float)
+        aero_edges = np.asarray(self.bin_edges, dtype=float)
+        if normalize:
+            dlog_opt = np.diff(np.log10(opt_edges))  # length n_opt
+            dlog_aero = np.diff(np.log10(aero_edges))  # length n_aero
+            values = matrix / (dlog_opt[None, :, None] * dlog_aero[None, None, :])
+        else:
+            values = matrix
+        return CorrelationCube(
+            corr.index, values, total, opt_edges, aero_edges, bool(normalize)
+        )
 
     def axis_view(self, axis: str = "aerodynamic") -> Aerosol2D:
         """Return the live aerodynamic or optical axis with activities synced.

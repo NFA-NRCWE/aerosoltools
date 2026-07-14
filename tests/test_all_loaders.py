@@ -90,6 +90,46 @@ def test_aps_correlated_and_aero_only():
     assert len(cor.data) == len(cor.optical.data) == len(cor.correlation)
 
 
+def test_correlation_cube():
+    """Aerosol3d.correlation_cube reshapes the matrix and normalizes on request."""
+    import numpy as np
+
+    from aerosoltools import CorrelationCube, load_aps_file
+
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    cor = load_aps_file(os.path.join(data_dir, "Sample_APS_correlated.txt"))
+
+    n_opt = len(cor.optical.bin_mids)
+    n_aero = len(cor.bin_mids)
+    cube = cor.correlation_cube()
+    assert isinstance(cube, CorrelationCube)
+    assert not cube.normalized
+    assert cube.values.shape == (len(cor.correlation), n_opt, n_aero)
+    assert cube.optical_edges.shape == (n_opt + 1,)
+    assert cube.aero_edges.shape == (n_aero + 1,)
+    # The physical total matches the raw matrix row-sums and the aero total.
+    assert cube.total[0] == pytest.approx(float(cor.correlation.iloc[0].sum()))
+    assert cube.total[0] == pytest.approx(float(cor.data["Total_conc"].iloc[0]))
+
+    # Normalized cube divides each cell by both log bin widths; the total stays
+    # the raw physical sum.
+    norm = cor.correlation_cube(normalize=True)
+    assert norm.normalized
+    dlog_opt = np.diff(np.log10(cube.optical_edges))
+    dlog_aero = np.diff(np.log10(cube.aero_edges))
+    expected = cube.values / (dlog_opt[None, :, None] * dlog_aero[None, None, :])
+    np.testing.assert_allclose(norm.values, expected, equal_nan=True)
+    np.testing.assert_allclose(norm.total, cube.total)
+
+    # An un-correlated Aerosol3d (no optical axis) has no correlation cube.
+    from aerosoltools import Aerosol3d
+
+    uncorrelated = Aerosol3d(cor.data.copy())
+    assert not uncorrelated.is_correlated
+    with pytest.raises(ValueError):
+        uncorrelated.correlation_cube()
+
+
 _RANGER_STATUS = "Status(f:fail a:aging w:warming-up z:zerocal c:spancal)"
 
 

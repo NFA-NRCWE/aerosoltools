@@ -110,7 +110,7 @@ from ._core.decay import DecayResult
 from ._core.fitting import PSDFitResult, lognormal_modes
 from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
-from .aerosol3d import Aerosol3d
+from .aerosol3d import Aerosol3d, CorrelationCube
 from .aethalometer import Aethalometer
 from .discmini import DiSCmini
 from .dusttrak import DustTrak
@@ -156,6 +156,7 @@ __all__ = [
     "Aerosol1D",
     "Aerosol2D",
     "Aerosol3d",
+    "CorrelationCube",
     "DiSCmini",
     "DustTrak",
     "ELPI",
