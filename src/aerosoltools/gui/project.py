@@ -135,12 +135,14 @@ class Dataset:
         # persisted in the project file and dropped when the activity is edited
         # or removed (see Project).
         self.psd_fits: Dict[str, PsdFitSpec] = {}
-        # Decay / source fits for the Decay pane. Each entry is a persisted spec
+        # Decay / source fits for the Decay pane. Each entry is a live spec dict
         # ``{"window": (start, end), "metric": str, "model": str,
         # "optimized": bool, "overrides": {...}, "per_bin": bool}`` describing one
-        # marked region; the fit results themselves are recomputed on load so
-        # they track density/calibration changes. Stored per dataset and saved
-        # with the project.
+        # marked region (the tab mutates it in place and hangs a transient
+        # ``_result`` on it); the fit results themselves are recomputed on load so
+        # they track density/calibration changes. Persisted via the typed
+        # ``DecayFitSpec`` (gui/fit_specs.py); stored per dataset and saved with
+        # the project.
         self.decay_fits: List[dict] = []
         # Per-activity plot colours for the PSD-comparison pane, keyed by
         # activity name. Empty by default: each activity then auto-shades the

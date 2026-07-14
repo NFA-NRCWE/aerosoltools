@@ -497,6 +497,50 @@ def test_psd_fit_spec_typed_and_serializable():
     assert reloaded["Task 1"].modes[0]["sigma"] == 1.6
 
 
+def test_decay_fit_spec_typed_and_serializable():
+    """Stored decay fits round-trip live-dict -> JSON -> live-dict via DecayFitSpec."""
+    import json
+
+    import pandas as pd
+
+    from aerosoltools.gui.fit_specs import DecayFitSpec
+    from aerosoltools.gui.projectio import _dump_decay_fits, _load_decay_fits
+
+    t0 = pd.Timestamp("2024-01-01 10:00:00")
+    live = {
+        "window": (pd.Timestamp("2024-01-01 10:00"), pd.Timestamp("2024-01-01 10:30")),
+        "metric": "PNC",
+        "model": "auto",
+        "optimized": False,
+        "per_bin": True,
+        "overrides": {
+            "t0": t0,
+            "peak_time": None,
+            "background": 100.0,
+            "peakval": None,
+            "rate": 0.5,
+        },
+        "_result": {"model": "single"},  # transient, must not be serialized
+    }
+    dumped = _dump_decay_fits([live])
+    json.dumps(dumped)  # must not raise
+    assert "_result" not in dumped[0]
+    assert dumped[0]["overrides"]["t0"] == t0.isoformat()
+
+    restored = _load_decay_fits(dumped)[0]
+    # Timestamps parse back, floats/None preserved, transient key stays gone.
+    assert restored["window"][0] == live["window"][0]
+    assert restored["overrides"]["t0"] == t0
+    assert restored["overrides"]["background"] == 100.0
+    assert restored["overrides"]["peakval"] is None
+    assert restored["per_bin"] is True and restored["optimized"] is False
+    assert "_result" not in restored
+
+    # A spec with no usable window is dropped on both directions.
+    assert _dump_decay_fits([{"window": None}]) == []
+    assert DecayFitSpec.from_dict({"window": ["x"]}) is None
+
+
 def test_core_mixin_protocols_are_typing_only():
     """The _core host Protocols document the contract but never change runtime MRO."""
     from aerosoltools._core import _protocols
