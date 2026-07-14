@@ -30,23 +30,11 @@ directory into a single aerosol object.
 
 from .aethalometer import load_aethalometer_file
 from .aps import load_aps_file
-from .Common import load_data_from_folder
 from .cpc import load_cpc_file
 from .dev_weather import load_devlabs_file
 from .discmini import load_discmini_file, load_discmini_raw_file
 from .dusttrak import load_dusttrak_file
 from .elpi import load_elpi_file
-from .exceptions import (
-    DelimiterDetectionError,
-    EmptyFileError,
-    EncodingError,
-    FileAccessError,
-    FileFormatError,
-    InstrumentDetectionError,
-    LoaderError,
-    MetadataParseError,
-    TimestampError,
-)
 from .fmps import load_fmps_file
 from .fourtec import load_fourtec_file
 from .grimm import load_grimm_file
@@ -62,6 +50,18 @@ from .registry import (
     supported_instruments,
 )
 from .smps import load_smps_file
+from .support.exceptions import (
+    DelimiterDetectionError,
+    EmptyFileError,
+    EncodingError,
+    FileAccessError,
+    FileFormatError,
+    InstrumentDetectionError,
+    LoaderError,
+    MetadataParseError,
+    TimestampError,
+)
+from .support.parsing import load_data_from_folder
 
 __all__ = [
     "load_aps_file",

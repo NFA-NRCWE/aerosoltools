@@ -27,12 +27,10 @@ from typing import Callable, Optional
 
 from .aethalometer import load_aethalometer_file
 from .aps import load_aps_file
-from .Common import _detect_delimiter
 from .cpc import load_cpc_file
 from .discmini import load_discmini_file, load_discmini_raw_file
 from .dusttrak import load_dusttrak_file
 from .elpi import load_elpi_file
-from .exceptions import InstrumentDetectionError
 from .fmps import load_fmps_file
 from .fourtec import load_fourtec_file
 from .grimm import load_grimm_file
@@ -42,6 +40,8 @@ from .ops import load_ops_file
 from .partector import load_partector_file
 from .ranger import load_ranger_file
 from .smps import load_smps_file
+from .support.exceptions import InstrumentDetectionError
+from .support.parsing import _detect_delimiter
 
 #: Canonical instrument name -> loader function. Order is preserved for the GUI
 #: combo box; the keys are the values :func:`detect_instrument` returns.

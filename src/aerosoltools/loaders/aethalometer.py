@@ -1,8 +1,8 @@
 import pandas as pd
 
 from ..aethalometer import Aethalometer
-from .Common import _detect_delimiter
-from .exceptions import EmptyFileError
+from .support.exceptions import EmptyFileError
+from .support.parsing import _detect_delimiter
 
 ###############################################################################
 

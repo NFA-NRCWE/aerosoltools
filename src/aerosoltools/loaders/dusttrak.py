@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 
 from ..dusttrak import DustTrak
-from .Common import _detect_delimiter
-from .exceptions import TimestampError
+from .support.exceptions import TimestampError
+from .support.parsing import _detect_delimiter
 
 ###############################################################################
 

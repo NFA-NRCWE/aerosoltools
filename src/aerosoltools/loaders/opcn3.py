@@ -5,8 +5,8 @@ import pandas as pd
 
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
-from .Common import _detect_delimiter
-from .exceptions import FileFormatError
+from .support.exceptions import FileFormatError
+from .support.parsing import _detect_delimiter
 
 ###############################################################################
 

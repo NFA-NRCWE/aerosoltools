@@ -9,7 +9,6 @@ through exactly the same code.
 
 from __future__ import annotations
 
-from ..loaders.exceptions import InstrumentDetectionError
 from ..loaders.registry import (
     INSTRUMENT_LOADERS,
     LOADERS,
@@ -40,6 +39,7 @@ from ..loaders.registry import (
     supported_instrument_names,
     supported_instruments,
 )
+from ..loaders.support.exceptions import InstrumentDetectionError
 
 #: Historical GUI name for the detection failure (now the public API exception).
 UnrecognizedInstrumentError = InstrumentDetectionError

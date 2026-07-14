@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 
 from ..discmini import DiSCmini
-from .Common import _detect_delimiter
-from .exceptions import EmptyFileError, FileFormatError, TimestampError
+from .support.exceptions import EmptyFileError, FileFormatError, TimestampError
+from .support.parsing import _detect_delimiter
 
 ###############################################################################
 

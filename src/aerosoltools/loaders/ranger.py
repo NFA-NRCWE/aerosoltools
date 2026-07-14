@@ -9,7 +9,7 @@ import pandas as pd
 
 from ..aerosol1d import Aerosol1D
 from ..gas1d import Gas1D
-from .Common import _detect_delimiter
+from .support.parsing import _detect_delimiter
 
 ###############################################################################
 
