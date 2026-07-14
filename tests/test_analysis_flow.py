@@ -108,6 +108,55 @@ def test_pm_calc_creates_and_reuses_px_columns():
     ), "Band-limited P{x} series should not be all NaN"
 
 
+def test_bin_property_cache_is_safe_and_invalidates():
+    """Cached bin_mids/edges/_sizebin_headers stay copy-safe and refresh on change."""
+    test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
+    data = load_elpi_file(test_file)
+
+    # _sizebin_headers is memoised (same object on repeat access).
+    assert data._sizebin_headers is data._sizebin_headers
+    assert data._sizebin_headers == [str(x) for x in data.bin_mids]
+
+    # Returned bin arrays are copies — mutating them must not corrupt internals.
+    m = data.bin_mids
+    m[0] = -12345.0
+    assert data.bin_mids[0] != -12345.0
+    e = data.bin_edges
+    e[0] = -12345.0
+    assert data.bin_edges[0] != -12345.0
+
+    # Rebinning reassigns the axis; the caches must reflect the new bins.
+    n = len(data.bin_mids)
+    new_edges = np.linspace(data.bin_edges.min(), data.bin_edges.max(), n)
+    rb = data.rebin_bin_edges(new_edges, inplace=False)
+    assert len(rb.bin_mids) == n - 1
+    assert len(rb._sizebin_headers) == n - 1
+    assert len(data.bin_mids) == n  # original untouched
+
+
+def test_summarize_size_metrics_mode_median_gmd():
+    """MODE/MEDIAN/GMD size metrics compute over timesteps (numpy-row path)."""
+    test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
+    data = load_elpi_file(test_file)
+
+    out = data.summarize_activities(metrics=["MODE", "MEDIAN", "GMD"])
+    assert isinstance(out, pd.DataFrame)
+    row = out[out["Segment"] == "All data"].iloc[0]
+
+    # Each metric produces a mean column populated with an in-range diameter.
+    mids = data.bin_mids
+    lo, hi = float(mids.min()), float(mids.max())
+    got = {}
+    for label in ("Mode", "Median", "GMD"):
+        col = next(c for c in out.columns if c.startswith(label))
+        val = float(row[col])
+        assert lo <= val <= hi, f"{label}={val} outside [{lo}, {hi}]"
+        got[label] = val
+    # Sanity: on a real distribution the three central diameters are close-ish
+    # in magnitude (not orders of magnitude apart), which guards a gross regression.
+    assert 0.1 < got["Median"] / got["GMD"] < 10.0
+
+
 def test_dtype_converter_roundtrip_and_geometry_single_source():
     """dN/dS/dV/dM conversions round-trip and share one geometry helper."""
     from aerosoltools._core.size_distribution import (

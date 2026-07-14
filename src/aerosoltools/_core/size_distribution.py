@@ -932,32 +932,22 @@ class SizeConversionMixin:
                 "largest new bin must be equal to or smaller than the largest old bin."
             )
 
-        # Log10 edges and widths
+        # Log10 edges (widths are taken directly from the edges below)
         log_edges = np.log10(bin_edges)
         log_new_edges = np.log10(new_bin_edges)
 
-        old_dlog = np.diff(log_edges)
-        new_dlog = np.diff(log_new_edges)
+        # Build transfer matrix T such that new_totals = old_totals @ T, where
+        # T[i, j] is the fraction of old bin i's (log-diameter) width overlapped
+        # by new bin j. Vectorised over both bin axes via broadcasting — the
+        # min/max/overlap arithmetic is identical to the per-cell scalar form.
+        old_lo = log_edges[:-1][:, None]  # (n_old, 1)
+        old_hi = log_edges[1:][:, None]
+        new_lo = log_new_edges[:-1][None, :]  # (1, n_new)
+        new_hi = log_new_edges[1:][None, :]
 
-        n_old = len(old_dlog)
-        n_new = len(new_dlog)
-
-        # Build transfer matrix T such that:
-        # new_totals = old_totals @ T
-        T = np.zeros((n_old, n_new), dtype=float)
-
-        for i in range(n_old):
-            old_lo = log_edges[i]
-            old_hi = log_edges[i + 1]
-            old_width = old_hi - old_lo
-
-            for j in range(n_new):
-                new_lo = log_new_edges[j]
-                new_hi = log_new_edges[j + 1]
-
-                overlap = min(old_hi, new_hi) - max(old_lo, new_lo)
-                if overlap > 0:
-                    T[i, j] = overlap / old_width
+        overlap = np.minimum(old_hi, new_hi) - np.maximum(old_lo, new_lo)
+        overlap = np.where(overlap > 0, overlap, 0.0)
+        T = overlap / (old_hi - old_lo)  # divide each row by its old bin width
 
         # Convert dataframe to numeric array
         values = out.data[out.bin_mids.astype(str)].to_numpy(dtype=float)

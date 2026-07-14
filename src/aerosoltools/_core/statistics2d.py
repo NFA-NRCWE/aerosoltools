@@ -243,8 +243,10 @@ class Summary2DMixin:
                 med_list: list[float] = []
                 gmd_list: list[float] = []
 
-                for _, row in num_act.iterrows():  # type: ignore
-                    dist = row.to_numpy(dtype=float)  # type: ignore
+                # Iterate the raw matrix rows rather than DataFrame.iterrows(),
+                # which builds a pandas Series per timestep; the per-row values
+                # (and therefore every derived metric) are unchanged.
+                for dist in num_act.to_numpy(dtype=float):
                     tot = float(dist.sum())
                     if tot <= 0:
                         continue

@@ -61,6 +61,30 @@ class Aerosol2D(
     def __init__(self, dataframe):
         super().__init__(dataframe)
 
+    def _frozen_bins(self, key: str) -> NDArray[np.float64]:
+        """Cached read-only float64 view of ``_meta[key]`` (bin_mids/bin_edges).
+
+        The size axis only ever changes by *reassigning* a new array in
+        ``_meta`` (load, rebin, density recompute, combine) — never by mutating
+        one in place — so a cheap identity + length + endpoint signature detects
+        any change and rebuilds the cache. Public :attr:`bin_mids`/
+        :attr:`bin_edges` copy this before returning (callers may mutate); the
+        frozen array also gives :attr:`_sizebin_headers` a stable identity to
+        memoise against.
+        """
+        src = self._meta[key]
+        sig = (id(src), len(src), float(src[0]), float(src[-1]))
+        cache = self.__dict__.setdefault("_bins_cache", {})
+        entry = cache.get(key)
+        if entry is None or entry[0] != sig:
+            arr = np.asarray(src, dtype=np.float64)
+            if arr is src:  # never freeze the caller's stored array in place
+                arr = arr.copy()
+            arr.setflags(write=False)
+            entry = (sig, arr)
+            cache[key] = entry
+        return entry[1]
+
     @property
     def bin_edges(self) -> NDArray[np.float64]:
         """Particle size bin edges in nanometers.
@@ -71,8 +95,8 @@ class Aerosol2D(
             ``n`` size bins. A copy is returned so callers cannot mutate the
             internal metadata.
         """
-        # ensure an array of floats; .copy() so callers can't mutate your internal state
-        return np.asarray(self._meta["bin_edges"], dtype=np.float64).copy()
+        # .copy() so callers can't mutate the cached internal array
+        return self._frozen_bins("bin_edges").copy()
 
     @property
     def bin_mids(self) -> NDArray[np.float64]:
@@ -84,7 +108,7 @@ class Aerosol2D(
             bins. A copy is returned so callers cannot mutate the internal
             metadata.
         """
-        return np.asarray(self._meta["bin_mids"], dtype=np.float64).copy()
+        return self._frozen_bins("bin_mids").copy()
 
     @property
     def density(self) -> float:
@@ -134,4 +158,11 @@ class Aerosol2D(
             distribution in methods such as :meth:`convert_to_number_concentration`,
             :meth:`convert_to_mass_concentration`, and plotting utilities.
         """
-        return [str(x) for x in self.bin_mids]
+        # Memoise the (repeatedly requested) header list against the frozen
+        # bin_mids identity, so ``size_data`` doesn't rebuild it on every access.
+        mids = self._frozen_bins("bin_mids")
+        cache = self.__dict__.get("_headers_cache")
+        if cache is None or cache[0] is not mids:
+            cache = (mids, [str(x) for x in mids])
+            self.__dict__["_headers_cache"] = cache
+        return cache[1]
