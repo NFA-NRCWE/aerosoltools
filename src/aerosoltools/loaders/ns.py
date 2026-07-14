@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 
 from ..aerosol2d import Aerosol2D
+from .support.construct import build_2d
 from .support.exceptions import FileFormatError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_cells, read_table, sniff
 
 ###############################################################################
 
@@ -129,10 +130,10 @@ def load_ns_file(file: str, extra_data: bool = False) -> Aerosol2D:
               fig, ax = ns.plot_psd()
     """
     # Detect encoding and delimiter for the NanoScan export
-    encoding, delimiter = _detect_delimiter(file)
+    encoding, delimiter = sniff(file)
 
     # Load the full table from the main data header line
-    ns_df = pd.read_csv(
+    ns_df = read_table(
         file, delimiter=delimiter, decimal=".", header=5, encoding=encoding
     )
 
@@ -167,14 +168,7 @@ def load_ns_file(file: str, extra_data: bool = False) -> Aerosol2D:
 
     # Inspect first data row to infer dtype string and density
     dtype_line = str(
-        np.genfromtxt(
-            file,
-            delimiter=delimiter,
-            skip_header=5,
-            max_rows=1,
-            dtype=str,
-            encoding=encoding,
-        )
+        read_cells(file, skip_header=5, encoding=encoding, delimiter=delimiter)
     )
     dtype = dtype_line.split(" ")[0]
     density = ns_df["Particle Density (g/cc)"].iloc[0]
@@ -198,19 +192,17 @@ def load_ns_file(file: str, extra_data: bool = False) -> Aerosol2D:
     total_col = pd.DataFrame({"Total_conc": total_conc})
     data_out = pd.concat([ns_df["Datetime"], total_col, size_data], axis=1)
 
-    # Instantiate Aerosol2D and attach metadata
-    NS = Aerosol2D(data_out)
-    NS._meta["instrument"] = "NS"
-    NS._meta["bin_edges"] = bin_edges.round(1)
-    NS._meta["bin_mids"] = bin_mids.round(1)
-    NS._meta["density"] = float(density)
-    NS._meta["serial_number"] = serial_number
-    NS._meta["unit"] = unit
-    NS._meta["dtype"] = dtype
-
-    # Standardise to number concentration and undo any /dlogDp normalisation
-    NS._convert_to_number_concentration()
-    NS.unnormalize_logdp()
+    # Instantiate, attach metadata, standardise to number and undo /dlogDp.
+    NS = build_2d(
+        data_out,
+        bin_edges=bin_edges.round(1),
+        bin_mids=bin_mids.round(1),
+        instrument="NS",
+        serial_number=serial_number,
+        unit=unit,
+        dtype=dtype,
+        density=float(density),
+    )
 
     # Attach optional extra channels
     if extra_data:

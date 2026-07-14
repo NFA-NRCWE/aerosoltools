@@ -5,8 +5,9 @@ import numpy as np
 import pandas as pd
 
 from ..aerosol2d import Aerosol2D
+from .support.construct import build_2d
 from .support.exceptions import FileFormatError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_table, sniff
 
 ###############################################################################
 
@@ -239,8 +240,8 @@ def load_smps_file(file: str, extra_data: bool = False) -> Aerosol2D:
             # Plot a time-integrated size distribution
             fig, ax = smps.plot_psd()
     """
-    encoding, delimiter = _detect_delimiter(file)
-    df = pd.read_csv(file, delimiter=delimiter, encoding=encoding, header=25)
+    encoding, delimiter = sniff(file)
+    df = read_table(file, delimiter=delimiter, encoding=encoding, header=25)
     meta = _load_SMPS_metadata(file, delimiter, encoding)
 
     # Parse datetime
@@ -286,24 +287,22 @@ def load_smps_file(file: str, extra_data: bool = False) -> Aerosol2D:
             "Unit and/or data type does not match the expected format."
         )
 
-    # Construct object
-    smps = Aerosol2D(final_df)
-    smps._meta = {
-        **{k: v for k, v in meta.items() if k not in ("Weight", "Units")},
-        "instrument": "SMPS",
-        "bin_edges": bin_edges,
-        "bin_mids": bin_mids,
-        "density": density,
-        "serial_number": (
+    # Construct object; the extra SMPS header metadata is carried alongside the
+    # canonical fields (which win on any key collision).
+    smps = build_2d(
+        final_df,
+        bin_edges=bin_edges,
+        bin_mids=bin_mids,
+        instrument="SMPS",
+        serial_number=(
             f"Classifier: {meta['Classifier Model'][2]}, "
             f"Detector: {meta['Detector Model'][2]}"
         ),
-        "unit": unit,
-        "dtype": dtype,
-    }
-
-    smps._convert_to_number_concentration()
-    smps.unnormalize_logdp()
+        unit=unit,
+        dtype=dtype,
+        density=density,
+        extra_meta={k: v for k, v in meta.items() if k not in ("Weight", "Units")},
+    )
 
     if extra_data:
         extra_df = df.drop(columns=bin_cols)

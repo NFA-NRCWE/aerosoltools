@@ -4,8 +4,9 @@ import numpy as np
 import pandas as pd
 
 from ..aerosol2d import Aerosol2D
+from .support.construct import build_2d
 from .support.exceptions import FileFormatError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_cells, read_table, sniff
 
 ###############################################################################
 
@@ -142,9 +143,9 @@ def load_grimm_file(file: str) -> Aerosol2D:
             # Plot the time series
             fig, ax = grimm.plot_timeseries()
     """
-    encoding, delimiter = _detect_delimiter(file)
-    header_line = np.genfromtxt(
-        file, delimiter=delimiter, encoding=encoding, max_rows=1, dtype=str
+    encoding, delimiter = sniff(file)
+    header_line = read_cells(
+        file, skip_header=0, encoding=encoding, delimiter=delimiter
     )
 
     # Normalise first header cell to a plain string
@@ -190,7 +191,7 @@ def _load_grimm_soft(file: str, encoding: str, delimiter: str) -> Aerosol2D:
             mass or count format.
     """
     # Read main data table
-    df = pd.read_csv(file, delimiter=delimiter, encoding=encoding, header=13)
+    df = read_table(file, delimiter=delimiter, encoding=encoding, header=13)
     df.rename(columns={df.columns[0]: "Datetime"}, inplace=True)
     df = df.dropna().reset_index(drop=True)
 
@@ -236,18 +237,20 @@ def _load_grimm_soft(file: str, encoding: str, delimiter: str) -> Aerosol2D:
     # Assemble final DataFrame
     final_df = pd.concat([df["Datetime"], total_conc, dist_df], axis=1)
 
-    # Build Aerosol2D object and attach metadata
-    grimm = Aerosol2D(final_df)
-    grimm._meta = {
-        "instrument": "Grimm",
-        "bin_edges": bin_edges,
-        "bin_mids": bin_mids,
-        "density": 1.0,
-        "serial_number": serial_number,
-        "location": location,
-        "unit": "cm⁻³",
-        "dtype": "dN",
-    }
+    # Build Aerosol2D object and attach metadata (already plain number).
+    grimm = build_2d(
+        final_df,
+        bin_edges=bin_edges,
+        bin_mids=bin_mids,
+        instrument="Grimm",
+        serial_number=serial_number,
+        unit="cm⁻³",
+        dtype="dN",
+        density=1.0,
+        extra_meta={"location": location},
+        to_number=False,
+        unnormalize=False,
+    )
 
     return grimm
 
@@ -281,7 +284,7 @@ def _load_grimm_inst(file: str, encoding: str, delimiter: str) -> Aerosol2D:
             If the data type (mass vs count) is not recognised from the header.
     """
     # Read main table with header near top of file
-    df = pd.read_csv(file, delimiter=delimiter, encoding=encoding, header=1)
+    df = read_table(file, delimiter=delimiter, encoding=encoding, header=1)
     df.rename(columns={df.columns[0]: "Datetime"}, inplace=True)
     df = df.dropna().reset_index(drop=True)
 
@@ -326,16 +329,19 @@ def _load_grimm_inst(file: str, encoding: str, delimiter: str) -> Aerosol2D:
     dist_df = pd.DataFrame(raw_data, columns=bin_mids.astype(str))
     final_df = pd.concat([df["Datetime"], total_conc, dist_df], axis=1)
 
-    # Build Aerosol2D object and metadata (serial number often not embedded cleanly)
-    grimm = Aerosol2D(final_df)
-    grimm._meta = {
-        "instrument": "Grimm",
-        "bin_edges": bin_edges,
-        "bin_mids": bin_mids,
-        "density": 1.0,
-        "serial_number": "Unknown",
-        "unit": "cm⁻³",
-        "dtype": "dN",
-    }
+    # Build Aerosol2D object and metadata (serial number often not embedded
+    # cleanly); the data are already plain number.
+    grimm = build_2d(
+        final_df,
+        bin_edges=bin_edges,
+        bin_mids=bin_mids,
+        instrument="Grimm",
+        serial_number="Unknown",
+        unit="cm⁻³",
+        dtype="dN",
+        density=1.0,
+        to_number=False,
+        unnormalize=False,
+    )
 
     return grimm

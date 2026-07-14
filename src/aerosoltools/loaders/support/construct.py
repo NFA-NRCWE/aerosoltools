@@ -59,6 +59,10 @@ def build_2d(
     """
     cls = cls or Aerosol2D
     obj = cls(data)
+    # Apply any instrument extra metadata first, then the canonical fields, so
+    # the canonical fields always win on a key collision.
+    if extra_meta:
+        obj._meta.update(extra_meta)
     obj._meta.update(
         {
             "instrument": instrument,
@@ -70,8 +74,6 @@ def build_2d(
             "dtype": dtype,
         }
     )
-    if extra_meta:
-        obj._meta.update(extra_meta)
     if to_number:
         obj._convert_to_number_concentration()
     if unnormalize:
