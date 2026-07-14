@@ -11,6 +11,21 @@ if TYPE_CHECKING:  # only for type hints; avoids a runtime circular import
     from ..aerosol2d import Aerosol2D
 
 
+def _particle_geometry(
+    bin_mids: NDArray[np.float64],
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Per-particle volume (nm³) and surface area (nm²) for spherical bins.
+
+    Single source of the sphere geometry the dtype conversions depend on:
+    ``V = (4/3)·π·r³`` and ``A = 4·π·r²`` with ``r = Dp/2`` in nm. Returned as
+    ``(volume_per_particle, surface_area_per_particle)``.
+    """
+    bin_radii = np.asarray(bin_mids, dtype=float) / 2.0  # nm
+    volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
+    surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
+    return volume_per_particle, surface_area_per_particle
+
+
 class SizeConversionMixin:
     """Convert between distribution bases and rescale/rebin the size axis."""
 
@@ -89,9 +104,7 @@ class SizeConversionMixin:
         if from_base == to_base:
             return arr
 
-        bin_radii = bin_mids / 2.0  # nm
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
+        volume_per_particle, surface_area_per_particle = _particle_geometry(bin_mids)
 
         # Step 1 — normalise to dN
         if from_base == "dN":
@@ -288,14 +301,13 @@ class SizeConversionMixin:
             return self if inplace else self.copy_self()
 
         base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
+        volume_per_particle, surface_area_per_particle = _particle_geometry(
+            self.bin_mids
+        )
 
         if "dS" in current_dtype:
             # Surface area -> Number -> Volume -> Mass
-            surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
             number_distribution = base_arr / surface_area_per_particle[None, :]
-
-            volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
             volume_distribution = number_distribution * volume_per_particle[None, :]
 
             mass_distribution = volume_distribution * self.density * 1e-9
@@ -306,7 +318,6 @@ class SizeConversionMixin:
 
         elif "dN" in current_dtype:
             # Number -> Volume -> Mass
-            volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
             volume_distribution = base_arr * volume_per_particle[None, :]
 
             mass_distribution = volume_distribution * self.density * 1e-9
@@ -373,10 +384,9 @@ class SizeConversionMixin:
             return self if inplace else self.copy_self()
 
         base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
-
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
+        volume_per_particle, surface_area_per_particle = _particle_geometry(
+            self.bin_mids
+        )
 
         if "dV" in current_dtype:
             # Volume -> Number
@@ -455,10 +465,9 @@ class SizeConversionMixin:
             return self if inplace else self.copy_self()
 
         base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
-
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
+        volume_per_particle, surface_area_per_particle = _particle_geometry(
+            self.bin_mids
+        )
 
         if "dV" in current_dtype:
             # Volume -> Number -> Surface Area
@@ -541,10 +550,9 @@ class SizeConversionMixin:
             return self if inplace else self.copy_self()
 
         base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
-
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
+        volume_per_particle, surface_area_per_particle = _particle_geometry(
+            self.bin_mids
+        )
 
         if "dS" in current_dtype:
             # Surface Area -> Number -> Volume

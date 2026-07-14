@@ -108,6 +108,44 @@ def test_pm_calc_creates_and_reuses_px_columns():
     ), "Band-limited P{x} series should not be all NaN"
 
 
+def test_dtype_converter_roundtrip_and_geometry_single_source():
+    """dN/dS/dV/dM conversions round-trip and share one geometry helper."""
+    from aerosoltools._core.size_distribution import (
+        SizeConversionMixin,
+        _particle_geometry,
+    )
+
+    test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
+    ops = load_elpi_file(test_file)
+
+    base = ops.size_data.to_numpy(dtype=float)  # dN base
+    for tgt in ("dS", "dV", "dM"):
+        c = ops.copy_self()
+        c.dtype_converter(tgt)
+        # Round-trip back to dN recovers the original within FP tolerance.
+        c.dtype_converter("dN")
+        np.testing.assert_allclose(
+            c.size_data.to_numpy(dtype=float), base, rtol=1e-9, equal_nan=True
+        )
+
+    # The instance converters and the array helper use the SAME geometry, so a
+    # dN->target conversion matches _convert_array exactly (byte-identical).
+    for tgt in ("dN", "dS", "dV", "dM"):
+        c = ops.copy_self()
+        c.dtype_converter(tgt)
+        via = SizeConversionMixin._convert_array(
+            base, ops.bin_mids, "dN", tgt, ops.density
+        )
+        np.testing.assert_array_equal(c.size_data.to_numpy(dtype=float), via)
+
+    # The geometry helper is the documented sphere formulae.
+    mids = np.array([100.0, 200.0])
+    vol, surf = _particle_geometry(mids)
+    r = mids / 2.0
+    np.testing.assert_allclose(vol, (4 / 3) * np.pi * r**3)
+    np.testing.assert_allclose(surf, 4 * np.pi * r**2)
+
+
 def test_aerosol2d_summarize_exposure_pm42_with_background_activity():
     """Test summarize_exposure on Aerosol2D with PM4.2 and background as activity."""
     test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
