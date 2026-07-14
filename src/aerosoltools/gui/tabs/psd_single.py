@@ -18,6 +18,7 @@ import numpy as np
 
 from ...aerosol3d import Aerosol3d
 from .. import helpers
+from ..fit_specs import PsdFitSpec
 from ..qt import QtCore, QtWidgets
 from . import _psddraw as draw
 from . import _psdfit as fit
@@ -260,9 +261,9 @@ class SinglePSDTab(_PlotTab):
             self._write_modes_to_table()
             return
         rec = ds.psd_fits.get(self._fit_key())
-        if rec and rec.get("modes"):
-            self._modes = fit.clean_modes(rec["modes"])
-            self._fitted = bool(rec.get("optimized"))
+        if rec and rec.modes:
+            self._modes = fit.clean_modes(rec.modes)
+            self._fitted = bool(rec.optimized)
         else:
             self._modes, self._fitted = [], False
         self._write_modes_to_table()
@@ -274,10 +275,10 @@ class SinglePSDTab(_PlotTab):
             return
         key = self._fit_key()
         if self._modes:
-            ds.psd_fits[key] = {
-                "modes": fit.clean_modes(self._modes),
-                "optimized": bool(self._fitted),
-            }
+            ds.psd_fits[key] = PsdFitSpec(
+                modes=fit.clean_modes(self._modes),
+                optimized=bool(self._fitted),
+            )
         else:
             ds.psd_fits.pop(key, None)
 

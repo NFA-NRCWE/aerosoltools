@@ -21,6 +21,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import pandas as pd
 
 from . import helpers
+from .fit_specs import PsdFitSpec
 
 # Process-wide counter giving every dataset a stable, unique id.
 _ID = itertools.count(1)
@@ -128,11 +129,12 @@ class Dataset:
         self.calibration_enabled: bool = False
         self._cal_baseline = None
         # Lognormal PSD fits, keyed by activity name (e.g. "All data", "Task 1").
-        # Each value is ``{"modes": [{mu, sigma, peak, bound}, ...],
-        # "optimized": bool}``. Stored per dataset because a fit describes that
-        # instrument's PSD for one activity; persisted in the project file and
-        # dropped when the activity is edited or removed (see Project).
-        self.psd_fits: Dict[str, dict] = {}
+        # Each value is a typed ``PsdFitSpec`` (gui/fit_specs.py) holding the
+        # lognormal modes + whether they were optimized. Stored per dataset
+        # because a fit describes that instrument's PSD for one activity;
+        # persisted in the project file and dropped when the activity is edited
+        # or removed (see Project).
+        self.psd_fits: Dict[str, PsdFitSpec] = {}
         # Decay / source fits for the Decay pane. Each entry is a persisted spec
         # ``{"window": (start, end), "metric": str, "model": str,
         # "optimized": bool, "overrides": {...}, "per_bin": bool}`` describing one

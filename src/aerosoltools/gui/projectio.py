@@ -24,6 +24,7 @@ from typing import Optional
 
 import pandas as pd
 
+from .fit_specs import PsdFitSpec
 from .project import Dataset, Project
 from .summary_cache import SummaryCacheEntry
 
@@ -34,22 +35,23 @@ FORMAT = "aerosoltools-project"
 VERSION = 1
 
 
-def _clean_psd_fits(psd_fits: dict) -> dict:
-    """Coerce stored lognormal fits to plain JSON types for serialization."""
+def _dump_psd_fits(psd_fits: dict) -> dict:
+    """Serialize the ``{activity: PsdFitSpec}`` map, dropping empty fits."""
     out: dict = {}
-    for activity, rec in (psd_fits or {}).items():
-        modes = []
-        for m in rec.get("modes", []):
-            modes.append(
-                {
-                    "mu": float(m["mu"]),
-                    "sigma": float(m["sigma"]),
-                    "peak": float(m["peak"]),
-                    "bound": bool(m.get("bound", False)),
-                }
-            )
-        if modes:
-            out[activity] = {"modes": modes, "optimized": bool(rec.get("optimized"))}
+    for activity, spec in (psd_fits or {}).items():
+        payload = spec.to_dict()
+        if payload["modes"]:
+            out[activity] = payload
+    return out
+
+
+def _load_psd_fits(stored: dict) -> dict:
+    """Rebuild the ``{activity: PsdFitSpec}`` map from JSON, dropping empty fits."""
+    out: dict = {}
+    for activity, payload in (stored or {}).items():
+        spec = PsdFitSpec.from_dict(payload)
+        if spec.modes:
+            out[activity] = spec
     return out
 
 
@@ -257,7 +259,7 @@ def save_project(project: Project, folder: str, theme: str = "dark") -> None:
                 "calibration": ds.calibration,
                 "calibration_enabled": ds.calibration_enabled,
                 "calibration_baseline": cal_rel,
-                "psd_fits": _clean_psd_fits(ds.psd_fits),
+                "psd_fits": _dump_psd_fits(ds.psd_fits),
                 "decay_fits": _clean_decay_fits(ds.decay_fits),
                 "activity_colors": dict(ds.activity_colors),
             }
@@ -320,7 +322,7 @@ def load_project(folder: str) -> tuple[Project, str]:
         if contributing:
             ds.contributing_files = [os.path.join(folder, r) for r in contributing]
         ds.color = entry.get("color")  # None for pre-colour projects
-        ds.psd_fits = _clean_psd_fits(entry.get("psd_fits", {}))
+        ds.psd_fits = _load_psd_fits(entry.get("psd_fits", {}))
         ds.decay_fits = _restore_decay_fits(entry.get("decay_fits", []))
         ds.activity_colors = dict(entry.get("activity_colors", {}) or {})
         # Restore the calibration spec/state and its uncalibrated baseline (the

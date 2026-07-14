@@ -469,6 +469,34 @@ def test_summary_cache_entry_typed_and_serializable():
     assert got.dataframe().shape == (2, 2)
 
 
+def test_psd_fit_spec_typed_and_serializable():
+    """Stored PSD fits are typed PsdFitSpec objects that round-trip JSON."""
+    import json
+
+    from aerosoltools.gui.fit_specs import PsdFitSpec
+    from aerosoltools.gui.projectio import _dump_psd_fits, _load_psd_fits
+
+    spec = PsdFitSpec(
+        modes=[{"mu": 80.0, "sigma": 1.6, "peak": 1.2e4, "bound": True}],
+        optimized=True,
+    )
+    # to_dict/from_dict round-trip (modes coerced to plain floats/bools).
+    payload = spec.to_dict()
+    json.dumps(payload)  # must not raise
+    back = PsdFitSpec.from_dict(payload)
+    assert back.to_dict() == payload
+    assert back.modes[0]["mu"] == 80.0 and back.optimized is True
+
+    # projectio dumps the {activity: PsdFitSpec} map and reloads it typed,
+    # dropping fits that have no modes.
+    fits = {"Task 1": spec, "Empty": PsdFitSpec(modes=[], optimized=False)}
+    dumped = _dump_psd_fits(fits)
+    assert set(dumped) == {"Task 1"}
+    reloaded = _load_psd_fits(dumped)
+    assert isinstance(reloaded["Task 1"], PsdFitSpec)
+    assert reloaded["Task 1"].modes[0]["sigma"] == 1.6
+
+
 def test_core_mixin_protocols_are_typing_only():
     """The _core host Protocols document the contract but never change runtime MRO."""
     from aerosoltools._core import _protocols
