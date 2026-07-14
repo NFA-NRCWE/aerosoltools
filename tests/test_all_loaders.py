@@ -606,6 +606,73 @@ def test_loader_exception_hierarchy():
         assert issubclass(exc, ValueError)
 
 
+def test_loader_support_toolkit():
+    """The shared read/construct helpers behave as the loaders expect."""
+    import numpy as np
+    import pandas as pd
+
+    from aerosoltools import Aerosol2D
+    from aerosoltools.loaders.support.construct import build_2d
+    from aerosoltools.loaders.support.reading import read_table, sniff
+
+    # sniff returns provided values verbatim, else detects.
+    assert sniff("x", "utf-8", ",") == ("utf-8", ",")
+    enc, delim = sniff(_data_path("Sample_OPS2.txt"))
+    assert delim == ","
+
+    # read_table is pd.read_csv with detection folded in.
+    got = read_table(
+        _data_path("Sample_OPS2.txt"), header=13, encoding=enc, delimiter=delim
+    )
+    exp = pd.read_csv(
+        _data_path("Sample_OPS2.txt"), header=13, encoding=enc, delimiter=delim
+    )
+    assert got.equals(exp)
+
+    # build_2d constructs, sets the canonical metadata, and (default) converts to
+    # number + unnormalizes — same as the manual loader tail.
+    mids = np.array([100.0, 200.0, 400.0])
+    edges = np.array([70.0, 140.0, 280.0, 560.0])
+    df = pd.DataFrame(
+        {
+            "Datetime": pd.to_datetime(["2024-01-01 00:00:00", "2024-01-01 00:00:01"]),
+            "Total_conc": [3.0, 6.0],
+            "100.0": [1.0, 2.0],
+            "200.0": [1.0, 2.0],
+            "400.0": [1.0, 2.0],
+        }
+    )
+    obj = build_2d(
+        df.copy(),
+        bin_edges=edges,
+        bin_mids=mids,
+        instrument="TEST",
+        serial_number="SN1",
+        unit="cm⁻³",
+        dtype="dN",
+        density=1.2,
+    )
+    assert isinstance(obj, Aerosol2D)
+    assert obj.metadata["instrument"] == "TEST"
+    assert obj.metadata["serial_number"] == "SN1"
+    assert float(obj.density) == 1.2
+    assert list(obj.bin_mids) == [100.0, 200.0, 400.0]
+    # A different concrete class can be requested.
+    from aerosoltools import ELPI
+
+    elpi = build_2d(
+        df.copy(),
+        bin_edges=edges,
+        bin_mids=mids,
+        instrument="ELPI",
+        serial_number="SN2",
+        unit="cm⁻³",
+        dtype="dN",
+        cls=ELPI,
+    )
+    assert isinstance(elpi, ELPI)
+
+
 def test_public_load_file_autodetects():
     """at.load_file auto-detects the instrument and matches the explicit loader."""
     import aerosoltools as at
