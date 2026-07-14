@@ -51,8 +51,11 @@ src/aerosoltools/
                        activities, time_ops, statistics, statistics2d, fractions,
                        size_distribution, corrections, fitting, plotting, plotting2d,
                        alt, + shared helpers _shading (activity shading) / _labels.
-  loaders/           One module per instrument + Common.py (delimiter sniffer / parse
-                       helpers) + __init__ registry; load_<instr>_file functions.
+  loaders/           One module per instrument + registry.py (dispatch / auto-detect)
+                       + __init__; load_<instr>_file functions. Shared infra lives in
+                       loaders/support/ (parsing.py — the delimiter/encoding sniffer +
+                       folder batch-loader, formerly Common.py; exceptions.py — the
+                       LoaderError hierarchy).
   intercomparison/   Public multi-dataset workflows: combination.py
                        (combine_measurements, combine_size_ranges), correlation.py
                        (plot_correlation, bland_altman_analysis, fit_data),
@@ -71,14 +74,23 @@ inheritance, so each file stays readable while the public API is unchanged.
 Every method is still reachable on the facade class. Watch the MRO when adding
 methods, and prefer adding to the relevant mixin over the facade.
 
-**GUI architecture (`src/aerosoltools/gui/`):** `main_window.py` (`MainWindow`)
-owns a `Project` (`project.py` — datasets + active id + shared activity
-registry; Qt-free) persisted by `projectio.py` (movable self-contained folder).
-`tabs/` is a package, one module per tab, with `_base.py` providing the
-`_PlotTab` base (embedded Matplotlib figure, the publication export pipeline,
-table helpers). Other modules: `theme.py` (dark/light themes + `export_rc`),
-`helpers.py`, `widgets.py`, `adjustments.py`, `calibration.py`, `sidebar.py`,
-`models.py`, `loaders.py`, `qt.py` (single PyQt5/backend binding point).
+**GUI architecture (`src/aerosoltools/gui/`):** grouped into concern-based
+subpackages (plus `qt.py` — the single PyQt5/backend binding point — and
+`__init__.py`/`__main__.py` entry points at the top):
+- `app/` — application shell / lifecycle: `main_window.py` (`MainWindow`) and
+  `sidebar.py`.
+- `state/` — the Qt-free data model + persistence: `project.py` (`Project`:
+  datasets + active id + shared activity registry), `projectio.py` (save/load to
+  a movable self-contained folder, schema-versioned with a migration seam), and
+  the typed caches `summary_cache.py` + `fit_specs.py` (`PsdFitSpec`/
+  `DecayFitSpec`).
+- `view/` — appearance: `theme.py` (dark/light + `export_rc`), `widgets.py`,
+  `models.py` (pandas Qt table model), `metric_picker.py`, `shortcut.py`, and
+  `assets.py` (+ the bundled `aerosoltools.ico`).
+- `logic/` — Qt-light domain workflows: `helpers.py`, `calibration.py`,
+  `adjustments.py`, `loaders.py` (GUI file-open shim over the loader registry).
+- `tabs/` — one module per tab, with `_base.py` providing the `_PlotTab` base
+  (embedded Matplotlib figure, the publication export pipeline, table helpers).
 
 ## Branch & git workflow
 
