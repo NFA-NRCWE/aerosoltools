@@ -480,10 +480,9 @@ class DecayFitMixin:
         series: Optional[pd.Series] = None,
         unit: Optional[str] = None,
     ) -> dict:
-        """Description:
-            Fit a single-zone emission + decay peak to one time window of a
-            concentration metric, estimating the emission/source strength and
-            the loss kinetics (zeroth, first, second order, or combined).
+        """Fit a single-zone emission + decay peak to one time window of a
+        concentration metric, estimating the emission/source strength and
+        the loss kinetics (zeroth, first, second order, or combined).
 
             The loss kinetics come from a robust fit of the **decay** (post-peak)
             part alone; the peak is anchored to the data and the emission rate is
@@ -553,19 +552,22 @@ class DecayFitMixin:
                 given but ``unit`` is ``None`` the named metric's unit is used.
 
         Returns:
-            dict: With keys including "model", "unit", "metric", "r_squared"
-            (whole window), "decay_r_squared" (post-peak fit), "n_points",
-            "params", "errors", "background", "peak_concentration",
-            "peak_excess", "emission_rate"/"emission_rate_unit",
-            "decay_rate"/"decay_rate_per_hour" (first-order-equivalent loss
-            rate, for round-tripping into ``decay_rate``),
-            "loss_rate_per_hour"/"half_life_hours" (first-order term),
-            "zeroth_order_rate" (zeroth order), "second_order_rate"
-            (second/combined), "wall_loss_rate_per_hour" (with
-            ``air_exchange_rate``), "source_strength"/"total_emitted" (with
-            ``volume``), the timing ("emission_start_s", "emission_duration_s",
-            "peak_time_s", "peak_time") and, for redrawing, "window_start" and
-            "model_popt" (see :func:`decay_curve`).
+            DecayResult: A typed record (also a read-only mapping, so
+            ``result["r_squared"]`` still works) with fields including ``model``,
+            ``unit``, ``metric``, ``r_squared`` (whole window), ``decay_r_squared``
+            (post-peak fit), ``n_points``, ``params``, ``errors``, ``background``,
+            ``peak_concentration``, ``peak_excess``, ``emission_rate`` /
+            ``emission_rate_unit``, ``decay_rate`` / ``decay_rate_per_hour``
+            (first-order-equivalent loss rate, for round-tripping into
+            ``decay_rate``), ``loss_rate_per_hour`` / ``half_life_hours``
+            (first-order term), ``zeroth_order_rate``, ``second_order_rate``
+            (second/combined), ``wall_loss_rate_per_hour`` (with
+            ``air_exchange_rate``), ``source_strength`` / ``total_emitted`` (with
+            ``volume``), the timing (``emission_start_s``, ``emission_duration_s``,
+            ``peak_time_s``, ``peak_time``) and, for redrawing, ``window_start``
+            and ``model_popt`` (see :func:`decay_curve`). Optional model-/volume-
+            specific fields are ``None`` (and omitted from the mapping view) when
+            not applicable.
 
         Raises:
             ValueError: If ``period`` is neither a known activity nor a valid

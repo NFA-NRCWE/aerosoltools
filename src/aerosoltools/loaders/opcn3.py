@@ -12,10 +12,9 @@ from .support.parsing import _detect_delimiter
 
 
 def load_opcn3_file(file: str, extra_data: bool = False, PM_focus: bool = False):
-    """Description:
-        Load an OPC-N3 export and return either a size-resolved distribution
-        (:class:`Aerosol2D`) or PM-focused time series (:class:`Aerosol1D`)
-        with metadata.
+    """Load an OPC-N3 export and return either a size-resolved distribution
+    (:class:`Aerosol2D`) or PM-focused time series (:class:`Aerosol1D`)
+    with metadata.
 
     Args:
         file (str):
@@ -45,7 +44,7 @@ def load_opcn3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
         ValueError:
             If the delimiter detection or CSV parsing fails in a way that
             prevents reading the header or main data table.
-        Exception:
+        FileFormatError:
             If the file format cannot be recognised from the first line and
             thus cannot be dispatched to a supported OPC-N3 loader.
 

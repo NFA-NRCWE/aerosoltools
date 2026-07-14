@@ -11,10 +11,9 @@ from .support.parsing import _detect_delimiter
 
 
 def load_cpc_file(file: str, extra_data: bool = False) -> Aerosol1D:
-    """Description:
-        Load a TSI CPC (Condensation Particle Counter) export file, automatically
-        detect its format, and return a time series of total particle number
-        concentration as an :class:`Aerosol1D` object.
+    """Load a TSI CPC (Condensation Particle Counter) export file, automatically
+    detect its format, and return a time series of total particle number
+    concentration as an :class:`Aerosol1D` object.
 
     Args:
         file (str):
@@ -56,7 +55,7 @@ def load_cpc_file(file: str, extra_data: bool = False) -> Aerosol1D:
             If :func:`_detect_delimiter` cannot reliably determine a delimiter
             from the sampled lines. This can happen for very short or malformed
             files.
-        Exception:
+        FileFormatError:
             If the detected column structure does not match any supported CPC
             format (currently focused with 4 columns or full with 14 columns).
             In this case, check that the file is an unmodified CPC export and

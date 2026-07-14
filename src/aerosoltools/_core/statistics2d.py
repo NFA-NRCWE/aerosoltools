@@ -46,8 +46,7 @@ class Summary2DMixin:
         metrics: Optional[list[str]] = None,
         stats: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
-        """Description:
-            Summarize size-resolved aerosol metrics per activity.
+        """Summarize size-resolved aerosol metrics per activity.
 
         Args:
             filename (str | None): Optional Excel file path. If provided,
@@ -404,8 +403,7 @@ class Summary2DMixin:
         sheet_name: Optional[str] = None,
         activities: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
-        """Description:
-            Summarize exposure metrics for one PSD-derived metric across activities.
+        """Summarize exposure metrics for one PSD-derived metric across activities.
 
         Args:
             metric (str): Exposure metric name derived from the underlying

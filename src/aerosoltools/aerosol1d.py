@@ -451,8 +451,7 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
     ###########################################################################
 
     def copy_self(self):
-        """Description:
-            Create and return a deep copy of the aerosol time-series object.
+        """Create and return a deep copy of the aerosol time-series object.
 
         Returns:
             Aerosol1D: A new object with independent copies of all data,

@@ -12,9 +12,8 @@ from .support.parsing import _detect_delimiter
 
 
 def load_partector_file(file: str, extra_data: bool = False) -> Partector:
-    """Description:
-        Load a Partector LDSA text export and return it as a
-        :class:`Partector` time series with TEM sampling metadata.
+    """Load a Partector LDSA text export and return it as a
+    :class:`Partector` time series with TEM sampling metadata.
 
     Args:
         file (str):

@@ -24,8 +24,7 @@ class TimeOpsMixin:
         focus: bool = True,
         crop_extra: bool = True,
     ) -> "Aerosol1D":
-        """Description:
-            Crop the time axis to include or exclude a time interval.
+        """Crop the time axis to include or exclude a time interval.
 
         Args:
             start (str | pandas.Timestamp | None): Start of the interval.
@@ -95,8 +94,7 @@ class TimeOpsMixin:
         method: Union[str, Callable] = "mean",
         inplace: bool = True,
     ) -> "Aerosol1D":
-        """Description:
-            Resample the time series to a new regular frequency.
+        """Resample the time series to a new regular frequency.
 
         Args:
             freq (str): Target sampling interval as a pandas offset alias
@@ -231,8 +229,7 @@ class TimeOpsMixin:
         inplace: bool = True,
         shift_extra: bool = True,
     ):
-        """Description:
-            Shift the time index by a constant offset.
+        """Shift the time index by a constant offset.
 
         Args:
             seconds (float): Offset in seconds; positive shifts the series
@@ -287,8 +284,7 @@ class TimeOpsMixin:
         return target
 
     def timesmooth(self, window: int = 5, method: str = "mean", inplace: bool = True):
-        """Description:
-            Apply a centered rolling smoother to numeric columns.
+        """Apply a centered rolling smoother to numeric columns.
 
         Args:
             window (int): Rolling window size in number of samples.

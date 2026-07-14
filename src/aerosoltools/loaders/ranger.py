@@ -206,13 +206,12 @@ def _build_object(
 def load_ranger_file(
     file: str, extra_data: bool = False
 ) -> Union[RangerObject, List[RangerObject]]:
-    """Description:
-        Load a Ranger sensor CSV export. The Ranger uses interchangeable
-        measurement heads (e.g. Cl₂, NO₂ or PM), and a single export may
-        contain several of them: each head writes its own ``"UTC time, …"``
-        header row followed by its readings. This loader splits the file on
-        those headers, groups the segments by measured component, and returns
-        one aerosol object per component.
+    """Load a Ranger sensor CSV export. The Ranger uses interchangeable
+    measurement heads (e.g. Cl₂, NO₂ or PM), and a single export may
+    contain several of them: each head writes its own ``"UTC time, …"``
+    header row followed by its readings. This loader splits the file on
+    those headers, groups the segments by measured component, and returns
+    one aerosol object per component.
 
     Args:
         file (str):

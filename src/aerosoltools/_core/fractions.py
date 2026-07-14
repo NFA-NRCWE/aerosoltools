@@ -218,8 +218,7 @@ class FractionMixin:
         )
 
     def PM_calc(self, dtype: str = "dM", PM: float = 4.2, lower_lim: float = 0):
-        """Description:
-            Compute a size-selective Pₓ time series and store it in extra_data.
+        """Compute a size-selective Pₓ time series and store it in extra_data.
 
         Args:
             dtype (str): Base distribution type to integrate, one of

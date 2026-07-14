@@ -13,9 +13,8 @@ from .support.parsing import _detect_delimiter
 
 
 def load_ops_file(file: str, extra_data: bool = False):
-    """Description:
-        Load a TSI OPS spectrometer export and return it as an
-        :class:`Aerosol2D` number-size distribution with metadata.
+    """Load a TSI OPS spectrometer export and return it as an
+    :class:`Aerosol2D` number-size distribution with metadata.
 
     Args:
         file (str):
@@ -37,7 +36,7 @@ def load_ops_file(file: str, extra_data: bool = False):
         UnicodeDecodeError:
             If the file cannot be decoded using the encodings tried by
             :func:`_detect_delimiter`.
-        Exception:
+        FileFormatError:
             If the first header line cannot be recognised as either an AIM
             export (``"Sample File"``) or a direct OPS export
             (``"Instrument Name"``), and the file therefore cannot be routed

@@ -89,10 +89,9 @@ def combine_size_ranges(
     rebin_freq: str | None = None,
     rebin_method: str | Callable = "mean",
 ) -> Aerosol2D:
-    """Description:
-        Stitch two size-resolved instruments that together **extend** the size
-        range (e.g. NanoScan + OPS, FMPS + OPS, NS/FMPS + APS) into one
-        time-aligned :class:`~aerosoltools.aerosol2d.Aerosol2D` number spectrum.
+    """Stitch two size-resolved instruments that together **extend** the size
+    range (e.g. NanoScan + OPS, FMPS + OPS, NS/FMPS + APS) into one
+    time-aligned :class:`~aerosoltools.aerosol2d.Aerosol2D` number spectrum.
 
         One instrument supplies the small-size end, the other the large-size
         end, and a single ``crossover`` diameter marks where one takes over from
@@ -269,13 +268,12 @@ def combine_size_ranges(
 
 
 def combine_measurements(datasets, *, require_same_serial: bool = True):
-    """Description:
-        Concatenate several measurements from the *same* instrument into one
-        continuous time series — for example the same monitor run on three
-        separate days, with gaps in between. The inputs are joined along the
-        time axis, sorted, de-duplicated, and returned as a single new object
-        of the same class. Gaps between recordings are preserved (no
-        interpolation is performed).
+    """Concatenate several measurements from the *same* instrument into one
+    continuous time series — for example the same monitor run on three
+    separate days, with gaps in between. The inputs are joined along the
+    time axis, sorted, de-duplicated, and returned as a single new object
+    of the same class. Gaps between recordings are preserved (no
+    interpolation is performed).
 
     Args:
         datasets (Sequence):

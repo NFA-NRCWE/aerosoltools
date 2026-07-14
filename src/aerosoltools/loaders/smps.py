@@ -67,9 +67,8 @@ def _load_SMPS_metadata(
 
 
 def load_smps_file(file: str, extra_data: bool = False) -> Aerosol2D:
-    """Description:
-        Load an SMPS size-distribution export and return it as an
-        :class:`Aerosol2D` number-size distribution with metadata.
+    """Load an SMPS size-distribution export and return it as an
+    :class:`Aerosol2D` number-size distribution with metadata.
 
     Args:
         file (str):
@@ -93,7 +92,7 @@ def load_smps_file(file: str, extra_data: bool = False) -> Aerosol2D:
         ValueError:
             If CSV parsing fails in a way that prevents reading the header or
             main data table.
-        Exception:
+        FileFormatError:
             If the weight/unit combination in the SMPS header does not match
             the expected format and the data type cannot be interpreted.
 

@@ -21,7 +21,9 @@ ACTIVITY_CMAP = "gist_ncar"
 ACTIVITY_ALPHA = 0.3
 
 
-def resolve_activities(activity_periods: Dict, mark, include_all_data: bool = False) -> List[str]:
+def resolve_activities(
+    activity_periods: Dict, mark, include_all_data: bool = False
+) -> List[str]:
     """Resolve a ``mark`` spec to the list of activity names to shade.
 
     Args:
@@ -45,9 +47,7 @@ def activity_colors(activity_periods: Dict) -> Dict:
     """Map each activity to a stable colour from :data:`ACTIVITY_CMAP`."""
     all_names = sorted(activity_periods.keys())
     cmap = plt.colormaps.get_cmap(ACTIVITY_CMAP)
-    return {
-        name: cmap(i / max(1, len(all_names))) for i, name in enumerate(all_names)
-    }
+    return {name: cmap(i / max(1, len(all_names))) for i, name in enumerate(all_names)}
 
 
 def shade_activities(

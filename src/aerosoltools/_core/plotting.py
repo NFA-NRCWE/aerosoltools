@@ -22,9 +22,8 @@ class Plot1DMixin:
         mark_activities: bool | Sequence[str] = False,
         parameter: Union[int, str] = 0,
     ) -> tuple[Figure, Axes]:
-        """Description:
-            Plot a selected scalar channel versus time for a multi-channel
-            object.
+        """Plot a selected scalar channel versus time for a multi-channel
+        object.
 
         Args:
             ax (matplotlib.axes.Axes | None, optional):

@@ -51,8 +51,7 @@ def _aps_bins_nm(headers, lower_um, upper_um):
 
 
 def load_aps_file(file: str) -> Aerosol2D:
-    """Description:
-        Load a TSI APS 3321 AIM text export and return the size distribution.
+    """Load a TSI APS 3321 AIM text export and return the size distribution.
 
         The APS sizes each particle both **aerodynamically** (time of flight)
         and, in *correlated* mode, **optically** (side scatter). This loader

@@ -30,8 +30,7 @@ class CorrectionMixin(_Host):
         P: float = 101300,
         inplace: bool = True,
     ):
-        """Description:
-            Correct size distributions for diffusion losses in sampling tubes.
+        """Correct size distributions for diffusion losses in sampling tubes.
 
         Args:
             D_tube (float): Inner diameter of the sampling tube in metres.

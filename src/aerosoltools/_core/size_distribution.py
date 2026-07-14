@@ -572,8 +572,7 @@ class SizeConversionMixin:
         )
 
     def dtype_converter(self, dtype: str = "dN", inplace: bool = True):
-        """Description:
-            Convert the size distribution to a chosen base data type.
+        """Convert the size distribution to a chosen base data type.
 
         Args:
             dtype (str): Target data type string, one of "dN", "dS",
@@ -636,8 +635,7 @@ class SizeConversionMixin:
             )
 
     def normalize_logdp(self, inplace: bool = True):
-        """Description:
-            Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).
+        """Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).
 
         Args:
             inplace (bool): If True, normalize this object in place and
@@ -699,8 +697,7 @@ class SizeConversionMixin:
         return target
 
     def unnormalize_logdp(self, inplace: bool = True):
-        """Description:
-            Undo Δlog₁₀(Dp) normalization (dx/dlogDp → base form).
+        """Undo Δlog₁₀(Dp) normalization (dx/dlogDp → base form).
 
         Args:
             inplace (bool): If True, unnormalize this object in place and
@@ -780,8 +777,7 @@ class SizeConversionMixin:
         return False
 
     def set_density(self, density: Union[float, int] = 1.0):
-        """Description:
-            Set or update the assumed particle density (g/cm³).
+        """Set or update the assumed particle density (g/cm³).
 
         Args:
             density (float | int): New particle density in g/cm³.
@@ -856,8 +852,7 @@ class SizeConversionMixin:
         return self
 
     def rebin_bin_edges(self, new_bin_edges, inplace: bool = True):
-        """Description:
-            Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).
+        """Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).
 
         Args:
             new_bin_edges (np.array): A list of

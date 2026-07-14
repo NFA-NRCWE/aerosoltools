@@ -64,48 +64,39 @@ def fit_data(
     variable_guess: dict = {"m": 1},
     start_time: pd.Timestamp | str | None = None,
     end_time: pd.Timestamp | str | None = None,
-    # inplace: bool = True
 ):
-    # m: Union[int, float, list] = 1, b: Union[int, float, list] = 0, inplace: bool = True):
-    """
-    Apply a correction to the total conc and mark the data as calibrated
-    by a linear function. The calibration value is applied to the size data.
+    """Fit a function relating one dataset's signal to another's.
+
+    Aligns the chosen signal from ``target_data`` and ``ref_data`` on their
+    common time base (dropping samples that are NaN in either), fits
+    ``fit_function`` to the pair with :func:`scipy.optimize.curve_fit`, and
+    reports the fitted coefficients, their 1σ standard errors, and the R² of the
+    fit. Nothing is modified — this only computes the relationship (e.g. to build
+    a calibration from it later).
 
     Args:
-        X: First aerosol-like object, typically :class:`Aerosol1D` or
-            :class:`Aerosol2D`.
-        Y: Second aerosol-like object.
-        parameter: Name of the variable or variables to extract from each object.
-            If tuple the parameters are read as (parameter_X, parameter_Y)
-        parameter (int | str, optional):
-            Index or column name of the signal to plot. If ``int``, it is
-            interpreted as a positional index into :attr:`data.columns`. If
-            ``str``, it is treated as a column label. Defaults to ``0``.
-            If 'bin' is chosen, the calibration will go through each size bin,
-            and apply the calibration function.
-        fit_function (function):
-            A defined function to apply to the calibration.
-            If none is chosen, an assumed linear calibration is used using y = m*x +b
-        Variables (dict):
-            The calibration value to be multiplied to the data for correction.
-            If m is provided as a list, it should be of equal length to the number
-            of bins. The total concentration is then recalculated as the sum.
+        target_data: The dataset whose signal is the fit's ``x`` (e.g. the field
+            instrument being characterised).
+        ref_data: The dataset whose signal is the fit's ``y`` (e.g. the
+            reference instrument).
+        parameter (int | str): Which signal to extract from each dataset. An
+            ``int`` is a positional index into ``data.columns``; a ``str`` is a
+            column label. Defaults to ``0``.
+        fit_function (callable | None): Model ``f(x, *coeffs)`` to fit. Defaults
+            to a linear model ``y = m*x + b`` (:func:`_linear`) when ``None``.
+        variable_guess (dict): Initial guesses for the fit coefficients, keyed by
+            name (e.g. ``{"m": 1}`` or ``{"A": 1, "B": 0}``); the keys also name
+            the returned coefficients. Defaults to ``{"m": 1}``.
         start_time: Optional start of the analysis window (string or
             :class:`pandas.Timestamp`).
         end_time: Optional end of the analysis window (string or
             :class:`pandas.Timestamp`).
-        inplace (bool): If ``True`` (default), modify the current instance and
-            return it. If ``False``, perform the conversion on a deep copy
-            and return the new instance.
 
     Returns:
-        out (Aerosold2D):
-            If inplace ``True`` the calibration function applies the calibration
-            to the acted upon dataset, if inplace ``False`` a copy of the calibrated
-            dataset is returned.
-            In addition to the data with the applied calibration, a
-    None
-
+        tuple[dict, dict, float]: ``(coeffs, errors, r_squared)`` where
+        ``coeffs`` maps each ``variable_guess`` key to its fitted value,
+        ``errors`` maps each key to its 1σ standard error, and ``r_squared`` is
+        the coefficient of determination of the fit.
     """
 
     if fit_function is None:
@@ -150,9 +141,8 @@ def plot_correlation(
     outlier_influence: bool = True,
     activity: str | None = None,
 ) -> tuple[Figure, Axes]:
-    """Description:
-        Create a correlation plot between the same variable from two aerosol
-        datasets, including regression line, 1:1 line, and R².
+    """Create a correlation plot between the same variable from two aerosol
+    datasets, including regression line, 1:1 line, and R².
 
     Args:
         X:

@@ -10,9 +10,8 @@ from .support.parsing import _detect_delimiter
 
 
 def load_fourtec_file(file: str) -> Environmental1D:
-    """Description:
-        Load a Fourtec Bluefish CSV or Excel export and return temperature and
-        relative humidity as an :class:`Environmental1D` time series.
+    """Load a Fourtec Bluefish CSV or Excel export and return temperature and
+    relative humidity as an :class:`Environmental1D` time series.
 
     Args:
         file (str):

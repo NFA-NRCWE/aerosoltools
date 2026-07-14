@@ -9,9 +9,8 @@ from .support.parsing import _detect_delimiter
 
 
 def load_ns_file(file: str, extra_data: bool = False) -> Aerosol2D:
-    """Description:
-        Load a NanoScan SMPS (NS) CSV export and return it as an
-        :class:`Aerosol2D` number-size distribution with metadata.
+    """Load a NanoScan SMPS (NS) CSV export and return it as an
+    :class:`Aerosol2D` number-size distribution with metadata.
 
     Args:
         file (str):

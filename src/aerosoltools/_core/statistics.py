@@ -266,8 +266,7 @@ class SummaryMixin(_Host):
         metrics: Optional[list[str]] = None,
         stats: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
-        """Description:
-            Summarize 1D aerosol metrics per activity.
+        """Summarize 1D aerosol metrics per activity.
 
         Args:
             filename (str | None): Optional path to a CSV or Excel file.
@@ -415,8 +414,7 @@ class SummaryMixin(_Host):
         filename: Optional[str] = None,
         activities: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
-        """Description:
-            Summarize exposure metrics for one 1D metric across activities.
+        """Summarize exposure metrics for one 1D metric across activities.
 
         Args:
             metric (str): Exposure metric name based on the underlying

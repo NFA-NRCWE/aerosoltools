@@ -11,9 +11,8 @@ from .support.parsing import _detect_delimiter
 
 
 def load_grimm_file(file: str) -> Aerosol2D:
-    """Description:
-        Load a Grimm spectrometer export and return it as an
-        :class:`Aerosol2D` number-size distribution with metadata.
+    """Load a Grimm spectrometer export and return it as an
+    :class:`Aerosol2D` number-size distribution with metadata.
 
     Args:
         file (str):

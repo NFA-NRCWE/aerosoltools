@@ -11,9 +11,8 @@ from .support.parsing import _detect_delimiter
 
 
 def load_dusttrak_file(file: str, extra_data: bool = False) -> DustTrak:
-    """Description:
-        Load a DustTrak DRX export file and return PM mass concentrations and
-        total mass as a :class:`DustTrak` time series.
+    """Load a DustTrak DRX export file and return PM mass concentrations and
+    total mass as a :class:`DustTrak` time series.
 
     Args:
         file (str):

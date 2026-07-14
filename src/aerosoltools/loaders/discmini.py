@@ -92,10 +92,9 @@ def _extract_serial_and_firmware(
 
 
 def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
-    """Description:
-        Load a converted DiSCmini export file and return total number
-        concentration, mean size, and LDSA as a :class:`DiSCmini` time
-        series.
+    """Load a converted DiSCmini export file and return total number
+    concentration, mean size, and LDSA as a :class:`DiSCmini` time
+    series.
 
     Args:
         file (str):
@@ -130,7 +129,7 @@ def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
             ``"Number"``, or size/LDSA columns are missing or renamed in an
             unexpected way. Verify that the file is an unmodified DiSCmini
             export.
-        Exception:
+        TimestampError:
             If neither direct parsing nor reconstruction of the datetime
             column succeeds, or if a valid ``"Datetime"`` column cannot be
             produced after all attempts. The raised message will typically
@@ -584,10 +583,9 @@ def load_discmini_raw_file(
     zero_offset_correction: bool = True,
     ldsa_correction: bool = False,
 ) -> DiSCmini:
-    """Description:
-        Load a **raw** DiSCmini ``.TXT`` file and reproduce the vendor
-        software's processed output (total number concentration, mean size
-        and LDSA) directly, without the intermediate commercial conversion.
+    """Load a **raw** DiSCmini ``.TXT`` file and reproduce the vendor
+    software's processed output (total number concentration, mean size
+    and LDSA) directly, without the intermediate commercial conversion.
 
     Args:
         file (str):

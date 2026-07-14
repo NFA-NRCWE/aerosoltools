@@ -11,9 +11,8 @@ from .support.parsing import _detect_delimiter
 
 
 def load_fmps_file(file: str) -> Aerosol2D:
-    """Description:
-        Load an FMPS size-distribution export and return it as an
-        :class:`Aerosol2D` number-size distribution with metadata.
+    """Load an FMPS size-distribution export and return it as an
+    :class:`Aerosol2D` number-size distribution with metadata.
 
     Args:
         file (str):
@@ -30,7 +29,7 @@ def load_fmps_file(file: str) -> Aerosol2D:
         UnicodeDecodeError:
             If the file cannot be decoded using the encodings tried by
             :func:`_detect_delimiter`.
-        Exception:
+        FileFormatError:
             If the file appears to be a raw (unconverted) FMPS export, or if
             the detected data type cannot be interpreted as a supported FMPS
             format.

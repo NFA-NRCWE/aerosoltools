@@ -8,9 +8,8 @@ from .support.parsing import _detect_delimiter
 
 
 def load_aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
-    """Description:
-        Load time-resolved black carbon data from an Aethalometer export file
-        into an :class:`aerosoltools.Aethalometer` object.
+    """Load time-resolved black carbon data from an Aethalometer export file
+    into an :class:`aerosoltools.Aethalometer` object.
 
     Args:
         file (str):
@@ -58,7 +57,7 @@ def load_aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
             cannot be parsed using the expected format
             ``\"%Y-%m-%dT%H:%M:%S\"``. Check that the locale and export
             format match the loader assumptions.
-        Exception:
+        EmptyFileError:
             If the file is read successfully but, after dropping empty rows,
             no data remain (i.e. the dataset is effectively empty). This
             typically indicates an export problem or a file containing only

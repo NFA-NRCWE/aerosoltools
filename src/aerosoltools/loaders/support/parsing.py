@@ -140,8 +140,7 @@ def file_list(
     max_subfolder: int = 0,
     nested_list: bool = False,
 ) -> List[Union[str, List[str]]]:
-    """Description:
-        List files in a folder tree with optional depth and name filtering.
+    """List files in a folder tree with optional depth and name filtering.
 
     Args:
         path (str):
@@ -319,10 +318,9 @@ def load_data_from_folder(
     time_rebin: str | None = None,
     **kwargs: Any,
 ):
-    """Description:
-        Batch-load aerosol data from multiple files in a folder, check
-        metadata consistency, and combine compatible datasets into a single
-        aerosol object, while skipping files that do not match.
+    """Batch-load aerosol data from multiple files in a folder, check
+    metadata consistency, and combine compatible datasets into a single
+    aerosol object, while skipping files that do not match.
 
     Args:
         folder_path (str):
