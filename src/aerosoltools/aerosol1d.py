@@ -286,6 +286,23 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
         """
         return self._meta.get("unit", "Unknown unit")
 
+    @property
+    def column_units(self) -> dict:
+        """Canonical unit per column name (core *and* extra columns).
+
+        Populated by the loaders from the shared unit registry (see
+        :func:`aerosoltools._core.metrics.parse_header_unit`), so every column a
+        loader could resolve carries one canonical unit string. A column that is
+        **absent** from this map has no known unit — callers that need an honest
+        "unknown" (e.g. an axis label) should show the header text alone rather
+        than borrow the primary series' unit. Empty ``dict`` for objects built
+        without unit resolution.
+
+        Returns:
+            dict: ``{column_name: canonical_unit}`` (possibly empty).
+        """
+        return self._meta.get("column_units", {})
+
     ###########################################################################
     """########################### Core helpers ###########################"""
     ###########################################################################
@@ -311,9 +328,11 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
     def unit_of(self, column: str | None = None) -> str:
         """Return the unit for ``column`` as a string (per-column aware).
 
-        Handles both scalar and per-column-``dict`` ``unit`` metadata. With
-        ``column=None`` (or an unknown column) returns the scalar unit, or the
-        first per-column unit for a multi-channel instrument.
+        Prefers the canonical per-column unit from :attr:`column_units` when the
+        loader resolved one for ``column``; otherwise handles both scalar and
+        per-column-``dict`` ``unit`` metadata. With ``column=None`` (or an
+        unknown column with no ``unit`` dict entry) returns the scalar unit, or
+        the first per-column unit for a multi-channel instrument.
 
         Args:
             column: Column/channel name to look up; ``None`` for the default.
@@ -321,6 +340,9 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
         Returns:
             str: The resolved unit string.
         """
+        units = self._meta.get("column_units")
+        if column is not None and isinstance(units, dict) and column in units:
+            return str(units[column])
         return self._resolve_meta(self._meta.get("unit", "Unknown unit"), column)
 
     def dtype_of(self, column: str | None = None) -> str:

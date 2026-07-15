@@ -134,6 +134,13 @@ def column_unit(obj: Aerosol1D, column: str | None) -> str | None:
     Returns:
         The unit string when known, else ``None``.
     """
+    # Loader-resolved canonical units (core + extra columns) are the single
+    # source of truth when present.
+    column_units = getattr(obj, "column_units", None) or {}
+    if column in column_units:
+        return str(column_units[column])
+    # Fall back to the primary/dict ``unit`` metadata for objects (or columns)
+    # without a resolved canonical unit.
     meta = getattr(obj, "_meta", {}).get("unit")
     if isinstance(meta, dict):
         return str(meta[column]) if column in meta else None

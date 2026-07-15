@@ -96,6 +96,29 @@ def test_parse_header_unit_extracts_recognised_units(header, name, unit):
     assert parse_header_unit(header) == (name, unit)
 
 
+def test_column_units_meta_drives_unit_of_without_breaking_scalar_unit():
+    """A ``column_units`` map resolves per-column units; ``.unit`` stays scalar."""
+    import aerosoltools as at
+
+    ops = at.load_ops_file(_ops_sample())
+    # Inert until populated.
+    assert ops.column_units == {}
+    assert ops.unit == "cm⁻³"
+
+    ops._meta["column_units"] = {"Temperature (C)": "°C", "Total_conc": "cm⁻³"}
+    assert ops.unit_of("Temperature (C)") == "°C"  # resolved from the map
+    assert ops.unit_of("Total_conc") == "cm⁻³"
+    assert ops.unit == "cm⁻³"  # scalar .unit unchanged (back-compat)
+    # A copy carries the map (it lives in _meta, which is deep-copied).
+    assert ops.copy_self().column_units == ops.column_units
+
+
+def _ops_sample():
+    import os
+
+    return os.path.join(os.path.dirname(__file__), "data", "Sample_OPS2.txt")
+
+
 @pytest.mark.parametrize(
     "header",
     [
