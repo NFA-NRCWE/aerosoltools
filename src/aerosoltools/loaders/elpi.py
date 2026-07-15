@@ -8,7 +8,7 @@ import pandas as pd
 
 from ..elpi import ELPI
 from .support.exceptions import FileFormatError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_table, sniff
 
 ###############################################################################
 
@@ -122,9 +122,9 @@ def _read_ELPI_table(
 
     data_idx, header = _find_ELPI_data_section(lines, delimiter)
 
-    df = pd.read_csv(
+    df = read_table(
         file,
-        sep=delimiter,
+        delimiter=delimiter,
         header=None,
         skiprows=data_idx + 1,
         encoding=encoding,
@@ -502,7 +502,7 @@ def load_elpi_file(file: str, extra_data: bool = False) -> ELPI:
     ``CalculatedMoment=Current (fA)`` are converted by
     :func:`load_elpi_file_dat` before constructing the Aerosol2D object.
     """
-    encoding, delimiter = _detect_delimiter(file)
+    encoding, delimiter = sniff(file)
     meta = _load_ELPI_metadata(file, delimiter, encoding)
     calculated_moment = str(meta.get("CalculatedMoment", ""))
 
@@ -514,7 +514,7 @@ def load_elpi_file(file: str, extra_data: bool = False) -> ELPI:
 
 def load_elpi_file_txt(file: str, extra_data: bool = False) -> ELPI:
     """Load an already-converted ELPI size-distribution export."""
-    encoding, delimiter = _detect_delimiter(file)
+    encoding, delimiter = sniff(file)
     meta = _load_ELPI_metadata(file, delimiter, encoding)
     bin_edges, bin_mids = _get_ELPI_bin_edges_and_mids_nm(meta)
 
@@ -573,7 +573,7 @@ def load_elpi_file_dat(file: str, extra_data: bool = False) -> ELPI:
     converts fA/dlogDp to fA per bin, applies ELPI charger efficiency, and
     returns number concentration per bin in cm-3.
     """
-    encoding, delimiter = _detect_delimiter(file)
+    encoding, delimiter = sniff(file)
     meta = _load_ELPI_metadata(file, delimiter, encoding)
     bin_edges, bin_mids = _get_ELPI_bin_edges_and_mids_nm(meta)
 
