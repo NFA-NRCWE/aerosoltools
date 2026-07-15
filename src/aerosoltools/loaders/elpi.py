@@ -117,8 +117,15 @@ def _read_ELPI_table(
     encoding: str,
 ) -> pd.DataFrame:
     """Read the tabular part of an ELPI file and attach the header before [Data]."""
+    # Only the header region (up to the "[Data]" marker) is needed to locate the
+    # data section, so stop reading there instead of pulling the whole file into
+    # memory just to find the marker (the data itself is read by read_csv below).
+    lines = []
     with open(file, encoding=encoding, errors="replace") as f:
-        lines = f.readlines()
+        for line in f:
+            lines.append(line)
+            if line.strip() == "[Data]":
+                break
 
     data_idx, header = _find_ELPI_data_section(lines, delimiter)
 
