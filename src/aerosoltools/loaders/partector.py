@@ -13,7 +13,36 @@ from .support.units import resolve_extra_columns
 ###############################################################################
 
 
-def load_partector_file(file: str, extra_data: bool = True) -> Partector:
+def _tem_sampling_periods(tem_flag, datetimes) -> list[tuple]:
+    """Return a ``(start, end)`` timestamp pair for each TEM-sampling run.
+
+    The Partector's ``TEM`` channel is 1 while the sampler is actively
+    collecting particles onto its TEM grid. This finds every *contiguous* run of
+    ``TEM == 1`` (a distinct grid-sampling period), so multiple samples in one
+    recording are separated rather than merged into a single span.
+
+    Args:
+        tem_flag: The ``TEM`` column (0/1, possibly with NaN).
+        datetimes: The matching ``Datetime`` column (same positional order).
+
+    Returns:
+        A list of ``(start, end)`` :class:`pandas.Timestamp` pairs, one per run
+        (empty when the sampler never ran).
+    """
+    flag = (tem_flag == 1).to_numpy()
+    if not flag.any():
+        return []
+    # Rising/falling edges of the padded 0/1 signal bound each run (inclusive).
+    edges = np.diff(np.concatenate([[0], flag.astype(int), [0]]))
+    starts = np.where(edges == 1)[0]
+    ends = np.where(edges == -1)[0] - 1
+    dt = np.asarray(datetimes)
+    return [(pd.Timestamp(dt[s]), pd.Timestamp(dt[e])) for s, e in zip(starts, ends)]
+
+
+def load_partector_file(
+    file: str, extra_data: bool = True, tem_activities: bool = True
+) -> Partector:
     """Load a Partector LDSA text export and return it as a
     :class:`Partector` time series with TEM sampling metadata.
 
@@ -218,5 +247,15 @@ def load_partector_file(file: str, extra_data: bool = True) -> Partector:
         )
         Par._extra_data = extra_df
         Par._meta["column_units"] = column_units
+
+    # Register each TEM grid-sampling run as its own activity so users get the
+    # sampling periods directly, without re-extracting them by hand.
+    if tem_activities:
+        periods = _tem_sampling_periods(df["TEM"], df["Datetime"])
+        if periods:
+            Par.mark_activities(
+                {f"TEM grid sampling {i + 1}": [p] for i, p in enumerate(periods)},
+                mode="replace",
+            )
 
     return Par
