@@ -488,7 +488,29 @@ class DecayTab(_PlotTab):
         times = self.obj.time
         values = np.asarray(series, dtype=float)
         finite = np.isfinite(values)
-        return times[finite], values[finite], unit, metric
+        return times[finite], values[finite], self._display_unit(metric, unit), metric
+
+    def _display_unit(self, metric: str, unit: str) -> str:
+        """Return the unit to *show* for ``metric`` (may differ from the fit unit).
+
+        Only the 1-D base :meth:`_get_metric_series` fabricates a unit: for a raw
+        ``data``/``extra_data`` column it falls back to the *primary* series' unit
+        (via :meth:`~aerosoltools.Aerosol1D.unit_of`), which mislabels e.g. a
+        ``"Temperature (C)"`` channel as ``cm⁻³``. For such columns show only the
+        header text (its unit, if any, is embedded), so use the column's genuine
+        unit or none. The 2-D override instead returns real hardcoded units for
+        its derived PNC/MASS/Pₓ metrics (which it also caches into
+        ``extra_data``), so those are left untouched.
+        """
+        obj = self.obj
+        if helpers.is_2d(obj):
+            return unit
+        is_raw_column = metric in obj.data.columns or (
+            obj.extra_data is not None and metric in obj.extra_data.columns
+        )
+        if is_raw_column:
+            return helpers.column_unit(obj, metric) or ""
+        return unit
 
     # -- fitting -----------------------------------------------------------
     def _fit_spec(self, spec: dict, optimize=None):
@@ -1128,7 +1150,7 @@ class DecayTab(_PlotTab):
             base["rstart"] = _fmt_time(start)
             base["rend"] = _fmt_time(end)
             if res is not None:
-                unit = res.get("unit", unit)
+                unit = self._display_unit(self._build_metric(), res.get("unit", unit))
             rows.append(base)
             bins = self._bin_results[i] if i < len(self._bin_results) else []
             for mid, bres, excluded in bins:

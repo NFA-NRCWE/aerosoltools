@@ -110,6 +110,39 @@ def describe(obj: Aerosol1D, column: str | None = None) -> Tuple[str, str]:
     return obj.dtype_of(column), obj.unit_of(column)
 
 
+def column_unit(obj: Aerosol1D, column: str | None) -> str | None:
+    """Return ``column``'s own unit, or ``None`` when it has no unit metadata.
+
+    Unlike :meth:`~aerosoltools.Aerosol1D.unit_of` — which deliberately *falls
+    back* to the object's scalar (or first per-column) unit for an unknown column
+    — this returns ``None`` when ``column`` carries no unit of its own. A unit is
+    only reported when it is genuinely known:
+
+    * a per-column ``unit`` **dict** that contains ``column`` (e.g. a Partector's
+      ``Flow`` → ``l/min``), or
+    * the object's single **scalar** unit when ``column`` is the primary channel.
+
+    For a housekeeping / ``extra_data`` column, or a secondary column on a
+    scalar-unit object, there is no reliable unit, so the caller should label the
+    series by its header text alone (which often already embeds the unit, e.g.
+    ``"Temperature (C)"``) rather than mislabel it with the primary series' unit.
+
+    Args:
+        obj: The aerosol object.
+        column: Column/channel name to look up; ``None`` targets the primary.
+
+    Returns:
+        The unit string when known, else ``None``.
+    """
+    meta = getattr(obj, "_meta", {}).get("unit")
+    if isinstance(meta, dict):
+        return str(meta[column]) if column in meta else None
+    primary_name = getattr(getattr(obj, "_primary", None), "name", None)
+    if column is None or column == primary_name:
+        return str(meta) if meta else None
+    return None
+
+
 def converted_copy(obj, basis: str):
     """Deep-copy ``obj``, convert it to ``basis``, and return ``(view, unit)``.
 

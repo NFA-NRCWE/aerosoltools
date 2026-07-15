@@ -418,10 +418,14 @@ class OverlayTab(_PlotTab):
             # the dataset's main channel for non-particle ones (e.g. a gas).
             return pd.to_numeric(obj._primary, errors="coerce"), metric, unit
         if metric in obj.data.columns:
-            _dtype, unit = helpers.describe(obj, metric)
+            # A raw data/extra column: only carry a unit the column genuinely
+            # owns (a per-column dict entry, e.g. Flow → l/min). Housekeeping
+            # columns have none, so leave the unit blank and label by header
+            # text rather than stitch on the primary series' unit (e.g. cm⁻³).
+            unit = helpers.column_unit(obj, metric) or ""
             return pd.to_numeric(obj.data[metric], errors="coerce"), metric, unit
         if obj.extra_data is not None and metric in obj.extra_data.columns:
-            _dtype, unit = helpers.describe(obj, metric)
+            unit = helpers.column_unit(obj, metric) or ""
             return pd.to_numeric(obj.extra_data[metric], errors="coerce"), metric, unit
         return None
 

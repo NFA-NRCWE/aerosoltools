@@ -642,9 +642,17 @@ class TimeSeriesTab(_PlotTab):
             mname, unit = helpers.measurement_label(self.obj)
             ylabel = f"{mname}, {unit}".strip(", ")
         else:
+            # A named data/extra channel: label it by the column's own name
+            # (as the Overlay and Decay panes do), not the object's primary
+            # dtype. Append a unit only when the column genuinely has one — a
+            # data channel carries a reliable per-column unit (e.g. a
+            # Partector's "Flow" → l/min), whereas an extra housekeeping column
+            # has none, so the object's scalar dtype/unit describe the *primary*
+            # series and appending them would mislabel e.g. a temperature
+            # channel as "dN, cm⁻³".
             series = helpers.series_for(self.obj, kind, name)
-            dtype, unit = helpers.describe(self.obj, name)
-            ylabel = f"{helpers.base_dtype(dtype)}, {unit}".strip(", ")
+            unit = helpers.column_unit(self.obj, name)
+            ylabel = str(name) if unit is None else f"{name}, {unit}".strip(", ")
 
         # Draw the line in the active dataset's stable colour so the same
         # instrument reads the same across the single-dataset panes.
