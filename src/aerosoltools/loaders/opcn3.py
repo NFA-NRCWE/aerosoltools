@@ -5,8 +5,9 @@ import pandas as pd
 
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
+from .support.construct import build_2d
 from .support.exceptions import FileFormatError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_cells, read_table, sniff
 
 ###############################################################################
 
@@ -147,17 +148,10 @@ def load_opcn3_file(file: str, extra_data: bool = False, PM_focus: bool = False)
             # 3) Plot the time-integrated size distribution
             fig, ax = opcn_dist.plot_psd()
     """
-    encoding, delimiter = _detect_delimiter(file)
+    encoding, delimiter = sniff(file)
 
     # Peek at the first line to determine file type
-    first_line = np.genfromtxt(
-        file,
-        delimiter=delimiter,
-        encoding=encoding,
-        skip_header=0,
-        max_rows=1,
-        dtype=str,
-    )
+    first_line = read_cells(file, skip_header=0, encoding=encoding, delimiter=delimiter)
 
     if len(first_line) <= 34:
         if PM_focus:
@@ -223,19 +217,9 @@ def _load_opcn3_file_old(
         ValueError: If exactly one of ``encoding`` or ``delimiter`` is
             provided (both must be given or neither).
     """
-    # Detect when both are omitted
-    both_missing = encoding is None and delimiter is None
-    if both_missing:
-        encoding, delimiter = _detect_delimiter(file)  # -> Tuple[str, str]
+    enc, delim = sniff(file, encoding, delimiter)
 
-    # If only one was provided, that’s ambiguous
-    if (encoding is None) != (delimiter is None):
-        raise ValueError("Either provide both encoding and delimiter, or neither.")
-
-    enc: str = encoding  # type: ignore[assignment]
-    delim: str = delimiter  # type: ignore[assignment]
-
-    df = pd.read_csv(file, delimiter=delim, encoding=enc)
+    df = read_table(file, delimiter=delim, encoding=enc)
     df.rename(columns={"date": "Datetime"}, inplace=True)
     df.dropna(inplace=True)
     df.reset_index(drop=True, inplace=True)
@@ -287,16 +271,19 @@ def _load_opcn3_file_old(
 
     final_df = pd.concat([df["Datetime"], total_df, bin_df], axis=1)
 
-    OPCN = Aerosol2D(final_df)
-    OPCN._meta = {
-        "instrument": "OPCN",
-        "bin_edges": bin_edges,
-        "bin_mids": bin_mids,
-        "density": 1.65,
-        "serial_number": "unknown",
-        "unit": "cm⁻³",
-        "dtype": "dN",
-    }
+    # Already plain number (dN, cm⁻³); no post-construction conversion.
+    OPCN = build_2d(
+        final_df,
+        bin_edges=bin_edges,
+        bin_mids=bin_mids,
+        instrument="OPCN",
+        serial_number="unknown",
+        unit="cm⁻³",
+        dtype="dN",
+        density=1.65,
+        to_number=False,
+        unnormalize=False,
+    )
 
     if extra_data:
         OPCN._extra_data = extra_df
@@ -347,19 +334,9 @@ def _load_opcn3_file_new(
         ValueError: If exactly one of ``encoding`` or ``delimiter`` is
             provided (both must be given or neither).
     """
-    # Detect when both are omitted
-    both_missing = encoding is None and delimiter is None
-    if both_missing:
-        encoding, delimiter = _detect_delimiter(file)  # -> Tuple[str, str]
+    enc, delim = sniff(file, encoding, delimiter)
 
-    # If only one was provided, that’s ambiguous
-    if (encoding is None) != (delimiter is None):
-        raise ValueError("Either provide both encoding and delimiter, or neither.")
-
-    enc: str = encoding  # type: ignore[assignment]
-    delim: str = delimiter  # type: ignore[assignment]
-
-    df = pd.read_csv(file, delimiter=delim, encoding=enc)
+    df = read_table(file, delimiter=delim, encoding=enc)
     df.rename(columns={"Date": "Datetime"}, inplace=True)
     df.drop(columns="OPC", inplace=True)
     df.dropna(inplace=True)
@@ -443,16 +420,19 @@ def _load_opcn3_file_new(
 
     final_df = pd.concat([df["Datetime"], total_df, bin_df], axis=1)
 
-    OPCN = Aerosol2D(final_df)
-    OPCN._meta = {
-        "instrument": "OPCN",
-        "bin_edges": bin_edges,
-        "bin_mids": bin_mids,
-        "density": 1.65,
-        "serial_number": "unknown",
-        "unit": "cm⁻³",
-        "dtype": "dN",
-    }
+    # Already plain number (dN, cm⁻³); no post-construction conversion.
+    OPCN = build_2d(
+        final_df,
+        bin_edges=bin_edges,
+        bin_mids=bin_mids,
+        instrument="OPCN",
+        serial_number="unknown",
+        unit="cm⁻³",
+        dtype="dN",
+        density=1.65,
+        to_number=False,
+        unnormalize=False,
+    )
 
     if extra_data:
         OPCN._extra_data = extra_df
@@ -507,19 +487,9 @@ def _load_opcn3_file_pm_old(
         ValueError: If exactly one of ``encoding`` or ``delimiter`` is
             provided (both must be given or neither).
     """
-    # Detect when both are omitted
-    both_missing = encoding is None and delimiter is None
-    if both_missing:
-        encoding, delimiter = _detect_delimiter(file)  # -> Tuple[str, str]
+    enc, delim = sniff(file, encoding, delimiter)
 
-    # If only one was provided, that’s ambiguous
-    if (encoding is None) != (delimiter is None):
-        raise ValueError("Either provide both encoding and delimiter, or neither.")
-
-    enc: str = encoding  # type: ignore[assignment]
-    delim: str = delimiter  # type: ignore[assignment]
-
-    df = pd.read_csv(file, delimiter=delim, encoding=enc)
+    df = read_table(file, delimiter=delim, encoding=enc)
     df.rename(columns={"date": "Datetime"}, inplace=True)
     df.dropna(inplace=True)
     df.reset_index(drop=True, inplace=True)
@@ -637,19 +607,9 @@ def _load_opcn3_file_pm_new(
         ValueError: If exactly one of ``encoding`` or ``delimiter`` is
             provided (both must be given or neither).
     """
-    # Detect when both are omitted
-    both_missing = encoding is None and delimiter is None
-    if both_missing:
-        encoding, delimiter = _detect_delimiter(file)  # -> Tuple[str, str]
+    enc, delim = sniff(file, encoding, delimiter)
 
-    # If only one was provided, that’s ambiguous
-    if (encoding is None) != (delimiter is None):
-        raise ValueError("Either provide both encoding and delimiter, or neither.")
-
-    enc: str = encoding  # type: ignore[assignment]
-    delim: str = delimiter  # type: ignore[assignment]
-
-    df = pd.read_csv(file, delimiter=delim, encoding=enc)
+    df = read_table(file, delimiter=delim, encoding=enc)
     df.rename(columns={"Date": "Datetime"}, inplace=True)
     df.drop(columns="OPC", inplace=True)
     df.dropna(inplace=True)
