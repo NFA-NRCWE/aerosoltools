@@ -75,8 +75,10 @@ Every method is still reachable on the facade class. Watch the MRO when adding
 methods, and prefer adding to the relevant mixin over the facade.
 
 **GUI architecture (`src/aerosoltools/gui/`):** grouped into concern-based
-subpackages (plus `qt.py` — the single PyQt5/backend binding point — and
-`__init__.py`/`__main__.py` entry points at the top):
+subpackages (plus `qt.py` — the single PyQt5/backend binding point — and the
+`__init__.py`/`__main__.py`/`shortcut.py` entry-point modules at the top;
+`shortcut.py` is the `aerosoltools-gui-shortcut` console script and stays at the
+top level so its pip-generated launcher path doesn't break on a reorg):
 - `app/` — application shell / lifecycle: `main_window.py` (`MainWindow`) and
   `sidebar.py`.
 - `state/` — the Qt-free data model + persistence: `project.py` (`Project`:
@@ -85,8 +87,8 @@ subpackages (plus `qt.py` — the single PyQt5/backend binding point — and
   the typed caches `summary_cache.py` + `fit_specs.py` (`PsdFitSpec`/
   `DecayFitSpec`).
 - `view/` — appearance: `theme.py` (dark/light + `export_rc`), `widgets.py`,
-  `models.py` (pandas Qt table model), `metric_picker.py`, `shortcut.py`, and
-  `assets.py` (+ the bundled `aerosoltools.ico`).
+  `models.py` (pandas Qt table model), `metric_picker.py`, and `assets.py`
+  (+ the bundled `aerosoltools.ico`).
 - `logic/` — Qt-light domain workflows: `helpers.py`, `calibration.py`,
   `adjustments.py`, `loaders.py` (GUI file-open shim over the loader registry).
 - `tabs/` — one module per tab, with `_base.py` providing the `_PlotTab` base

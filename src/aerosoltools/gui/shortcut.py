@@ -7,6 +7,13 @@ Run this once after installing the package::
 It drops an "AerosolTools" shortcut on the Desktop and in the Start Menu, so the
 GUI can be launched by double-click or via Windows search — no terminal or IDE
 required. Re-running it simply refreshes the shortcuts.
+
+This module is the ``aerosoltools-gui-shortcut`` console-script entry point, so
+it deliberately lives at the ``gui`` package top level (next to the
+``aerosoltools-gui`` entry point in ``__init__``): pip bakes the entry-point
+module path into the generated launcher at install time, so moving this module
+into a subpackage would break the launcher of every already-installed
+environment until it is reinstalled.
 """
 
 from __future__ import annotations
@@ -16,7 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .assets import icon_path
+from .view.assets import icon_path
 
 SHORTCUT_NAME = "AerosolTools.lnk"
 

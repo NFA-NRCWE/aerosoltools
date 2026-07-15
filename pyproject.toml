@@ -48,7 +48,7 @@ aerosoltools-gui = "aerosoltools.gui:main"
 
 [project.scripts]
 # One-time helper to drop a Desktop / Start-Menu shortcut for the GUI.
-aerosoltools-gui-shortcut = "aerosoltools.gui.view.shortcut:main"
+aerosoltools-gui-shortcut = "aerosoltools.gui.shortcut:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
