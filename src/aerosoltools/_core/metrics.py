@@ -15,6 +15,7 @@ column.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 #: Superscript digits/sign → plain characters, so ``cm⁻³`` compares like ``cm-3``.
@@ -69,11 +70,37 @@ _UNIT_TABLE: dict[str, tuple[str, str, float]] = {
     unit_key("ppm"): ("mixing_ratio", "ppm", 1.0),
     unit_key("ppb"): ("mixing_ratio", "ppm", 1.0e-3),
     unit_key("ppt"): ("mixing_ratio", "ppm", 1.0e-6),
-    # environmental / misc (each its own dimension; not cross-converted)
-    unit_key("°C"): ("temperature", "°C", 1.0),
-    unit_key("%"): ("humidity", "%", 1.0),
+    # -- environmental / housekeeping --------------------------------------
+    # Each is its own dimension (never cross-converted with a different one),
+    # but the many raw header spellings a file may use (``C``/``degC``/``°C``,
+    # ``ug/m3``, ``mL/min`` …) collapse to one canonical glyph so the same
+    # quantity from two instruments compares equal. See parse_header_unit.
+    # temperature (canonical °C)
+    **{unit_key(u): ("temperature", "°C", 1.0) for u in ("°C", "C", "degC", "celsius")},
+    # relative humidity (canonical %)
+    **{unit_key(u): ("humidity", "%", 1.0) for u in ("%", "%RH", "RH%")},
+    # pressure (canonical hPa == mbar)
+    unit_key("hPa"): ("pressure", "hPa", 1.0),
+    unit_key("mbar"): ("pressure", "hPa", 1.0),
+    unit_key("Pa"): ("pressure", "hPa", 1.0e-2),
+    unit_key("kPa"): ("pressure", "hPa", 10.0),
+    unit_key("bar"): ("pressure", "hPa", 1.0e3),
+    unit_key("atm"): ("pressure", "hPa", 1013.25),
+    # volumetric flow (canonical l/min)
+    **{unit_key(u): ("flow", "l/min", 1.0) for u in ("l/min", "L/min", "lpm")},
+    unit_key("mL/min"): ("flow", "l/min", 1.0e-3),
+    # particle size / diameter (canonical nm)
     unit_key("nm"): ("size", "nm", 1.0),
-    unit_key("l/min"): ("flow", "l/min", 1.0),
+    **{unit_key(u): ("size", "nm", 1.0e3) for u in ("µm", "um")},
+    # elapsed time / duration (canonical s)
+    unit_key("s"): ("time", "s", 1.0),
+    unit_key("sec"): ("time", "s", 1.0),
+    unit_key("ms"): ("time", "s", 1.0e-3),
+    unit_key("min"): ("time", "s", 60.0),
+    **{unit_key(u): ("time", "s", 3600.0) for u in ("h", "hr")},
+    # speed (canonical km/h) — e.g. a GPS ground speed channel
+    unit_key("km/h"): ("speed", "km/h", 1.0),
+    unit_key("m/s"): ("speed", "km/h", 3.6),
 }
 
 
@@ -93,6 +120,48 @@ def classify_unit(unit: str) -> tuple[str, str, float]:
 def canonical_unit(unit: str) -> str:
     """The canonical unit string for ``unit``'s dimension (e.g. ng/m³ → µg/m³)."""
     return classify_unit(unit)[1]
+
+
+#: A trailing unit in round/square brackets: ``"Sample temp (C)"`` → ``"C"``,
+#: ``"Pressure [mBar]"`` → ``"mBar"``. The bracket group must sit at the very end
+#: so a leading ``"[1] Conc"`` (an index) is not mistaken for a unit.
+_BRACKET_UNIT_RE = re.compile(
+    r"^(?P<name>.*?)\s*[\(\[]\s*(?P<unit>[^)\]]+?)\s*[\)\]]\s*$"
+)
+#: A dot-suffixed unit: ``"Temperature.C"`` → ``"C"``. The suffix must be letters
+#: (or ``%``), so ``"PM2.5"`` / ``"Bin0.35"`` (numeric) never match.
+_DOT_UNIT_RE = re.compile(r"^(?P<name>.+)\.(?P<unit>[A-Za-z%µ°]+)$")
+
+
+def parse_header_unit(header: str) -> tuple[str, str | None]:
+    """Split a column header into ``(name, canonical_unit)`` when it embeds one.
+
+    A unit is extracted **only** when the bracketed/dot-suffixed token is a unit
+    the registry actually recognises (:func:`classify_unit`), so non-units are
+    left as part of the name rather than fabricated into a unit — e.g. an index
+    ``"[1] Conc"``, a coordinate format ``"GPS lat (ddmm.mmmmm)"``, a note
+    ``"UB with RI"``, or a distribution weighting ``"Concentration (dW)"`` all
+    return ``(header, None)``. A recognised unit is returned canonicalised
+    (``"(C)"`` → ``"°C"``, ``"(ug/m3)"`` → ``"µg/m³"``, ``"[mBar]"`` → ``"hPa"``).
+
+    Args:
+        header: A raw column header from an instrument export.
+
+    Returns:
+        ``(name, unit)`` where ``unit`` is the canonical unit string, or
+        ``(header, None)`` when no recognised unit is embedded.
+    """
+    if not header:
+        return header, None
+    for rx in (_BRACKET_UNIT_RE, _DOT_UNIT_RE):
+        m = rx.match(header)
+        if m is None:
+            continue
+        dimension, canonical, _scale = classify_unit(m.group("unit"))
+        if not dimension.startswith("other:"):
+            name = m.group("name").strip()
+            return (name or header), canonical
+    return header, None
 
 
 def convert_value(x, from_unit: str, to_unit: str):
