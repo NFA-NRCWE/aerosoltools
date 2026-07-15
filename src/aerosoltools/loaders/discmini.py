@@ -7,8 +7,9 @@ import numpy as np
 import pandas as pd
 
 from ..discmini import DiSCmini
+from .support.construct import build_1d
 from .support.exceptions import EmptyFileError, FileFormatError, TimestampError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_table, sniff
 
 ###############################################################################
 
@@ -216,14 +217,14 @@ def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
     """
     # Detect encoding + delimiter
     try:
-        enc, delim = _detect_delimiter(file, sample_lines=25)  # -> (str, str)
+        enc, delim = sniff(file, sample_lines=25)  # -> (str, str)
     except Exception as e:
         raise FileFormatError(
             "DiSCmini data has not been converted or delimiter could not be detected."
         ) from e
 
     # Read first 7 columns as strings; coerce later
-    df = pd.read_csv(
+    df = read_table(
         file,
         header=4,
         encoding=enc,
@@ -344,19 +345,15 @@ def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
     present = [c for c in needed if c in df.columns]
     if present[:1] != ["Datetime"]:
         raise TimestampError("Datetime column missing after parsing.")
-    DM = DiSCmini(df[present])
-
-    # Metadata
-    DM._meta["instrument"] = "DiSCmini"
-    DM._meta["serial_number"] = serial_number
-    if firmware is not None:
-        DM._meta["firmware"] = firmware
-    DM._meta["unit"] = {
-        "Total_conc": "cm⁻³",
-        "Size": "nm",
-        "LDSA": "nm²/cm³",
-    }
-    DM._meta["dtype"] = {"Total_conc": "dN", "Size": "l", "LDSA": "dS"}
+    DM = build_1d(
+        df[present],
+        cls=DiSCmini,
+        instrument="DiSCmini",
+        serial_number=serial_number,
+        unit={"Total_conc": "cm⁻³", "Size": "nm", "LDSA": "nm²/cm³"},
+        dtype={"Total_conc": "dN", "Size": "l", "LDSA": "dS"},
+        extra_meta={"firmware": firmware} if firmware is not None else None,
+    )
 
     # Optional extra data (everything except the main 3 numeric cols) indexed by
     # time. Columns are read as strings; coerce the numeric ones (e.g. the
@@ -688,7 +685,7 @@ def load_discmini_raw_file(
             dm = at.load_discmini_raw_file("data/6605G55D.TXT")
             print(dm.data[["Total_conc", "Size", "LDSA"]])
     """
-    enc, _ = _detect_delimiter(file, sample_lines=25)
+    enc, _ = sniff(file, sample_lines=25)
 
     # Read the header block (enough lines to reach the data-table header row).
     with open(file, "r", encoding=enc) as fh:
