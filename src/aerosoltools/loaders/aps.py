@@ -5,8 +5,9 @@ import pandas as pd
 
 from ..aerosol2d import Aerosol2D
 from ..aerosol3d import Aerosol3d
+from .support.construct import build_2d
 from .support.exceptions import FileFormatError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_table, sniff
 
 ###############################################################################
 
@@ -97,7 +98,7 @@ def load_aps_file(file: str) -> Aerosol2D:
             if aps.is_correlated:
                 aps.plot_aero_vs_optical()  # optical vs aerodynamic comparison
     """
-    encoding, delimiter = _detect_delimiter(file)
+    encoding, delimiter = sniff(file)
     meta = _aps_header(file, delimiter, encoding)
     try:
         sample_time = float(meta.get("Sample Time", 1.0))
@@ -106,7 +107,7 @@ def load_aps_file(file: str) -> Aerosol2D:
     except (KeyError, ValueError) as exc:
         raise FileFormatError("File does not look like an APS AIM export.") from exc
 
-    df = pd.read_csv(file, delimiter=delimiter, encoding=encoding, header=6)
+    df = read_table(file, delimiter=delimiter, encoding=encoding, header=6)
     if df.shape[1] < 56:
         raise FileFormatError("APS export has fewer size columns than expected.")
 
@@ -191,25 +192,32 @@ def _optical_bins_nm(n_opt):
 
 
 def _build_aero_2d(frame, bin_mids, bin_edges, meta, cls):
-    """Construct an Aerosol2D/3d from a prepared (Datetime, Total_conc, bins) df."""
-    obj = cls(frame.copy())
-    obj._meta["instrument"] = "APS"
-    # The AIM text export carries no instrument serial number — only the sample
-    # file path. Report the serial as unknown and keep the sample name as its
-    # own field, rather than mislabelling the file name as a serial number.
+    """Construct an Aerosol2D/3d from a prepared (Datetime, Total_conc, bins) df.
+
+    The frame is already plain number (dN, cm⁻³), so no post-construction
+    conversion is applied. The APS reports aerodynamic diameter (time-of-flight),
+    which is density-independent — so, unlike the ELPI, changing density does NOT
+    rescale the size axis; it only affects mass conversion. The AIM text export
+    carries no instrument serial number (only the sample-file path), so the
+    serial is left blank and the sample name kept as its own metadata field;
+    the "Stokes Correction" export flag is kept for transparency.
+    """
     sample_file = str(meta.get("Sample File", "")).replace("/", "\\").split("\\")[-1]
-    obj._meta["serial_number"] = ""
-    obj._meta["sample_file"] = sample_file
-    obj._meta["unit"] = "cm⁻³"
-    obj._meta["dtype"] = "dN"
-    obj._meta["bin_mids"] = np.asarray(bin_mids, dtype=float)
-    obj._meta["bin_edges"] = np.asarray(bin_edges, dtype=float)
-    obj._meta["density"] = float(meta.get("Density", 1.0) or 1.0)
-    # The APS reports aerodynamic diameter (time-of-flight), which is density-
-    # independent — so, unlike the ELPI, changing density does NOT rescale the
-    # size axis; it only affects mass conversion. The "Stokes Correction" export
-    # flag (whether the software converted to a Stokes/volume-equivalent
-    # diameter) is kept for transparency.
-    obj._meta["stokes_correction"] = str(meta.get("Stokes Correction", "")).strip()
-    obj._meta["sample_time_s"] = float(meta.get("Sample Time", 0) or 0)
-    return obj
+    return build_2d(
+        frame.copy(),
+        cls=cls,
+        bin_edges=np.asarray(bin_edges, dtype=float),
+        bin_mids=np.asarray(bin_mids, dtype=float),
+        instrument="APS",
+        serial_number="",
+        unit="cm⁻³",
+        dtype="dN",
+        density=float(meta.get("Density", 1.0) or 1.0),
+        extra_meta={
+            "sample_file": sample_file,
+            "stokes_correction": str(meta.get("Stokes Correction", "")).strip(),
+            "sample_time_s": float(meta.get("Sample Time", 0) or 0),
+        },
+        to_number=False,
+        unnormalize=False,
+    )
