@@ -96,6 +96,32 @@ def test_parse_header_unit_extracts_recognised_units(header, name, unit):
     assert parse_header_unit(header) == (name, unit)
 
 
+@pytest.mark.parametrize(
+    "column, canonical",
+    [
+        ("Temperature", "Ambient temperature"),
+        ("Temp", "Ambient temperature"),
+        ("Sample temp", "Ambient temperature"),
+        ("T", "Ambient temperature"),
+        ("RH", "Ambient relative humidity"),
+        ("Rel. Humidity", "Ambient relative humidity"),
+        ("Sample RH", "Ambient relative humidity"),
+        ("Pressure", "Ambient pressure"),
+        ("Sample Pressure", "Ambient pressure"),
+        # internal / sensor channels must never merge with the ambient metric
+        ("Internal temp", None),
+        ("Temperature1", None),
+        ("Internal pressure", None),
+        ("LDSA", None),
+        ("Filter", None),
+    ],
+)
+def test_canonical_metric_for_merges_ambient_only(column, canonical):
+    from aerosoltools._core.metrics import canonical_metric_for
+
+    assert canonical_metric_for(column) == canonical
+
+
 def test_column_units_meta_drives_unit_of_without_breaking_scalar_unit():
     """A ``column_units`` map resolves per-column units; ``.unit`` stays scalar."""
     import aerosoltools as at

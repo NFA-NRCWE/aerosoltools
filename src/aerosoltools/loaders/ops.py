@@ -441,7 +441,10 @@ def _load_ops_direct(
         except KeyError:
             pass
         extra.set_index("Datetime", inplace=True)
-        extra, column_units = resolve_extra_columns(extra)
+        # "Rel. Humidity" has no in-header unit; relative humidity is always %.
+        extra, column_units = resolve_extra_columns(
+            extra, curated={"Rel. Humidity": "%"}
+        )
     else:
         extra = pd.DataFrame([])
 

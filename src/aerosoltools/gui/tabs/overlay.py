@@ -17,6 +17,8 @@ import pandas as pd
 from matplotlib.lines import Line2D
 
 from ..._core import _shading
+from ..._core.metrics import _CANONICAL_METRICS as _ENV_METRICS
+from ..._core.metrics import canonical_metric_for
 from ..logic import helpers
 from ..qt import QtCore, QtWidgets
 from ..view.widgets import ThresholdControls, WheelLineEdit
@@ -330,6 +332,7 @@ class OverlayTab(_PlotTab):
         measurements: list = []
         channels: list = []
         seen_channels: set = set()
+        env_metrics: list = []  # canonical ambient metrics shared across instruments
         extra_by_instr: dict = {}
         for ds in self._datasets:
             obj = ds.obj
@@ -352,7 +355,14 @@ class OverlayTab(_PlotTab):
                 channels.append(name)
             names = extra_by_instr.setdefault(ds.instrument, [])
             for _label, _kind, name in extra:
-                if name not in names:
+                # A recognised ambient channel (temperature/RH/pressure) collapses
+                # into one shared, cross-instrument metric; anything else stays in
+                # its per-instrument group.
+                canonical = canonical_metric_for(name)
+                if canonical is not None:
+                    if canonical not in env_metrics:
+                        env_metrics.append(canonical)
+                elif name not in names:
                     names.append(name)
 
         totals: list = []
@@ -361,7 +371,10 @@ class OverlayTab(_PlotTab):
         if has_2d:
             totals += [f"Total concentration ({b})" for b in _TOTAL_BASES[1:]]
         standard = totals + measurements + channels
-        groups = [
+        groups = []
+        if env_metrics:
+            groups.append(("Environment (shared)", env_metrics))
+        groups += [
             (f"Extra: {instr}", names)
             for instr, names in extra_by_instr.items()
             if names
@@ -384,6 +397,22 @@ class OverlayTab(_PlotTab):
             self._conv_cache[key] = cached
         return cached
 
+    def _canonical_column(self, obj, metric: str) -> str | None:
+        """The dataset column mapping to a canonical ambient ``metric``, if any.
+
+        Searches the dataset's core and extra columns for one the registry maps
+        to ``metric`` (e.g. a Fourtec ``Temperature`` or an OPS ``Temp`` for
+        "Ambient temperature"), so each dataset contributes its own channel to
+        the shared metric. Returns ``None`` when the dataset has no such column.
+        """
+        cols = list(obj.data.columns)
+        if obj.extra_data is not None and not obj.extra_data.empty:
+            cols += list(obj.extra_data.columns)
+        for col in cols:
+            if canonical_metric_for(col) == metric:
+                return col
+        return None
+
     def _series_for(self, ds, metric: str):
         """Return ``(series, name, unit)`` for a dataset's metric, or None.
 
@@ -394,6 +423,15 @@ class OverlayTab(_PlotTab):
         """
         obj = ds.obj
         meas = self._measurement_of(obj)
+        # A shared ambient metric ("Ambient temperature", …) resolves to whichever
+        # of this dataset's columns maps to it (or nothing, if it has none).
+        if metric in _ENV_METRICS:
+            col = self._canonical_column(obj, metric)
+            if col is None:
+                return None
+            series = obj.data[col] if col in obj.data.columns else obj.extra_data[col]
+            unit = helpers.column_unit(obj, col) or ""
+            return pd.to_numeric(series, errors="coerce"), metric, unit
         if metric.startswith("Total concentration (") and metric.endswith(")"):
             if not helpers.is_particle(obj):
                 # Non-particle instruments (gas, black carbon, LDSA, T/RH) are

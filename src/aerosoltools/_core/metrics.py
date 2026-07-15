@@ -164,6 +164,53 @@ def parse_header_unit(header: str) -> tuple[str, str | None]:
     return header, None
 
 
+#: Canonical cross-instrument environmental metrics: a display name → the set of
+#: instrument column names (lower-cased) that mean the *same* physical quantity.
+#: Only genuinely-shared **ambient** channels are listed, so different
+#: instruments' temperature/RH/pressure columns collapse into one pickable
+#: metric. Internal/sensor channels are deliberately absent (e.g. an
+#: aethalometer's ``Internal temp``, an ELPI's ``Temperature1``) so they are
+#: never merged with the ambient quantity.
+_CANONICAL_METRICS: dict[str, set[str]] = {
+    "Ambient temperature": {
+        "temperature",
+        "temp",
+        "sample temp",
+        "air temperature",
+        "t",
+    },
+    "Ambient relative humidity": {
+        "rh",
+        "humidity",
+        "rel. humidity",
+        "relative humidity",
+        "sample rh",
+    },
+    "Ambient pressure": {
+        "pressure",
+        "ambient pressure",
+        "sample pressure",
+        "barometric pressure",
+    },
+}
+
+
+def canonical_metric_for(column: str) -> str | None:
+    """Return the canonical environmental metric ``column`` belongs to, or None.
+
+    Matches a (cleaned) instrument column name against :data:`_CANONICAL_METRICS`
+    so the same ambient quantity from different instruments (``"Sample temp"``,
+    ``"Temp"``, ``"T"`` → ``"Ambient temperature"``) can be combined. Returns
+    ``None`` for anything not on the curated list — including internal/sensor
+    channels — so unrecognised columns stay instrument-local.
+    """
+    key = (column or "").strip().lower()
+    for canonical, aliases in _CANONICAL_METRICS.items():
+        if key in aliases:
+            return canonical
+    return None
+
+
 def convert_value(x, from_unit: str, to_unit: str):
     """Convert a value/array from ``from_unit`` to ``to_unit`` (same dimension).
 
