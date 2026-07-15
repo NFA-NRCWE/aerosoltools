@@ -9,6 +9,7 @@ import pandas as pd
 from ..elpi import ELPI
 from .support.exceptions import FileFormatError
 from .support.reading import read_table, sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
@@ -501,7 +502,7 @@ def recalculate_ELPI_density(elpi, new_density: float) -> bool:
 # Public loaders
 
 
-def load_elpi_file(file: str, extra_data: bool = False) -> ELPI:
+def load_elpi_file(file: str, extra_data: bool = True) -> ELPI:
     """Load an ELPI file and return an Aerosol2D object.
 
     This is the routing function. Already-converted Dekati exports are handled
@@ -690,6 +691,11 @@ def _build_ELPI_aerosol2d(
 
     if extra_data:
         extra_df.set_index("Datetime", inplace=True)
+        # ELPI diagnostic headers carry no in-header units, and its several
+        # Temperature*/Pressure channels are internal sensors (deliberately not
+        # curated as ambient); keep them all, resolving any that do embed a unit.
+        extra_df, column_units = resolve_extra_columns(extra_df)
         elpi._extra_data = extra_df
+        elpi._meta["column_units"] = column_units
 
     return elpi

@@ -7,6 +7,7 @@ from ..aerosol2d import Aerosol2D
 from .support.construct import build_2d
 from .support.exceptions import FileFormatError
 from .support.reading import sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
@@ -262,6 +263,19 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
         dtype=dtype,
         density=1.0,
     )
+
+    # The trailing block of the data matrix carries the reported Pressure [mBar]
+    # and Sample Temp [°C] at fixed offsets from the end (…, P, _, _, T, _, _).
+    # Keep them as extra_data with curated units (mBar == hPa).
+    extra_df = pd.DataFrame(
+        {"Pressure": data_array[:, -6], "Sample Temp": data_array[:, -3]},
+        index=pd.Index(datetime_df["Datetime"], name="Datetime"),
+    )
+    extra_df, column_units = resolve_extra_columns(
+        extra_df, curated={"Pressure": "hPa", "Sample Temp": "°C"}
+    )
+    FMPS._extra_data = extra_df
+    FMPS._meta["column_units"] = column_units
 
     return FMPS
 
