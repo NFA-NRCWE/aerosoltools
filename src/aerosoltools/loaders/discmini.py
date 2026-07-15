@@ -10,6 +10,7 @@ from ..discmini import DiSCmini
 from .support.construct import build_1d
 from .support.exceptions import EmptyFileError, FileFormatError, TimestampError
 from .support.reading import read_table, sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
@@ -92,7 +93,7 @@ def _extract_serial_and_firmware(
 ###############################################################################
 
 
-def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
+def load_discmini_file(file: str, extra_data: bool = True) -> DiSCmini:
     """Load a converted DiSCmini export file and return total number
     concentration, mean size, and LDSA as a :class:`DiSCmini` time
     series.
@@ -366,8 +367,10 @@ def load_discmini_file(file: str, extra_data: bool = False) -> DiSCmini:
             coerced = pd.to_numeric(extra_df[col], errors="coerce")
             if coerced.notna().any():
                 extra_df[col] = coerced
+        extra_df, column_units = resolve_extra_columns(extra_df)
         DM._extra_data = extra_df
         DM._raw_extra_data = extra_df.copy()
+        DM._meta["column_units"] = column_units
 
     return DM
 
@@ -575,7 +578,7 @@ def _zero_offset_series(raw: pd.DataFrame, offsets_hdr) -> tuple:
 
 def load_discmini_raw_file(
     file: str,
-    extra_data: bool = False,
+    extra_data: bool = True,
     period: int = 10,
     zero_offset_correction: bool = True,
     ldsa_correction: bool = False,
@@ -799,7 +802,9 @@ def load_discmini_raw_file(
         extra = avg.copy()
         extra.insert(0, "Datetime", times)
         extra = extra.set_index("Datetime")
+        extra, column_units = resolve_extra_columns(extra)
         DM._extra_data = extra
         DM._raw_extra_data = extra.copy()
+        DM._meta["column_units"] = column_units
 
     return DM

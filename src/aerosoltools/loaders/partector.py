@@ -8,11 +8,12 @@ from ..partector import Partector
 from .support.construct import build_1d
 from .support.exceptions import TimestampError
 from .support.reading import sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
 
-def load_partector_file(file: str, extra_data: bool = False) -> Partector:
+def load_partector_file(file: str, extra_data: bool = True) -> Partector:
     """Load a Partector LDSA text export and return it as a
     :class:`Partector` time series with TEM sampling metadata.
 
@@ -206,9 +207,16 @@ def load_partector_file(file: str, extra_data: bool = False) -> Partector:
         extra_meta={"TEM_samples": pd.DataFrame(sample_meta)},
     )
 
-    # Attach extra data
+    # Attach extra data. The Partector writes bare headers with no in-header
+    # units; curate the ambient T/RH channels (whose units are fixed by the
+    # instrument) so they resolve too. The diagnostic currents/voltages are kept
+    # but left unitless rather than guess a unit.
     if extra_data:
         extra_df = df.drop(columns=["LDSA", "TEM", "Flow"]).set_index("Datetime")
+        extra_df, column_units = resolve_extra_columns(
+            extra_df, curated={"T": "°C", "RH": "%"}
+        )
         Par._extra_data = extra_df
+        Par._meta["column_units"] = column_units
 
     return Par

@@ -3,11 +3,12 @@ import pandas as pd
 from ..aethalometer import Aethalometer
 from .support.exceptions import EmptyFileError
 from .support.reading import read_table, sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
 
-def load_aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
+def load_aethalometer_file(file: str, extra_data: bool = True) -> Aethalometer:
     """Load time-resolved black carbon data from an Aethalometer export file
     into an :class:`aerosoltools.Aethalometer` object.
 
@@ -194,6 +195,8 @@ def load_aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
     if extra_data:
         extra_df = df.drop(columns=core_cols[1:])
         extra_df.set_index("Datetime", inplace=True)
+        extra_df, column_units = resolve_extra_columns(extra_df)
         aeth._extra_data = extra_df
+        aeth._meta["column_units"] = column_units
 
     return aeth
