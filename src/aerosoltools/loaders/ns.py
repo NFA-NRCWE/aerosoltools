@@ -5,11 +5,12 @@ from ..aerosol2d import Aerosol2D
 from .support.construct import build_2d
 from .support.exceptions import FileFormatError
 from .support.reading import read_cells, read_table, sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
 
-def load_ns_file(file: str, extra_data: bool = False) -> Aerosol2D:
+def load_ns_file(file: str, extra_data: bool = True) -> Aerosol2D:
     """Load a NanoScan SMPS (NS) CSV export and return it as an
     :class:`Aerosol2D` number-size distribution with metadata.
 
@@ -151,10 +152,12 @@ def load_ns_file(file: str, extra_data: bool = False) -> Aerosol2D:
     # Select size-distribution columns as numeric data
     size_data = ns_df[bin_mids.astype(str)].copy()
 
-    # Optionally keep all non-size-bin columns as extra_data
+    # Keep all non-size-bin columns as extra_data (units resolved from headers)
+    column_units: dict[str, str] = {}
     if extra_data:
         ns_extra = ns_df.drop(columns=bin_mids.astype(str))
         ns_extra.set_index("Datetime", inplace=True)
+        ns_extra, column_units = resolve_extra_columns(ns_extra)
     else:
         ns_extra = pd.DataFrame([])
 
@@ -204,8 +207,9 @@ def load_ns_file(file: str, extra_data: bool = False) -> Aerosol2D:
         density=float(density),
     )
 
-    # Attach optional extra channels
+    # Attach the kept extra channels and their resolved units
     if extra_data:
         NS._extra_data = ns_extra
+        NS._meta["column_units"] = column_units
 
     return NS
