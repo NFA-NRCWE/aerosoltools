@@ -9,11 +9,12 @@ from ..aerosol2d import Aerosol2D
 from .support.construct import build_2d
 from .support.exceptions import FileFormatError
 from .support.reading import read_cells, read_table, sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
 
-def load_ops_file(file: str, extra_data: bool = False):
+def load_ops_file(file: str, extra_data: bool = True):
     """Load a TSI OPS spectrometer export and return it as an
     :class:`Aerosol2D` number-size distribution with metadata.
 
@@ -280,10 +281,12 @@ def _load_ops_aim(
     dist_df = pd.DataFrame(dist_data, columns=bin_mids.astype(str))
     final_df = pd.concat([df["Datetime"], total_conc, dist_df], axis=1)
 
-    # Optional extra-data (everything beyond column 13 kept, indexed by time)
+    # Optional extra-data (the env/metadata columns kept, indexed by time)
+    column_units: dict[str, str] = {}
     if extra_data:
         ops_extra = df.drop(columns=df.columns[13:])
         ops_extra.set_index("Datetime", inplace=True)
+        ops_extra, column_units = resolve_extra_columns(ops_extra)
 
     # --- metadata block ------------------------------------------------------
     with open(file, "r", encoding=enc) as fh3:
@@ -328,6 +331,7 @@ def _load_ops_aim(
 
     if extra_data:
         OPS._extra_data = ops_extra  # type: ignore[assignment]
+        OPS._meta["column_units"] = column_units
 
     return OPS
 
@@ -429,6 +433,7 @@ def _load_ops_direct(
     conc = np.true_divide(counts, 16.67 * (sample_length - deadtime[:, np.newaxis]))
 
     # If requested, store Bin 17 and other columns as extra data
+    column_units: dict[str, str] = {}
     if extra_data:
         extra = df.drop(columns=df.columns[0:16]).copy()
         try:
@@ -436,6 +441,7 @@ def _load_ops_direct(
         except KeyError:
             pass
         extra.set_index("Datetime", inplace=True)
+        extra, column_units = resolve_extra_columns(extra)
     else:
         extra = pd.DataFrame([])
 
@@ -466,5 +472,6 @@ def _load_ops_direct(
     )
     if extra_data:
         OPS._extra_data = extra
+        OPS._meta["column_units"] = column_units
 
     return OPS

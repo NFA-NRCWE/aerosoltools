@@ -100,8 +100,8 @@ def test_column_units_meta_drives_unit_of_without_breaking_scalar_unit():
     """A ``column_units`` map resolves per-column units; ``.unit`` stays scalar."""
     import aerosoltools as at
 
-    ops = at.load_ops_file(_ops_sample())
-    # Inert until populated.
+    # extra_data=False leaves the map empty — the plumbing is inert until set.
+    ops = at.load_ops_file(_ops_sample(), extra_data=False)
     assert ops.column_units == {}
     assert ops.unit == "cm⁻³"
 

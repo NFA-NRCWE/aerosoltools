@@ -8,11 +8,12 @@ from ..aerosol2d import Aerosol2D
 from .support.construct import build_2d
 from .support.exceptions import FileFormatError
 from .support.reading import read_cells, read_table, sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
 
-def load_opcn3_file(file: str, extra_data: bool = False, PM_focus: bool = False):
+def load_opcn3_file(file: str, extra_data: bool = True, PM_focus: bool = False):
     """Load an OPC-N3 export and return either a size-resolved distribution
     (:class:`Aerosol2D`) or PM-focused time series (:class:`Aerosol1D`)
     with metadata.
@@ -250,11 +251,12 @@ def _load_opcn3_file_old(
         inplace=True,
     )
 
-    # Optional: store extra data
+    # Optional: store extra data (units resolved from headers)
+    column_units: dict[str, str] = {}
     if extra_data:
         extra_df = df.drop(columns=bin_cols)
-
         extra_df.set_index("Datetime", inplace=True)
+        extra_df, column_units = resolve_extra_columns(extra_df)
     else:
         extra_df = pd.DataFrame([])
 
@@ -288,6 +290,7 @@ def _load_opcn3_file_old(
     if extra_data:
         OPCN._extra_data = extra_df
         OPCN._raw_extra_data = extra_df.copy()
+        OPCN._meta["column_units"] = column_units
     return OPCN
 
 
@@ -400,10 +403,12 @@ def _load_opcn3_file_new(
         inplace=True,
     )
 
-    # Optional: store extra data
+    # Optional: store extra data (units resolved from headers)
+    column_units: dict[str, str] = {}
     if extra_data:
         extra_df = df.drop(columns=bin_cols)
         extra_df.set_index("Datetime", inplace=True)
+        extra_df, column_units = resolve_extra_columns(extra_df)
     else:
         extra_df = pd.DataFrame([])
 
@@ -437,6 +442,7 @@ def _load_opcn3_file_new(
     if extra_data:
         OPCN._extra_data = extra_df
         OPCN._raw_extra_data = extra_df.copy()
+        OPCN._meta["column_units"] = column_units
     return OPCN
 
 
@@ -519,11 +525,12 @@ def _load_opcn3_file_pm_old(
         inplace=True,
     )
 
-    # Optional: store extra data
+    # Optional: store extra data (units resolved from headers)
+    column_units: dict[str, str] = {}
     if extra_data:
         extra_df = df[["Datetime", "Temp (C)", "RH (%)", "Period (s)"]]
-
         extra_df.set_index("Datetime", inplace=True)
+        extra_df, column_units = resolve_extra_columns(extra_df)
     else:
         extra_df = pd.DataFrame([])
 
@@ -557,6 +564,7 @@ def _load_opcn3_file_pm_old(
     if extra_data:
         OPCN._extra_data = extra_df
         OPCN._raw_extra_data = extra_df.copy()
+        OPCN._meta["column_units"] = column_units
     return OPCN
 
 
@@ -637,10 +645,12 @@ def _load_opcn3_file_pm_new(
         inplace=True,
     )
 
-    # Optional: store extra data
+    # Optional: store extra data (units resolved from headers)
+    column_units: dict[str, str] = {}
     if extra_data:
         extra_df = df[["Datetime", "Temp (C)", "RH (%)", "Period (s)"]]
         extra_df.set_index("Datetime", inplace=True)
+        extra_df, column_units = resolve_extra_columns(extra_df)
     else:
         extra_df = pd.DataFrame([])
 
@@ -674,4 +684,5 @@ def _load_opcn3_file_pm_new(
     if extra_data:
         OPCN._extra_data = extra_df
         OPCN._raw_extra_data = extra_df.copy()
+        OPCN._meta["column_units"] = column_units
     return OPCN

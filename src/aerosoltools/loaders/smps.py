@@ -8,6 +8,7 @@ from ..aerosol2d import Aerosol2D
 from .support.construct import build_2d
 from .support.exceptions import FileFormatError
 from .support.reading import read_table, sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
@@ -67,7 +68,7 @@ def _load_SMPS_metadata(
 ###############################################################################
 
 
-def load_smps_file(file: str, extra_data: bool = False) -> Aerosol2D:
+def load_smps_file(file: str, extra_data: bool = True) -> Aerosol2D:
     """Load an SMPS size-distribution export and return it as an
     :class:`Aerosol2D` number-size distribution with metadata.
 
@@ -307,6 +308,8 @@ def load_smps_file(file: str, extra_data: bool = False) -> Aerosol2D:
     if extra_data:
         extra_df = df.drop(columns=bin_cols)
         extra_df.set_index("Datetime", inplace=True)
+        extra_df, column_units = resolve_extra_columns(extra_df)
         smps._extra_data = extra_df
+        smps._meta["column_units"] = column_units
 
     return smps

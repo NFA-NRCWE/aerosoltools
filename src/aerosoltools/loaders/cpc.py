@@ -6,11 +6,12 @@ from ..aerosol1d import Aerosol1D
 from .support.construct import build_1d
 from .support.exceptions import FileFormatError
 from .support.reading import read_cells, read_table, sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
 
-def load_cpc_file(file: str, extra_data: bool = False) -> Aerosol1D:
+def load_cpc_file(file: str, extra_data: bool = True) -> Aerosol1D:
     """Load a TSI CPC (Condensation Particle Counter) export file, automatically
     detect its format, and return a time series of total particle number
     concentration as an :class:`Aerosol1D` object.
@@ -226,6 +227,8 @@ def _load_cpc_full(
     if extra_data:
         extra_df = df.drop(columns=["Start Date", "Start Time", "Total_conc"])
         extra_df.set_index("Datetime", inplace=True)
+        extra_df, column_units = resolve_extra_columns(extra_df)
         CPC._extra_data = extra_df
+        CPC._meta["column_units"] = column_units
 
     return CPC
