@@ -2,7 +2,7 @@ import pandas as pd
 
 from ..aethalometer import Aethalometer
 from .support.exceptions import EmptyFileError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_table, sniff
 
 ###############################################################################
 
@@ -112,11 +112,11 @@ def load_aethalometer_file(file: str, extra_data: bool = False) -> Aethalometer:
             aeth = at.load_aethalometer_file("data/aeth_export.csv")
     """
     # Detect file encoding and delimiter (comma, semicolon, etc.)
-    enc, delim = _detect_delimiter(file)
+    enc, delim = sniff(file)
 
     # Read raw file, drop known non-data column and rows that are completely empty
     df = (
-        pd.read_csv(file, delimiter=delim, encoding=enc, header=0, decimal=".")
+        read_table(file, delimiter=delim, encoding=enc, header=0, decimal=".")
         .drop(columns=["Readable status"])
         .dropna()
     )

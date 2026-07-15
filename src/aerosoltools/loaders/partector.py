@@ -5,8 +5,9 @@ import pandas as pd
 from matplotlib.dates import date2num
 
 from ..partector import Partector
+from .support.construct import build_1d
 from .support.exceptions import TimestampError
-from .support.parsing import _detect_delimiter
+from .support.reading import sniff
 
 ###############################################################################
 
@@ -153,7 +154,7 @@ def load_partector_file(file: str, extra_data: bool = False) -> Partector:
     """
 
     try:
-        encoding, delimiter = _detect_delimiter(file, sample_lines=30)
+        encoding, delimiter = sniff(file, sample_lines=30)
     except Exception:
         delimiter = "\t"
 
@@ -196,11 +197,14 @@ def load_partector_file(file: str, extra_data: bool = False) -> Partector:
     }
 
     # Create Partector object
-    Par = Partector(df[["Datetime", "LDSA", "TEM", "Flow"]])
-    Par._meta["instrument"] = "Partector"
-    Par._meta["serial_number"] = meta_lines[0][-3:]
-    Par._meta["unit"] = {"LDSA": "nm$^{2}$/cm$^{3}$", "TEM": "bool", "Flow": "l/min"}
-    Par._meta["TEM_samples"] = pd.DataFrame(sample_meta)
+    Par = build_1d(
+        df[["Datetime", "LDSA", "TEM", "Flow"]],
+        cls=Partector,
+        instrument="Partector",
+        serial_number=meta_lines[0][-3:],
+        unit={"LDSA": "nm$^{2}$/cm$^{3}$", "TEM": "bool", "Flow": "l/min"},
+        extra_meta={"TEM_samples": pd.DataFrame(sample_meta)},
+    )
 
     # Attach extra data
     if extra_data:

@@ -9,7 +9,7 @@ import pandas as pd
 
 from ..aerosol1d import Aerosol1D
 from ..gas1d import Gas1D
-from .support.parsing import _detect_delimiter
+from .support.reading import sniff
 
 ###############################################################################
 
@@ -92,7 +92,7 @@ def _read_segments(file: str) -> tuple[str, str, list[dict]]:
     Raises:
         ValueError: If the file contains no recognizable header row.
     """
-    encoding, delimiter = _detect_delimiter(file)
+    encoding, delimiter = sniff(file)
 
     with open(file, "r", encoding=encoding, errors="replace") as fh:
         raw_lines = fh.read().splitlines()

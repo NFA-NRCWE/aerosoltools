@@ -15,15 +15,22 @@ import pandas as pd
 from .parsing import _detect_delimiter
 
 
-def sniff(file: str, encoding: str | None = None, delimiter: str | None = None):
+def sniff(
+    file: str,
+    encoding: str | None = None,
+    delimiter: str | None = None,
+    **detect_kwargs,
+):
     """Return ``(encoding, delimiter)`` for ``file``, detecting what is missing.
 
     Pass a value you already know to skip detecting it; pass neither to detect
-    both. Lets a loader detect once and thread the result through every read.
+    both. ``detect_kwargs`` (e.g. ``sample_lines=30``) are forwarded to
+    :func:`~aerosoltools.loaders.support.parsing._detect_delimiter` so loaders
+    that need a larger sample keep their exact detection behaviour.
     """
     if encoding is not None and delimiter is not None:
         return encoding, delimiter
-    enc, delim = _detect_delimiter(file)
+    enc, delim = _detect_delimiter(file, **detect_kwargs)
     return (encoding or enc), (delimiter or delim)
 
 

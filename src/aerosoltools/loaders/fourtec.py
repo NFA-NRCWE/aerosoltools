@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from ..environmental import Environmental1D
+from .support.construct import build_1d
 from .support.parsing import _detect_delimiter
 
 ###############################################################################
@@ -168,9 +169,12 @@ def load_fourtec_file(file: str) -> Environmental1D:
         SN = str(pd.read_excel(file, skiprows=0, nrows=1, usecols=[2]).iloc[0, 0])
 
     # Build Environmental1D with core variables only
-    fourtec = Environmental1D(df[["Datetime", "Temperature", "RH"]])
-    fourtec._meta["instrument"] = "Fourtec"
-    fourtec._meta["serial_number"] = SN
-    fourtec._meta["unit"] = {"Temperature": "°C", "RH": "%"}
+    fourtec = build_1d(
+        df[["Datetime", "Temperature", "RH"]],
+        cls=Environmental1D,
+        instrument="Fourtec",
+        serial_number=SN,
+        unit={"Temperature": "°C", "RH": "%"},
+    )
 
     return fourtec
