@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from ...aerosol1d import Aerosol1D
 from ...aerosol2d import Aerosol2D
 
 
@@ -78,4 +79,51 @@ def build_2d(
         obj._convert_to_number_concentration()
     if unnormalize:
         obj.unnormalize_logdp()
+    return obj
+
+
+def build_1d(
+    data,
+    *,
+    instrument: str,
+    serial_number,
+    unit=None,
+    dtype: Optional[str] = None,
+    cls: Optional[type] = None,
+    extra_meta: Optional[dict] = None,
+) -> Aerosol1D:
+    """Construct a 1-D (time-series) object and set its canonical metadata.
+
+    The 1-D / non-particle loaders finish by building the class and writing a
+    small, mostly-shared set of ``_meta`` fields; this centralises that tail.
+    Unlike :func:`build_2d` there is no size axis and no number/normalization
+    conversion. ``unit`` may be a string or a per-channel ``dict`` (multi-channel
+    instruments), and ``dtype`` is optional (some non-particle classes carry it
+    per channel via ``extra_meta`` instead).
+
+    Args:
+        data: The assembled ``DataFrame`` the class expects.
+        instrument: Instrument name for ``_meta["instrument"]``.
+        serial_number: Instrument serial number.
+        unit: Concentration unit string, or a per-channel ``{col: unit}`` dict.
+            Omitted from ``_meta`` when ``None``.
+        dtype: Distribution/quantity dtype string; omitted when ``None``.
+        cls: Concrete class to instantiate (e.g. :class:`Gas1D`,
+            :class:`Partector`); defaults to :class:`Aerosol1D`.
+        extra_meta: Optional extra metadata merged into ``_meta`` *before* the
+            canonical fields (so instrument/serial/unit/dtype win on collision).
+
+    Returns:
+        The constructed, populated object.
+    """
+    cls = cls or Aerosol1D
+    obj = cls(data)
+    if extra_meta:
+        obj._meta.update(extra_meta)
+    obj._meta["instrument"] = instrument
+    obj._meta["serial_number"] = serial_number
+    if unit is not None:
+        obj._meta["unit"] = unit
+    if dtype is not None:
+        obj._meta["dtype"] = dtype
     return obj

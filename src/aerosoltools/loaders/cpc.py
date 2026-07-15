@@ -1,11 +1,11 @@
 import datetime
 
-import numpy as np
 import pandas as pd
 
 from ..aerosol1d import Aerosol1D
+from .support.construct import build_1d
 from .support.exceptions import FileFormatError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_cells, read_table, sniff
 
 ###############################################################################
 
@@ -98,16 +98,9 @@ def load_cpc_file(file: str, extra_data: bool = False) -> Aerosol1D:
             # Plot the time series of total concentration
             fig, ax = cpc.plot_timeseries()
     """
-    encoding, delimiter = _detect_delimiter(file)
+    encoding, delimiter = sniff(file)
     col_count = len(
-        np.genfromtxt(
-            file,
-            delimiter=delimiter,
-            encoding=encoding,
-            skip_header=4,
-            max_rows=1,
-            dtype=str,
-        )
+        read_cells(file, skip_header=4, encoding=encoding, delimiter=delimiter)
     )
 
     if col_count == 4:
@@ -144,7 +137,7 @@ def _load_cpc_focused(file: str, encoding: str, delimiter: str) -> Aerosol1D:
         - instrument metadata including ``instrument``, ``serial_number``,
           and ``unit``.
     """
-    df = pd.read_csv(
+    df = read_table(
         file,
         header=14,
         skipfooter=3,
@@ -155,13 +148,8 @@ def _load_cpc_focused(file: str, encoding: str, delimiter: str) -> Aerosol1D:
     )
     df.columns = ["Time", "Total_conc"]
 
-    meta = np.genfromtxt(
-        file,
-        delimiter=delimiter,
-        encoding=encoding,
-        skip_header=4,
-        max_rows=6,
-        dtype="str",
+    meta = read_cells(
+        file, skip_header=4, max_rows=6, encoding=encoding, delimiter=delimiter
     )
 
     start_datetime = datetime.datetime.strptime(
@@ -175,11 +163,13 @@ def _load_cpc_focused(file: str, encoding: str, delimiter: str) -> Aerosol1D:
     df["Total_conc"] = pd.to_numeric(df["Total_conc"], errors="coerce")
     df = df.dropna()
 
-    CPC = Aerosol1D(df)
-    CPC._meta["instrument"] = "CPC"
-    CPC._meta["serial_number"] = meta[5, 1][5:-3]
-    CPC._meta["unit"] = "cm⁻³"
-    CPC._meta["dtype"] = "dN"
+    CPC = build_1d(
+        df,
+        instrument="CPC",
+        serial_number=meta[5, 1][5:-3],
+        unit="cm⁻³",
+        dtype="dN",
+    )
     return CPC
 
 
@@ -214,7 +204,7 @@ def _load_cpc_full(
         - optionally, extra diagnostic columns in ``.extra_data`` when
           ``extra_data=True``.
     """
-    df = pd.read_csv(
+    df = read_table(
         file, header=2, encoding=encoding, delimiter=delimiter, engine="python"
     )
 
@@ -225,11 +215,13 @@ def _load_cpc_full(
 
     data_df = pd.concat([df["Datetime"], df["Total_conc"]], axis=1)
 
-    CPC = Aerosol1D(data_df.copy())
-    CPC._meta["instrument"] = "CPC"
-    CPC._meta["serial_number"] = df["Instrument ID"].iloc[0][5:-3]
-    CPC._meta["unit"] = "cm⁻³"
-    CPC._meta["dtype"] = "dN"
+    CPC = build_1d(
+        data_df.copy(),
+        instrument="CPC",
+        serial_number=df["Instrument ID"].iloc[0][5:-3],
+        unit="cm⁻³",
+        dtype="dN",
+    )
 
     if extra_data:
         extra_df = df.drop(columns=["Start Date", "Start Time", "Total_conc"])
