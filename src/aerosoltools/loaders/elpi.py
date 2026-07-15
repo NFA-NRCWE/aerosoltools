@@ -502,20 +502,40 @@ def load_elpi_file(file: str, extra_data: bool = False) -> ELPI:
     ``CalculatedMoment=Current (fA)`` are converted by
     :func:`load_elpi_file_dat` before constructing the Aerosol2D object.
     """
+    # Detect + read the header once here to route the file; the chosen sub-loader
+    # reuses them (see the encoding/delimiter/meta pass-through) instead of
+    # re-sniffing and re-reading the header.
     encoding, delimiter = sniff(file)
     meta = _load_ELPI_metadata(file, delimiter, encoding)
     calculated_moment = str(meta.get("CalculatedMoment", ""))
 
     if calculated_moment.lower().startswith("current"):
-        return load_elpi_file_dat(file, extra_data=extra_data)
+        return load_elpi_file_dat(
+            file, extra_data, encoding=encoding, delimiter=delimiter, meta=meta
+        )
 
-    return load_elpi_file_txt(file, extra_data=extra_data)
+    return load_elpi_file_txt(
+        file, extra_data, encoding=encoding, delimiter=delimiter, meta=meta
+    )
 
 
-def load_elpi_file_txt(file: str, extra_data: bool = False) -> ELPI:
-    """Load an already-converted ELPI size-distribution export."""
-    encoding, delimiter = sniff(file)
-    meta = _load_ELPI_metadata(file, delimiter, encoding)
+def load_elpi_file_txt(
+    file: str,
+    extra_data: bool = False,
+    *,
+    encoding: str | None = None,
+    delimiter: str | None = None,
+    meta: dict | None = None,
+) -> ELPI:
+    """Load an already-converted ELPI size-distribution export.
+
+    ``encoding``/``delimiter``/``meta`` are reused when supplied (the router
+    :func:`load_elpi_file` passes what it already computed); each is derived from
+    the file only when not given, so the file's header is not re-read.
+    """
+    encoding, delimiter = sniff(file, encoding, delimiter)
+    if meta is None:
+        meta = _load_ELPI_metadata(file, delimiter, encoding)
     bin_edges, bin_mids = _get_ELPI_bin_edges_and_mids_nm(meta)
 
     # Recalculate bin edges for non-unit density, preserving existing behavior.
@@ -565,16 +585,28 @@ def load_elpi_file_txt(file: str, extra_data: bool = False) -> ELPI:
     )
 
 
-def load_elpi_file_dat(file: str, extra_data: bool = False) -> ELPI:
+def load_elpi_file_dat(
+    file: str,
+    extra_data: bool = False,
+    *,
+    encoding: str | None = None,
+    delimiter: str | None = None,
+    meta: dict | None = None,
+) -> ELPI:
     """Load a raw ELPI .dat current file and convert it to number dN.
 
     The raw .dat file contains the measured channels and a main CAL Stage1-14
     block in current units. This function uses the CAL stage-current block,
     converts fA/dlogDp to fA per bin, applies ELPI charger efficiency, and
     returns number concentration per bin in cm-3.
+
+    ``encoding``/``delimiter``/``meta`` are reused when supplied (the router
+    :func:`load_elpi_file` passes what it already computed); each is derived from
+    the file only when not given, so the file's header is not re-read.
     """
-    encoding, delimiter = sniff(file)
-    meta = _load_ELPI_metadata(file, delimiter, encoding)
+    encoding, delimiter = sniff(file, encoding, delimiter)
+    if meta is None:
+        meta = _load_ELPI_metadata(file, delimiter, encoding)
     bin_edges, bin_mids = _get_ELPI_bin_edges_and_mids_nm(meta)
 
     df = _read_ELPI_table(file, delimiter, encoding)
