@@ -42,32 +42,6 @@ _TAIL_SAFE = {
 }
 
 
-def _sniff_lines(file_path: str, encoding: str, size: int) -> list[str]:
-    """Return decoded lines for delimiter sniffing, reading a bounded slice.
-
-    For a large file (> ``2 * _SNIFF_BYTES``) with a single-byte-safe encoding,
-    only a head slice (to validate the encoding) and a tail slice (the data rows
-    the delimiter is sampled from) are read — so a big file is not read in full
-    just to inspect its last lines. Smaller files, or multi-byte encodings, are
-    read whole. Raises the usual decode error on a mismatched encoding.
-    """
-    if size <= 2 * _SNIFF_BYTES or encoding.lower() not in _TAIL_SAFE:
-        with open(file_path, "r", encoding=encoding) as f:
-            return f.readlines()
-    with open(file_path, "rb") as fb:
-        head_bytes = fb.read(_SNIFF_BYTES)
-        fb.seek(size - _SNIFF_BYTES)
-        tail_bytes = fb.read()
-    # Validate the encoding on the head, dropping a trailing partial line so a
-    # multi-byte char split at the slice edge can't cause a false decode error.
-    hcut = head_bytes.rfind(b"\n")
-    (head_bytes[:hcut] if hcut != -1 else head_bytes).decode(encoding)
-    # Sample from the tail, dropping the leading partial line for the same reason.
-    tcut = tail_bytes.find(b"\n")
-    tail = tail_bytes[tcut + 1 :] if tcut != -1 else tail_bytes
-    return tail.decode(encoding).split("\n")
-
-
 ###############################################################################
 
 
@@ -127,29 +101,58 @@ def _detect_delimiter(
     encodings = encodings or ["utf-8", "cp1252", "latin-1"]
     delimiters = delimiters or [",", ";", "\t", "|"]
 
+    # Read the bytes we need for detection ONCE — the whole file when it is
+    # small, otherwise a head slice (encoding validation) + tail slice (the data
+    # rows the delimiter is sampled from). The encoding trial then decodes these
+    # bytes in memory, so the file is not re-opened once per candidate encoding
+    # (a cp1252 file used to be read for utf-8, fail, then read again for cp1252).
+    size = os.path.getsize(file_path)
+    small = size <= 2 * _SNIFF_BYTES
+    with open(file_path, "rb") as fb:
+        if small:
+            raw = fb.read()
+            head_bytes = raw
+        else:
+            raw = None
+            head_bytes = fb.read(_SNIFF_BYTES)
+            fb.seek(size - _SNIFF_BYTES)
+            tail_bytes = fb.read()
+
     # A byte-order mark is authoritative — honour it ahead of the trial list.
     # UTF-16 is intentionally BOM-only: without a BOM it would happily
     # mis-decode a single-byte (Latin-1) file, so it is never guessed blindly.
-    with open(file_path, "rb") as fb:
-        head = fb.read(4)
+    head4 = head_bytes[:4]
     bom_encoding = None
-    if head.startswith(codecs.BOM_UTF8):
+    if head4.startswith(codecs.BOM_UTF8):
         bom_encoding = "utf-8-sig"
-    elif head.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+    elif head4.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
         bom_encoding = "utf-16"
-    elif head.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
+    elif head4.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
         bom_encoding = "utf-32"
 
     trial = ([bom_encoding] if bom_encoding else []) + list(encodings)
     if "latin-1" not in trial:  # always keep a can't-fail fallback last
         trial.append("latin-1")
 
-    # Try each encoding until one decodes cleanly, reading only a bounded slice
-    # of a large file (the loader reads it fully afterwards).
-    size = os.path.getsize(file_path)
+    # Try each encoding by decoding the already-read bytes (no re-open).
     for encoding in trial:
         try:
-            lines = _sniff_lines(file_path, encoding, size)
+            if small:
+                lines = raw.decode(encoding).split("\n")
+            elif encoding.lower() in _TAIL_SAFE:
+                # Byte-level newline slicing is safe for single-byte encodings:
+                # validate the head (dropping a trailing partial line) and sample
+                # the tail (dropping a leading partial line).
+                hcut = head_bytes.rfind(b"\n")
+                (head_bytes[:hcut] if hcut != -1 else head_bytes).decode(encoding)
+                tcut = tail_bytes.find(b"\n")
+                tail = tail_bytes[tcut + 1 :] if tcut != -1 else tail_bytes
+                lines = tail.decode(encoding).split("\n")
+            else:
+                # Large file in a multi-byte encoding (UTF-16/32 via BOM): 0x0A
+                # occurs inside code units, so read the whole file to split it.
+                with open(file_path, "r", encoding=encoding) as f:
+                    lines = f.readlines()
             break
         except (UnicodeError, LookupError):
             continue
