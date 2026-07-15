@@ -361,14 +361,30 @@ class DecayTab(_PlotTab):
 
     # -- option syncing ------------------------------------------------------
     def _sync_metric_options(self) -> None:
-        """Repopulate the metric drop-down for the active object's dimensionality."""
-        is2d = helpers.is_2d(self.obj)
+        """Repopulate the metric drop-down for the active dataset.
+
+        Particle number-concentration datasets keep the PNC (+ size-selective
+        Pₓ / MASS for 2-D) kinds, which the cut-off field parameterises. Every
+        other dataset — gases (Cl₂/NO₂ ppm), black carbon, LDSA, PM-mass, T/RH —
+        instead offers its own named metrics from :meth:`available_metrics`, so
+        the decay fit works on whatever quantity the instrument actually
+        measured rather than an inapplicable PNC.
+        """
+        obj = self.obj
+        is2d = helpers.is_2d(obj)
+        number_primary = obj._has_number_primary()
+        if number_primary:
+            kinds = ["PNC"]
+            if is2d:
+                kinds += ["MASS", "PM", "PN", "PS", "PV"]
+        else:
+            # Named metrics (Cl₂, BC channels, LDSA, PM1/2.5/10, T, RH, …); none
+            # of these use a size cut-off.
+            kinds = obj._metric_keys() or [str(obj.data.columns[0])]
+
         current = self.metric_kind.currentText()
         self.metric_kind.blockSignals(True)
         self.metric_kind.clear()
-        kinds = ["PNC"]
-        if is2d:
-            kinds += ["MASS", "PM", "PN", "PS", "PV"]
         self.metric_kind.addItems(kinds)
         idx = self.metric_kind.findText(current)
         self.metric_kind.setCurrentIndex(idx if idx >= 0 else 0)
@@ -377,8 +393,9 @@ class DecayTab(_PlotTab):
         self.metric_cut.clear()
         self.metric_cut.addItems(["0.1", "0.25", "0.5", "1", "2.5", "4", "4.2", "10"])
         self.metric_cut.blockSignals(False)
-        self.per_bin.setEnabled(is2d)
-        if not is2d:
+        # Per-bin decay only applies to size-resolved particle data.
+        self.per_bin.setEnabled(is2d and number_primary)
+        if not (is2d and number_primary):
             self.per_bin.setChecked(False)
         self._on_metric_kind_change()
 
