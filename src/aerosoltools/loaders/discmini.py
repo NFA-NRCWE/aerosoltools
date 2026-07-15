@@ -106,7 +106,8 @@ def load_discmini_file(file: str, extra_data: bool = True) -> DiSCmini:
             If ``True``, columns that are not part of the core time series
             (datetime, total concentration, mean size, LDSA) are stored in
             the returned object's ``.extra_data`` (and ``._raw_extra_data``)
-            DataFrames, indexed by ``Datetime``. Defaults to ``False``.
+            DataFrames, indexed by ``Datetime``. Defaults to ``True`` —
+            everything in the file is kept.
 
     Returns:
         DiSCmini:
@@ -595,7 +596,8 @@ def load_discmini_raw_file(
         extra_data (bool, optional):
             If ``True``, the averaged diagnostic channels (diffusion/filter
             currents, temperature, flow, battery, …) are stored in
-            ``.extra_data``. Defaults to ``False``.
+            ``.extra_data``. Defaults to ``True`` — everything in the file is
+            kept.
         period (int, optional):
             Averaging period in seconds. The vendor tool averages the raw
             1 Hz data into 10 s windows; this reproduces that with

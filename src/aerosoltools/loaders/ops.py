@@ -25,7 +25,8 @@ def load_ops_file(file: str, extra_data: bool = True):
         extra_data (bool, optional):
             If ``True``, auxiliary channels (e.g. status, environmental
             variables, Bin 17 for direct exports) are stored in ``extra_data``
-            when supported by the underlying loader. Defaults to ``False``.
+            when supported by the underlying loader. Defaults to ``True`` —
+            everything in the file is kept.
 
     Returns:
         Aerosol2D:

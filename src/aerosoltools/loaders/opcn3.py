@@ -24,7 +24,8 @@ def load_opcn3_file(file: str, extra_data: bool = True, PM_focus: bool = False):
         extra_data (bool, optional):
             If ``True``, auxiliary channels (e.g. temperature, RH, flow, PM
             channels) are stored in ``extra_data`` when supported by the
-            underlying loader. Defaults to ``False``.
+            underlying loader. Defaults to ``True`` — everything in the file is
+            kept.
         PM_focus (bool, optional):
             If ``True``, return a compact PM-focused :class:`Aerosol1D` with
             total number concentration and PM1/PM2.5/PM10 mass as reported

@@ -19,8 +19,10 @@ def load_aethalometer_file(file: str, extra_data: bool = True) -> Aethalometer:
         extra_data (bool, optional):
             If ``True``, non-core variables (e.g. diagnostics, sensor status
             or quality flags) are stored in ``Aethalometer.extra_data`` with
-            a ``Datetime`` index. If ``False`` (default), only the main
-            measurement channels are kept in ``.data``.
+            a ``Datetime`` index (ambient sample temp/RH/dewpoint and flows get
+            canonical units). If ``False``, only the main measurement channels
+            are kept in ``.data``. Defaults to ``True`` — everything in the file
+            is kept.
 
     Returns:
         Aethalometer:

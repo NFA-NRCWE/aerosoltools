@@ -78,7 +78,7 @@ def load_smps_file(file: str, extra_data: bool = True) -> Aerosol2D:
         extra_data (bool, optional):
             If ``True``, non-distribution columns (e.g. status, flow, voltages)
             are stored in ``extra_data`` indexed by ``Datetime``. Defaults to
-            ``False``.
+            ``True`` — everything in the file is kept.
 
     Returns:
         Aerosol2D:

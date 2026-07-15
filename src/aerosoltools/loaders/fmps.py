@@ -23,7 +23,8 @@ def load_fmps_file(file: str) -> Aerosol2D:
     Returns:
         Aerosol2D:
             FMPS size distributions with a datetime index, total concentration,
-            size-resolved bins, and associated metadata.
+            size-resolved bins, and associated metadata. The reported Pressure
+            (hPa) and Sample Temp (°C) are kept in ``extra_data``.
 
     Raises:
         FileNotFoundError:

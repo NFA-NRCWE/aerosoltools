@@ -25,7 +25,7 @@ def load_cpc_file(file: str, extra_data: bool = True) -> Aerosol1D:
             and operational parameters are stored in the returned object's
             ``.extra_data`` attribute. For *focused* format files, this flag
             has no effect because only minimal channels are available.
-            Defaults to ``False``.
+            Defaults to ``True`` — everything in the file is kept.
 
     Returns:
         Aerosol1D:

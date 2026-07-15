@@ -19,7 +19,9 @@ def load_ns_file(file: str, extra_data: bool = True) -> Aerosol2D:
             Path to the NanoScan CSV export file.
         extra_data (bool, optional):
             If ``True``, non-size-bin columns (e.g. status, density) are stored
-            in ``extra_data`` indexed by ``Datetime``. Defaults to ``False``.
+            in ``extra_data`` indexed by ``Datetime`` (with their units resolved
+            into ``column_units`` where recognisable). Defaults to ``True`` —
+            everything in the file is kept.
 
     Returns:
         Aerosol2D:

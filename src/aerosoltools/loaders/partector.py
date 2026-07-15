@@ -51,8 +51,13 @@ def load_partector_file(
             Path to the Partector ``.txt`` export file.
         extra_data (bool, optional):
             If ``True``, additional columns (beyond ``LDSA``, ``TEM`` and
-            ``Flow``) are stored in ``extra_data`` indexed by ``Datetime``.
-            Defaults to ``False``.
+            ``Flow``) are stored in ``extra_data`` indexed by ``Datetime`` (the
+            ambient T/RH channels get canonical units). Defaults to ``True`` —
+            everything in the file is kept.
+        tem_activities (bool, optional):
+            If ``True``, each contiguous ``TEM == 1`` grid-sampling run is
+            registered as an activity ("TEM grid sampling 1", 2, …). Defaults to
+            ``True``.
 
     Returns:
         Partector:
