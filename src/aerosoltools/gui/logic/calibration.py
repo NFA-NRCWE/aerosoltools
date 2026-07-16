@@ -75,6 +75,7 @@ def _rebuild(ds) -> None:
     if ds.calibration_enabled and model is not None:
         obj = _apply_model(obj, model, inplace=True)
     ds.obj = obj
+    ds.touch()  # obj swapped → invalidate the derived-copy cache
 
 
 def apply_to_dataset(ds, model: CalibrationModel) -> None:
@@ -106,6 +107,7 @@ def reset_calibration(ds) -> None:
     ds.calibration = None
     ds.calibration_enabled = False
     ds._cal_baseline = None
+    ds.touch()  # obj restored → invalidate the derived-copy cache
 
 
 # -- human-readable summaries (Metadata pane) ---------------------------------

@@ -21,6 +21,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import pandas as pd
 
 from ..logic import helpers
+from .derived_cache import DerivedCache
 from .fit_specs import PsdFitSpec
 
 # Process-wide counter giving every dataset a stable, unique id.
@@ -97,6 +98,11 @@ class Dataset:
         """
         self.id: int = next(_ID)
         self.obj = obj
+        # Bumped by :meth:`touch` on every data-changing mutation of ``obj``
+        # (crop/rebin/smooth/shift, calibration apply/reset, set_density). The
+        # derived-copy cache keys on it, so a stale converted view can never be
+        # handed out. See gui/state/derived_cache.py.
+        self.generation: int = 0
         self.source_path = source_path
         self.instrument_key = instrument_key
         if label:
@@ -149,6 +155,16 @@ class Dataset:
         # dataset's base colour; a user override is stored here and persisted.
         self.activity_colors: Dict[str, str] = {}
 
+    def touch(self) -> None:
+        """Mark ``obj``'s data as changed, invalidating this dataset's cache.
+
+        Called at every mutation site (crop/rebin/smooth/shift, calibration
+        apply/reset, ``set_density``). Bumping the generation is the *only* way
+        data-change is signalled to the derived-copy cache — no layer sets
+        ``generation`` directly.
+        """
+        self.generation += 1
+
     @property
     def instrument(self) -> str:
         """Instrument name (the loader key, falling back to the object's own)."""
@@ -179,6 +195,10 @@ class Project:
         self.name = name
         self.datasets: List[Dataset] = []
         self.active_id: Optional[int] = None
+        # Memoised basis conversions for the display tabs, keyed by dataset
+        # generation (see gui/state/derived_cache.py). The single façade the view
+        # layer uses to obtain a converted view; invalidated by Dataset.touch().
+        self.derived = DerivedCache()
         # name -> list of (start, end). "All data" is intentionally NOT stored
         # here; each dataset manages its own "All data" span over its own range.
         self.activities: Dict[str, List[Period]] = {}

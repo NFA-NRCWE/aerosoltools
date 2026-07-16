@@ -1126,6 +1126,7 @@ class MainWindow(QtWidgets.QMainWindow):
             for ds in targets:
                 if helpers.is_2d(ds.obj):
                     ds.obj.set_density(value)
+                    ds.touch()  # diameters changed → invalidate derived-copy cache
         except Exception:
             QtWidgets.QMessageBox.warning(
                 self, "set_density failed", traceback.format_exc(limit=1)

@@ -278,6 +278,7 @@ class TimeOpsMixin:
             # Shift extra_data if it shares the same index
             target._extra_data.index = target._extra_data.index + delta
 
+        target._drop_derived()  # uniform invalidation (values unchanged, just re-timed)
         return target
 
     def timesmooth(self, window: int = 5, method: str = "mean", inplace: bool = True):

@@ -214,6 +214,12 @@ class AdjustmentsBox(QtWidgets.QGroupBox):
             widget.blockSignals(False)
 
     # -- handlers ----------------------------------------------------------
+    def _touch_active(self) -> None:
+        """Invalidate the active dataset's derived-copy cache after a mutation."""
+        ds = self.main.project.active
+        if ds is not None:
+            ds.touch()
+
     def _do_crop(self, start, end) -> None:
         """Crop the active object to ``[start, end]`` and refresh."""
         # Target the parent object so a correlated APS keeps both axes aligned.
@@ -240,6 +246,7 @@ class AdjustmentsBox(QtWidgets.QGroupBox):
                 "Empty result",
                 "Cropping removed all data; reload to recover.",
             )
+        self._touch_active()
         self.sync_crop_fields()
         self.main.refresh_all(reset_view=True)
 
@@ -294,6 +301,7 @@ class AdjustmentsBox(QtWidgets.QGroupBox):
                 self.main, "Smoothing failed", traceback.format_exc(limit=1)
             )
             return
+        self._touch_active()
         self.main.refresh_all(reset_view=True)
 
     def _apply_resampling(self) -> None:
@@ -316,6 +324,7 @@ class AdjustmentsBox(QtWidgets.QGroupBox):
                 self.main, "Resampling failed", traceback.format_exc(limit=1)
             )
             return
+        self._touch_active()
         self.sync_crop_fields()
         self.main.refresh_all(reset_view=True)
 
@@ -339,6 +348,7 @@ class AdjustmentsBox(QtWidgets.QGroupBox):
         # Shared tasks keep their absolute times: re-project them onto the
         # shifted axis so this dataset's masks/summaries reflect the new timing.
         self.main.project._apply_activities(ds)
+        ds.touch()
         self.sync_crop_fields()
         self.main.refresh_all(reset_view=True)
         self.main._refresh_sidebar()
