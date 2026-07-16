@@ -630,9 +630,10 @@ class TimeSeriesTab(_PlotTab):
         """Draw the currently selected series onto ``ax`` (no view/cap logic)."""
         kind, name = self.column.currentData() or ("total", helpers.TOTAL)
         if kind == "dtype":
-            # Total concentration on a converted basis (dM/dS/dV): convert a copy
-            # so the loaded object stays dN, then use its recomputed total.
-            conv, unit = helpers.converted_copy(self.obj, name)
+            # Total concentration on a converted basis (dM/dS/dV): the shared
+            # cache converts the loaded object (kept dN) once; we only read the
+            # recomputed total, so the read-only cached view is fine to use.
+            conv, unit = self._converted_active(name)
             series = conv.total_concentration
             ylabel = f"{helpers.base_dtype(conv.dtype)}, {unit}".strip(", ")
         elif kind == "total":

@@ -130,6 +130,25 @@ class _PlotTab(QtWidgets.QWidget):
         """Active aerosol object (proxied from the main window)."""
         return self.main.obj
 
+    def _converted_active(self, basis: str):
+        """Return ``(view, unit)`` for the active object on ``basis``.
+
+        Routes through the project's shared :class:`DerivedCache` when the shown
+        object is the active dataset's own object (the common case), so repeated
+        redraws reuse the conversion. Falls back to a direct (uncached)
+        conversion for a transient view such as a correlated-APS optical axis.
+
+        The cached view is **read-only** — callers that mutate it (add Pₓ
+        columns, normalise) must ``copy_self()`` it first.
+        """
+        obj = self.obj
+        ds = self.main.project.active
+        if ds is not None and obj is ds.obj:
+            return self.main.project.derived.converted(ds, basis)
+        from ..logic import helpers
+
+        return helpers.converted_copy(obj, basis)
+
     def _split_with_side(self, side_widget, sizes=(820, 300)):
         """Lay the plot out left of ``side_widget`` with a draggable divider.
 
