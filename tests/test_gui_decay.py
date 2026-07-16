@@ -44,15 +44,19 @@ def test_decay_metric_options_follow_dataset_type(app):
     win.load_file(os.path.join(_DATA, "Sample_Ranger.csv"), instrument="Ranger")
     tab = _decay_tab(win)
     tab.refresh()
-    kinds = [tab.metric_kind.itemText(i) for i in range(tab.metric_kind.count())]
-    assert kinds == ["Cl₂"]
-    assert "PNC" not in kinds
+    # The picker shows canonical labels; the internal metric key is the item data.
+    keys = [tab.metric_kind.itemData(i) for i in range(tab.metric_kind.count())]
+    assert keys == ["Cl₂"]
+    assert "PNC" not in keys
     _times, values, unit, metric = tab._series()
     assert metric == "Cl₂" and unit == "ppm" and len(values) > 0
     tab._draw()  # previously raised ValueError for the Gas1D
 
-    # Particle size-resolved dataset still exposes PNC + the derived fractions.
+    # Particle size-resolved dataset still exposes PNC + the derived fractions
+    # (internal keys), shown under canonical labels ("Number concentration", …).
     win.load_file(os.path.join(_DATA, "Sample_OPS2.txt"), instrument="OPS")
     tab.refresh()
-    p_kinds = [tab.metric_kind.itemText(i) for i in range(tab.metric_kind.count())]
-    assert "PNC" in p_kinds and "PM" in p_kinds
+    p_keys = [tab.metric_kind.itemData(i) for i in range(tab.metric_kind.count())]
+    assert "PNC" in p_keys and "PM" in p_keys
+    p_labels = [tab.metric_kind.itemText(i) for i in range(tab.metric_kind.count())]
+    assert "Number concentration" in p_labels and "PNC" not in p_labels

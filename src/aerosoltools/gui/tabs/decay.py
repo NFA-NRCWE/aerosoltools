@@ -30,6 +30,18 @@ from ._base import _export_table, _PlotTab
 #: Fraction metrics that need a cut-off diameter alongside the kind.
 _FRACTION_KINDS = ("PM", "PN", "PS", "PV")
 
+#: Internal metric key -> canonical label shown to the user (so the picker never
+#: exposes raw "PNC"/"MASS" tokens). Keys not listed here (instrument channel
+#: names like "Cl₂"/"LDSA") are shown verbatim.
+_KIND_LABELS = {
+    "PNC": "Number concentration",
+    "MASS": "Mass concentration",
+    "PM": "PM (mass fraction)",
+    "PN": "PN (number fraction)",
+    "PS": "PS (surface fraction)",
+    "PV": "PV (volume fraction)",
+}
+
 #: Model label shown in the selector -> value passed to ``fit_decay``.
 _MODEL_CHOICES = [
     ("Auto (best fit)", "auto"),
@@ -382,11 +394,13 @@ class DecayTab(_PlotTab):
             # of these use a size cut-off.
             kinds = obj._metric_keys() or [str(obj.data.columns[0])]
 
-        current = self.metric_kind.currentText()
+        current = self.metric_kind.currentData()
         self.metric_kind.blockSignals(True)
         self.metric_kind.clear()
-        self.metric_kind.addItems(kinds)
-        idx = self.metric_kind.findText(current)
+        for key in kinds:
+            # Show a canonical label but keep the internal key as item data.
+            self.metric_kind.addItem(_KIND_LABELS.get(key, key), userData=key)
+        idx = self.metric_kind.findData(current)
         self.metric_kind.setCurrentIndex(idx if idx >= 0 else 0)
         self.metric_kind.blockSignals(False)
         self.metric_cut.blockSignals(True)
@@ -401,7 +415,7 @@ class DecayTab(_PlotTab):
 
     def _on_metric_kind_change(self, *_args) -> None:
         """Show the cut-off field only for size-selective fractions, then redraw."""
-        is_fraction = self.metric_kind.currentText().strip() in _FRACTION_KINDS
+        is_fraction = self.metric_kind.currentData() in _FRACTION_KINDS
         self.metric_cut.setVisible(is_fraction)
         self.metric_cut_label.setVisible(is_fraction)
         # A different metric has its own data range/units: refit every region.
@@ -410,7 +424,7 @@ class DecayTab(_PlotTab):
 
     def _on_metric_cut_change(self, *_args) -> None:
         """Refit when the fraction cut-off diameter changes."""
-        if self.metric_kind.currentText().strip() not in _FRACTION_KINDS:
+        if self.metric_kind.currentData() not in _FRACTION_KINDS:
             return
         self._recompute_all()
         self._draw(reset=True)
@@ -421,7 +435,9 @@ class DecayTab(_PlotTab):
 
     def _build_metric(self) -> str:
         """Assemble the metric string (kind plus cut-off where relevant)."""
-        kind = self.metric_kind.currentText().strip()
+        kind = self.metric_kind.currentData()
+        if kind is None:  # empty picker (no dataset yet)
+            return ""
         if kind in _FRACTION_KINDS:
             return f"{kind}{self.metric_cut.currentText().strip()}"
         return kind
