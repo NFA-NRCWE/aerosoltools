@@ -297,6 +297,7 @@ class FractionMixin:
             self._extra_data = self._extra_data.reindex(self.time)
 
         self._extra_data[out_label] = series
+        self._register_derived(out_label)
 
         return self
 
@@ -390,6 +391,7 @@ class FractionMixin:
 
             aligned_extra["MASS"] = series
             self._extra_data = aligned_extra
+            self._register_derived("MASS")
             return series, "µg/m³"
 
         # --- Pₓ metrics: PM, PN, PS, PV (reusing if already present) ----------
@@ -435,6 +437,7 @@ class FractionMixin:
         series = work.extra_data[label].astype(float)
         aligned_extra[label] = series
         self._extra_data = aligned_extra
+        self._register_derived(label)
 
         return series, unit_map[dchar]
 

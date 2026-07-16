@@ -74,17 +74,12 @@ class TimeOpsMixin:
         if not focus:
             mask = ~mask
 
-        if inplace:
-            self._data = self._data.loc[mask]
-            if crop_extra and len(self._extra_data) > 0:
-                self._extra_data = self._extra_data.loc[mask]
-            return self
-        else:
-            obj = self.copy_self()
-            obj._data = obj._data.loc[mask]
-            if crop_extra and len(obj._extra_data) > 0:
-                obj._extra_data = obj._extra_data.loc[mask]
-            return obj
+        target = self if inplace else self.copy_self()
+        target._data = target._data.loc[mask]
+        if crop_extra and len(target._extra_data) > 0:
+            target._extra_data = target._extra_data.loc[mask]
+        target._drop_derived()  # memoised MASS/Pₓ recompute from the cropped data
+        return target
 
     def timerebin(
         self,
@@ -213,12 +208,14 @@ class TimeOpsMixin:
 
             if len(self._extra_data) > 0:
                 self._extra_data = rebinned_extra
+            self._drop_derived()  # recompute MASS/Pₓ from the rebinned data
             return self
         else:
             obj = self.copy_self()
             obj._data = rebinned
             if len(self._extra_data) > 0:
                 obj._extra_data = rebinned_extra
+            obj._drop_derived()
             return obj
 
     def timeshift(
@@ -343,10 +340,7 @@ class TimeOpsMixin:
 
         smoothed = pd.concat([smoothed_numeric, preserved_bool], axis=1)
 
-        if inplace:
-            self._data = smoothed
-            return self
-        else:
-            new_obj = self.copy_self()
-            new_obj._data = smoothed
-            return new_obj
+        target = self if inplace else self.copy_self()
+        target._data = smoothed
+        target._drop_derived()  # memoised MASS/Pₓ recompute from the smoothed data
+        return target

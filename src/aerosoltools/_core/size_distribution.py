@@ -840,6 +840,7 @@ class SizeConversionMixin:
                 self._data[self._sizebin_headers] *= factor
                 if "Total_conc" in self._data.columns:
                     self._data["Total_conc"] *= factor
+            self._drop_derived()  # diameters changed → MASS/Pₓ recompute
             return self
 
         if "dM" in str(self.dtype):
@@ -857,6 +858,7 @@ class SizeConversionMixin:
                 self._data["Total_conc"] *= factor
 
         self._meta["density"] = density
+        self._drop_derived()  # density changed → mass-based MASS/Pₓ recompute
         return self
 
     def rebin_bin_edges(self, new_bin_edges, inplace: bool = True):
@@ -974,5 +976,6 @@ class SizeConversionMixin:
         out._meta["bin_edges"] = new_bin_edges
         out._meta["bin_mids"] = new_bin_mids
         out.mark_activities(out.activity_periods)
+        out._drop_derived()  # bins changed → MASS/Pₓ recompute
 
         return out

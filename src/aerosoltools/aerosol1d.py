@@ -81,6 +81,11 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
     def __init__(self, dataframe):
         self._meta = {}
         self._extra_data = pd.DataFrame([])
+        # Names of the columns in ``_extra_data`` that are *derived* (memoised
+        # results such as MASS / Pₓ), as opposed to loaded housekeeping columns.
+        # Any data-changing mutation drops these so they recompute; loaded
+        # columns are carried through untouched. See :meth:`_drop_derived`.
+        self._derived_columns: set[str] = set()
         self._activities = []
         self._activity_periods = {}
 
@@ -307,6 +312,38 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
     """########################### Core helpers ###########################"""
     ###########################################################################
 
+    def _register_derived(self, *names: str) -> None:
+        """Mark ``names`` as derived (memoised) columns in :attr:`extra_data`.
+
+        Called by the metric machinery (``PM_calc`` / ``_get_metric_series``)
+        when it caches a computed result, so the object knows which
+        ``extra_data`` columns are recomputable and may be invalidated. Loaded
+        housekeeping columns are never registered.
+        """
+        # Defensive: older objects reconstructed without __init__ may lack the set.
+        if not hasattr(self, "_derived_columns"):
+            self._derived_columns = set()
+        self._derived_columns.update(str(n) for n in names)
+
+    def _drop_derived(self) -> None:
+        """Invalidate memoised derived columns so they recompute from current data.
+
+        Every data-changing mutation (crop / rebin / smooth / ``set_density`` /
+        calibration) calls this. Only the columns registered via
+        :meth:`_register_derived` (MASS, Pₓ, …) are dropped — loaded
+        housekeeping columns (temperature, RH, …) are left intact — and the
+        dropped ones refill lazily on next access via the usual
+        ``compute-if-absent`` path. This is the single invalidation primitive
+        shared by the API and the GUI.
+        """
+        derived = getattr(self, "_derived_columns", None)
+        if not derived:
+            return
+        cols = [c for c in derived if c in self._extra_data.columns]
+        if cols:
+            self._extra_data = self._extra_data.drop(columns=cols)
+        self._derived_columns = set()
+
     @staticmethod
     def _resolve_meta(meta, column):
         """Resolve a scalar-or-dict ``_meta`` value to a display string.
@@ -468,6 +505,7 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
                 raise KeyError(f"Parameter '{column}' not found in data or extra_data")
 
         out._meta["calibration"] = model.to_dict()
+        out._drop_derived()  # data rescaled → MASS/Pₓ recompute
         return out
 
     ###########################################################################
