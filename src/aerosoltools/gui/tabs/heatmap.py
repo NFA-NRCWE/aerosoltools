@@ -118,15 +118,16 @@ class HeatmapTab(_PlotTab):
         fig.clear()
         ax1, ax2 = fig.subplots(2, 1, sharex=True)
 
-        # Convert for display on a working copy so the loaded object stays dN.
+        # Convert for display via the shared cache (loaded object stays dN). The
+        # cached view is read-only; normalisation mutates, so copy first when it's
+        # on.
         disp = self.dtype.currentText()
-        target = self.obj
-        if disp != "dN" or self.normalize.isChecked():
-            target = self.obj.copy_self()
-            if disp != "dN":
-                target.dtype_converter(disp)
-            if self.normalize.isChecked():
-                target.normalize_logdp()
+        base, _ = self._converted_active(disp)
+        if self.normalize.isChecked():
+            target = base.copy_self()
+            target.normalize_logdp()
+        else:
+            target = base
 
         # y_3d caps the colour scale: (min, max), where 0 means "automatic".
         # A log colour scale needs a strictly positive lower cap; when the user

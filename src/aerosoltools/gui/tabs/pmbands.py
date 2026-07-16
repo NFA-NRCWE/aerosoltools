@@ -102,7 +102,10 @@ class PMBandsTab(_PlotTab):
 
         dtype = self.dtype.currentText()
         dchar = dtype[-1]
-        work, unit = helpers.converted_copy(self.obj, dtype)
+        # The shared cache converts once (read-only); pm_calc adds Pₓ columns, so
+        # work on a copy.
+        base, unit = self._converted_active(dtype)
+        work = base.copy_self()
         for pm in values:
             work.pm_calc(dtype=dtype, PM=pm)
         activity = self.activity.currentText()
