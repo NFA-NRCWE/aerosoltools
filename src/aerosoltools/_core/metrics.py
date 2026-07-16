@@ -164,6 +164,20 @@ def parse_header_unit(header: str) -> tuple[str, str | None]:
     return header, None
 
 
+#: Distribution basis → canonical user-facing quantity name. Replaces the
+#: confusing ``"Total concentration (dX)"`` notation with a plain physical name,
+#: so a *measured* mass (e.g. a DustTrak) reads "Mass concentration" just like a
+#: *derived* one — comparable, one name. The ``dX`` basis stays internal.
+BASIS_QUANTITY: dict[str, str] = {
+    "dN": "Number concentration",
+    "dM": "Mass concentration",
+    "dS": "Surface area concentration",
+    "dV": "Volume concentration",
+}
+#: Reverse lookup: canonical quantity name → basis.
+QUANTITY_BASIS: dict[str, str] = {v: k for k, v in BASIS_QUANTITY.items()}
+
+
 #: Canonical cross-instrument environmental metrics: a display name → the set of
 #: instrument column names (lower-cased) that mean the *same* physical quantity.
 #: Only genuinely-shared **ambient** channels are listed, so different

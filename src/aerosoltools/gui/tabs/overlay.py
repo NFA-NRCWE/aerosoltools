@@ -18,7 +18,7 @@ from matplotlib.lines import Line2D
 
 from ..._core import _shading
 from ..._core.metrics import _CANONICAL_METRICS as _ENV_METRICS
-from ..._core.metrics import canonical_metric_for
+from ..._core.metrics import BASIS_QUANTITY, QUANTITY_BASIS, canonical_metric_for
 from ..logic import helpers
 from ..qt import QtCore, QtWidgets
 from ..view.widgets import ThresholdControls, WheelLineEdit
@@ -173,8 +173,9 @@ class OverlayTab(_PlotTab):
             combo.setMaximumWidth(160)
             combo.setToolTip(
                 "Metric for this slot (colour = dataset, line style = slot). "
-                "The 'Total concentration (dN/dM/dS/dV)' options are particle "
-                "totals; named measurements (e.g. a black-carbon or gas channel) "
+                "The Number/Mass/Surface area/Volume concentration options are "
+                "particle-size-distribution totals; named measurements (e.g. a "
+                "black-carbon or gas channel) "
                 "appear under their own name. Choose '— none —' to leave the slot "
                 "unused."
             )
@@ -365,9 +366,10 @@ class OverlayTab(_PlotTab):
 
         totals: list = []
         if has_number:
-            totals.append("Total concentration (dN)")
+            totals.append(BASIS_QUANTITY["dN"])  # "Number concentration"
         if has_2d:
-            totals += [f"Total concentration ({b})" for b in _TOTAL_BASES[1:]]
+            # Mass / surface area / volume concentration (derived from the PSD).
+            totals += [BASIS_QUANTITY[b] for b in _TOTAL_BASES[1:]]
         standard = totals + measurements + channels
         groups = []
         if env_metrics:
@@ -398,9 +400,10 @@ class OverlayTab(_PlotTab):
     def _series_for(self, ds, metric: str):
         """Return ``(series, name, unit)`` for a dataset's metric, or None.
 
-        "Total concentration (dN/dM/dS/dV)" is the generic particle total, only
-        for datasets *without* a named measurement (dM/dS/dV need size-resolved
-        data); a named measurement resolves to that dataset's primary series;
+        Number/Mass/Surface area/Volume concentration is the generic particle
+        total (dN/dM/dS/dV), only for datasets *without* a named measurement
+        (mass/surface/volume need size-resolved data); a named measurement
+        resolves to that dataset's primary series;
         otherwise the metric is looked up as a data / extra column.
         """
         obj = ds.obj
@@ -414,13 +417,13 @@ class OverlayTab(_PlotTab):
             series = obj.data[col] if col in obj.data.columns else obj.extra_data[col]
             unit = helpers.column_unit(obj, col) or ""
             return pd.to_numeric(series, errors="coerce"), metric, unit
-        if metric.startswith("Total concentration (") and metric.endswith(")"):
+        if metric in QUANTITY_BASIS:
             if not helpers.is_particle(obj):
                 # Non-particle instruments (gas, black carbon, LDSA, T/RH) are
                 # never a generic particle total; they appear under their own
                 # named channel/measurement instead.
                 return None
-            basis = metric[metric.index("(") + 1 : -1]
+            basis = QUANTITY_BASIS[metric]  # "Mass concentration" -> "dM"
             if meas:  # a named measurement is not a generic particle total
                 return None
             if basis != "dN":
@@ -428,10 +431,10 @@ class OverlayTab(_PlotTab):
                     return None
                 conv, unit = self.main.project.derived.converted(ds, basis)
                 s = pd.to_numeric(conv.total_concentration, errors="coerce")
-                return s, f"Total concentration ({basis})", unit
+                return s, metric, unit
             _dtype, unit = helpers.describe(obj)
             s = pd.to_numeric(obj.total_concentration, errors="coerce")
-            return s, "Total concentration", unit
+            return s, metric, unit
         if meas is not None and metric == meas:
             _dtype, unit = helpers.describe(obj)
             # ``_primary`` is total_concentration for particle instruments and
@@ -475,7 +478,7 @@ class OverlayTab(_PlotTab):
             if idx >= 0:
                 combo.setCurrentIndex(idx)
             elif slot == 0:
-                default = combo.findText("Total concentration (dN)")
+                default = combo.findText(BASIS_QUANTITY["dN"])
                 combo.setCurrentIndex(default if default >= 0 else 0)
             else:
                 combo.setCurrentIndex(0)  # — none —

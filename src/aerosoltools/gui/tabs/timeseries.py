@@ -566,13 +566,13 @@ class TimeSeriesTab(_PlotTab):
         standard, extra = helpers.grouped_columns(self.obj)
         for label, kind, name in standard:
             self.column.addItem(label, userData=(kind, name))
-        # For size-resolved data, offer the total concentration on the mass/
-        # surface/volume bases too (the old top-bar dtype control was removed).
-        # dN is already the plain "Total concentration" entry above.
+        # For size-resolved data, offer the mass/surface/volume concentration too
+        # (the old top-bar dtype control was removed). The dN total is the plain
+        # "Total concentration" entry above.
         if helpers.is_2d(self.obj):
             for basis in ("dM", "dS", "dV"):
                 self.column.addItem(
-                    f"Total concentration ({basis})", userData=("dtype", basis)
+                    helpers.BASIS_QUANTITY[basis], userData=("dtype", basis)
                 )
         if extra:
             self._add_column_header(f"── Extra: {self.obj.instrument} ──")
@@ -635,7 +635,8 @@ class TimeSeriesTab(_PlotTab):
             # recomputed total, so the read-only cached view is fine to use.
             conv, unit = self._converted_active(name)
             series = conv.total_concentration
-            ylabel = f"{helpers.base_dtype(conv.dtype)}, {unit}".strip(", ")
+            quantity = helpers.BASIS_QUANTITY.get(name, helpers.base_dtype(conv.dtype))
+            ylabel = f"{quantity}, {unit}".strip(", ")
         elif kind == "total":
             # Name the primary series by its measured quantity (e.g. "Cl₂") so a
             # gas/BC dataset is not mislabelled as a generic "Total concentration".

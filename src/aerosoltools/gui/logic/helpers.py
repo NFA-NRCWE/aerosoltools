@@ -14,6 +14,7 @@ import pandas as pd
 
 from ..._core import _shading
 from ..._core._labels import base_dtype  # re-exported for GUI use
+from ..._core.metrics import BASIS_QUANTITY  # re-exported for GUI use
 from ..._core.nonparticle import _NonParticleMixin
 from ...aerosol1d import Aerosol1D
 from ...aerosol2d import Aerosol2D
@@ -22,6 +23,7 @@ __all__ = [
     "TOTAL",
     "THRESHOLD_COLOR",
     "base_dtype",
+    "BASIS_QUANTITY",
     "is_2d",
     "is_particle",
     "describe",
