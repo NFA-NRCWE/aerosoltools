@@ -53,21 +53,33 @@ def test_smoothing_invalidates_derived_metrics():
     assert p_after == p_fresh
 
 
-def test_crop_drops_derived_but_keeps_loaded_columns():
-    """A crop invalidates derived columns yet preserves loaded housekeeping ones."""
+def test_crop_keeps_derived_columns_valid():
+    """A crop carries derived columns along (subset), so they stay valid — not dropped."""
     obj = at.load_ops_file(os.path.join(_DATA, "Sample_OPS2.txt"))
     _mass_pm(obj)  # MASS/PM2.5 now cached in extra_data
     assert "MASS" in obj.extra_data.columns
-    loaded = [c for c in obj.extra_data.columns if c not in ("MASS", "PM2.5")]
 
     t = obj.time
-    obj.timecrop(start=str(t[0]), end=str(t[len(t) // 2]))
+    cut = str(t[len(t) // 2])
+    obj.timecrop(start=str(t[0]), end=cut)
 
-    # Derived columns are gone (will recompute on demand)...
-    assert "MASS" not in obj.extra_data.columns
-    # ...but the loaded housekeeping columns survive (cropped, not dropped).
-    assert all(c in obj.extra_data.columns for c in loaded)
+    # Derived columns are retained (cropping only subsets by the time mask)...
+    assert "MASS" in obj.extra_data.columns
     assert len(obj.extra_data) == len(obj.time)
+    # ...and match a fresh recomputation on an independently-cropped object.
+    fresh = at.load_ops_file(os.path.join(_DATA, "Sample_OPS2.txt"))
+    fresh.timecrop(start=str(t[0]), end=cut)
+    assert _mass_pm(obj) == _mass_pm(fresh)
+
+
+def test_timeshift_keeps_derived_columns_valid():
+    """A time shift only re-times; derived columns shift along and stay valid."""
+    obj = at.load_ops_file(os.path.join(_DATA, "Sample_OPS2.txt"))
+    before = _mass_pm(obj)  # caches MASS/PM2.5
+    assert "MASS" in obj.extra_data.columns
+    obj.timeshift(minutes=5)
+    assert "MASS" in obj.extra_data.columns  # not dropped
+    assert _mass_pm(obj) == before  # values unchanged by a shift
 
 
 def test_derived_registry_carried_across_copy():

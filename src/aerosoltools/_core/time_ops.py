@@ -78,7 +78,8 @@ class TimeOpsMixin:
         target._data = target._data.loc[mask]
         if crop_extra and len(target._extra_data) > 0:
             target._extra_data = target._extra_data.loc[mask]
-        target._drop_derived()  # memoised MASS/Pₓ recompute from the cropped data
+        # Derived columns are NOT invalidated: cropping subsets extra_data by the
+        # same mask, so a cached MASS/Pₓ stays correct at the kept timestamps.
         return target
 
     def timerebin(
@@ -278,7 +279,8 @@ class TimeOpsMixin:
             # Shift extra_data if it shares the same index
             target._extra_data.index = target._extra_data.index + delta
 
-        target._drop_derived()  # uniform invalidation (values unchanged, just re-timed)
+        # Derived columns are NOT invalidated: a shift only re-times, and
+        # extra_data (incl. cached MASS/Pₓ) is shifted along, so values stay valid.
         return target
 
     def timesmooth(self, window: int = 5, method: str = "mean", inplace: bool = True):
