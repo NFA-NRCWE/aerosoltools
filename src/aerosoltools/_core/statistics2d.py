@@ -8,6 +8,7 @@ import pandas as pd
 from tabulate import tabulate
 
 from . import _stats
+from .metrics import MetricSpec
 
 try:
     from typing import override  # Python 3.12+
@@ -18,6 +19,25 @@ except ImportError:  # pragma: no cover - typing_extensions fallback
 class Summary2DMixin:
     """Activity and exposure summaries for size-resolved (2D) data."""
 
+    def available_metrics(self) -> list[MetricSpec]:
+        """Size-resolved concentration metrics available for a summary/picker.
+
+        Lists the metrics that flow through :meth:`_get_metric_series` (bulk
+        ``PNC``/``MASS`` and the size-selective Pₓ families at common cutoffs).
+        Arbitrary cutoffs still work when a metric string like ``"PM4.2"`` or
+        ``"PN0.3-1"`` is passed directly. (The distribution-shape stats
+        ``MODE``/``MEDIAN``/``GMD`` remain available via
+        :meth:`summarize_activities` but are not combinable columns, so they are
+        not listed here.)
+        """
+        specs = [
+            MetricSpec("PNC", "Number concentration", "cm⁻³", "number", True),
+            MetricSpec("MASS", "Mass concentration", "µg/m³", "mass", False),
+        ]
+        for cut in ("1", "2.5", "4", "10"):
+            specs.append(MetricSpec(f"PM{cut}", f"PM{cut}", "µg/m³", "mass", False))
+        return specs
+
     @override
     def summarize_activities(
         self,
@@ -26,8 +46,7 @@ class Summary2DMixin:
         metrics: Optional[list[str]] = None,
         stats: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
-        """Description:
-            Summarize size-resolved aerosol metrics per activity.
+        """Summarize size-resolved aerosol metrics per activity.
 
         Args:
             filename (str | None): Optional Excel file path. If provided,
@@ -224,8 +243,10 @@ class Summary2DMixin:
                 med_list: list[float] = []
                 gmd_list: list[float] = []
 
-                for _, row in num_act.iterrows():  # type: ignore
-                    dist = row.to_numpy(dtype=float)  # type: ignore
+                # Iterate the raw matrix rows rather than DataFrame.iterrows(),
+                # which builds a pandas Series per timestep; the per-row values
+                # (and therefore every derived metric) are unchanged.
+                for dist in num_act.to_numpy(dtype=float):
                     tot = float(dist.sum())
                     if tot <= 0:
                         continue
@@ -384,8 +405,7 @@ class Summary2DMixin:
         sheet_name: Optional[str] = None,
         activities: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
-        """Description:
-            Summarize exposure metrics for one PSD-derived metric across activities.
+        """Summarize exposure metrics for one PSD-derived metric across activities.
 
         Args:
             metric (str): Exposure metric name derived from the underlying

@@ -218,8 +218,7 @@ class FractionMixin:
         )
 
     def PM_calc(self, dtype: str = "dM", PM: float = 4.2, lower_lim: float = 0):
-        """Description:
-            Compute a size-selective Pₓ time series and store it in extra_data.
+        """Compute a size-selective Pₓ time series and store it in extra_data.
 
         Args:
             dtype (str): Base distribution type to integrate, one of
@@ -298,6 +297,7 @@ class FractionMixin:
             self._extra_data = self._extra_data.reindex(self.time)
 
         self._extra_data[out_label] = series
+        self._register_derived(out_label)
 
         return self
 
@@ -363,24 +363,13 @@ class FractionMixin:
 
         # --- Bulk metrics: PNC and MASS, with optional reuse -------------------
         if mu == "PNC":
-            if "PNC" in aligned_extra.columns:
-                series = aligned_extra["PNC"].astype(float)
-                self._extra_data = aligned_extra
-                return series, "cm⁻³"
-
-            # Fast path: convert array without deep-copying the object
-            base_arr, _, _ = self._as_base_array()
-            current_base = str(self.dtype).replace("/dlogDp", "")
-            if current_base != "dN":
-                number_arr = self._convert_array(
-                    base_arr, self.bin_mids, current_base, "dN", self.density
-                )
-            else:
-                number_arr = base_arr
-            series = self._ensure_data_robustness(np.nansum(number_arr, axis=1))
-
-            aligned_extra["PNC"] = series
-            self._extra_data = aligned_extra
+            # PNC is the number total — identical to ``total_concentration`` (the
+            # ``Total_conc`` column is recomputed from the base number
+            # distribution by every basis change and carried through crop/rebin/
+            # smooth, so it is always the current number total). Resolve to it
+            # directly rather than recompute and cache a duplicate column, which
+            # only bred a confusing "PNC" entry alongside "Number concentration".
+            series = self.total_concentration.astype(float)
             return series, "cm⁻³"
 
         if mu == "MASS":
@@ -402,6 +391,7 @@ class FractionMixin:
 
             aligned_extra["MASS"] = series
             self._extra_data = aligned_extra
+            self._register_derived("MASS")
             return series, "µg/m³"
 
         # --- Pₓ metrics: PM, PN, PS, PV (reusing if already present) ----------
@@ -447,6 +437,7 @@ class FractionMixin:
         series = work.extra_data[label].astype(float)
         aligned_extra[label] = series
         self._extra_data = aligned_extra
+        self._register_derived(label)
 
         return series, unit_map[dchar]
 

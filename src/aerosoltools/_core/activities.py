@@ -11,8 +11,7 @@ class ActivityMixin:
     """Define, retrieve and auto-detect activity periods."""
 
     def mark_activities(self, activity_periods, mode: str = "union"):
-        """Description:
-            Define or update boolean activity masks on the time axis.
+        """Define or update boolean activity masks on the time axis.
 
         Args:
             activity_periods (dict): Mapping from activity name (str) to
@@ -120,8 +119,7 @@ class ActivityMixin:
             self._activity_periods[activity] = periods
 
     def rename_activity(self, old_name: str, new_name: str) -> None:
-        """Description:
-            Rename an existing activity, keeping its periods and mask intact.
+        """Rename an existing activity, keeping its periods and mask intact.
 
         Args:
             old_name (str): Current activity name.
@@ -191,8 +189,7 @@ class ActivityMixin:
         return self._data.loc[mask].drop(columns=self.activities).copy()
 
     def get_activity_extra_data(self, activity_name):
-        """Description:
-            Return extra_data restricted to a given activity period.
+        """Return extra_data restricted to a given activity period.
 
         Args:
             activity_name (str): Name of the activity/boolean mask column
@@ -238,8 +235,7 @@ class ActivityMixin:
         method: str = "median",
         specific_data: str = "",
     ):
-        """Description:
-            Detect peaks and mark them as an activity labeled 'Peak'.
+        """Detect peaks and mark them as an activity labeled 'Peak'.
 
         Args:
             window (int): Rolling window size in number of samples used to
@@ -250,9 +246,10 @@ class ActivityMixin:
             method (str): Aggregation used as the rolling baseline, one of
                 "mean", "median", "sum", "min", "max". Defaults to "median".
             specific_data (str): Optional column name to use for peak
-                detection. If empty, the total_concentration time series is
-                used. Otherwise, the name is looked up first in self.data
-                (numeric columns) and then in extra_data.
+                detection. If empty, the dataset's primary channel is used
+                (total concentration for particle instruments). Otherwise, the
+                name is looked up first in self.data (numeric columns) and then
+                in extra_data.
 
         Returns:
             None: The method adds/updates a boolean "Peak" column in
@@ -299,7 +296,7 @@ class ActivityMixin:
         Data_return = self.copy_self()
 
         if specific_data == "":
-            Data_return = Data_return.total_concentration
+            Data_return = Data_return._primary
         else:
             if specific_data in self._data.select_dtypes(exclude="bool").columns:
                 Data_return = Data_return._data[specific_data]
@@ -351,10 +348,9 @@ class ActivityMixin:
         metric: Optional[str] = None,
         threshold_direction: str = "above",
     ):
-        """Description:
-            Mark every time step whose value lies on the requested side of a
-            fixed threshold as an activity, and store the contiguous runs as
-            its periods.
+        """Mark every time step whose value lies on the requested side of a
+        fixed threshold as an activity, and store the contiguous runs as
+        its periods.
 
             This is a threshold-based segmenter: unlike :meth:`Peak_finder`
             (which compares each point to a moving baseline), it tags samples
@@ -410,7 +406,10 @@ class ActivityMixin:
         Data_return = self.copy_self()
 
         if metric is None:
-            metric = Data_return.data.columns[0]
+            # Default to the dataset's primary channel (total concentration for
+            # particle instruments, the main channel otherwise) — matching
+            # Peak_finder and removing the "first column = primary" assumption.
+            metric = str(getattr(self._primary, "name", None) or self.data.columns[0])
 
         if metric in self._data.select_dtypes(exclude="bool").columns:
             Data_return = Data_return._data[metric]

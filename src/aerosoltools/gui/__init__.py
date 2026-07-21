@@ -48,8 +48,8 @@ def launch(path: Optional[str] = None, instrument: Optional[str] = None) -> int:
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise ImportError(_MISSING_QT_MSG) from exc
 
-    from .main_window import MainWindow
-    from .theme import apply_mpl_theme, apply_qt_theme
+    from .app.main_window import MainWindow
+    from .view.theme import apply_mpl_theme, apply_qt_theme
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     apply_qt_theme(app)

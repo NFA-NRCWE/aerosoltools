@@ -7,8 +7,9 @@ import traceback
 import matplotlib.dates as mdates
 import numpy as np
 
-from .. import helpers
+from ..logic import helpers
 from ..qt import QtWidgets
+from ..view.widgets import repopulate_combo
 from ._base import _PlotTab
 
 #: A categorical, high-contrast palette (Okabe–Ito, colour-blind safe) so the
@@ -91,13 +92,7 @@ class PMBandsTab(_PlotTab):
 
     def _sync_activities(self) -> None:
         """Repopulate the activity combo, preserving the selection."""
-        self.activity.blockSignals(True)
-        current = self.activity.currentText()
-        self.activity.clear()
-        self.activity.addItems(self.obj.activities)
-        idx = self.activity.findText(current)
-        self.activity.setCurrentIndex(idx if idx >= 0 else 0)
-        self.activity.blockSignals(False)
+        repopulate_combo(self.activity, self.obj.activities)
 
     def _plot_on(self, ax) -> None:
         """Compute and draw the stacked Pₓ bands onto ``ax``."""
@@ -107,14 +102,15 @@ class PMBandsTab(_PlotTab):
 
         dtype = self.dtype.currentText()
         dchar = dtype[-1]
-        work = self.obj.copy_self()
-        work.dtype_converter(dtype=dtype)
+        # The shared cache converts once (read-only); pm_calc adds Pₓ columns, so
+        # work on a copy.
+        base, unit = self._converted_active(dtype)
+        work = base.copy_self()
         for pm in values:
             work.pm_calc(dtype=dtype, PM=pm)
         activity = self.activity.currentText()
         mask = work.data[activity].astype(bool)
         pm_data = work.extra_data.loc[mask]
-        _, unit = helpers.describe(work)
 
         ax.clear()
         x = pm_data.index

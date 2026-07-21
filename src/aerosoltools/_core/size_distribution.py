@@ -11,6 +11,21 @@ if TYPE_CHECKING:  # only for type hints; avoids a runtime circular import
     from ..aerosol2d import Aerosol2D
 
 
+def _particle_geometry(
+    bin_mids: NDArray[np.float64],
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Per-particle volume (nm³) and surface area (nm²) for spherical bins.
+
+    Single source of the sphere geometry the dtype conversions depend on:
+    ``V = (4/3)·π·r³`` and ``A = 4·π·r²`` with ``r = Dp/2`` in nm. Returned as
+    ``(volume_per_particle, surface_area_per_particle)``.
+    """
+    bin_radii = np.asarray(bin_mids, dtype=float) / 2.0  # nm
+    volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
+    surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
+    return volume_per_particle, surface_area_per_particle
+
+
 class SizeConversionMixin:
     """Convert between distribution bases and rescale/rebin the size axis."""
 
@@ -89,9 +104,7 @@ class SizeConversionMixin:
         if from_base == to_base:
             return arr
 
-        bin_radii = bin_mids / 2.0  # nm
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
+        volume_per_particle, surface_area_per_particle = _particle_geometry(bin_mids)
 
         # Step 1 — normalise to dN
         if from_base == "dN":
@@ -288,14 +301,13 @@ class SizeConversionMixin:
             return self if inplace else self.copy_self()
 
         base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
+        volume_per_particle, surface_area_per_particle = _particle_geometry(
+            self.bin_mids
+        )
 
         if "dS" in current_dtype:
             # Surface area -> Number -> Volume -> Mass
-            surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
             number_distribution = base_arr / surface_area_per_particle[None, :]
-
-            volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
             volume_distribution = number_distribution * volume_per_particle[None, :]
 
             mass_distribution = volume_distribution * self.density * 1e-9
@@ -306,7 +318,6 @@ class SizeConversionMixin:
 
         elif "dN" in current_dtype:
             # Number -> Volume -> Mass
-            volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
             volume_distribution = base_arr * volume_per_particle[None, :]
 
             mass_distribution = volume_distribution * self.density * 1e-9
@@ -373,10 +384,9 @@ class SizeConversionMixin:
             return self if inplace else self.copy_self()
 
         base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
-
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
+        volume_per_particle, surface_area_per_particle = _particle_geometry(
+            self.bin_mids
+        )
 
         if "dV" in current_dtype:
             # Volume -> Number
@@ -455,10 +465,9 @@ class SizeConversionMixin:
             return self if inplace else self.copy_self()
 
         base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
-
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
+        volume_per_particle, surface_area_per_particle = _particle_geometry(
+            self.bin_mids
+        )
 
         if "dV" in current_dtype:
             # Volume -> Number -> Surface Area
@@ -541,10 +550,9 @@ class SizeConversionMixin:
             return self if inplace else self.copy_self()
 
         base_arr, headers, was_norm = self._as_base_array()
-        bin_radii = self.bin_mids / 2.0  # nm
-
-        volume_per_particle = (4.0 / 3.0) * np.pi * bin_radii**3  # nm³
-        surface_area_per_particle = 4.0 * np.pi * bin_radii**2  # nm²
+        volume_per_particle, surface_area_per_particle = _particle_geometry(
+            self.bin_mids
+        )
 
         if "dS" in current_dtype:
             # Surface Area -> Number -> Volume
@@ -572,8 +580,7 @@ class SizeConversionMixin:
         )
 
     def dtype_converter(self, dtype: str = "dN", inplace: bool = True):
-        """Description:
-            Convert the size distribution to a chosen base data type.
+        """Convert the size distribution to a chosen base data type.
 
         Args:
             dtype (str): Target data type string, one of "dN", "dS",
@@ -636,8 +643,7 @@ class SizeConversionMixin:
             )
 
     def normalize_logdp(self, inplace: bool = True):
-        """Description:
-            Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).
+        """Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).
 
         Args:
             inplace (bool): If True, normalize this object in place and
@@ -699,8 +705,7 @@ class SizeConversionMixin:
         return target
 
     def unnormalize_logdp(self, inplace: bool = True):
-        """Description:
-            Undo Δlog₁₀(Dp) normalization (dx/dlogDp → base form).
+        """Undo Δlog₁₀(Dp) normalization (dx/dlogDp → base form).
 
         Args:
             inplace (bool): If True, unnormalize this object in place and
@@ -760,9 +765,27 @@ class SizeConversionMixin:
 
         return target
 
+    def _recompute_diameters_for_density(self, density: float, old: float) -> bool:
+        """Hook: recompute the size axis for a new density (default: no-op).
+
+        Instruments whose reported diameter is density-dependent (e.g. the ELPI)
+        override this to rebuild the diameters — and, where needed, the per-bin
+        number — for the new density. Return ``True`` if the recompute was
+        handled here (in which case :meth:`set_density` only applies the residual
+        mass rescale); return ``False`` (the default) to fall through to the
+        standard mass-only rescale.
+
+        Args:
+            density (float): The new particle density (g/cm³).
+            old (float): The previous density (g/cm³).
+
+        Returns:
+            bool: Whether this hook handled the diameter recompute.
+        """
+        return False
+
     def set_density(self, density: Union[float, int] = 1.0):
-        """Description:
-            Set or update the assumed particle density (g/cm³).
+        """Set or update the assumed particle density (g/cm³).
 
         Args:
             density (float | int): New particle density in g/cm³.
@@ -806,21 +829,19 @@ class SizeConversionMixin:
         density = float(density)
         old = float(self.density)
 
-        # ELPI: the particle size it reports is density-dependent, so a density
-        # change recomputes the diameters (and, for raw-current data, the number
-        # concentration) instead of only rescaling mass. This works the same
-        # whether called from the GUI or a plain script.
-        if str(self._meta.get("instrument", "")).upper() == "ELPI":
-            from ..loaders.ELPI import recalculate_ELPI_density
-
-            if recalculate_ELPI_density(self, density):
-                # Mass still also scales with density (M ∝ ρ·V) when mass-based.
-                if "dM" in str(self.dtype) and old > 0:
-                    factor = density / old
-                    self._data[self._sizebin_headers] *= factor
-                    if "Total_conc" in self._data.columns:
-                        self._data["Total_conc"] *= factor
-                return self
+        # Some instruments report a density-dependent particle size, so a density
+        # change must recompute the diameters (and possibly the number) rather
+        # than only rescaling mass. Those classes override the hook below (e.g.
+        # ELPI); the default is a no-op, so the standard mass rescale runs.
+        if self._recompute_diameters_for_density(density, old):
+            # Mass still also scales with density (M ∝ ρ·V) when mass-based.
+            if "dM" in str(self.dtype) and old > 0:
+                factor = density / old
+                self._data[self._sizebin_headers] *= factor
+                if "Total_conc" in self._data.columns:
+                    self._data["Total_conc"] *= factor
+            self._drop_derived()  # diameters changed → MASS/Pₓ recompute
+            return self
 
         if "dM" in str(self.dtype):
             if old <= 0:
@@ -837,11 +858,11 @@ class SizeConversionMixin:
                 self._data["Total_conc"] *= factor
 
         self._meta["density"] = density
+        self._drop_derived()  # density changed → mass-based MASS/Pₓ recompute
         return self
 
     def rebin_bin_edges(self, new_bin_edges, inplace: bool = True):
-        """Description:
-            Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).
+        """Normalize the size distribution by Δlog₁₀(Dp) (dx/dlogDp).
 
         Args:
             new_bin_edges (np.array): A list of
@@ -913,32 +934,22 @@ class SizeConversionMixin:
                 "largest new bin must be equal to or smaller than the largest old bin."
             )
 
-        # Log10 edges and widths
+        # Log10 edges (widths are taken directly from the edges below)
         log_edges = np.log10(bin_edges)
         log_new_edges = np.log10(new_bin_edges)
 
-        old_dlog = np.diff(log_edges)
-        new_dlog = np.diff(log_new_edges)
+        # Build transfer matrix T such that new_totals = old_totals @ T, where
+        # T[i, j] is the fraction of old bin i's (log-diameter) width overlapped
+        # by new bin j. Vectorised over both bin axes via broadcasting — the
+        # min/max/overlap arithmetic is identical to the per-cell scalar form.
+        old_lo = log_edges[:-1][:, None]  # (n_old, 1)
+        old_hi = log_edges[1:][:, None]
+        new_lo = log_new_edges[:-1][None, :]  # (1, n_new)
+        new_hi = log_new_edges[1:][None, :]
 
-        n_old = len(old_dlog)
-        n_new = len(new_dlog)
-
-        # Build transfer matrix T such that:
-        # new_totals = old_totals @ T
-        T = np.zeros((n_old, n_new), dtype=float)
-
-        for i in range(n_old):
-            old_lo = log_edges[i]
-            old_hi = log_edges[i + 1]
-            old_width = old_hi - old_lo
-
-            for j in range(n_new):
-                new_lo = log_new_edges[j]
-                new_hi = log_new_edges[j + 1]
-
-                overlap = min(old_hi, new_hi) - max(old_lo, new_lo)
-                if overlap > 0:
-                    T[i, j] = overlap / old_width
+        overlap = np.minimum(old_hi, new_hi) - np.maximum(old_lo, new_lo)
+        overlap = np.where(overlap > 0, overlap, 0.0)
+        T = overlap / (old_hi - old_lo)  # divide each row by its old bin width
 
         # Convert dataframe to numeric array
         values = out.data[out.bin_mids.astype(str)].to_numpy(dtype=float)
@@ -965,5 +976,6 @@ class SizeConversionMixin:
         out._meta["bin_edges"] = new_bin_edges
         out._meta["bin_mids"] = new_bin_mids
         out.mark_activities(out.activity_periods)
+        out._drop_derived()  # bins changed → MASS/Pₓ recompute
 
         return out

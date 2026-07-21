@@ -71,8 +71,7 @@ class Plot2DMixin:
         ax=None,
         dtype: str | None = None,
     ):
-        """Description:
-            Plot mean particle size distributions for one or more activities.
+        """Plot mean particle size distributions for one or more activities.
 
         Args:
             activities (list[str] | None): Names of activities to include.
@@ -197,8 +196,7 @@ class Plot2DMixin:
         cumulative: bool = False,
         mark_activities: bool | Sequence[str] = False,
     ):
-        """Description:
-            Plot time series of one or more size-selective Pₓ metrics.
+        """Plot time series of one or more size-selective Pₓ metrics.
 
         Args:
             PM_values (list[float]): Cut diameters in µm defining the
@@ -422,8 +420,7 @@ class Plot2DMixin:
         mark_activities: bool | Sequence[str] = False,
         dtype: str | None = None,
     ) -> tuple[Figure, NDArray[Any]]:
-        """Description:
-            Plot total concentration and a time–size heatmap in one figure.
+        """Plot total concentration and a time–size heatmap in one figure.
 
         Args:
             y_tot (tuple[float, float]): Y-limits for the total

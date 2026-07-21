@@ -9,16 +9,18 @@ tab colours stay theme-correct on screen and in exports.
 from __future__ import annotations
 
 import io
+import math
 import os
 import pickle
 import traceback
 
 import matplotlib as mpl
 import matplotlib.colors as mcolors
+import numpy as np
 import pandas as pd
 
-from .. import theme
 from ..qt import Figure, FigureCanvas, NavigationToolbar, QtCore, QtWidgets
+from ..view import theme
 
 
 def _export_table(
@@ -79,6 +81,11 @@ class _PlotTab(QtWidgets.QWidget):
     #: Short tag used in the suggested export file name.
     export_tag = "plot"
 
+    #: Whether the shared cursor-zoom / right-drag-pan navigation is attached.
+    #: Panes with their own drag/rotate navigation (e.g. the 3D APS view) opt
+    #: out by setting this False.
+    interactive_nav = True
+
     def __init__(self, main, nrows: int = 1):
         """Build the embedded figure, canvas, toolbar and a Save-plot button.
 
@@ -107,10 +114,40 @@ class _PlotTab(QtWidgets.QWidget):
         )
         self.save_btn.clicked.connect(self.save_figure)
 
+        # Direct-manipulation navigation: scroll to zoom toward the cursor and
+        # right-drag to pan, so the toolbar tools are rarely needed. Panes gate
+        # these while a modal interaction (fit editing, area marking) owns the
+        # mouse — see :meth:`_scroll_reserved` / :meth:`_pan_locked`.
+        self._pan_state = None
+        if self.interactive_nav:
+            self.canvas.mpl_connect("scroll_event", self._nav_scroll)
+            self.canvas.mpl_connect("button_press_event", self._nav_press)
+            self.canvas.mpl_connect("motion_notify_event", self._nav_motion)
+            self.canvas.mpl_connect("button_release_event", self._nav_release)
+
     @property
     def obj(self):
         """Active aerosol object (proxied from the main window)."""
         return self.main.obj
+
+    def _converted_active(self, basis: str):
+        """Return ``(view, unit)`` for the active object on ``basis``.
+
+        Routes through the project's shared :class:`DerivedCache` when the shown
+        object is the active dataset's own object (the common case), so repeated
+        redraws reuse the conversion. Falls back to a direct (uncached)
+        conversion for a transient view such as a correlated-APS optical axis.
+
+        The cached view is **read-only** — callers that mutate it (add Pₓ
+        columns, normalise) must ``copy_self()`` it first.
+        """
+        obj = self.obj
+        ds = self.main.project.active
+        if ds is not None and obj is ds.obj:
+            return self.main.project.derived.converted(ds, basis)
+        from ..logic import helpers
+
+        return helpers.converted_copy(obj, basis)
 
     def _split_with_side(self, side_widget, sizes=(820, 300)):
         """Lay the plot out left of ``side_widget`` with a draggable divider.
@@ -171,6 +208,44 @@ class _PlotTab(QtWidgets.QWidget):
                 ax.autoscale_view()
         self.toolbar.update()
         self.toolbar.push_current()
+
+    def autoscale_to_data(
+        self,
+        ax=None,
+        *,
+        log_x: bool | None = None,
+        log_y: bool | None = None,
+        y_anchor_zero: bool = False,
+        extra_axes=(),
+        set_x: bool = True,
+        set_y: bool = True,
+    ) -> None:
+        """Set ``ax``'s limits from the data currently drawn on it (the shared policy).
+
+        Reads the drawn artists via :mod:`_autoscale` (lines, bars and ±σ bands)
+        and applies tight limits with a small margin, so panes get consistent,
+        never-stale limits by calling this after any display/dataset change. Pass
+        ``extra_axes`` (e.g. a twin axis) to include their y-data in the y-range;
+        ``set_x`` / ``set_y`` restrict which axis is updated. ``log_x`` / ``log_y``
+        default to the axis' current scale (so a log axis gets a positive range).
+        """
+        from . import _autoscale
+
+        ax = ax if ax is not None else getattr(self, "ax", None)
+        if ax is None:
+            return
+        if log_x is None:
+            log_x = ax.get_xscale() == "log"
+        if log_y is None:
+            log_y = ax.get_yscale() == "log"
+        xlim, _ = _autoscale.limits([ax], log_x=log_x)
+        _, ylim = _autoscale.limits(
+            [ax, *extra_axes], log_y=log_y, y_anchor_zero=y_anchor_zero
+        )
+        if set_x and xlim is not None:
+            ax.set_xlim(*xlim)
+        if set_y and ylim is not None:
+            ax.set_ylim(*ylim)
 
     def current_time_xlim(self):
         """Return the (xmin, xmax) of the time axis as Matplotlib date numbers.
@@ -254,6 +329,95 @@ class _PlotTab(QtWidgets.QWidget):
     def refresh(self) -> None:  # pragma: no cover - overridden
         """Redraw the tab from the current object (overridden by subclasses)."""
         raise NotImplementedError
+
+    # -- shared direct-manipulation navigation ----------------------------
+    # Scroll zooms toward the cursor; right-drag pans. Both defer to a pane's
+    # modal interaction (fit editing, area marking) via the two predicates
+    # below, and to an active toolbar pan/zoom tool, so limits stay locked while
+    # a mode owns the mouse (and the wheel/clicks do that mode's job instead).
+
+    def _scroll_reserved(self, event) -> bool:  # pragma: no cover - overridden
+        """True when a pane mode claims the wheel (so cursor-zoom stands down)."""
+        return False
+
+    def _pan_locked(self) -> bool:  # pragma: no cover - overridden
+        """True when a pane mode locks the view (so right-drag pan is disabled)."""
+        return False
+
+    @staticmethod
+    def _rescale_range(lo, hi, center, scale, is_log):
+        """Zoom a ``(lo, hi)`` range about ``center`` by ``scale`` (log-aware)."""
+        if center is None:
+            return None
+        if is_log:
+            if lo <= 0 or hi <= 0 or center <= 0:
+                return None
+            lo, hi, center = math.log10(lo), math.log10(hi), math.log10(center)
+        new_lo = center - (center - lo) * scale
+        new_hi = center + (hi - center) * scale
+        if is_log:
+            return 10**new_lo, 10**new_hi
+        return new_lo, new_hi
+
+    def _nav_scroll(self, event) -> None:
+        """Zoom the axes under the cursor toward the cursor point on scroll."""
+        ax = event.inaxes
+        if ax is None or self.toolbar.mode:
+            return
+        if self._pan_locked() or self._scroll_reserved(event):
+            return
+        scale = 1.0 / 1.2 if event.step > 0 else 1.2  # scroll up = zoom in
+        xr = self._rescale_range(
+            *ax.get_xlim(), event.xdata, scale, ax.get_xscale() == "log"
+        )
+        yr = self._rescale_range(
+            *ax.get_ylim(), event.ydata, scale, ax.get_yscale() == "log"
+        )
+        if xr is not None:
+            ax.set_xlim(*xr)
+        if yr is not None:
+            ax.set_ylim(*yr)
+        self.canvas.draw_idle()
+
+    def _nav_press(self, event) -> None:
+        """Begin a right-drag pan on the axes under the cursor."""
+        if event.button != 3 or event.inaxes is None:
+            return
+        if self.toolbar.mode or self._pan_locked():
+            return
+        ax = event.inaxes
+        self._pan_state = {
+            "ax": ax,
+            "x": event.x,
+            "y": event.y,
+            "xlim": ax.get_xlim(),
+            "ylim": ax.get_ylim(),
+        }
+
+    def _nav_motion(self, event) -> None:
+        """Pan the grabbed axes so the point under the cursor tracks the drag."""
+        pan = self._pan_state
+        if pan is None or event.x is None or event.y is None:
+            return
+        ax = pan["ax"]
+        trans = ax.transData
+        # Shift the axes' corner points by the cursor's pixel delta, then map
+        # back to data coordinates — correct for linear and log axes alike.
+        corners = np.array(
+            [[pan["xlim"][0], pan["ylim"][0]], [pan["xlim"][1], pan["ylim"][1]]]
+        )
+        disp = trans.transform(corners)
+        disp[:, 0] -= event.x - pan["x"]
+        disp[:, 1] -= event.y - pan["y"]
+        new = trans.inverted().transform(disp)
+        ax.set_xlim(new[0, 0], new[1, 0])
+        ax.set_ylim(new[0, 1], new[1, 1])
+        self.canvas.draw_idle()
+
+    def _nav_release(self, event) -> None:
+        """End a right-drag pan."""
+        if event.button == 3:
+            self._pan_state = None
 
 
 def _active_color_cycle() -> list:

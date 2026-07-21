@@ -5,7 +5,9 @@ Qt widget in :mod:`psd` is left owning only the view and interaction. It holds:
 
 * the mode parameterisation and the ``peak`` <-> ``factor`` reparameterisation
   (:func:`peak_to_factor` / :func:`factor_to_peak`),
-* lognormal evaluation (:func:`lognormal_modes`),
+* lognormal evaluation (:func:`lognormal_modes`, re-exported from the API's
+  :func:`aerosoltools.lognormal_modes` so the overlay and the fit share one
+  implementation),
 * mode validation / cleaning (:func:`clean_modes`, :func:`valid_modes`,
   :func:`modes_as_triples`),
 * the local fit window (:func:`local_mask`),
@@ -22,6 +24,10 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 
 import numpy as np
+
+# The lognormal model is single-sourced in the API: the overlay curve the GUI
+# draws is the very function fit_psd fits, so a script reproduces it exactly.
+from ..._core.fitting import lognormal_modes
 
 # A lognormal mode is parameterised by its peak diameter ``mu`` (nm), its
 # geometric standard deviation ``sigma`` (dimensionless), and the *peak height*
@@ -54,35 +60,6 @@ def peak_to_factor(peak: float, sigma: float) -> float:
 def factor_to_peak(factor: float, sigma: float) -> float:
     """Convert ``fit_psd``'s ``factor`` back to a dx/dlogDp peak height."""
     return float(factor) / (_SQRT_2PI * np.log10(sigma))
-
-
-def lognormal_modes(dp_nm, modes):
-    """Evaluate a sum of lognormal modes (dx/dlogDp) at diameters ``dp_nm``.
-
-    Mirrors the lognormal used inside :meth:`Aerosol2D.fit_psd` so the overlay
-    matches the fit exactly.
-
-    Args:
-        dp_nm: Diameters in nm to evaluate at.
-        modes: Iterable of ``(mu, sigma, factor)`` triples.
-
-    Returns:
-        ``(total, per_mode)`` where ``total`` is the summed curve and
-        ``per_mode`` is the list of each mode's individual curve.
-    """
-    x = np.log10(np.asarray(dp_nm, dtype=float))
-    total = np.zeros_like(x)
-    per_mode = []
-    for mu, sigma, factor in modes:
-        s = np.log10(sigma)
-        comp = (
-            factor
-            * (1.0 / (_SQRT_2PI * s))
-            * np.exp(-((x - np.log10(mu)) ** 2) / (2.0 * s**2))
-        )
-        per_mode.append(comp)
-        total = total + comp
-    return total, per_mode
 
 
 def clean_modes(modes) -> List[dict]:
@@ -119,7 +96,9 @@ def modes_as_triples(modes) -> List[Tuple[float, float, float]]:
     ]
 
 
-def local_mask(x, modes, *, enabled: bool = True, local_sigmas: float = FIT_LOCAL_SIGMAS):
+def local_mask(
+    x, modes, *, enabled: bool = True, local_sigmas: float = FIT_LOCAL_SIGMAS
+):
     """Boolean mask of bins within the local fit window of any mode.
 
     Mirrors ``fit_psd``'s ``local_sigmas`` windowing so a reported R² is scored

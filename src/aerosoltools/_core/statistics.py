@@ -3,17 +3,107 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, Optional, Sequence, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union, cast
 
 import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
 from . import _stats
+from ._labels import base_dtype
+from .metrics import MetricSpec, classify_unit, unit_key
+
+if TYPE_CHECKING:
+    # Typing-only host contract; the runtime base stays ``object`` (see
+    # _core/_protocols.py) so facade composition/MRO is unchanged.
+    from ._protocols import AerosolData as _Host
+else:
+    _Host = object
 
 
-class SummaryMixin:
+class SummaryMixin(_Host):
     """Per-activity and exposure (STEL/TWA) summaries."""
+
+    #: Class hint: metric keys that form the instrument's *primary* (default)
+    #: summary set. ``None`` (the default) falls back to a heuristic — PNC for a
+    #: number-concentration instrument, else the first available channel.
+    _primary_metric_keys: tuple[str, ...] | None = None
+
+    #: dtype bases / unit dimensions that rule out a particle *number* primary.
+    _NON_NUMBER_DTYPES = frozenset({"dM", "dS", "dV"})
+    _NON_NUMBER_DIMS = frozenset(
+        {"mass", "mixing_ratio", "surface", "volume", "temperature", "humidity"}
+    )
+
+    def _has_number_primary(self) -> bool:
+        """True if the primary channel can be read as a particle *number* concentration.
+
+        A plain :class:`Aerosol1D` (the particle base) qualifies even with unset
+        metadata — number concentration is its historical default. Only a
+        *clearly* non-number quantity disqualifies it: a mass/surface/volume
+        dtype (``dM``/``dS``/``dV``) or a non-number unit dimension (mass, gas
+        mixing ratio, surface, volume, temperature, humidity). This is what keeps
+        ``PNC`` valid for CPC/size-resolved data but raising for gases, black
+        carbon, LDSA and PM-mass instruments.
+        """
+        name = getattr(self._primary, "name", None)
+        dt = base_dtype(self.dtype_of(name))
+        dim = classify_unit(self.unit_of(name))[0]
+        if dt in self._NON_NUMBER_DTYPES or dim in self._NON_NUMBER_DIMS:
+            return False
+        return True
+
+    def available_metrics(self) -> list[MetricSpec]:
+        """List the quantities this dataset can be summarised on.
+
+        Each entry is a :class:`~aerosoltools._core.metrics.MetricSpec` whose
+        ``key`` is accepted by :meth:`summarize_activities` /
+        :meth:`summarize_exposure`. The ``default=True`` entries are the
+        instrument's primary metrics (used when no ``metrics=`` is given, and
+        pre-selected in the GUI picker). Size-resolved classes override this to
+        add derived PNC/MASS/Pₓ metrics.
+
+        Returns:
+            list[MetricSpec]: The dataset's compatible metrics.
+        """
+        activities = set(getattr(self, "_activities", []))
+        primary_name = getattr(self._primary, "name", None)
+        number_primary = self._has_number_primary()
+
+        entries: list[tuple[str, str, str, str]] = []  # (key, label, unit, dim)
+        seen: set[str] = set()
+        if number_primary:
+            unit = self.unit_of(primary_name)
+            entries.append(
+                ("PNC", "Number concentration", unit, classify_unit(unit)[0])
+            )
+            seen.add("PNC")
+        for col in self._data.select_dtypes(exclude="bool").columns:
+            if col in activities or col in seen:
+                continue
+            if number_primary and col == primary_name:
+                continue  # already represented by PNC
+            unit = self.unit_of(col)
+            if unit_key(unit) == "bool":
+                continue  # flags (e.g. Partector TEM) are not summary metrics
+            entries.append((str(col), str(col), unit, classify_unit(unit)[0]))
+            seen.add(str(col))
+
+        dk = self._primary_metric_keys
+        specs: list[MetricSpec] = []
+        for i, (key, label, unit, dim) in enumerate(entries):
+            if dk is not None:
+                default = key in dk
+            elif number_primary:
+                default = key == "PNC"
+            else:
+                default = i == 0
+            specs.append(MetricSpec(key, label, unit, dim, default))
+        return specs
+
+    def _metric_keys(self) -> list[str]:
+        """The metric keys available for this dataset (for error messages)."""
+        return [m.key for m in self.available_metrics()]
 
     @staticmethod
     def _format_hhmm(total_minutes: float) -> str:
@@ -52,6 +142,70 @@ class SummaryMixin:
         dt.iloc[-1] = med
         return dt / 60.0
 
+    def _default_metrics(self) -> list[str]:
+        """Default metric set for :meth:`summarize_activities`.
+
+        The instrument's *primary* metrics — the ``default=True`` entries of
+        :meth:`available_metrics`. See that method for the full compatible set.
+        """
+        defaults = [m.key for m in self.available_metrics() if m.default]
+        return defaults or ["PNC"]
+
+    def summarize(self, filename: Optional[str] = None, *, parameter=0) -> pd.DataFrame:
+        """Summarise basic statistics of one channel by activity.
+
+        Reports ``Min / Max / Mean / Std / N`` per activity (including
+        ``"All data"``) for the selected channel. Works for any dataset — for a
+        single-quantity instrument ``parameter=0`` is the primary series; for a
+        multi-channel instrument pick the channel by index or name.
+
+        Args:
+            filename (str | None): Optional ``.xlsx`` path to write the table to.
+            parameter (int | str): Channel to summarise — positional index into
+                :attr:`data` columns (``int``) or a column label (``str``).
+
+        Returns:
+            pandas.DataFrame: Columns
+            ``["Segment", "Min", "Max", "Mean", "Std", "N datapoints"]``.
+
+        Raises:
+            LookupError: If ``parameter`` is not a valid index or column label.
+        """
+        if isinstance(parameter, int):
+            if parameter >= len(self.data.columns):
+                raise LookupError("Chosen parameter is invalid")
+            parameter = self.data.columns[parameter]
+        elif not isinstance(parameter, str):
+            raise LookupError("Chosen parameter is invalid")
+
+        rows: list[list[Any]] = []
+        for activity in self.activities:
+            subset = self.data[self.data[activity].astype(bool)][parameter]
+            if not subset.empty:
+                rows.append(
+                    [
+                        activity,
+                        subset.min(),
+                        subset.max(),
+                        subset.mean(),
+                        subset.std(),
+                        len(subset),
+                    ]
+                )
+
+        summary = pd.DataFrame(
+            rows, columns=["Segment", "Min", "Max", "Mean", "Std", "N datapoints"]
+        ).round(3)
+
+        print(f"\nSummary of {parameter}:\n")
+        print(tabulate(summary, headers="keys", tablefmt="pretty", floatfmt=".3f"))  # type: ignore
+
+        if filename:
+            summary.to_excel(filename, index=False)
+            print(f"\nSummary saved to: {filename}")
+
+        return summary
+
     def _get_metric_series(self, metric_name: str) -> tuple[pd.Series, str]:
         """Return a time series and unit for a named 1D metric.
 
@@ -79,8 +233,16 @@ class SummaryMixin:
         mu = metric_name.upper()
 
         if mu == "PNC":
-            series = self.total_concentration.astype(float)
-            return series, self.unit
+            # "PNC" only means something for a genuine number concentration —
+            # not a gas, black carbon, LDSA or PM-mass primary.
+            if not self._has_number_primary():
+                raise ValueError(
+                    f"'PNC' (particle number concentration) is not available for "
+                    f"this {type(self).__name__}. Available metrics: "
+                    f"{', '.join(self._metric_keys())}."
+                )
+            series = self._primary.astype(float)
+            return series, self.unit_of(getattr(self._primary, "name", None))
 
         # Look up in main data first, then extra_data
         if metric_name in self._data.select_dtypes(exclude="bool").columns:
@@ -89,11 +251,13 @@ class SummaryMixin:
             series = self._extra_data[metric_name].astype(float)
         else:
             raise ValueError(
-                f"Metric '{metric_name}' not found in main data or extra_data."
+                f"Metric '{metric_name}' is not available for this "
+                f"{type(self).__name__}. Available metrics: "
+                f"{', '.join(self._metric_keys())}."
             )
 
-        # For 1D, we do not have per-metric units, so we reuse self.unit.
-        return series, self.unit
+        # Per-column unit (multi-channel instruments carry a per-column dict).
+        return series, self.unit_of(metric_name)
 
     def summarize_activities(
         self,
@@ -102,8 +266,7 @@ class SummaryMixin:
         metrics: Optional[list[str]] = None,
         stats: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
-        """Description:
-            Summarize 1D aerosol metrics per activity.
+        """Summarize 1D aerosol metrics per activity.
 
         Args:
             filename (str | None): Optional path to a CSV or Excel file.
@@ -111,9 +274,13 @@ class SummaryMixin:
                 (creating it if it does not exist). If None, nothing is
                 written to disk.
             metrics (list[str] | None): List of metric names to summarize.
-                If None, a default set is used: ["PNC"].
+                If None, the dataset's natural set is used (see
+                :meth:`_default_metrics`): ``["PNC"]`` for particle data, every
+                numeric channel for a multi-channel instrument, or the named
+                primary channel otherwise.
 
-                * "PNC" refers to total_concentration.
+                * "PNC" refers to the primary channel (total_concentration for
+                  particle instruments).
                 * Any other name is looked up in data or extra_data
                   (numeric columns only).
             stats (Sequence[str] | None): Which per-activity statistics to
@@ -147,9 +314,10 @@ class SummaryMixin:
                 data.summarize_activities(stats=["mean", "min", "max"])
         """
 
-        # Defaults: only PNC if nothing else is specified
+        # Defaults: the dataset's natural metric set (PNC for particle data, the
+        # per-channel set for multi-channel instruments, the named primary else).
         if metrics is None:
-            metrics = ["PNC"]
+            metrics = self._default_metrics()
         if stats is None:
             stats = ["mean", "std"]
 
@@ -246,8 +414,7 @@ class SummaryMixin:
         filename: Optional[str] = None,
         activities: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
-        """Description:
-            Summarize exposure metrics for one 1D metric across activities.
+        """Summarize exposure metrics for one 1D metric across activities.
 
         Args:
             metric (str): Exposure metric name based on the underlying

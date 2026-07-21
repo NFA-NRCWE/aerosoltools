@@ -26,6 +26,9 @@ class AeroOpticalTab(_PlotTab):
     """Time-cursor + 3-D bar view of a correlated APS record."""
 
     export_tag = "aero_optical"
+    # The 3-D panel has its own drag-to-rotate navigation and the top panel a
+    # time-cursor drag, so the shared cursor-zoom / right-drag-pan is left off.
+    interactive_nav = False
 
     def __init__(self, main):
         """Build the (empty) controls and the two-panel figure with a cursor."""
@@ -33,6 +36,14 @@ class AeroOpticalTab(_PlotTab):
         self.controls.addWidget(
             QtWidgets.QLabel("Drag the line on the top plot to pick a time.")
         )
+        self.normalize = QtWidgets.QCheckBox("Normalize (dlogDp)")
+        self.normalize.setToolTip(
+            "Divide each cell by BOTH log bin widths — dN/(dlogDp_optical · "
+            "dlogDp_aerodynamic) — so bins of unequal width are comparable. The "
+            "top total-concentration panel stays on the raw counts."
+        )
+        self.normalize.stateChanged.connect(self.refresh)
+        self.controls.addWidget(self.normalize)
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
@@ -41,7 +52,7 @@ class AeroOpticalTab(_PlotTab):
         self._obj = None  # currently drawn correlated object
         self._times = None  # correlation time index
         self._total = None  # total concentration per time
-        self._matrix = None  # (n_times, n_optical, n_aero)
+        self._disp = None  # displayed matrix (raw or dlogDp-normalized)
         self._opt_edges = None
         self._aero_edges = None
         self._norm = None
@@ -71,19 +82,18 @@ class AeroOpticalTab(_PlotTab):
             self.canvas.draw_idle()
             return
 
-        corr = obj.correlation
         if obj is not self._obj:
             self._sel = 0  # start at the first time for a newly shown dataset
         self._obj = obj
-        self._times = corr.index
-        n_opt = len(obj.optical.bin_mids)
-        n_aero = len(obj.bin_mids)
-        # (n_times, n_optical, n_aero) — matrix columns are (optical, aero).
-        self._matrix = corr.to_numpy(dtype=float).reshape(len(corr), n_opt, n_aero)
-        self._total = np.nansum(self._matrix, axis=(1, 2))
-        self._opt_edges = np.asarray(obj.optical.bin_edges, dtype=float)
-        self._aero_edges = np.asarray(obj.bin_edges, dtype=float)
-        gmax = np.nanmax(self._matrix) if self._matrix.size else 1.0
+        # The data object owns the reshape, the physical total and the optional
+        # dlogDp normalization; the tab only renders the resulting cube.
+        cube = obj.correlation_cube(normalize=self.normalize.isChecked())
+        self._times = cube.times
+        self._total = cube.total
+        self._opt_edges = cube.optical_edges
+        self._aero_edges = cube.aero_edges
+        self._disp = cube.values
+        gmax = np.nanmax(self._disp) if self._disp.size else 1.0
         self._norm = Normalize(vmin=0.0, vmax=gmax if gmax > 0 else 1.0)
         self._sel = min(self._sel, len(self._times) - 1)
 
@@ -97,13 +107,19 @@ class AeroOpticalTab(_PlotTab):
             ax=self.ax_bot,
             pad=0.08,
             shrink=0.7,
-            label=f"Concentration ({obj.unit})",
+            label=self._conc_label(obj),
         )
 
         self._draw_top()
         self._draw_bottom()
         self._sync_toolbar_home()
         self.canvas.draw_idle()
+
+    def _conc_label(self, obj) -> str:
+        """Colourbar label reflecting whether the cells are dlogDp-normalized."""
+        if self.normalize.isChecked():
+            return f"dN / (dlogDp_opt · dlogDp_aero)  ({obj.unit})"
+        return f"Concentration ({obj.unit})"
 
     def _draw_top(self) -> None:
         """Total concentration vs time with the draggable time cursor."""
@@ -124,7 +140,7 @@ class AeroOpticalTab(_PlotTab):
         """3-D bar plot of the optical×aerodynamic distribution at the cursor."""
         ax = self.ax_bot
         ax.clear()
-        mat = self._matrix[self._sel]  # (n_optical, n_aero)
+        mat = self._disp[self._sel]  # (n_optical, n_aero)
         xe = np.log10(self._opt_edges)  # optical on x
         ye = np.log10(self._aero_edges)  # aerodynamic on y
         xs, ys, zs, dxs, dys, dzs, colors = [], [], [], [], [], [], []
@@ -147,7 +163,11 @@ class AeroOpticalTab(_PlotTab):
         self._log_ticks(ax.set_yticks, ax.set_yticklabels, self._aero_edges)
         ax.set_xlabel("Optical Ø (nm)", fontsize=8)
         ax.set_ylabel("Aerodynamic Ø (nm)", fontsize=8)
-        ax.set_zlabel(f"Conc. ({self._obj.unit})", fontsize=8)
+        if self.normalize.isChecked():
+            zlabel = "Norm. conc."
+        else:
+            zlabel = f"Conc. ({self._obj.unit})"
+        ax.set_zlabel(zlabel, fontsize=8)
         ax.tick_params(labelsize=7)
         ax.set_title(
             f"t = {self._times[self._sel].strftime('%Y-%m-%d %H:%M:%S')}", fontsize=9

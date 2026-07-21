@@ -81,6 +81,11 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
     def __init__(self, dataframe):
         self._meta = {}
         self._extra_data = pd.DataFrame([])
+        # Names of the columns in ``_extra_data`` that are *derived* (memoised
+        # results such as MASS / Pₓ), as opposed to loaded housekeeping columns.
+        # Any data-changing mutation drops these so they recompute; loaded
+        # columns are carried through untouched. See :meth:`_drop_derived`.
+        self._derived_columns: set[str] = set()
         self._activities = []
         self._activity_periods = {}
 
@@ -173,6 +178,21 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
         return self._meta.get("instrument", "Unknown instrument")
 
     @property
+    def measurement(self):
+        """Human-readable name of the measured quantity, if known.
+
+        Returns:
+            The label describing *what* the primary series represents — for
+            example ``"Cl₂"`` or ``"NO₂"`` for a gas monitor — as set by the
+            loader in ``metadata["measurement"]``. Returns ``None`` when no
+            explicit label was stored (in which case callers fall back to a
+            generic name such as ``"Total concentration"`` or the channel name).
+            This is distinct from :attr:`dtype` (``dN``/``dM``/…) and
+            :attr:`unit`; it names the quantity rather than its basis or units.
+        """
+        return self._meta.get("measurement", None)
+
+    @property
     def metadata(self) -> Dict:
         """Metadata associated with the dataset.
 
@@ -241,36 +261,157 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
             return self._data.iloc[:, 0]
 
     @property
+    def _primary(self) -> pd.Series:
+        """The dataset's primary channel (package-internal, not public API).
+
+        This is the generic hook that reusable operations (e.g. default peak
+        detection, default summaries) and the GUI use when they just need "the
+        main channel of this dataset", independent of what that channel *is*.
+
+        For particle classes it is the :attr:`total_concentration`. Non-particle
+        classes (gases, black carbon, environmental, LDSA-only) override this to
+        return their own primary channel, since ``total_concentration`` does not
+        apply to them.
+
+        Returns:
+            pandas.Series: The primary measurement series.
+        """
+        return self.total_concentration
+
+    @property
     def unit(self) -> str:
         """Measurement unit for the primary data.
 
         Returns:
             str: Unit string, for example ``"#/cm³"`` for number concentration
             or ``"µg/m³"`` for mass concentration. Falls back to
-            ``"Unknown unit"`` if not set in the metadata.
+            ``"Unknown unit"`` if not set in the metadata. May be a per-column
+            ``dict`` for multi-channel instruments — prefer :meth:`unit_of` for
+            a resolved per-column string.
         """
         return self._meta.get("unit", "Unknown unit")
+
+    @property
+    def column_units(self) -> dict:
+        """Canonical unit per column name (core *and* extra columns).
+
+        Populated by the loaders from the shared unit registry (see
+        :func:`aerosoltools._core.metrics.parse_header_unit`), so every column a
+        loader could resolve carries one canonical unit string. A column that is
+        **absent** from this map has no known unit — callers that need an honest
+        "unknown" (e.g. an axis label) should show the header text alone rather
+        than borrow the primary series' unit. Empty ``dict`` for objects built
+        without unit resolution.
+
+        Returns:
+            dict: ``{column_name: canonical_unit}`` (possibly empty).
+        """
+        return self._meta.get("column_units", {})
 
     ###########################################################################
     """########################### Core helpers ###########################"""
     ###########################################################################
 
+    def _register_derived(self, *names: str) -> None:
+        """Mark ``names`` as derived (memoised) columns in :attr:`extra_data`.
+
+        Called by the metric machinery (``PM_calc`` / ``_get_metric_series``)
+        when it caches a computed result, so the object knows which
+        ``extra_data`` columns are recomputable and may be invalidated. Loaded
+        housekeeping columns are never registered.
+        """
+        # Defensive: older objects reconstructed without __init__ may lack the set.
+        if not hasattr(self, "_derived_columns"):
+            self._derived_columns = set()
+        self._derived_columns.update(str(n) for n in names)
+
+    def _drop_derived(self) -> None:
+        """Invalidate memoised derived columns so they recompute from current data.
+
+        Every data-changing mutation (crop / rebin / smooth / ``set_density`` /
+        calibration) calls this. Only the columns registered via
+        :meth:`_register_derived` (MASS, Pₓ, …) are dropped — loaded
+        housekeeping columns (temperature, RH, …) are left intact — and the
+        dropped ones refill lazily on next access via the usual
+        ``compute-if-absent`` path. This is the single invalidation primitive
+        shared by the API and the GUI.
+        """
+        derived = getattr(self, "_derived_columns", None)
+        if not derived:
+            return
+        cols = [c for c in derived if c in self._extra_data.columns]
+        if cols:
+            self._extra_data = self._extra_data.drop(columns=cols)
+        self._derived_columns = set()
+
+    @staticmethod
+    def _resolve_meta(meta, column):
+        """Resolve a scalar-or-dict ``_meta`` value to a display string.
+
+        ``unit``/``dtype`` metadata is a plain string for single-quantity
+        instruments (CPC, size-resolved counters) but a per-column ``dict`` for
+        multi-channel instruments (DiSCmini, DustTrak, aethalometer, …). This
+        collapses either form to one string, indexing by ``column`` when a dict
+        is given (falling back to the first entry).
+        """
+        if isinstance(meta, dict):
+            if column is not None and column in meta:
+                return str(meta[column])
+            if meta:
+                return str(next(iter(meta.values())))
+            return ""
+        return str(meta)
+
+    def unit_of(self, column: str | None = None) -> str:
+        """Return the unit for ``column`` as a string (per-column aware).
+
+        Prefers the canonical per-column unit from :attr:`column_units` when the
+        loader resolved one for ``column``; otherwise handles both scalar and
+        per-column-``dict`` ``unit`` metadata. With ``column=None`` (or an
+        unknown column with no ``unit`` dict entry) returns the scalar unit, or
+        the first per-column unit for a multi-channel instrument.
+
+        Args:
+            column: Column/channel name to look up; ``None`` for the default.
+
+        Returns:
+            str: The resolved unit string.
+        """
+        units = self._meta.get("column_units")
+        if column is not None and isinstance(units, dict) and column in units:
+            return str(units[column])
+        return self._resolve_meta(self._meta.get("unit", "Unknown unit"), column)
+
+    def dtype_of(self, column: str | None = None) -> str:
+        """Return the dtype descriptor for ``column`` as a string.
+
+        The per-column-aware counterpart of :attr:`dtype` (see :meth:`unit_of`).
+
+        Args:
+            column: Column/channel name to look up; ``None`` for the default.
+
+        Returns:
+            str: The resolved dtype string (e.g. ``"dN"``, ``"dM"``).
+        """
+        return self._resolve_meta(self._meta.get("dtype", "Unknown dtype"), column)
+
     def _ensure_data_robustness(self, vals) -> pd.Series:
         """Validity mask from the original object (keeps alignment with self.time)
 
-        This returns a cleaned serires, so that no new data is generated,
-        where before the total_conc was NaN.
+        This returns a cleaned series, so that no new data is generated,
+        where before the primary channel was NaN.
         Args:
             vals (np.array):
                 array of data structured as a column of data from either data
                 extra data.
         Returns:
-            pd.Series: Time series of the requested Pₓ metric, indexed by
-            :attr:`time`. Empty or invalid time steps (where
-            :attr:`total_concentration` is NaN) are returned as NaN.
+            pd.Series: Time series aligned to :attr:`time`. Time steps where the
+            dataset's primary channel is NaN are returned as NaN. Uses
+            :attr:`_primary` (total concentration for particle instruments, the
+            main channel otherwise) so it works for every data class.
         """
 
-        valid_mask = self.total_concentration.notna()
+        valid_mask = self._primary.notna()
         series = pd.Series(vals, index=self.time)
 
         return series.where(valid_mask, np.nan)
@@ -281,35 +422,96 @@ class Aerosol1D(TimeOpsMixin, ActivityMixin, SummaryMixin, Plot1DMixin, DecayFit
     """############################# Functions #############################"""
     ###########################################################################
 
-    def calibrate(self, m: float = 1, b: float = 0):
+    def apply_calibration(self, model, *, inplace: bool = False):
+        """Apply a fitted calibration model to this dataset.
+
+        This is the single-dataset *application* half of the calibration
+        workflow: the cross-dataset fitting lives in
+        :func:`aerosoltools.intercomparison.fit_calibration`, which produces the
+        :class:`~aerosoltools.intercomparison.calibration.CalibrationModel`
+        applied here. Fit once, apply to as many datasets as you like.
+
+        Args:
+            model (CalibrationModel | dict): A model from ``fit_calibration``
+                (or its :meth:`~...CalibrationModel.to_dict` form). A
+                ``"total"`` model scales the total/primary series by ``gain``
+                (plus ``offset`` when the model includes one); a ``"per_bin"``
+                model scales each size bin by its own gain and re-sums the total,
+                applying only the bins the fit accepted.
+            inplace (bool): Modify this object (``True``) or a deep copy
+                (``False``, the default — calibration returns a new object).
+
+        Returns:
+            Aerosol1D: The calibrated object (``self`` when ``inplace``).
+
+        Raises:
+            ValueError: If a per-bin model is applied to non-size-resolved data,
+                or the model's bin count does not match the dataset.
         """
-        Apply a correction to the total conc and mark the data as calibrated
-        by a linear function
-
-        Parameters
-        ----------
-        m : float
-            The calibration value to be multiplied to the data for correction.
-        b : float
-            A constant offset to be removed. By default is zero and should be
-            used cautionsly.
-
-        Returns
-        -------
-        None
-
-        """
-        self._data["Total_conc"] = self._ensure_data_robustness(
-            self._data["Total_conc"] * m + b
+        from .intercomparison.calibration import (
+            BASIS_PER_BIN,
+            CalibrationModel,
         )
 
-        self._meta["calibrated"] = {"m": m, "b": b}
+        if isinstance(model, dict):
+            model = CalibrationModel.from_dict(model)
+
+        out = self if inplace else self.copy_self()
+
+        if model.basis == BASIS_PER_BIN:
+            headers = list(getattr(out, "_sizebin_headers", []) or [])
+            if not headers:
+                raise ValueError(
+                    "A per-bin calibration can only be applied to size-resolved "
+                    "(2D) data."
+                )
+            if len(model.gains) != len(headers):
+                raise ValueError(
+                    f"Model has {len(model.gains)} bin gains but the dataset has "
+                    f"{len(headers)} size bins."
+                )
+            for header, m, b, ok in zip(
+                headers, model.gains, model.offsets, model.applied
+            ):
+                if not ok:
+                    continue
+                out._data[header] = out._ensure_data_robustness(
+                    out._data[header] * m + b
+                )
+            if model.clip_negative:
+                out._data[headers] = out._data[headers].clip(lower=0.0)
+            out._data["Total_conc"] = out._ensure_data_robustness(
+                out._data[headers].sum(axis=1)
+            )
+        else:  # total / primary series only
+            m = float(model.gains[0])
+            b = float(model.offsets[0]) if model.include_offset else 0.0
+            column = (
+                "Total_conc"
+                if "Total_conc" in out._data.columns
+                else (getattr(out._primary, "name", None) or out._data.columns[0])
+            )
+            if column in out._data.columns:
+                out._data[column] = out._ensure_data_robustness(
+                    out._data[column] * m + b
+                )
+                if model.clip_negative:
+                    out._data[column] = out._data[column].clip(lower=0.0)
+            elif out._extra_data is not None and column in out._extra_data.columns:
+                out._extra_data[column] = out._ensure_data_robustness(
+                    out._extra_data[column] * m + b
+                )
+            else:
+                raise KeyError(f"Parameter '{column}' not found in data or extra_data")
+
+        out._meta["calibration"] = model.to_dict()
+        out._drop_derived()  # data rescaled → MASS/Pₓ recompute
+        return out
 
     ###########################################################################
 
     def copy_self(self):
-        """Description:
-            Create and return a deep copy of the aerosol time-series object.
+        """Create and return a deep copy of the aerosol time-series object.
 
         Returns:
             Aerosol1D: A new object with independent copies of all data,

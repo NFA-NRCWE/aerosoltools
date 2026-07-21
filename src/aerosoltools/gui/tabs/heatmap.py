@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import traceback
 
-from .. import helpers
+from ..logic import helpers
 from ..qt import QtCore, QtWidgets
-from ..widgets import ThresholdControls
+from ..view.widgets import ThresholdControls
 from ._base import _PlotTab
 
 #: Lower color-scale limit forced when a log scale is requested but the data
@@ -52,6 +52,14 @@ class HeatmapTab(_PlotTab):
         self.log.setChecked(True)
         self.log.stateChanged.connect(self.refresh)
         self.controls.addWidget(self.log)
+
+        self.log_top = QtWidgets.QCheckBox("Log Y (conc.)")
+        self.log_top.setToolTip(
+            "Log-scale the y-axis of the top total-concentration panel so several "
+            "decades of concentration are visible at once."
+        )
+        self.log_top.stateChanged.connect(self.refresh)
+        self.controls.addWidget(self.log_top)
 
         self.controls.addWidget(QtWidgets.QLabel("Color min:"))
         self.cmin = QtWidgets.QLineEdit()
@@ -110,15 +118,16 @@ class HeatmapTab(_PlotTab):
         fig.clear()
         ax1, ax2 = fig.subplots(2, 1, sharex=True)
 
-        # Convert for display on a working copy so the loaded object stays dN.
+        # Convert for display via the shared cache (loaded object stays dN). The
+        # cached view is read-only; normalisation mutates, so copy first when it's
+        # on.
         disp = self.dtype.currentText()
-        target = self.obj
-        if disp != "dN" or self.normalize.isChecked():
-            target = self.obj.copy_self()
-            if disp != "dN":
-                target.dtype_converter(disp)
-            if self.normalize.isChecked():
-                target.normalize_logdp()
+        base, _ = self._converted_active(disp)
+        if self.normalize.isChecked():
+            target = base.copy_self()
+            target.normalize_logdp()
+        else:
+            target = base
 
         # y_3d caps the colour scale: (min, max), where 0 means "automatic".
         # A log colour scale needs a strictly positive lower cap; when the user
@@ -140,6 +149,11 @@ class HeatmapTab(_PlotTab):
             ax2=ax2,
             mark_activities=self.show_acts.isChecked(),
         )
+        # Optionally log-scale the top total-concentration panel's y-axis so
+        # several decades of concentration are visible (the heatmap's own size
+        # axis is already log, and its colour scale is handled separately).
+        if self.log_top.isChecked():
+            ax1.set_yscale("log")
         # Threshold line (e.g. OEL) on the top total-concentration panel.
         helpers.draw_threshold(
             ax1, self.threshold.threshold_value(), self.threshold.legend_text()

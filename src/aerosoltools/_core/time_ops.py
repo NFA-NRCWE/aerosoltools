@@ -24,8 +24,7 @@ class TimeOpsMixin:
         focus: bool = True,
         crop_extra: bool = True,
     ) -> "Aerosol1D":
-        """Description:
-            Crop the time axis to include or exclude a time interval.
+        """Crop the time axis to include or exclude a time interval.
 
         Args:
             start (str | pandas.Timestamp | None): Start of the interval.
@@ -75,17 +74,13 @@ class TimeOpsMixin:
         if not focus:
             mask = ~mask
 
-        if inplace:
-            self._data = self._data.loc[mask]
-            if crop_extra and len(self._extra_data) > 0:
-                self._extra_data = self._extra_data.loc[mask]
-            return self
-        else:
-            obj = self.copy_self()
-            obj._data = obj._data.loc[mask]
-            if crop_extra and len(obj._extra_data) > 0:
-                obj._extra_data = obj._extra_data.loc[mask]
-            return obj
+        target = self if inplace else self.copy_self()
+        target._data = target._data.loc[mask]
+        if crop_extra and len(target._extra_data) > 0:
+            target._extra_data = target._extra_data.loc[mask]
+        # Derived columns are NOT invalidated: cropping subsets extra_data by the
+        # same mask, so a cached MASS/Pₓ stays correct at the kept timestamps.
+        return target
 
     def timerebin(
         self,
@@ -95,8 +90,7 @@ class TimeOpsMixin:
         method: Union[str, Callable] = "mean",
         inplace: bool = True,
     ) -> "Aerosol1D":
-        """Description:
-            Resample the time series to a new regular frequency.
+        """Resample the time series to a new regular frequency.
 
         Args:
             freq (str): Target sampling interval as a pandas offset alias
@@ -215,12 +209,14 @@ class TimeOpsMixin:
 
             if len(self._extra_data) > 0:
                 self._extra_data = rebinned_extra
+            self._drop_derived()  # recompute MASS/Pₓ from the rebinned data
             return self
         else:
             obj = self.copy_self()
             obj._data = rebinned
             if len(self._extra_data) > 0:
                 obj._extra_data = rebinned_extra
+            obj._drop_derived()
             return obj
 
     def timeshift(
@@ -231,8 +227,7 @@ class TimeOpsMixin:
         inplace: bool = True,
         shift_extra: bool = True,
     ):
-        """Description:
-            Shift the time index by a constant offset.
+        """Shift the time index by a constant offset.
 
         Args:
             seconds (float): Offset in seconds; positive shifts the series
@@ -284,11 +279,12 @@ class TimeOpsMixin:
             # Shift extra_data if it shares the same index
             target._extra_data.index = target._extra_data.index + delta
 
+        # Derived columns are NOT invalidated: a shift only re-times, and
+        # extra_data (incl. cached MASS/Pₓ) is shifted along, so values stay valid.
         return target
 
     def timesmooth(self, window: int = 5, method: str = "mean", inplace: bool = True):
-        """Description:
-            Apply a centered rolling smoother to numeric columns.
+        """Apply a centered rolling smoother to numeric columns.
 
         Args:
             window (int): Rolling window size in number of samples.
@@ -347,10 +343,7 @@ class TimeOpsMixin:
 
         smoothed = pd.concat([smoothed_numeric, preserved_bool], axis=1)
 
-        if inplace:
-            self._data = smoothed
-            return self
-        else:
-            new_obj = self.copy_self()
-            new_obj._data = smoothed
-            return new_obj
+        target = self if inplace else self.copy_self()
+        target._data = smoothed
+        target._drop_derived()  # memoised MASS/Pₓ recompute from the smoothed data
+        return target

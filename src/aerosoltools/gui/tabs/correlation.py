@@ -7,9 +7,10 @@ import io
 
 import matplotlib.colors as mcolors
 
-from ...utility import Plot_correlation, bland_altman_analysis
-from .. import theme
+from ...intercomparison import bland_altman_analysis, plot_correlation
 from ..qt import QtWidgets
+from ..view import theme
+from ..view.widgets import repopulate_combo
 from ._base import _PlotTab
 
 
@@ -18,8 +19,8 @@ class CorrelationTab(_PlotTab):
 
     A two-dataset comparison: pick an **X** and a **Y** dataset and a parameter
     they share, and the tab draws the library's own
-    :func:`~aerosoltools.utility.Plot_correlation` (scatter + 1:1 + regression +
-    R²) or :func:`~aerosoltools.utility.bland_altman_analysis` (difference plot)
+    :func:`~aerosoltools.intercomparison.plot_correlation` (scatter + 1:1 +
+    regression + R²) or :func:`~aerosoltools.intercomparison.bland_altman_analysis`
     on the embedded axis. Time alignment between the two instruments is delegated
     to the core via ``match`` ("exact"/"nearest"/"rebin") + ``tolerance``. The
     plot is built on **Compute** (alignment can be costly), so a plain ``refresh``
@@ -49,14 +50,14 @@ class CorrelationTab(_PlotTab):
         self.controls.addWidget(self.y_combo)
 
         self.param = QtWidgets.QComboBox()
-        self.param.setMinimumWidth(120)
+        self.param.setMinimumWidth(90)
         self.controls.addWidget(QtWidgets.QLabel("Parameter:"))
         self.controls.addWidget(self.param)
 
         # Restrict the correlation to one activity (e.g. a marked side-by-side
         # region). "All data" uses the full overlapping record.
         self.activity = QtWidgets.QComboBox()
-        self.activity.setMinimumWidth(110)
+        self.activity.setMinimumWidth(90)
         self.activity.setToolTip(
             "Correlate only the timestamps inside this activity — mark a "
             "side-by-side region in the Time series tab, then pick it here."
@@ -152,8 +153,13 @@ class CorrelationTab(_PlotTab):
         side_w = QtWidgets.QWidget()
         side_w.setLayout(side)
 
-        # Plot on the left of a resizable divider, side panel on the right.
-        self._split_with_side(side_w)
+        # Plot on the left of a resizable divider, side panel on the right. The
+        # side panel here is wider than the other tabs' (time-alignment +
+        # regression + Bland–Altman groups), so start the split narrower and let
+        # the canvas shrink, keeping the whole pane inside the window (no
+        # horizontal scroll) at the default size.
+        self._split_with_side(side_w, sizes=(560, 320))
+        self.canvas.setMinimumWidth(360)
 
         self.ax = self.figure.add_subplot(111)
         self._has_drawn = False
@@ -238,13 +244,9 @@ class CorrelationTab(_PlotTab):
 
     def _sync_activities(self) -> None:
         """Repopulate the activity combo from the project's tasks."""
-        self.activity.blockSignals(True)
-        prev = self.activity.currentText()
-        self.activity.clear()
-        self.activity.addItems(["All data"] + self.main.project.user_activities())
-        idx = self.activity.findText(prev)
-        self.activity.setCurrentIndex(idx if idx >= 0 else 0)
-        self.activity.blockSignals(False)
+        repopulate_combo(
+            self.activity, ["All data"] + self.main.project.user_activities()
+        )
 
     def _on_pair_change(self, *_a) -> None:
         """Re-sync the parameter list when X or Y changes."""
@@ -313,7 +315,7 @@ class CorrelationTab(_PlotTab):
         # plot is the output the GUI shows), as the summary tabs do.
         with contextlib.redirect_stdout(io.StringIO()):
             if self.analysis.currentText() == "Correlation":
-                Plot_correlation(
+                plot_correlation(
                     xds.obj,
                     yds.obj,
                     ax_in=ax,

@@ -22,9 +22,8 @@ class Plot1DMixin:
         mark_activities: bool | Sequence[str] = False,
         parameter: Union[int, str] = 0,
     ) -> tuple[Figure, Axes]:
-        """Description:
-            Plot a selected scalar channel versus time for an :class:`AerosolAlt`
-            object.
+        """Plot a selected scalar channel versus time for a multi-channel
+        object.
 
         Args:
             ax (matplotlib.axes.Axes | None, optional):
@@ -91,15 +90,15 @@ class Plot1DMixin:
 
         Examples:
             A typical use is to visualise one of several channels stored in
-            an :class:`AerosolAlt` object, optionally with activity periods
+            a multi-channel object, optionally with activity periods
             highlighted:
 
             .. code-block:: python
 
                 import aerosoltools as at
 
-                # Suppose 'alt' is an AerosolAlt with columns: ["LDSA", "Flow", "Flag"]
-                alt = at.Load_Partector_file("data/Partector_log.txt")
+                # Suppose 'alt' is a multi-channel object with columns: ["LDSA", "Flow", "Flag"]
+                alt = at.load_partector_file("data/Partector_log.txt")
 
                 # Plot LDSA with activity shading
                 fig, ax = alt.plot_total_conc(
@@ -147,16 +146,9 @@ class Plot1DMixin:
 
         ax.set_xlabel("Time")
 
-        # Resolve dtype/unit for the chosen parameter (can be scalar or per-column).
-        if isinstance(self.dtype, str):
-            Dtype = self.dtype
-        else:
-            Dtype = self.dtype[parameter]
-
-        if isinstance(self.unit, str):
-            Unit = self.unit
-        else:
-            Unit = self.unit[parameter]  # type: ignore[index]
+        # Resolve dtype/unit for the chosen parameter (scalar-or-per-column aware).
+        Dtype = self.dtype_of(parameter)
+        Unit = self.unit_of(parameter)
 
         ax.set_ylabel(f"{base_dtype(Dtype)}, {Unit}")
         ax.grid(True)

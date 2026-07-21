@@ -54,7 +54,7 @@ aerosoltools-gui-shortcut = "aerosoltools.gui.shortcut:main"
 package-dir = {"" = "src"}
 
 [tool.setuptools.package-data]
-"aerosoltools.gui" = ["*.ico"]
+"aerosoltools.gui.view" = ["*.ico"]
 
 [tool.setuptools.exclude-package-data]
 "*" = ["pytest.ini", "tests/*"]

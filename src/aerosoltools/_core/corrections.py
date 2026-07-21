@@ -1,136 +1,25 @@
-"""Instrument corrections for 2D data: calibration and diffusion losses."""
+"""Instrument corrections for 2D data: diffusion-loss transmission.
+
+Calibration application now lives on the data object itself as
+``apply_calibration`` (see :meth:`aerosoltools.aerosol1d.Aerosol1D.apply_calibration`)
+and the cross-dataset fitting in
+:mod:`aerosoltools.intercomparison.calibration`.
+"""
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 
-try:
-    from typing import override  # Python 3.12+
-except ImportError:  # pragma: no cover - typing_extensions fallback
-    from typing_extensions import override  # noqa: F401
+if TYPE_CHECKING:
+    # Typing-only host contract (the size-resolved facade this mixin runs on);
+    # at runtime the base is ``object`` so composition/MRO is unchanged.
+    from ._protocols import SizeResolvedData as _Host
+else:
+    _Host = object
 
 
-class CorrectionMixin:
-    """Apply calibration factors and diffusion-loss corrections."""
-
-    @override
-    def calibrate(
-        self,
-        parameter: str | int = "bins",
-        fit_function=None,
-        Variables: dict = {"m": 1},
-        inplace: bool = True,
-    ):
-        # m: Union[int, float, list] = 1, b: Union[int, float, list] = 0, inplace: bool = True):
-        """
-        Apply a correction to the total conc and mark the data as calibrated
-        by a linear function. The calibration value is applied to the size data.
-
-        Args:
-            parameter (int | str, optional):
-                Index or column name of the signal to plot. If ``int``, it is
-                interpreted as a positional index into :attr:`data.columns`. If
-                ``str``, it is treated as a column label. Defaults to ``0``.
-                If 'bin' is chosen, the calibration will go through each size bin,
-                and apply the calibration function.
-            fit_function (function):
-                A defined function to apply to the calibration.
-                If none is chosen, an assumed linear calibration is used using y = m*x +b
-            Variables (dict):
-                The calibration value to be multiplied to the data for correction.
-                If m is provided as a list, it should be of equal length to the number
-                of bins. The total concentration is then recalculated as the sum.
-            inplace (bool): If ``True`` (default), modify the current instance and
-                return it. If ``False``, perform the conversion on a deep copy
-                and return the new instance.
-
-        Returns:
-            out (Aerosold2D):
-                If inplace ``True`` the calibration function applies the calibration
-                to the acted upon dataset, if inplace ``False`` a copy of the calibrated
-                dataset is returned.
-                In addition to the data with the applied calibration, a
-        None
-
-        """
-        if fit_function is None:
-
-            def fit_function(x, m, b=0):
-                # Calculates a first order equation.
-                return m * x + b
-
-        values = list(Variables.values())
-        all_lists = all(isinstance(v, list) for v in values)
-        all_scalars = all(not isinstance(v, list) for v in values)
-
-        if not (all_lists or all_scalars):
-            raise ValueError("Variables must contain either all lists or all scalars")
-
-        out = self if inplace else self.copy_self()
-
-        # Resolve which column to use based on the requested parameter.
-        if isinstance(parameter, int):
-            if parameter >= len(self.data.columns):
-                raise LookupError("Chosen parameter is invalid")
-            parameter = self.data.columns[parameter]
-        elif isinstance(parameter, str):
-            if (
-                parameter != "bins"
-                and parameter not in out._data
-                and parameter not in out._extra_data
-            ):
-                raise LookupError(f"Chosen parameter '{parameter}' is invalid")
-        else:
-            raise LookupError("Chosen parameter is invalid")
-
-        # Apply the correction to the chosen parameter
-        if parameter != "bins" and all_lists:
-            raise ValueError(
-                "List-valued Variables are only supported when parameter='bins'"
-            )
-
-        elif parameter == "bins":
-
-            if all_lists:
-                lengths = [len(v) for v in values]
-                if len(set(lengths)) != 1:
-                    raise ValueError("All parameter lists must have same length")
-
-                if lengths[0] != len(out._sizebin_headers):
-                    raise ValueError("Parameter length must match number of bins")
-
-                for i, params in enumerate(zip(*values)):
-                    kwargs_i = dict(zip(Variables.keys(), params))
-                    header = out._sizebin_headers[i]
-                    out._data[header] = self._ensure_data_robustness(
-                        fit_function(out.data[header], **kwargs_i)
-                    )
-            else:
-                for header in out._sizebin_headers:
-                    out._data[header] = self._ensure_data_robustness(
-                        fit_function(out.data[header], **Variables)
-                    )
-
-            out_sum = out.data[out._sizebin_headers].sum(axis=1)
-            out._data["Total_conc"] = self._ensure_data_robustness(out_sum)
-        else:
-            if parameter in out._data:
-                out._data[parameter] = self._ensure_data_robustness(
-                    fit_function(out.data[parameter], **Variables)
-                )
-            elif parameter in out._extra_data:
-                out._extra_data[parameter] = self._ensure_data_robustness(
-                    fit_function(out._extra_data[parameter], **Variables)
-                )
-            else:
-                raise KeyError(
-                    f"Parameter '{parameter}' not found in data or extra_data"
-                )
-
-        if "calibrated" not in out._meta:
-            out._meta["calibrated"] = {}
-
-        out._meta["calibrated"][parameter] = Variables.copy()
-
-        return out
+class CorrectionMixin(_Host):
+    """Apply diffusion-loss transmission corrections to size-resolved data."""
 
     def correct_diffusion_losses(
         self,
@@ -141,8 +30,7 @@ class CorrectionMixin:
         P: float = 101300,
         inplace: bool = True,
     ):
-        """Description:
-            Correct size distributions for diffusion losses in sampling tubes.
+        """Correct size distributions for diffusion losses in sampling tubes.
 
         Args:
             D_tube (float): Inner diameter of the sampling tube in metres.

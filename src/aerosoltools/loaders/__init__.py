@@ -5,7 +5,7 @@ This subpackage provides a collection of functions for reading and parsing
 raw exports from common aerosol instruments. Each loader normalizes the
 instrument-specific file format into one of the core classes in
 :mod:`aerosoltools` (:class:`Aerosol1D`, :class:`Aerosol2D`,
-or :class:`AerosolAlt`).
+or an instrument subclass).
 
 Supported instruments include:
 
@@ -23,46 +23,78 @@ Supported instruments include:
 * Partector – Partector / PartectorTEM (Naneos)
 * SMPS – Scanning Mobility Particle Sizer (TSI)
 
-In addition, :func:`Load_data_from_folder` provides a convenience wrapper
+In addition, :func:`load_data_from_folder` provides a convenience wrapper
 for batch-loading and concatenating multiple compatible files from a
 directory into a single aerosol object.
 """
 
-from .Aethalometer import Load_Aethalometer_file
-from .APS import Load_APS_file
-from .Common import Load_data_from_folder
-from .CPC import Load_CPC_file
-from .Dev_weather import Load_Devlabs_file
-from .Discmini import Load_DiSCmini_file, Load_DiSCmini_raw_file
-from .DustTrak import Load_DustTrak_file
-from .ELPI import Load_ELPI_file
-from .FMPS import Load_FMPS_file
-from .Fourtec import Load_Fourtec_file
-from .Grimm import Load_Grimm_file
-from .NS import Load_NS_file
-from .OPCN3 import Load_OPCN3_file
-from .OPS import Load_OPS_file
-from .Partector import Load_Partector_file
-from .Ranger import Load_Ranger_file
-from .SMPS import Load_SMPS_file
+from .aethalometer import load_aethalometer_file
+from .aps import load_aps_file
+from .cpc import load_cpc_file
+from .dev_weather import load_devlabs_file
+from .discmini import load_discmini_file, load_discmini_raw_file
+from .dusttrak import load_dusttrak_file
+from .elpi import load_elpi_file
+from .fmps import load_fmps_file
+from .fourtec import load_fourtec_file
+from .grimm import load_grimm_file
+from .ns import load_ns_file
+from .opcn3 import load_opcn3_file
+from .ops import load_ops_file
+from .partector import load_partector_file
+from .ranger import load_ranger_file
+from .registry import (
+    INSTRUMENT_LOADERS,
+    detect_instrument,
+    load_file,
+    supported_instruments,
+)
+from .smps import load_smps_file
+from .support.exceptions import (
+    DelimiterDetectionError,
+    EmptyFileError,
+    EncodingError,
+    FileAccessError,
+    FileFormatError,
+    InstrumentDetectionError,
+    LoaderError,
+    MetadataParseError,
+    TimestampError,
+)
+from .support.parsing import load_data_from_folder
 
 __all__ = [
-    "Load_APS_file",
-    "Load_Aethalometer_file",
-    "Load_CPC_file",
-    "Load_DiSCmini_file",
-    "Load_DiSCmini_raw_file",
-    "Load_DustTrak_file",
-    "Load_ELPI_file",
-    "Load_FMPS_file",
-    "Load_Fourtec_file",
-    "Load_Grimm_file",
-    "Load_NS_file",
-    "Load_OPCN3_file",
-    "Load_OPS_file",
-    "Load_Partector_file",
-    "Load_Ranger_file",
-    "Load_SMPS_file",
-    "Load_data_from_folder",
-    "Load_Devlabs_file",
+    "load_aps_file",
+    "load_aethalometer_file",
+    "load_cpc_file",
+    "load_discmini_file",
+    "load_discmini_raw_file",
+    "load_dusttrak_file",
+    "load_elpi_file",
+    "load_fmps_file",
+    "load_fourtec_file",
+    "load_grimm_file",
+    "load_ns_file",
+    "load_opcn3_file",
+    "load_ops_file",
+    "load_partector_file",
+    "load_ranger_file",
+    "load_smps_file",
+    "load_data_from_folder",
+    "load_devlabs_file",
+    # Registry / auto-detection
+    "load_file",
+    "detect_instrument",
+    "supported_instruments",
+    "INSTRUMENT_LOADERS",
+    # Exception hierarchy
+    "LoaderError",
+    "FileAccessError",
+    "EmptyFileError",
+    "EncodingError",
+    "DelimiterDetectionError",
+    "FileFormatError",
+    "MetadataParseError",
+    "TimestampError",
+    "InstrumentDetectionError",
 ]
