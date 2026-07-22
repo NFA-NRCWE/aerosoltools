@@ -47,12 +47,16 @@ now have dedicated classes (above).
 
 Loader functions
 ----------------
+load_aethalometer_file
+    Load black carbon mass data from MicroAeth / aethalometers.
 load_cpc_file
     Load data from condensation particle counters (CPC, TSI).
 load_devlabs_file
     Load weather station data from DevLabs instrument.
 load_discmini_file
     Load data from DiSCmini personal dosimeters (Testo).
+load_dusttrak_file
+    Load PM mass concentration data from DustTrak instruments.
 load_elpi_file
     Load data from electrical low-pressure impactors (ELPI, Dekati).
 load_fmps_file
@@ -71,10 +75,8 @@ load_partector_file
     Load data from Naneos Partector particle dosimeters.
 load_smps_file
     Load data from scanning mobility particle sizers (SMPS, TSI).
-load_aethalometer_file
-    Load black carbon mass data from MicroAeth / aethalometers.
-load_dusttrak_file
-    Load PM mass concentration data from DustTrak instruments.
+load_tiger_file
+    Load data from handheld VOC detector (VOC, ION).
 load_data_from_folder
     Dispatch the appropriate loader over all files in a folder and
     return the combined dataset(s).
@@ -162,6 +164,7 @@ from .loaders import (
     load_partector_file,
     load_ranger_file,
     load_smps_file,
+    load_tiger_file
 )
 from .partector import Partector
 
@@ -214,5 +217,6 @@ __all__ = [
     "load_partector_file",
     "load_ranger_file",
     "load_smps_file",
+    "load_tiger_file",
     "load_data_from_folder",
 ]

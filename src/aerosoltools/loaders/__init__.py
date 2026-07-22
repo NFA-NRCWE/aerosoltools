@@ -22,6 +22,7 @@ Supported instruments include:
 * OPS – Optical Particle Sizer (TSI)
 * Partector – Partector / PartectorTEM (Naneos)
 * SMPS – Scanning Mobility Particle Sizer (TSI)
+* Tiger - VOC gas detector (ION)
 
 In addition, :func:`load_data_from_folder` provides a convenience wrapper
 for batch-loading and concatenating multiple compatible files from a
@@ -62,7 +63,7 @@ from .support.exceptions import (
     TimestampError,
 )
 from .support.parsing import load_data_from_folder
-
+from .tiger import load_tiger_file
 __all__ = [
     "load_aps_file",
     "load_aethalometer_file",
@@ -80,6 +81,7 @@ __all__ = [
     "load_partector_file",
     "load_ranger_file",
     "load_smps_file",
+    "load_tiger_file",
     "load_data_from_folder",
     "load_devlabs_file",
     # Registry / auto-detection
