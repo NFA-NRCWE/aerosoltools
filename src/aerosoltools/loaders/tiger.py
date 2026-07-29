@@ -115,7 +115,7 @@ def load_tiger_file(file: str, year=2026, extra_data: bool = False) -> AerosolAl
     # Create AerosolAlt object
     Tiger = AerosolAlt(df[["Datetime", "TVOC"]])
     Tiger._meta["instrument"] = "Tiger"
-    Tiger._meta["serial_number"] = meta_lines['Instrument IRN']
+    Tiger._meta["serial_number"] = [meta_lines[h] for h in meta_lines if 'IRN' in h]
     Tiger._meta["unit"] = meta_lines['Units']
 
     return Tiger
