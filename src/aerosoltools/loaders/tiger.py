@@ -117,5 +117,6 @@ def load_tiger_file(file: str, year=2026, extra_data: bool = False) -> AerosolAl
     Tiger._meta["instrument"] = "Tiger"
     Tiger._meta["serial_number"] = [meta_lines[h] for h in meta_lines if 'IRN' in h]
     Tiger._meta["unit"] = meta_lines['Units']
+    Tiger._meta["dtype"] = "TVOC"
 
     return Tiger
