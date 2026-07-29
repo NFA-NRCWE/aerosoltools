@@ -7,7 +7,7 @@ from .support.reading import sniff
 
 ###############################################################################
 
-def Load_tiger_file(file: str, year=2026, extra_data: bool = False) -> AerosolAlt:
+def load_tiger_file(file: str, year=2026, extra_data: bool = False) -> AerosolAlt:
     """Description:
         Load a Tiger LDSA text export and return it as an
         :class:`AerosolAlt` time series with TEM sampling metadata.

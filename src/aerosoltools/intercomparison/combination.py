@@ -212,7 +212,7 @@ def combine_size_ranges(
     # --- size-domain stitch (hard cap at whole bins, no scaling) -------------
     # Lower keeps bins whose upper edge <= Dc; upper keeps bins whose lower edge
     # >= Dc; the shared boundary edge is set to Dc (counts unchanged).
-    n_lo = int(np.searchsorted(lo_edges, Dc, side="right") - 1)  # lower bins kept
+    n_lo = int(np.searchsorted(lo_edges, Dc, side="right") )  # lower bins kept
     first_up = int(np.searchsorted(up_edges, Dc, side="left"))  # first upper edge >= Dc
     n_up = (len(up_edges) - 1) - first_up  # upper bins kept
     if n_lo < 1 or n_up < 1:
@@ -237,20 +237,19 @@ def combine_size_ranges(
     lo_keep = lo_headers[:n_lo]
     up_keep = up_headers[first_up:]
 
-    lower_df = lo_tm.data.drop(
-        columns=[h for h in lo_headers if h not in lo_keep] + ["Total_conc"],
-        errors="ignore",
-    )
+    lower_df = lo_tm.data.loc[:, lo_keep]
     upper_df = up_tm.data[up_keep]
     combined = pd.concat([lower_df, upper_df], axis=1)
 
     new_mids = [str(m) for m in mids]
     combined = combined.rename(columns=dict(zip(lo_keep + up_keep, new_mids)))
-    combined["Total_conc"] = combined[new_mids].sum(axis=1)
+    # Calculate total concentration and place it first
+    combined.insert( 0,"Total_conc",  combined.sum(axis=1) )
 
     res = Aerosol2D(combined)
-    res._activities = lower.activities
-    res._activity_periods = lower.activity_periods
+    res.mark_activities(lower.activity_periods)
+    # res._activities = lower.activities
+    # res._activity_periods = lower.activity_periods
     res._meta["bin_edges"] = edges
     res._meta["bin_mids"] = mids
     res._meta["density"] = lower._meta.get("density", 1.0)
