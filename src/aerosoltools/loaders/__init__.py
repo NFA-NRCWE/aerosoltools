@@ -29,6 +29,7 @@ for batch-loading and concatenating multiple compatible files from a
 directory into a single aerosol object.
 """
 
+from .acsm import load_simple_acsm_file
 from .aethalometer import load_aethalometer_file
 from .aps import load_aps_file
 from .cpc import load_cpc_file
@@ -65,8 +66,9 @@ from .support.exceptions import (
 from .support.parsing import load_data_from_folder
 from .tiger import load_tiger_file
 __all__ = [
-    "load_aps_file",
+    "load_simple_acsm_file",
     "load_aethalometer_file",
+    "load_aps_file",
     "load_cpc_file",
     "load_discmini_file",
     "load_discmini_raw_file",

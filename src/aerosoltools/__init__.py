@@ -47,8 +47,12 @@ now have dedicated classes (above).
 
 Loader functions
 ----------------
+load_simple_acsm_file
+    Load simple output from ACSM in five catagories (Aerodyne).
 load_aethalometer_file
     Load black carbon mass data from MicroAeth / aethalometers.
+load_aps_file
+    Load 2d ord 3d data from APS (APS, TSI).
 load_cpc_file
     Load data from condensation particle counters (CPC, TSI).
 load_devlabs_file
@@ -145,6 +149,7 @@ from .loaders import (
     INSTRUMENT_LOADERS,
     LoaderError,
     detect_instrument,
+    load_simple_acsm_file,
     load_aethalometer_file,
     load_aps_file,
     load_cpc_file,
@@ -200,8 +205,9 @@ __all__ = [
     "INSTRUMENT_LOADERS",
     "LoaderError",
     # Per-instrument loaders
-    "load_aps_file",
+    "load_simple_acsm_file",
     "load_aethalometer_file",
+    "load_aps_file",
     "load_cpc_file",
     "load_devlabs_file",
     "load_discmini_file",
