@@ -2,23 +2,23 @@
 import numpy as np
 import pandas as pd
 
-from ..aerosolalt import AerosolAlt
+from ..acsm_simple import ACSM_simple
 from .support.reading import sniff
 
 ###############################################################################
 
-def load_simple_acsm_file(file: str) -> AerosolAlt:
+def load_simple_acsm_file(file: str) -> ACSM_simple:
     """Description:
-        Load a acsm dM text export and return it as an
-        :class:`AerosolAlt` time series with TEM sampling metadata.
+        Load an acsm dM text export and return it as an
+        :class:`ACSM_simple` time series.
 
     Args:
         file (str):
             Path to the acsm ``.txt`` export file.
 
     Returns:
-        AerosolAlt:
-            acsm total VOC time series with a datetime index, TVOC
+        ACSM_simple:
+            acsm mass concentration time series with a datetime index, TVOC
             and associated metadata.
 
     Raises:
@@ -39,7 +39,7 @@ def load_simple_acsm_file(file: str) -> AerosolAlt:
             - Attempts to infer encoding and delimiter via
               :func:`sniff`. If delimiter detection fails.
             - Reads the main data block with :func:`numpy.genfromtxt`, starting
-              at the acsm data header (``header=14``).
+              at the acsm data header.
             - Renames core columns:
 
               - ``"t_base"`` → ``"Datetime"``,
@@ -49,11 +49,11 @@ def load_simple_acsm_file(file: str) -> AerosolAlt:
               timestamps by suptracting the difference in year from
               the recorded year.
 
-            - Constructs an :class:`AerosolAlt` object using the core columns:
+            - Constructs an :class:`ACSM_simple` object using the core columns:
 
               - ``Datetime``,
-              - ``SO4``,
               - ``Org``,
+              - ``SO4``,
               - ``NO3``,
               - ``NH4``,
               - ``Chlorine``,
@@ -77,14 +77,14 @@ def load_simple_acsm_file(file: str) -> AerosolAlt:
 
               import aerosoltools as at
 
-              # Load acsm VOC data
+              # Load acsm data
               acsm = at.Load_acsm_file("data/acsm_export.txt",
                                             extra_data=True)
 
               # Inspect the main time series
               print(acsm.data.head())
 
-              # Plot VOC over time
+              # Plot organic mass over time
               fig, ax = acsm.plot_total_conc()
     """
 
@@ -94,11 +94,13 @@ def load_simple_acsm_file(file: str) -> AerosolAlt:
     df = pd.read_csv(file, delimiter=delim, header=0)
     df.columns=['Datetime','SO4','Org','NO3','NH4','Chlorine']
     df["Datetime"] = pd.to_datetime(df['Datetime'], format="%d/%m/%Y %H:%M:%S")
+    
+    # Reordering columns using iloc to position Org as primary variable
+    df = df.iloc[:, [0, 2, 1, 3, 4, 5]] 
 
     # Create AerosolAlt object
-    acsm = AerosolAlt(df)
+    acsm = ACSM_simple(df)
     acsm._meta["instrument"] = "ACSM"
-    # acsm._meta["serial_number"] = [meta_lines[h] for h in meta_lines if 'IRN' in h]
     acsm._meta["unit"] = "µg/m³"
     acsm._meta["dtype"] = "dM"
 

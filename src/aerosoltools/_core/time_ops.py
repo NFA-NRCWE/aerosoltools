@@ -278,7 +278,8 @@ class TimeOpsMixin:
         if shift_extra and len(target._extra_data) > 0:
             # Shift extra_data if it shares the same index
             target._extra_data.index = target._extra_data.index + delta
-
+        #Ensure that the resulting data still has the right activity label
+        target.mark_activities(target.activity_periods,"replace")
         # Derived columns are NOT invalidated: a shift only re-times, and
         # extra_data (incl. cached MASS/Pₓ) is shifted along, so values stay valid.
         return target

@@ -670,3 +670,306 @@ def bland_altman_analysis(
     print(f"For the differences, μ = {bias:.2f} {unit_x} and s = {s:.2f} {unit_x}")
 
     return fig, ax
+
+def wind_rose(X,Y,
+              parameter: str ='Total_conc',
+              speed_log=False,
+              wind_resolution : tuple = (8,15),
+              ax_in=None,
+              start_time: pd.Timestamp | str | None = None,
+              end_time: pd.Timestamp | str | None = None,
+              rebin_freq: str | None = '1min',
+              rebin_method: str = "mean",
+              activity: str | None = None,
+              min_observations: int =3):
+    """
+    Function to generate a heat-map wind-rose depiction of data.
+    The functions combines the simultatious data of wind speed and wind direction
+    from an environmental class and combines it with a 
+
+    Args:
+       X:
+           First dataset. A :class:`Environmental1D` with data for wind speed
+           and wind direction.
+       Y:
+           Second aerosol-like object. This provides the data to be plotted
+           in the heatmap. This can also be the first data set X.
+       parameter (str, optional):
+           Name of the variable to correlate. The function first looks for
+           this column in ``Y.data`` and then in ``Y.extra_data``.
+           The default is ``\"Total_conc\"``.
+       speed_log (bool, optional):
+           Determines whether the radial axis should be displayed as with
+           windspeeds spreadout in logspace. Default is False.
+        wind_resolution (tuple, optional):
+           Provides the number of bins along each wind dimension. The default
+           (8,15) result in 8 sections around the compass with 15 sections 
+           along the radial axis marking the wind speed. 
+       ax_in (matplotlib.axes.Axes | None, optional):
+           Existing Matplotlib axes to draw on. If ``None``, a new figure
+           and axes are created. Default is None.
+       start_time (pandas.Timestamp | str | None, optional):
+           Inclusive start of the analysis window. If provided together with
+           ``end_time`` and the objects implement ``timecrop``, the data are
+           cropped to this period before correlation is computed. Strings are
+           parsed with :func:`pandas.to_datetime`. Default is None, meaning
+           start from first common timestamp.
+       end_time (pandas.Timestamp | str | None, optional):
+           Inclusive end of the analysis window. Same parsing rules as
+           ``start_time``.
+       rebin_freq (str | None, optional):
+           Target resampling rule for ``match=\"rebin\"`` (e.g. ``\"1min\"``).
+           If ``None``, the coarser cadence inferred from the two series is
+           chosen automatically. Default is None.
+       rebin_method (str | Callable, optional):
+           Aggregation method passed to ``timerebin`` when ``match=\"rebin\"``
+           is used (e.g. ``\"mean\"``, ``\"median\"``, or a custom function).
+           Default is ``\"mean\"``.
+       activity (str | None, optional):
+           If given, restrict the comparison to the timestamps inside this
+           activity's marked periods (absolute-time, multiple occurrences
+           supported). ``None`` (default) or ``\"All data\"`` uses the full
+           overlapping record. The viable activities must be marked in dataset X.
+       min_observations (int, optional):
+           The minimum number of datapoints going into the calculation of a 
+           bin average. Depending on the rebin freq this migth remain low,
+           if freq is high. Default is 3.
+    
+    Returns:
+        tuple[Figure, Axes]:
+            The figure and axes containing the wind-rose polar heatmap, with
+            colorbar to the right and details of parameter and instrument to
+            the top left.
+    
+    
+    Notes:
+        Detailed description:
+            ``wind_rose`` is creating a depiction of the average of a chosen
+            parameter data using a radial heat-map to associate the desired
+            parameter of interest with wind speed and direction. 
+    
+            * Extracts the requested ``parameter`` from dataset Y.
+            * Aligns the series in time using the selected timrebin
+            * Removes rows where either series is NaN or infinite.
+            * Create bins in the polar space according to the chosen resolution.
+            * Plots polar heatmap showning the average concentration/strength
+            of the chosen parameter in color along the compass directions.
+    
+            Axis labels are automatically derived from ``X.instrument`` and
+            ``Y.instrument``.
+    
+        Theory:
+            The regression models used are simple linear relationships:
+    
+
+    """
+    # ------------------------------------------------------------------
+    # Construct dataframe and remove invalid observations
+    # ------------------------------------------------------------------
+    
+    # Always return a top-level Figure 
+    if ax_in is None:
+        fig, ax = plt.subplots(
+            figsize=(8, 8),
+            subplot_kw={"projection": "polar"}
+        )
+        plt.xticks(fontsize=15)
+        plt.yticks(fontsize=15)
+        ax.grid(True)
+    else:
+        fig = ax_in.figure
+        if ax_in.name == "polar":
+            ax = ax_in
+        else:
+            subplotspec = ax_in.get_subplotspec()
+            ax_in.remove()
+            ax = fig.add_subplot(
+                subplotspec,
+                projection="polar",
+            )
+
+    wind=X.timerebin(
+        freq=rebin_freq,
+        start=start_time,
+        end=end_time,
+        method=rebin_method,
+        inplace = False)
+    
+    data=Y.timerebin(
+        freq=rebin_freq,
+        start=start_time,
+        end=end_time,
+        method=rebin_method,
+        inplace = False)
+    
+    #Mark activities
+    if activity==None:
+        activity="All data"
+        
+    data.mark_activities(wind.activity_periods)
+    
+    if "W_direction" in wind.data.columns:
+        df = {"w_dir":   wind.get_activity_data(activity)["W_direction"]}
+        
+        if "W_speed" in wind.data.columns:
+            df['w_speed']= wind.get_activity_data(activity)["W_speed"]
+        else:
+            raise ValueError("The chosen data does not contain data on wind-speed")
+    else:
+        raise ValueError("The chosen data does not contain data on wind-direction")
+        
+    if parameter in data.data.columns:
+        df['data'] = data.get_activity_data(activity)[parameter]
+    elif parameter in data.extra_data.columns:
+        df['data'] = data.get_activity_extra_data(activity)[parameter]
+    else:
+        raise ValueError(f"{parameter} is not present in the chosen dataset")
+        
+    df=pd.DataFrame(df)
+    df = df.replace([np.inf, -np.inf], np.nan)
+    df = df.dropna(subset=["w_dir", "w_speed", "data"])
+
+    if df.empty:
+        raise ValueError("No valid wind/concentration observations remain.")
+
+    n_dir_bins, n_speed_bins = wind_resolution
+
+    # Generate wind direction bins
+    dir_width = 360.0 / n_dir_bins
+    dir_shift = dir_width / 2
+    
+    wd = df["w_dir"] % 360
+    wd_shifted = (wd + dir_shift) % 360
+    dir_edges = np.linspace(
+        0,
+        360,
+        n_dir_bins + 1
+    )
+    
+    df["dir_bin"] = pd.cut(
+        wd_shifted,
+        bins=dir_edges,
+        right=False,
+        include_lowest=True,
+        labels=False
+    )
+    # Generate wind speed bins
+    if speed_log:
+        positive_speed = df.loc[df["w_speed"] > 0, "w_speed"]
+        speed_min = positive_speed.min()
+        speed_max = positive_speed.max()
+        speed_edges = np.geomspace(
+            speed_min,
+            speed_max * (1 + 1e-10),
+            n_speed_bins + 1
+        )
+    else:
+        speed_min = max(0, df["w_speed"].min())
+        speed_max = df["w_speed"].max()
+        speed_edges = np.linspace(
+            speed_min,
+            speed_max * (1 + 1e-10),
+            n_speed_bins + 1
+        )
+    df["speed_bin"] = pd.cut(
+        df["w_speed"],
+        bins=speed_edges,
+        right=False,
+        include_lowest=True,
+        labels=False
+    )
+    # Remove data outside the defined bins
+    df_grid = df.dropna(
+        subset=["dir_bin", "speed_bin", "data"]
+    ).copy()
+    df_grid["dir_bin"] = df_grid["dir_bin"].astype(int)
+    df_grid["speed_bin"] = df_grid["speed_bin"].astype(int)
+    # Calculate mean and counts 
+    grid = (
+        df_grid.groupby(
+            ["speed_bin", "dir_bin"]
+        )["data"]
+        .mean()
+        .unstack()
+    )
+    counts = (
+        df_grid.groupby(
+            ["speed_bin", "dir_bin"]
+        )["data"]
+        .count()
+        .unstack()
+    )
+    # Force the requested resolution
+    grid = grid.reindex(
+        index=range(n_speed_bins),
+        columns=range(n_dir_bins),
+    )
+    counts = counts.reindex(
+        index=range(n_speed_bins),
+        columns=range(n_dir_bins),
+        fill_value=0,
+    )
+    # Mask cells without sufficient observations
+    grid = grid.where(
+        counts >= min_observations
+    )
+    assert grid.shape == (n_speed_bins, n_dir_bins)
+    # Coordinate grid
+    plot_dir_edges = np.deg2rad(
+        np.linspace(
+            -dir_shift,
+            360 - dir_shift,
+            n_dir_bins + 1,
+        )
+    )
+    Theta, R = np.meshgrid(
+        plot_dir_edges,
+        speed_edges,
+    )
+    C = np.ma.masked_invalid(
+        grid.to_numpy(dtype=float)
+    )
+    pcm = ax.pcolormesh(
+        Theta,
+        R,
+        C,
+        shading="flat",
+        cmap="viridis",
+    )
+    ax.set_theta_zero_location("N")
+    ax.set_theta_direction(-1)
+    ax.set_xticks(
+        np.deg2rad(np.arange(0, 360, 45))
+    )
+    ax.set_xticklabels([
+        "N", "NE", "E", "SE",
+        "S", "SW", "W", "NW",
+    ])
+    # Radial scale
+    if speed_log:
+        ax.set_rscale("log")
+        ax.set_rlim(
+            speed_edges[0],
+            speed_edges[-1],
+        )
+    else:
+        ax.set_rlim(
+            speed_edges[0],
+            speed_edges[-1],
+        )
+    #Addition of unit and dtype to the color scale
+    if type(data._meta['unit'])==dict:
+        fig.colorbar(pcm, ax=ax, label=f"{data._meta['dtype'][parameter]} ({data._meta['unit'][parameter]})")
+    else:
+        fig.colorbar(pcm, ax=ax, label=f"{data._meta['dtype']} ({data._meta['unit']})")
+    #Finishing touches for the 
+    ax.set_title(f"{data._meta['instrument']} \n{parameter}",loc='left')
+    ax.text(
+        1.00, 1.05,
+        "Wind speed (m/s)",
+        transform=ax.transAxes,
+        ha="right",
+        va="top",
+        fontsize=14
+    )
+    return fig,ax

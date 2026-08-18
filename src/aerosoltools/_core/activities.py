@@ -90,7 +90,9 @@ class ActivityMixin:
             for start, end in periods:
                 start_ts = pd.Timestamp(start)
                 end_ts = pd.Timestamp(end)
-                mask = (self.time >= start_ts) & (self.time <= end_ts)
+                mask = (self.time.to_series().shift(-1).to_numpy() >= 
+                        start_ts) & (self.time <= end_ts)
+                # mask = (self.time >= start_ts) & (self.time <= end_ts)
                 col[mask] = True
 
             # Update or create column

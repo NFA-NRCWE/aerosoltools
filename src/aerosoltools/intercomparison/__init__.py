@@ -25,7 +25,7 @@ from .calibration import (
     fit_calibration,
 )
 from .combination import combine_measurements, combine_size_ranges
-from .correlation import bland_altman_analysis, fit_data, plot_correlation
+from .correlation import bland_altman_analysis, fit_data, plot_correlation, wind_rose
 
 __all__ = [
     "combine_measurements",
@@ -39,4 +39,5 @@ __all__ = [
     "apply_calibration",
     "CalibrationModel",
     "CalibrationError",
+    "wind_rose"
 ]

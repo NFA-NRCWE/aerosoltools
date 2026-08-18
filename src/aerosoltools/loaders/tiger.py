@@ -2,26 +2,27 @@
 import numpy as np
 import pandas as pd
 
-from ..aerosolalt import AerosolAlt
+from ..gas1d import Gas1D
 from .support.reading import sniff
 
 ###############################################################################
 
-def load_tiger_file(file: str, year=2026, extra_data: bool = False) -> AerosolAlt:
+def load_tiger_file(file: str, year=2026) -> Gas1D:
     """Description:
         Load a Tiger LDSA text export and return it as an
-        :class:`AerosolAlt` time series with TEM sampling metadata.
+        :class:`Gas1D` time series with TEM sampling metadata.
 
     Args:
         file (str):
             Path to the Tiger ``.txt`` export file.
-        extra_data (bool, optional):
-            If ``True``, additional columns (beyond ``LDSA``, ``TEM`` and
-            ``Flow``) are stored in ``extra_data`` indexed by ``Datetime``.
-            Defaults to ``False``.
+        year (int, optional):
+            Due to inconsistency in dating for the software, it is required to 
+            provide the year of the onset of the data, which will then
+            correct the year. It is still required to perform time_shift to 
+            ensure that the month, day, hour, minute and second fits.
 
     Returns:
-        AerosolAlt:
+        Gas1D:
             Tiger total VOC time series with a datetime index, TVOC
             and associated metadata.
 
@@ -54,7 +55,7 @@ def load_tiger_file(file: str, year=2026, extra_data: bool = False) -> AerosolAl
               to absolute timestamps by suptracting the difference in year from
               the recorded year.
 
-            - Constructs an :class:`AerosolAlt` object using the core columns:
+            - Constructs a :class:`Gas1D` object using the core columns:
 
               - ``Datetime``,
               - ``TVOC``,
@@ -67,11 +68,8 @@ def load_tiger_file(file: str, year=2026, extra_data: bool = False) -> AerosolAl
 
               - ``unit`` mapping:
 
-                - ``"VOC"`` → ``"ppb"`` or ``"ppb"``,
+                - ``"VOC"`` → ``"ppb"`` or ``"ppm"``,
 
-            - If ``extra_data=True``, all remaining columns (not ``LDSA``,
-              ``TEM``, ``Flow``) are stored in ``extra_data`` with
-              ``Datetime`` as index.
 
         Theory:
             The Tiger logs total VOC in either ppb or ppm 
@@ -112,8 +110,8 @@ def load_tiger_file(file: str, year=2026, extra_data: bool = False) -> AerosolAl
     # Convert time column to absolute datetime
     df["Datetime"] = pd.to_datetime(df["DayMonth"] + "-" + df['Year'] + " " + df["Time"], format="%d-%m-%Y %H:%M:%S")
 
-    # Create AerosolAlt object
-    Tiger = AerosolAlt(df[["Datetime", "TVOC"]])
+    # Create Gas1D object
+    Tiger = Gas1D(df[["Datetime", "TVOC"]])
     Tiger._meta["instrument"] = "Tiger"
     Tiger._meta["serial_number"] = [meta_lines[h] for h in meta_lines if 'IRN' in h]
     Tiger._meta["unit"] = meta_lines['Units']
