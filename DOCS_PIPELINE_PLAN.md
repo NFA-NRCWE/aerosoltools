@@ -1,8 +1,34 @@
 # Documentation pipeline overhaul — plan
 
 **Branch:** `GUI_test` (all edits + commits here; nothing merges to `main`).
-**Status:** Plan agreed. Phase 1 not yet started — pick up here.
+**Status:** Phase 1 **done**, plus the Phase 2 notebook rewrite (commit
+`208e79e`, 2026-08-18). Remaining: new example notebooks and the GUI docs
+section — both deferred by the maintainer until the pipeline is reviewed.
 **Date drafted:** 2026-07-17.
+
+> **Corrections to the findings below, from the 2026-08-18 implementation pass:**
+> - It was **all 7** notebooks that called the removed PascalCase API, not 5.
+> - Notebooks were **not** executed at build time. `nbsphinx_execute` was unset,
+>   so nbsphinx's `"auto"` default skipped every notebook that had stored
+>   outputs — which was all of them. That is why the build passed while
+>   publishing output from deleted functions.
+> - Three breaks were **not** simple renames: `Combine_NS_OPS` →
+>   `combine_size_ranges`, `summarize_exposure(activity=)` → `activities=`
+>   (now a sequence), and `plot_correlation(column=)` → `parameter=`.
+> - `.nojekyll` was lost on `Dev-gh-pages` by the manual "New documentation
+>   page" commit; the automated deploy had written it correctly.
+> - Two problems the plan missed: ~40 AutoAPI warnings from parsing the GUI
+>   (fixed with `autoapi_ignore`), and 36 duplicate-object-description warnings
+>   where Napoleon's `Attributes:` handling collided with AutoAPI (fixed with
+>   `napoleon_use_ivar`).
+> - The docs workflow cannot use plain `-W`: Sphinx logs unreachable-intersphinx
+>   warnings without a type, so they are filtered explicitly in the workflow.
+
+> **Deviation from decision 1:** the maintainer chose **two symmetric build
+> workflows** (staging + live) over build-then-promote. Implemented as one
+> reusable `_docs-build.yml` called by both, so the two cannot drift. Note the
+> consequence: the live site is a *rebuild*, not a byte-copy of what was
+> reviewed. Run both from the same commit.
 
 This file is a durable handoff of the agreed plan for reworking how the
 `aerosoltools` docs are built and deployed. Read the "Findings" and "Decisions"
@@ -120,6 +146,13 @@ release, not during it.
 
 **Phase 1 end state:** a clean build you can run to `Dev-gh-pages`. Then status
 check with maintainer.
+
+**Phase 1 outcome (2026-08-18):** done. Local build is warning-clean, all 7
+notebooks execute, and the site was built and committed to local branch
+`_docs_staging`. The push to `Dev-gh-pages` is **blocked**: the `gh` PAT in use
+(`AndersBros`) can read the repo but is denied write (403), so the maintainer
+must push it. Pushing `GUI_test` additionally needs the token's *Workflows*
+permission, because the commit adds files under `.github/workflows/`.
 
 ---
 
