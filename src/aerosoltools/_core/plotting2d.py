@@ -70,6 +70,8 @@ class Plot2DMixin:
         normalize: bool = True,
         ax=None,
         dtype: str | None = None,
+        color=None,
+        label: str | None = None,
     ):
         """Plot mean particle size distributions for one or more activities.
 
@@ -84,6 +86,16 @@ class Plot2DMixin:
                 normalisation if needed.
             ax (matplotlib.axes.Axes | None): Axis to plot into. If None,
                 a new figure and axes are created.
+            color: Matplotlib colour applied to every curve drawn by this
+                call, overriding the per-activity colours. Colours are
+                normally assigned per *activity*, which means two datasets
+                drawn onto the same axes are given the same colour and
+                become indistinguishable; pass a colour per dataset to tell
+                them apart. Default is None (colour by activity).
+            label (str | None): Legend label used instead of the activity
+                name. Only meaningful when a single activity is drawn, and
+                intended for the same overlay case as ``color`` -- naming the
+                *dataset* rather than the activity. Default is None.
 
         Returns:
             tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]: The
@@ -170,14 +182,17 @@ class Plot2DMixin:
             )
             if np.all(np.isnan(avg_act)):
                 continue
-            color = activity_colors.get(activity, None)
+            activity_color = activity_colors.get(activity, None)
 
-            ax.plot(bin_mids, avg_act, label=activity, color=color or "black")
+            curve_color = color if color is not None else (activity_color or "black")
+            curve_label = label if label is not None else activity
+
+            ax.plot(bin_mids, avg_act, label=curve_label, color=curve_color)
             ax.fill_between(
                 bin_mids,
                 avg_act - std_act,
                 avg_act + std_act,
-                color=color or "black",
+                color=curve_color,
                 alpha=0.3,
             )
 

@@ -3,9 +3,10 @@
 ```
 
 ```{toctree}
-:caption: Examples
-:maxdepth: 1
+:caption: Overview
+:maxdepth: 2
 :hidden:
 
-examples/index
+Examples <examples/index>
+aerosoltools documentation <api/aerosoltools/index>
 ```

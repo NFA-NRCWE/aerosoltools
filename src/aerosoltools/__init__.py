@@ -111,7 +111,8 @@ back-compatible with the plain container it replaced):
 
 DecayResult
     Emission+decay fit from ``Aerosol1D.fit_decay`` — attribute access plus a
-    read-only mapping view.
+    read-only mapping view. Pair it with ``decay_curve`` to reconstruct the
+    fitted curve for plotting.
 PSDFitResult
     Lognormal PSD fit from ``Aerosol2D.fit_psd`` — a ``NamedTuple`` (tuple
     unpacking still works) with ``.modes`` / ``.errors`` / ``.evaluate(dp)``.
@@ -126,7 +127,7 @@ Typical usage example
     >>> combined = at.combine_size_ranges(ns, ops, crossover=400)
 """
 
-from ._core.decay import DecayResult
+from ._core.decay import DecayResult, decay_curve
 from ._core.fitting import PSDFitResult, lognormal_modes
 from .acsm_simple import ACSM_simple
 from .aerosol1d import Aerosol1D
@@ -203,6 +204,7 @@ __all__ = [
     "PSDFitResult",
     # Decay fitting
     "DecayResult",
+    "decay_curve",
     # Loading: auto-detect entry point + registry + error base
     "load_file",
     "detect_instrument",

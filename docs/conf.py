@@ -64,7 +64,11 @@ autoapi_root = "api"  # generated into docs/api/*
 # modules (e.g. the old ``aerosolalt`` / ``utility`` packages) to linger and be
 # republished, because AutoAPI never prunes stale files it did not write.
 autoapi_keep_files = False
-autoapi_add_toctree_entry = True  # let AutoAPI own the API Reference toctree
+# AutoAPI's own toctree entry buries the whole reference under a generic "API
+# Reference" node, which then sits alongside "Examples" under a caption that
+# reads "Examples" -- confusing, and it hides the package page one level down.
+# The root toctree in docs/index.md links the package page directly instead.
+autoapi_add_toctree_entry = False
 autoapi_member_order = "bysource"
 autoapi_python_class_content = "both"  # include class + __init__ docstrings
 

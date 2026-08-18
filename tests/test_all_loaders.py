@@ -1453,3 +1453,83 @@ def test_load_file_dispatches_dusttrak():
     from aerosoltools import DustTrak, load_file
 
     assert isinstance(load_file(_data_path("Sample_DustTrak.csv")), DustTrak)
+
+
+# ---------------------------------------------------------------------------
+# Plotting and decay helpers used by the example notebooks
+# ---------------------------------------------------------------------------
+
+
+def test_plot_psd_color_and_label_distinguish_two_datasets():
+    """Two datasets on one axes need a colour each to be told apart.
+
+    plot_psd assigns colours per *activity*, so overlaying two datasets that
+    both have only "All data" drew them in the same colour -- they read as one
+    line doubling back. The color/label arguments override that.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    from aerosoltools import load_aps_file
+
+    aps = load_aps_file(_data_path("Sample_APS_correlated.txt"))
+
+    fig, ax = plt.subplots()
+    aps.aerodynamic.plot_psd(
+        ax=ax, activities=["All data"], color="tab:blue", label="aerodynamic"
+    )
+    aps.optical.plot_psd(
+        ax=ax, activities=["All data"], color="tab:orange", label="optical"
+    )
+
+    colors = [line.get_color() for line in ax.get_lines()]
+    labels = [line.get_label() for line in ax.get_lines()]
+
+    assert colors == ["tab:blue", "tab:orange"]
+    assert labels == ["aerodynamic", "optical"]
+    plt.close(fig)
+
+    # Without them, both curves still fall back to the per-activity colour.
+    fig, ax = plt.subplots()
+    aps.aerodynamic.plot_psd(ax=ax, activities=["All data"])
+    aps.optical.plot_psd(ax=ax, activities=["All data"])
+    assert len({line.get_color() for line in ax.get_lines()}) == 1
+    plt.close(fig)
+
+
+def test_decay_curve_reconstructs_the_fitted_model():
+    """decay_curve is exported and rebuilds the curve fit_decay reported."""
+    import numpy as np
+
+    from aerosoltools import decay_curve, load_ns_file
+
+    ns = load_ns_file(_data_path("Sample_NS.csv"))
+    fit = ns.fit_decay(
+        period=("2023-09-11 14:45:00", "2023-09-11 15:35:00"), metric="PNC"
+    )
+
+    curve = decay_curve(fit.model, np.array([0.0, fit.peak_time_s]), fit.model_popt)
+
+    # At t=0 the model sits at the background; at the peak time it reaches the
+    # reported peak concentration.
+    assert curve[0] == pytest.approx(fit.background, rel=1e-6)
+    assert curve[1] == pytest.approx(fit.peak_concentration, rel=1e-3)
+
+
+def test_decay_fit_on_the_documented_sample_is_sound():
+    """The NS sample is the example used in the docs; guard its fit quality."""
+    from aerosoltools import load_ns_file
+
+    ns = load_ns_file(_data_path("Sample_NS.csv"))
+    fit = ns.fit_decay(
+        period=("2023-09-11 14:45:00", "2023-09-11 15:35:00"),
+        metric="PNC",
+        volume=30.0,
+    )
+
+    assert fit.decay_r_squared > 0.99
+    assert fit.peak_concentration > 3 * fit.background
+    assert fit.decay_rate_per_hour > 0
+    assert fit.source_strength > 0
