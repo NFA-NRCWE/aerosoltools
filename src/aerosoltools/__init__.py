@@ -128,10 +128,10 @@ Typical usage example
 
 from ._core.decay import DecayResult
 from ._core.fitting import PSDFitResult, lognormal_modes
+from .acsm_simple import ACSM_simple
 from .aerosol1d import Aerosol1D
 from .aerosol2d import Aerosol2D
 from .aerosol3d import Aerosol3d, CorrelationCube
-from .acsm_simple import ACSM_simple
 from .aethalometer import Aethalometer
 from .discmini import DiSCmini
 from .dusttrak import DustTrak
@@ -145,13 +145,12 @@ from .intercomparison import (
     combine_size_ranges,
     fit_data,
     plot_correlation,
-    wind_rose
+    wind_rose,
 )
 from .loaders import (
     INSTRUMENT_LOADERS,
     LoaderError,
     detect_instrument,
-    load_simple_acsm_file,
     load_aethalometer_file,
     load_aps_file,
     load_cpc_file,
@@ -170,8 +169,9 @@ from .loaders import (
     load_ops_file,
     load_partector_file,
     load_ranger_file,
+    load_simple_acsm_file,
     load_smps_file,
-    load_tiger_file
+    load_tiger_file,
 )
 from .partector import Partector
 
@@ -180,12 +180,12 @@ __all__ = [
     "Aerosol1D",
     "Aerosol2D",
     "Aerosol3d",
-    "ACSM_simple"
     "CorrelationCube",
     "DiSCmini",
     "DustTrak",
     "ELPI",
     # Non-particle classes
+    "ACSM_simple",
     "Aethalometer",
     "Environmental1D",
     "Gas1D",
@@ -197,7 +197,7 @@ __all__ = [
     "plot_correlation",
     "combine_measurements",
     "calibrate_against_reference",
-    "wind_rose"
+    "wind_rose",
     # Size-distribution fitting
     "lognormal_modes",
     "PSDFitResult",

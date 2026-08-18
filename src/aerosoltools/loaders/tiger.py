@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 
@@ -6,6 +5,7 @@ from ..gas1d import Gas1D
 from .support.reading import sniff
 
 ###############################################################################
+
 
 def load_tiger_file(file: str, year=2026) -> Gas1D:
     """Description:
@@ -16,9 +16,9 @@ def load_tiger_file(file: str, year=2026) -> Gas1D:
         file (str):
             Path to the Tiger ``.txt`` export file.
         year (int, optional):
-            Due to inconsistency in dating for the software, it is required to 
+            Due to inconsistency in dating for the software, it is required to
             provide the year of the onset of the data, which will then
-            correct the year. It is still required to perform time_shift to 
+            correct the year. It is still required to perform time_shift to
             ensure that the month, day, hour, minute and second fits.
 
     Returns:
@@ -72,7 +72,7 @@ def load_tiger_file(file: str, year=2026) -> Gas1D:
 
 
         Theory:
-            The Tiger logs total VOC in either ppb or ppm 
+            The Tiger logs total VOC in either ppb or ppm
 
       Examples:
           Typical usage is to load a Tiger file and inspect VOC
@@ -97,24 +97,26 @@ def load_tiger_file(file: str, year=2026) -> Gas1D:
 
     # Read main data
     df = pd.read_csv(file, delimiter=delim, header=14)
-    df.rename(columns={"Date":"Datetime",df.columns[2]:"TVOC"}, inplace=True)
+    df.rename(columns={"Date": "Datetime", df.columns[2]: "TVOC"}, inplace=True)
 
     # # Read header metadata
     meta_lines = dict(np.genfromtxt(file, delimiter=delim, max_rows=8, dtype="str"))
     # Create new columns
     parts = df["Datetime"].str.split("-", expand=True)
-    
+
     df["DayMonth"] = parts[0] + "-" + parts[1]
-    #Corrects the year, as it is incorrectly stored in the software.
-    df["Year"] = (parts[2].astype(int)-[int(parts[2][0])-year]).astype(str)
+    # Corrects the year, as it is incorrectly stored in the software.
+    df["Year"] = (parts[2].astype(int) - [int(parts[2][0]) - year]).astype(str)
     # Convert time column to absolute datetime
-    df["Datetime"] = pd.to_datetime(df["DayMonth"] + "-" + df['Year'] + " " + df["Time"], format="%d-%m-%Y %H:%M:%S")
+    df["Datetime"] = pd.to_datetime(
+        df["DayMonth"] + "-" + df["Year"] + " " + df["Time"], format="%d-%m-%Y %H:%M:%S"
+    )
 
     # Create Gas1D object
     Tiger = Gas1D(df[["Datetime", "TVOC"]])
     Tiger._meta["instrument"] = "Tiger"
-    Tiger._meta["serial_number"] = [meta_lines[h] for h in meta_lines if 'IRN' in h]
-    Tiger._meta["unit"] = meta_lines['Units']
+    Tiger._meta["serial_number"] = [meta_lines[h] for h in meta_lines if "IRN" in h]
+    Tiger._meta["unit"] = meta_lines["Units"]
     Tiger._meta["dtype"] = "TVOC"
 
     return Tiger

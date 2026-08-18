@@ -62,4 +62,3 @@ class ACSM_simple(_NonParticleMixin, Aerosol1D):
     def chlorine(self) -> pd.Series:
         """Chlorine mass concentration (µg/m³)."""
         return self._require("Chlorine")
-

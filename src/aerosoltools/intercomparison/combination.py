@@ -212,7 +212,7 @@ def combine_size_ranges(
     # --- size-domain stitch (hard cap at whole bins, no scaling) -------------
     # Lower keeps bins whose upper edge <= Dc; upper keeps bins whose lower edge
     # >= Dc; the shared boundary edge is set to Dc (counts unchanged).
-    n_lo = int(np.searchsorted(lo_edges, Dc, side="right") )  # lower bins kept
+    n_lo = int(np.searchsorted(lo_edges, Dc, side="right"))  # lower bins kept
     first_up = int(np.searchsorted(up_edges, Dc, side="left"))  # first upper edge >= Dc
     n_up = (len(up_edges) - 1) - first_up  # upper bins kept
     if n_lo < 1 or n_up < 1:
@@ -244,7 +244,7 @@ def combine_size_ranges(
     new_mids = [str(m) for m in mids]
     combined = combined.rename(columns=dict(zip(lo_keep + up_keep, new_mids)))
     # Calculate total concentration and place it first
-    combined.insert( 0,"Total_conc",  combined.sum(axis=1) )
+    combined.insert(0, "Total_conc", combined.sum(axis=1))
 
     res = Aerosol2D(combined)
     res.mark_activities(lower.activity_periods)

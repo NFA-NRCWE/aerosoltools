@@ -39,5 +39,5 @@ __all__ = [
     "apply_calibration",
     "CalibrationModel",
     "CalibrationError",
-    "wind_rose"
+    "wind_rose",
 ]

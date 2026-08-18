@@ -1,11 +1,10 @@
-
-import numpy as np
 import pandas as pd
 
 from ..acsm_simple import ACSM_simple
 from .support.reading import sniff
 
 ###############################################################################
+
 
 def load_simple_acsm_file(file: str) -> ACSM_simple:
     """Description:
@@ -33,7 +32,7 @@ def load_simple_acsm_file(file: str) -> ACSM_simple:
             This loader is tailored to acsm text exports that provide
             a simle timeseries of the ascibed categories SO4, Organic, NO3, NH4
             and chorine.
-            
+
             Internally, the function:
 
             - Attempts to infer encoding and delimiter via
@@ -45,7 +44,7 @@ def load_simple_acsm_file(file: str) -> ACSM_simple:
               - ``"t_base"`` → ``"Datetime"``,
               - ``"SO4_11000"`` → ``"SO4"``.
 
-            - Converts the ``"Datetime"`` columns from str to absolute 
+            - Converts the ``"Datetime"`` columns from str to absolute
               timestamps by suptracting the difference in year from
               the recorded year.
 
@@ -67,7 +66,7 @@ def load_simple_acsm_file(file: str) -> ACSM_simple:
               - ``dtype`` set to ``"dM"``,
 
         Theory:
-            The acsm logs dM as acribed to five catagories in µg/m³ 
+            The acsm logs dM as acribed to five catagories in µg/m³
 
       Examples:
           Typical usage is to load a acsm file and look at the timeseries and
@@ -92,11 +91,11 @@ def load_simple_acsm_file(file: str) -> ACSM_simple:
 
     # Read main data
     df = pd.read_csv(file, delimiter=delim, header=0)
-    df.columns=['Datetime','SO4','Org','NO3','NH4','Chlorine']
-    df["Datetime"] = pd.to_datetime(df['Datetime'], format="%d/%m/%Y %H:%M:%S")
-    
+    df.columns = ["Datetime", "SO4", "Org", "NO3", "NH4", "Chlorine"]
+    df["Datetime"] = pd.to_datetime(df["Datetime"], format="%d/%m/%Y %H:%M:%S")
+
     # Reordering columns using iloc to position Org as primary variable
-    df = df.iloc[:, [0, 2, 1, 3, 4, 5]] 
+    df = df.iloc[:, [0, 2, 1, 3, 4, 5]]
 
     # Create AerosolAlt object
     acsm = ACSM_simple(df)

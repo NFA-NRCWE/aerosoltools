@@ -59,29 +59,28 @@ class Environmental1D(_NonParticleMixin, Aerosol1D):
     def pressure(self) -> pd.Series:
         """Air pressure."""
         return self._require("Pressure")
-    
+
     @property
     def wind_speed(self) -> pd.Series:
         """Wind speed (m/s)."""
         return self._require("W_speed")
-    
+
     @property
     def wind_direction(self) -> pd.Series:
         """Wind direction (°)."""
         return self._require("W_direc")
-    
+
     @property
     def CO(self) -> pd.Series:
         """CO mixing ratio (ppm)."""
         return self._require("CO")
-    
+
     @property
     def CO2(self) -> pd.Series:
         """CO2 mixing ratio (ppm)."""
         return self._require("CO2")
-    
+
     @property
     def NO2(self) -> pd.Series:
         """NO2 mixing ratio (ppb)."""
         return self._require("NO2")
-
