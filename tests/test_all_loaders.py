@@ -9,6 +9,7 @@ from aerosoltools.loaders import (
     load_cpc_file,
     load_discmini_file,
     load_discmini_raw_file,
+    load_dusttrak_file,
     load_elpi_file,
     load_fmps_file,
     load_fourtec_file,
@@ -51,6 +52,7 @@ from aerosoltools.loaders.discmini import (
         (load_smps_file, "Sample_SMPS.txt"),
         (load_simple_acsm_file, "Sample_ACSM.csv"),
         (load_tiger_file, "Sample_Tiger.csv"),
+        (load_dusttrak_file, "Sample_DustTrak.csv"),
     ],
 )
 def test_loader_smoke(loader_func, filename):
@@ -1320,6 +1322,7 @@ def test_acsm_is_non_particle():
     [
         ("Sample_ACSM.csv", "ACSM"),
         ("Sample_Tiger.csv", "Tiger"),
+        ("Sample_DustTrak.csv", "DustTrak"),
         ("Sample_Aethalometer.csv", "Aethalometer"),
         ("Sample_APS_correlated.txt", "APS"),
         ("Sample_ELPI.txt", "ELPI"),
@@ -1374,3 +1377,79 @@ def test_new_instruments_are_registered():
 
     assert INSTRUMENT_LOADERS["ACSM"] is load_simple_acsm_file
     assert INSTRUMENT_LOADERS["Tiger"] is load_tiger_file
+
+
+# ---------------------------------------------------------------------------
+# DustTrak DRX
+# ---------------------------------------------------------------------------
+
+
+def test_dusttrak_loads_all_pm_channels():
+    """DustTrak DRX exposes the five PM mass fractions as accessors."""
+    from aerosoltools import DustTrak
+
+    dust = load_dusttrak_file(_data_path("Sample_DustTrak.csv"))
+
+    assert isinstance(dust, DustTrak)
+    assert dust.metadata["instrument"] == "DustTrak DRX"
+    assert dust.metadata["serial_number"] == "8533151303"
+
+    for channel in ("pm1", "pm2_5", "pm4", "pm10", "total"):
+        series = getattr(dust, channel)
+        assert not series.empty, f"{channel} is empty"
+        assert pd.api.types.is_numeric_dtype(series), f"{channel} is not numeric"
+
+    # Fractions are cumulative, so each cut must be >= the one below it.
+    assert (dust.pm1 <= dust.pm2_5).all()
+    assert (dust.pm2_5 <= dust.pm4).all()
+    assert (dust.pm4 <= dust.pm10).all()
+
+
+def test_dusttrak_converts_mg_to_ug():
+    """The export is in mg/m3; the loader normalises to ug/m3."""
+    dust = load_dusttrak_file(_data_path("Sample_DustTrak.csv"))
+
+    # First data row of the sample reads PM1 = 0.123 mg/m3.
+    assert dust.pm1.iloc[0] == pytest.approx(123.0)
+    assert dust.metadata["unit"]["PM1"] == "µg/m³"
+
+
+def test_dusttrak_reconstructs_timestamps_from_header():
+    """Rows carry elapsed seconds; absolute time comes from the header."""
+    dust = load_dusttrak_file(_data_path("Sample_DustTrak.csv"))
+
+    # Header: Test Start Date 24/06/2024, Test Start Time 09:22:57,
+    # Test Interval 0:10, Number of Samples 234.
+    assert len(dust.data) == 234
+    assert dust.time[0] == pd.Timestamp("2024-06-24 09:23:07")
+    assert dust.time.is_monotonic_increasing
+    assert (dust.time[1] - dust.time[0]).total_seconds() == 10
+
+
+def test_dusttrak_is_not_mistaken_for_ops():
+    """A DustTrak DRX header looks like an OPS header at first glance.
+
+    Both open with "Instrument Name" followed by a model line, and OPS is
+    sniffed first, so a DustTrak file was previously routed to the OPS loader.
+    The instrument name itself is the discriminator.
+    """
+    from aerosoltools import detect_instrument
+    from aerosoltools.loaders.registry import is_DustTrak_file, is_OPS_file
+
+    dusttrak = _data_path("Sample_DustTrak.csv")
+
+    assert is_DustTrak_file(dusttrak)
+    assert not is_OPS_file(dusttrak)
+    assert detect_instrument(dusttrak) == "DustTrak"
+
+    # ...and the OPS sniffer still accepts both real OPS header variants.
+    assert is_OPS_file(_data_path("Sample_OPS.csv"))
+    assert is_OPS_file(_data_path("Sample_OPS2.txt"))
+    assert not is_DustTrak_file(_data_path("Sample_OPS.csv"))
+
+
+def test_load_file_dispatches_dusttrak():
+    """Auto-detection routes a DustTrak export to the DustTrak loader."""
+    from aerosoltools import DustTrak, load_file
+
+    assert isinstance(load_file(_data_path("Sample_DustTrak.csv")), DustTrak)

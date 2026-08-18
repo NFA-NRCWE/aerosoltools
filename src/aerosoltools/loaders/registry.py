@@ -246,6 +246,18 @@ def is_OPS_file(path: str | Path) -> bool:
     if first_cell not in {"sample file", "instrument name"}:
         return False
 
+    # "Instrument Name,<value>" names the instrument outright, so trust the
+    # value rather than a generic model marker. DustTrak DRX exports open with
+    # exactly the same two lines ("Instrument Name,DustTrak DRX" followed by
+    # "Model Number,8533"), so accepting any model line here claimed real
+    # DustTrak files for the OPS loader -- OPS is checked first, so the
+    # DustTrak sniffer never got a say.
+    if first_cell == "instrument name":
+        name = first[1].strip().lower() if len(first) > 1 else ""
+        return "optical particle sizer" in name or name.startswith("ops")
+
+    # "Sample File" variant. TSI CPC exports open the same way but carry only a
+    # bare "Model" line, whereas OPS carries "Instrument Model"/"Model Number".
     text = _head_text(path, max_lines=20)
     return (
         "optical particle sizer" in text
