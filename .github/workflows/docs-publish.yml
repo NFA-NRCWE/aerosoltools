@@ -1,0 +1,25 @@
+# Step 2 of a docs release: publish the documentation to the live site at
+# https://nfa-nrcwe.github.io/aerosoltools/
+#
+# Identical to "Docs staging (Dev-gh-pages)" except for the target branch: both
+# call the same reusable build workflow, so the live site is produced exactly
+# the way the staged one you reviewed was.
+#
+# Note that this rebuilds from the current state of the branch it runs on rather
+# than copying what is on Dev-gh-pages. Run it from the same commit you staged
+# from, so that what you reviewed is what ships.
+
+name: Docs publish (gh-pages, live)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  docs:
+    uses: ./.github/workflows/_docs-build.yml
+    with:
+      publish: true
+      publish_branch: gh-pages

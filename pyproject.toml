@@ -39,7 +39,14 @@ docs = [
   "furo>=2024.8.6",
   "myst-parser>=2.0.0",
   "sphinx-autoapi>=3.2.1",
-  "sphinx-autodoc-typehints>=2.2.3"
+  "sphinx-autodoc-typehints>=2.2.3",
+  # Example notebooks are executed at build time (see docs/conf.py).
+  # nbsphinx also needs the `pandoc` binary, installed by the docs workflow.
+  "nbsphinx>=0.9",
+  "ipython>=8",
+  "ipykernel>=6",
+  # Required by the MyST "linkify" extension enabled in docs/conf.py.
+  "linkify-it-py>=2.0",
 ]
 
 [project.gui-scripts]

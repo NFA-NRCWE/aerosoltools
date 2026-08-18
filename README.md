@@ -2,10 +2,10 @@
 
 **Tools for loading and analyzing aerosol instrument data**
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/NFA-NRCWE/aerosoltools/blob/main/LICENSE)  
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)  
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](./tests)  
-![Docs](https://github.com/NFA-NRCWE/aerosoltools/actions/workflows/deploy-docs.yml/badge.svg)  
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/NFA-NRCWE/aerosoltools/tree/main/tests)  
+![Docs](https://github.com/NFA-NRCWE/aerosoltools/actions/workflows/docs-publish.yml/badge.svg)  
 [![PyPI version](https://badge.fury.io/py/aerosoltools.svg)](https://pypi.org/project/aerosoltools/)
 
 ---
@@ -16,12 +16,16 @@
 
 - **1D time-series** (e.g. total number or mass) via `Aerosol1D`
 - **2D size-resolved time-series** via `Aerosol2D`
-- **Alternative / legacy formats** via `AerosolAlt`
+- **Dual-distribution data** (APS aerodynamic + optical) via `Aerosol3d`
+- **Instrument-specific classes** with their own physics and accessors —
+  `DiSCmini`, `DustTrak`, `ELPI`
+- **Non-particle instruments** — `Gas1D`, `Aethalometer`, `Environmental1D`,
+  `Partector` (these expose domain accessors instead of `total_concentration`)
 
 The package includes loaders for common instrument exports, tools for activity segmentation, and convenience methods for **task-based statistics** and **exposure assessment** (e.g. 8 h TWA, short-term limits, peaks).
 
 Prefer a point-and-click workflow? An interactive **desktop GUI** is included —
-see [Desktop GUI](#-desktop-gui) below.
+see the **Desktop GUI** section below.
 
 For full documentation and usage examples, see:
 
@@ -31,21 +35,28 @@ For full documentation and usage examples, see:
 
 ## 🧰 Provided Loaders
 
-| Instrument    | Function                   | Company                   |
-| ------------- | -------------------------- | ------------------------- |
-| Aethalometer  | `Load_Aethalometer_file()` | **Aethlabs**      |
-| CPC           | `Load_CPC_file()`          | **TSI Inc.**              |
-| DiSCmini      | `Load_DiSCmini_file()`     | **Testo**                 |
-| DustTrak      | `Load_DustTrak_file()`     | **TSI Inc.**              |
-| ELPI          | `Load_ELPI_file()`         | **Dekati Ltd.**           |
-| FMPS          | `Load_FMPS_file()`         | **TSI Inc.**              |
-| Fourtec       | `Load_Fourtec()`           | **Fourtec Technologies**  |
-| Grimm         | `Load_Grimm_file()`        | **GRIMM Aerosol Technik** |
-| NS (NanoScan) | `Load_NS_file()`           | **TSI Inc.**              |
-| OPC-N3        | `Load_OPCN3_file()`        | **Alphasense Ltd.**       |
-| OPS           | `Load_OPS_file()`          | **TSI Inc.**              |
-| Partector     | `Load_Partector_file()`    | **naneos GmbH**           |
-| SMPS          | `Load_SMPS_file()`         | **TSI Inc.**              |
+| Instrument             | Function                    | Company                   |
+| ---------------------- | --------------------------- | ------------------------- |
+| Aethalometer           | `load_aethalometer_file()`  | **AethLabs**              |
+| APS                    | `load_aps_file()`           | **TSI Inc.**              |
+| CPC                    | `load_cpc_file()`           | **TSI Inc.**              |
+| DiSCmini               | `load_discmini_file()`      | **Testo**                 |
+| DiSCmini (raw export)  | `load_discmini_raw_file()`  | **Testo**                 |
+| DustTrak               | `load_dusttrak_file()`      | **TSI Inc.**              |
+| ELPI                   | `load_elpi_file()`          | **Dekati Ltd.**           |
+| FMPS                   | `load_fmps_file()`          | **TSI Inc.**              |
+| Fourtec                | `load_fourtec_file()`       | **Fourtec Technologies**  |
+| Grimm                  | `load_grimm_file()`         | **GRIMM Aerosol Technik** |
+| NS (NanoScan)          | `load_ns_file()`            | **TSI Inc.**              |
+| OPC-N3                 | `load_opcn3_file()`         | **Alphasense Ltd.**       |
+| OPS                    | `load_ops_file()`           | **TSI Inc.**              |
+| Partector              | `load_partector_file()`     | **naneos GmbH**           |
+| Ranger                 | `load_ranger_file()`        | **Aeroqual**              |
+| SMPS                   | `load_smps_file()`          | **TSI Inc.**              |
+| Weather station        | `load_devlabs_file()`       | **DevLabs**               |
+
+Don't know which loader you need? `load_file()` auto-detects the instrument
+from the file itself, and `detect_instrument()` reports what it found.
 
 ---
 
@@ -85,7 +96,7 @@ For full documentation and usage examples, see:
   - Simple correlation/comparison plots
 
 - **Batch loading**
-  - `Load_data_from_folder()` to apply a loader across a folder of files
+  - `load_data_from_folder()` to apply a loader across a folder of files
 
 ---
 
@@ -113,7 +124,7 @@ pip install aerosoltools[gui]
 ```python
 import aerosoltools as at
 
-elpi = at.Load_ELPI_file("data/elpi_sample.txt")
+elpi = at.load_elpi_file("data/elpi_sample.txt")
 elpi.plot_timeseries()
 ```
 
@@ -139,7 +150,7 @@ summary = elpi.summarize_activities()
 # Detailed exposure summary for respirable dust (PM4.2) during "Emission"
 exp = elpi.summarize_exposure(
     metric="PM4.2",
-    activity="Emission",
+    activities=["Emission"],
     background="Background",  # or a float, or None
     short_limit=1.0,
     long_limit=1.0,
@@ -150,7 +161,7 @@ exp = elpi.summarize_exposure(
 
 ```python
 folder_path = "data/cpc_campaign/"
-data_list = at.Load_data_from_folder(folder_path, loader=at.Load_CPC_file)
+data = at.load_data_from_folder(folder_path, at.load_cpc_file)
 ```
 
 ---

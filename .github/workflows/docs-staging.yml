@@ -1,0 +1,29 @@
+# Step 1 of a docs release: build the docs and publish them to Dev-gh-pages
+# for review.
+#
+# Dev-gh-pages is not served by GitHub Pages (a repository serves exactly one
+# branch, and that is gh-pages). Review a staged build locally:
+#
+#     git fetch origin
+#     git checkout Dev-gh-pages
+#     git pull
+#     # then open index.html in a browser
+#
+# Alternatively, download the "docs-site" artifact from the run summary.
+#
+# When the result looks right, run "Docs: publish to gh-pages (live)".
+
+name: Docs staging (Dev-gh-pages)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  docs:
+    uses: ./.github/workflows/_docs-build.yml
+    with:
+      publish: true
+      publish_branch: Dev-gh-pages
