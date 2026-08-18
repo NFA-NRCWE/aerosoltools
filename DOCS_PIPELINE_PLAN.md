@@ -24,11 +24,19 @@ section — both deferred by the maintainer until the pipeline is reviewed.
 > - The docs workflow cannot use plain `-W`: Sphinx logs unreachable-intersphinx
 >   warnings without a type, so they are filtered explicitly in the workflow.
 
-> **Deviation from decision 1:** the maintainer chose **two symmetric build
-> workflows** (staging + live) over build-then-promote. Implemented as one
-> reusable `_docs-build.yml` called by both, so the two cannot drift. Note the
-> consequence: the live site is a *rebuild*, not a byte-copy of what was
-> reviewed. Run both from the same commit.
+> **Decisions 1 and 3 superseded (2026-08-18):** staging via `Dev-gh-pages` was
+> dropped entirely. The maintainer first chose two symmetric build workflows
+> (staging + live) over build-then-promote, then observed that since
+> `Dev-gh-pages` was never served by GitHub Pages — a repo serves exactly one
+> branch — "reviewing on staging" already meant checking it out and opening
+> `index.html` locally. It was local review with an extra round-trip.
+>
+> Final pipeline: **build and review locally** (~90 s, see `docs/README.md`) →
+> push and open a PR to `main`, where `docs-check.yml` builds in CI without
+> publishing and attaches the site as an artifact (this is what catches
+> environment-specific breakage such as the Windows path bug) → merge →
+> run **Docs publish (gh-pages, live)**. `docs-staging.yml` was removed; the
+> remote `Dev-gh-pages` branch is left in place for the maintainer to delete.
 
 This file is a durable handoff of the agreed plan for reworking how the
 `aerosoltools` docs are built and deployed. Read the "Findings" and "Decisions"
@@ -147,12 +155,12 @@ release, not during it.
 **Phase 1 end state:** a clean build you can run to `Dev-gh-pages`. Then status
 check with maintainer.
 
-**Phase 1 outcome (2026-08-18):** done. Local build is warning-clean, all 7
-notebooks execute, and the site was built and committed to local branch
-`_docs_staging`. The push to `Dev-gh-pages` is **blocked**: the `gh` PAT in use
-(`AndersBros`) can read the repo but is denied write (403), so the maintainer
-must push it. Pushing `GUI_test` additionally needs the token's *Workflows*
-permission, because the commit adds files under `.github/workflows/`.
+**Phase 1 outcome (2026-08-18):** done. Local build is warning-clean and all 7
+notebooks execute. Review is now local (`docs/README.md`), so nothing needs
+pushing to a staging branch. Pushing `GUI_test` itself needs the token's
+*Contents* **and** *Workflows* permissions — the `gh` PAT in use (`AndersBros`)
+can read the repo but is denied write (403), and the commit adds files under
+`.github/workflows/`.
 
 ---
 

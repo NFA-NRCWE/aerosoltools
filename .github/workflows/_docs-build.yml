@@ -1,14 +1,13 @@
 # Shared documentation build.
 #
 # This is a reusable workflow: it is never run directly, only called by
-# `docs-staging.yml` (publishes to Dev-gh-pages, for review) and
+# `docs-check.yml` (builds on pull requests, publishes nothing) and
 # `docs-publish.yml` (publishes to gh-pages, the live site). Keeping the build
-# in one place guarantees the site you review on Dev-gh-pages was produced by
-# exactly the same steps as the one that goes live -- the two callers differ
-# only in `publish_branch`.
+# in one place means the build validated on a pull request is byte-for-byte the
+# same build that later goes live -- the callers differ only in whether they
+# publish.
 #
-# It can also run without publishing at all (`publish: false`), which is how the
-# pull-request check validates the docs without touching either branch.
+# Day-to-day review happens locally rather than in CI; see docs/README.md.
 
 name: Docs build (reusable)
 

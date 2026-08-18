@@ -36,6 +36,8 @@ myst_enable_extensions = ["colon_fence", "linkify"]
 exclude_patterns = [
     "_build",
     "**.ipynb_checkpoints",
+    # Maintainer notes on building these docs; not part of the built site.
+    "README.md",
 ]
 
 # Put repo /src on path so type hints and cross-refs can import when needed
