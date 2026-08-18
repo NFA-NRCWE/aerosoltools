@@ -18,7 +18,9 @@ from aerosoltools.loaders import (
     load_ops_file,
     load_partector_file,
     load_ranger_file,
+    load_simple_acsm_file,
     load_smps_file,
+    load_tiger_file,
 )
 from aerosoltools.loaders.discmini import (
     _extract_serial_and_firmware,
@@ -29,7 +31,7 @@ from aerosoltools.loaders.discmini import (
 @pytest.mark.parametrize(
     "loader_func, filename",
     [
-        (load_aethalometer_file, "Sample_Aetholometer.csv"),
+        (load_aethalometer_file, "Sample_Aethalometer.csv"),
         (load_aps_file, "Sample_APS_aero.txt"),
         (load_aps_file, "Sample_APS_correlated.txt"),
         (load_cpc_file, "Sample_CPC_Direct.txt"),
@@ -47,6 +49,8 @@ from aerosoltools.loaders.discmini import (
         (load_partector_file, "Sample_Partector.txt"),
         (load_ranger_file, "Sample_Ranger.csv"),
         (load_smps_file, "Sample_SMPS.txt"),
+        (load_simple_acsm_file, "Sample_ACSM.csv"),
+        (load_tiger_file, "Sample_Tiger.csv"),
     ],
 )
 def test_loader_smoke(loader_func, filename):
@@ -237,7 +241,7 @@ def test_aethalometer_per_channel_units():
     import contextlib
     import io
 
-    aeth = load_aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    aeth = load_aethalometer_file(_data_path("Sample_Aethalometer.csv"))
     unit, dtype = aeth.metadata["unit"], aeth.metadata["dtype"]
     assert isinstance(unit, dict) and isinstance(dtype, dict)
     channels = [c for c in aeth.data.columns if c != "All data"]
@@ -950,7 +954,7 @@ def test_aethalometer_class_and_channels():
     """Aethalometer loads as its own class with per-wavelength BCc accessors."""
     from aerosoltools import Aethalometer
 
-    aeth = load_aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    aeth = load_aethalometer_file(_data_path("Sample_Aethalometer.csv"))
     assert isinstance(aeth, Aethalometer)
     # Per-wavelength direct accessors resolve to the matching BCc column.
     assert aeth.ir_bcc.name == "IR BCc"
@@ -1215,7 +1219,7 @@ def test_available_metrics_are_instrument_aware():
     assert "LDSA" in par_keys and "TEM" not in par_keys  # bool flag excluded
     assert par._default_metrics() == ["LDSA"]
 
-    aeth = load_aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    aeth = load_aethalometer_file(_data_path("Sample_Aethalometer.csv"))
     assert "IR BCc" in [m.key for m in aeth.available_metrics()]
     assert aeth._default_metrics() == ["IR BCc"]
 
@@ -1228,7 +1232,7 @@ def test_pnc_metric_is_rejected_for_non_number_instruments():
     assert cpc._get_metric_series("PNC")[1] == "cm⁻³"
     assert ops._get_metric_series("PNC")[1] == "cm⁻³"
 
-    aeth = load_aethalometer_file(_data_path("Sample_Aetholometer.csv"))
+    aeth = load_aethalometer_file(_data_path("Sample_Aethalometer.csv"))
     par = load_partector_file(_data_path("Sample_Partector.txt"))
     for obj in (aeth, par):
         with pytest.raises(ValueError):
@@ -1243,3 +1247,130 @@ def test_gas_metric_keyed_by_species():
     assert keys == [str(gas.dtype)]  # e.g. "Cl₂"
     series, unit = gas._get_metric_series(str(gas.dtype))
     assert unit == gas.unit and len(series) == len(gas.time)
+
+
+# ---------------------------------------------------------------------------
+# Tiger (handheld VOC monitor) and simple ACSM
+# ---------------------------------------------------------------------------
+
+
+def test_tiger_loads_as_gas1d_following_the_gas1d_contract():
+    """Tiger returns a Gas1D whose reading is reachable via ``.concentration``.
+
+    Gas1D's contract is a single column named "Concentration" with the measured
+    species carried in ``dtype`` -- the same shape the Ranger loader produces.
+    A loader that names the column after the species instead (here "TVOC")
+    still constructs, but every generic accessor built on that contract breaks,
+    so assert the contract rather than just that the file parses.
+    """
+    from aerosoltools import Gas1D
+
+    tiger = load_tiger_file(_data_path("Sample_Tiger.csv"))
+
+    assert isinstance(tiger, Gas1D)
+    assert "Concentration" in tiger.data.columns
+    assert tiger.metadata["instrument"] == "Tiger"
+    assert tiger.dtype == "TVOC"
+    assert tiger.unit == "ppb"
+
+    # The accessor and anything built on it must work.
+    assert not tiger.concentration.empty
+    assert pd.api.types.is_numeric_dtype(tiger.concentration)
+    assert len(tiger.summarize_activities()) >= 1
+
+
+def test_tiger_corrects_the_instrument_year():
+    """The Tiger firmware writes a nonsense year; the loader overrides it."""
+    tiger = load_tiger_file(_data_path("Sample_Tiger.csv"), year=2026)
+
+    assert tiger.time[0].year == 2026
+    assert tiger.time.is_monotonic_increasing
+
+
+def test_acsm_loads_with_all_species_accessors():
+    """ACSM returns an ACSM_simple exposing each chemical species."""
+    from aerosoltools import ACSM_simple
+
+    acsm = load_simple_acsm_file(_data_path("Sample_ACSM.csv"))
+
+    assert isinstance(acsm, ACSM_simple)
+    assert acsm.metadata["instrument"] == "ACSM"
+
+    for species in ("org", "sulfate", "nitrate", "ammonia", "chlorine"):
+        series = getattr(acsm, species)
+        assert not series.empty, f"{species} is empty"
+        assert pd.api.types.is_numeric_dtype(series), f"{species} is not numeric"
+
+
+def test_acsm_is_non_particle():
+    """ACSM measures mass by species, not a particle number concentration."""
+    acsm = load_simple_acsm_file(_data_path("Sample_ACSM.csv"))
+
+    with pytest.raises(AttributeError):
+        _ = acsm.total_concentration
+
+
+# ---------------------------------------------------------------------------
+# Automatic instrument detection
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "filename, expected",
+    [
+        ("Sample_ACSM.csv", "ACSM"),
+        ("Sample_Tiger.csv", "Tiger"),
+        ("Sample_Aethalometer.csv", "Aethalometer"),
+        ("Sample_APS_correlated.txt", "APS"),
+        ("Sample_ELPI.txt", "ELPI"),
+        ("Sample_NS.csv", "NanoScan (NS)"),
+        ("Sample_OPCN3.txt", "OPC-N3"),
+        ("Sample_OPS.csv", "OPS"),
+        ("Sample_Partector.txt", "Partector"),
+        ("Sample_Ranger.csv", "Ranger"),
+        ("Sample_SMPS.txt", "SMPS"),
+    ],
+)
+def test_detect_instrument_identifies_sample_files(filename, expected):
+    """Content sniffing identifies each sample file."""
+    from aerosoltools import detect_instrument
+
+    assert detect_instrument(_data_path(filename)) == expected
+
+
+def test_detection_of_new_instruments_does_not_depend_on_filename():
+    """ACSM and Tiger are recognized from content, not from their names.
+
+    The sample files are named by convention, which the filename-hint fallback
+    would match on its own. Copy them to a neutral name so only the content
+    sniffer can succeed.
+    """
+    import shutil
+    import tempfile
+
+    from aerosoltools import detect_instrument
+
+    for filename, expected in [
+        ("Sample_ACSM.csv", "ACSM"),
+        ("Sample_Tiger.csv", "Tiger"),
+    ]:
+        with tempfile.TemporaryDirectory() as tmp:
+            neutral = os.path.join(tmp, "unnamed_export.csv")
+            shutil.copyfile(_data_path(filename), neutral)
+            assert detect_instrument(neutral) == expected
+
+
+def test_load_file_dispatches_new_instruments():
+    """``load_file`` routes an unidentified path to the right loader."""
+    from aerosoltools import ACSM_simple, Gas1D, load_file
+
+    assert isinstance(load_file(_data_path("Sample_Tiger.csv")), Gas1D)
+    assert isinstance(load_file(_data_path("Sample_ACSM.csv")), ACSM_simple)
+
+
+def test_new_instruments_are_registered():
+    """Both new loaders are reachable through the public registry."""
+    from aerosoltools import INSTRUMENT_LOADERS
+
+    assert INSTRUMENT_LOADERS["ACSM"] is load_simple_acsm_file
+    assert INSTRUMENT_LOADERS["Tiger"] is load_tiger_file

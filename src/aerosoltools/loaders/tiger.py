@@ -47,7 +47,8 @@ def load_tiger_file(file: str, year=2026) -> Gas1D:
             - Renames core columns:
 
               - ``"Date"`` → ``"Datetime"``,
-              - ``"TVOC (ppb)"`` → ``"TVOC"``.
+              - ``"TVOC (ppb)"`` → ``"Concentration"`` (the species is kept
+                in ``dtype``, per the :class:`Gas1D` contract).
 
             - Reads the header region (first 8 lines) via
               :func:`numpy.genfromtxt`.
@@ -58,7 +59,7 @@ def load_tiger_file(file: str, year=2026) -> Gas1D:
             - Constructs a :class:`Gas1D` object using the core columns:
 
               - ``Datetime``,
-              - ``TVOC``,
+              - ``Concentration``,
 
             - Populates metadata:
 
@@ -97,7 +98,12 @@ def load_tiger_file(file: str, year=2026) -> Gas1D:
 
     # Read main data
     df = pd.read_csv(file, delimiter=delim, header=14)
-    df.rename(columns={"Date": "Datetime", df.columns[2]: "TVOC"}, inplace=True)
+    # Gas1D's contract is a single column named "Concentration"; the species
+    # itself is carried in ``dtype`` (set to "TVOC" below), the same way the
+    # Ranger loader handles its interchangeable heads.
+    df.rename(
+        columns={"Date": "Datetime", df.columns[2]: "Concentration"}, inplace=True
+    )
 
     # # Read header metadata
     meta_lines = dict(np.genfromtxt(file, delimiter=delim, max_rows=8, dtype="str"))
@@ -113,7 +119,7 @@ def load_tiger_file(file: str, year=2026) -> Gas1D:
     )
 
     # Create Gas1D object
-    Tiger = Gas1D(df[["Datetime", "TVOC"]])
+    Tiger = Gas1D(df[["Datetime", "Concentration"]])
     Tiger._meta["instrument"] = "Tiger"
     Tiger._meta["serial_number"] = [meta_lines[h] for h in meta_lines if "IRN" in h]
     Tiger._meta["unit"] = meta_lines["Units"]

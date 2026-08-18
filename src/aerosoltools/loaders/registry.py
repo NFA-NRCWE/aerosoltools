@@ -25,6 +25,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable, Optional
 
+from .acsm import load_simple_acsm_file
 from .aethalometer import load_aethalometer_file
 from .aps import load_aps_file
 from .cpc import load_cpc_file
@@ -42,6 +43,7 @@ from .ranger import load_ranger_file
 from .smps import load_smps_file
 from .support.exceptions import InstrumentDetectionError
 from .support.parsing import _detect_delimiter
+from .tiger import load_tiger_file
 
 #: Canonical instrument name -> loader function. Order is preserved for the GUI
 #: combo box; the keys are the values :func:`detect_instrument` returns.
@@ -62,6 +64,8 @@ INSTRUMENT_LOADERS: dict[str, Callable] = {
     "DustTrak": load_dusttrak_file,
     "Ranger": load_ranger_file,
     "APS": load_aps_file,
+    "Tiger": load_tiger_file,
+    "ACSM": load_simple_acsm_file,
 }
 
 #: Back-compat alias for the GUI (which historically called this ``LOADERS``).
@@ -73,6 +77,8 @@ LOADERS = INSTRUMENT_LOADERS
 # names where overlap is possible.
 _FILENAME_HINTS: list[tuple[str, str]] = [
     ("aps", "APS"),
+    ("acsm", "ACSM"),
+    ("tiger", "Tiger"),
     ("aethalometer", "Aethalometer"),
     ("aeth", "Aethalometer"),
     ("dusttrak", "DustTrak"),
@@ -367,6 +373,37 @@ def is_OPCN3_file(path: str | Path) -> bool:
     return (has_bins and has_pm and has_env) or "opc-n3" in text or "opcn3" in text
 
 
+def is_Tiger_file(path: str | Path) -> bool:
+    """Detect Tiger handheld VOC monitor exports.
+
+    The export opens with a semicolon-separated metadata block whose first key
+    is the instrument reference number, followed by the measured gas and its
+    unit. ``"instrument irn"`` is unique to this instrument among the formats
+    handled here, so it alone is decisive.
+    """
+    text = _head_text(path, max_lines=16)
+
+    return "instrument irn" in text and "session number" in text
+
+
+def is_ACSM_file(path: str | Path) -> bool:
+    """Detect simple ACSM (aerosol chemical speciation monitor) exports.
+
+    The export is a plain CSV whose first column is the time base ``t_base``
+    and whose remaining columns are the chemical species, each suffixed with
+    the vaporizer setting (e.g. ``"SO4_11000"``). Matching the species by
+    prefix keeps the sniffer working when that suffix changes.
+    """
+    first = [x.lower() for x in _split_first_line(path)]
+
+    if not first or not first[0].startswith("t_base"):
+        return False
+
+    species = ("so4", "org", "no3", "nh4", "chl")
+
+    return sum(col.startswith(species) for col in first) >= 3
+
+
 def is_APS_file(path: str | Path) -> bool:
     """Detect TSI APS AIM exports (aerodynamic-only or correlated).
 
@@ -431,6 +468,8 @@ def is_CPC_file(path: str | Path) -> bool:
 # - Weak/generic signatures such as CPC last.
 SNIFFERS: dict[str, Callable[[str | Path], bool]] = {
     "APS": is_APS_file,
+    "Tiger": is_Tiger_file,
+    "ACSM": is_ACSM_file,
     "ELPI": is_ELPI_file,
     "Aethalometer": is_Aethalometer_file,
     "SMPS": is_SMPS_file,

@@ -686,86 +686,93 @@ def wind_rose(
     activity: str | None = None,
     min_observations: int = 3,
 ):
-    """
-    Function to generate a heat-map wind-rose depiction of data.
-    The functions combines the simultatious data of wind speed and wind direction
-    from an environmental class and combines it with a
+    """Plot a polar heat map of one parameter against wind speed and direction.
+
+    A wind rose answers "where does the signal come from?": each cell of the
+    polar grid is the **mean** of ``parameter`` for the times when the wind blew
+    from that direction at that speed. Unlike a classic wind rose, where the
+    colour shows how often a wind occurs, here it shows how large the measured
+    quantity was under that wind condition -- so a hot wedge points back toward
+    a source.
 
     Args:
-       X:
-           First dataset. A :class:`Environmental1D` with data for wind speed
-           and wind direction.
-       Y:
-           Second aerosol-like object. This provides the data to be plotted
-           in the heatmap. This can also be the first data set X.
-       parameter (str, optional):
-           Name of the variable to correlate. The function first looks for
-           this column in ``Y.data`` and then in ``Y.extra_data``.
-           The default is ``\"Total_conc\"``.
-       speed_log (bool, optional):
-           Determines whether the radial axis should be displayed as with
-           windspeeds spreadout in logspace. Default is False.
+        X:
+            Dataset supplying the wind. Must expose ``W_direction`` (degrees,
+            meteorological convention) and ``W_speed`` columns -- typically an
+            :class:`~aerosoltools.Environmental1D` from a weather station.
+            ``ValueError`` is raised if either column is absent.
+        Y:
+            Dataset supplying the quantity to colour by. Any aerosol-like
+            object; pass ``X`` again to plot one of the weather channels
+            against its own wind.
+        parameter (str, optional):
+            Name of the variable to average. Looked up first in ``Y.data``,
+            then in ``Y.extra_data``. Default is ``"Total_conc"``.
+        speed_log (bool, optional):
+            If True, space the radial (wind-speed) bin edges geometrically
+            rather than linearly, which spreads out low wind speeds. Zero and
+            negative speeds are excluded in this mode. Default is False.
         wind_resolution (tuple, optional):
-           Provides the number of bins along each wind dimension. The default
-           (8,15) result in 8 sections around the compass with 15 sections
-           along the radial axis marking the wind speed.
-       ax_in (matplotlib.axes.Axes | None, optional):
-           Existing Matplotlib axes to draw on. If ``None``, a new figure
-           and axes are created. Default is None.
-       start_time (pandas.Timestamp | str | None, optional):
-           Inclusive start of the analysis window. If provided together with
-           ``end_time`` and the objects implement ``timecrop``, the data are
-           cropped to this period before correlation is computed. Strings are
-           parsed with :func:`pandas.to_datetime`. Default is None, meaning
-           start from first common timestamp.
-       end_time (pandas.Timestamp | str | None, optional):
-           Inclusive end of the analysis window. Same parsing rules as
-           ``start_time``.
-       rebin_freq (str | None, optional):
-           Target resampling rule for ``match=\"rebin\"`` (e.g. ``\"1min\"``).
-           If ``None``, the coarser cadence inferred from the two series is
-           chosen automatically. Default is None.
-       rebin_method (str | Callable, optional):
-           Aggregation method passed to ``timerebin`` when ``match=\"rebin\"``
-           is used (e.g. ``\"mean\"``, ``\"median\"``, or a custom function).
-           Default is ``\"mean\"``.
-       activity (str | None, optional):
-           If given, restrict the comparison to the timestamps inside this
-           activity's marked periods (absolute-time, multiple occurrences
-           supported). ``None`` (default) or ``\"All data\"`` uses the full
-           overlapping record. The viable activities must be marked in dataset X.
-       min_observations (int, optional):
-           The minimum number of datapoints going into the calculation of a
-           bin average. Depending on the rebin freq this migth remain low,
-           if freq is high. Default is 3.
+            ``(n_direction_bins, n_speed_bins)``. The default ``(8, 15)`` gives
+            the eight compass sectors (N, NE, E, ...) and 15 speed rings.
+            Direction bins are centred on the compass points, so due north
+            falls in the middle of a wedge rather than on its edge.
+        ax_in (matplotlib.axes.Axes | None, optional):
+            Existing axes to draw on. A non-polar axes is replaced in place by
+            a polar one occupying the same subplot slot. If ``None``, a new
+            figure and polar axes are created. Default is None.
+        start_time (pandas.Timestamp | str | None, optional):
+            Inclusive start of the analysis window, passed to ``timerebin``.
+            Strings are parsed with :func:`pandas.to_datetime`. Default is
+            None, meaning start from the first common timestamp.
+        end_time (pandas.Timestamp | str | None, optional):
+            Inclusive end of the analysis window. Same parsing rules as
+            ``start_time``.
+        rebin_freq (str | None, optional):
+            Common time step both datasets are rebinned onto before pairing,
+            as a pandas offset string. Default is ``"1min"``.
+        rebin_method (str | Callable, optional):
+            Aggregation used by ``timerebin`` (e.g. ``"mean"``, ``"median"``,
+            or a callable). Default is ``"mean"``.
+        activity (str | None, optional):
+            Restrict to the timestamps inside this activity's marked periods.
+            The activity must be marked on **X**; its periods are projected
+            onto ``Y``. ``None`` (default) or ``"All data"`` uses the full
+            overlapping record.
+        min_observations (int, optional):
+            Minimum number of paired observations a cell needs before its mean
+            is drawn. Cells below the threshold are left blank rather than
+            shown as a mean of one or two points. Raise it when ``rebin_freq``
+            is short and the grid is fine. Default is 3.
 
     Returns:
         tuple[Figure, Axes]:
-            The figure and axes containing the wind-rose polar heatmap, with
-            colorbar to the right and details of parameter and instrument to
-            the top left.
+            The figure and the polar axes holding the heat map, with a colour
+            bar to the right and the parameter and instrument named top left.
 
+    Raises:
+        ValueError:
+            If ``X`` lacks a wind-direction or wind-speed column, if
+            ``parameter`` is in neither ``Y.data`` nor ``Y.extra_data``, or if
+            no valid observations remain after alignment.
 
     Notes:
-        Detailed description:
-            ``wind_rose`` is creating a depiction of the average of a chosen
-            parameter data using a radial heat-map to associate the desired
-            parameter of interest with wind speed and direction.
+        How the grid is built:
 
-            * Extracts the requested ``parameter`` from dataset Y.
-            * Aligns the series in time using the selected timerebin
-            * Removes rows where either series is NaN or infinite.
-            * Create bins in the polar space according to the chosen resolution.
-            * Plots polar heatmap showing the average concentration/strength
-              of the chosen parameter in color along the compass directions.
+            * Both datasets are rebinned to ``rebin_freq`` and, when
+              ``activity`` is given, restricted to that activity's periods.
+            * Rows where wind direction, wind speed or the parameter is NaN or
+              infinite are dropped.
+            * Directions are wrapped to 0-360 degrees and shifted by half a bin
+              so each wedge is centred on its compass point; speeds are binned
+              linearly, or geometrically when ``speed_log`` is set.
+            * Each cell is the arithmetic mean of ``parameter`` over the
+              observations falling in it, and cells with fewer than
+              ``min_observations`` values are masked out.
 
-            Axis labels are automatically derived from ``X.instrument`` and
-            ``Y.instrument``.
-
-        Theory:
-            The regression models used are simple linear relationships:
-
-
+        Interpretation: the colour is an average concentration, not a
+        frequency. A sector can be hot on very few hours of wind, which is what
+        ``min_observations`` guards against.
     """
     # ------------------------------------------------------------------
     # Construct dataframe and remove invalid observations
