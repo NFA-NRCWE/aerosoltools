@@ -753,11 +753,11 @@ def wind_rose(
             parameter of interest with wind speed and direction.
 
             * Extracts the requested ``parameter`` from dataset Y.
-            * Aligns the series in time using the selected timrebin
+            * Aligns the series in time using the selected timerebin
             * Removes rows where either series is NaN or infinite.
             * Create bins in the polar space according to the chosen resolution.
-            * Plots polar heatmap showning the average concentration/strength
-            of the chosen parameter in color along the compass directions.
+            * Plots polar heatmap showing the average concentration/strength
+              of the chosen parameter in color along the compass directions.
 
             Axis labels are automatically derived from ``X.instrument`` and
             ``Y.instrument``.
