@@ -32,7 +32,7 @@ notebooks either side of it.
 
 ---
 
-## The set — 15 notebooks
+## The set — 15 notebooks (14 buildable now)
 
 Files are renamed to `NN-topic.ipynb` (clean URLs; the current names produce
 `3%20-%20Defining%20time%20segments%2C...`). The `toctree` is grouped into the
@@ -68,7 +68,7 @@ four sections below.
 
 | File | Theme | Principal API |
 |---|---|---|
-| `11-simple-instruments.ipynb` | Single-value instruments that behave like 1D aerosol data | `Partector` (`ldsa`, `flow`, `tem_samples`), `DiSCmini` (`size`, `ldsa`), `Gas1D` (Ranger and Tiger), `Environmental1D` basics (Fourtec: temperature, RH); the no-`total_concentration` contract |
+| `11-simple-instruments.ipynb` | Single-value instruments that behave like 1D aerosol data | `Partector` (`ldsa`, `flow`, `tem_samples`), `DiSCmini` (`size`, `ldsa`), `DustTrak` (`pm1`, `pm2_5`, `pm4`, `pm10`, `total`), `Gas1D` (Ranger and Tiger), `Environmental1D` basics (Fourtec: temperature, RH); the no-`total_concentration` contract |
 | `12-aethalometer.ipynb` | Wavelength-resolved black carbon | 5 BCc channels + `fossil_bcc`, `biomass_bcc`, `aae`; per-channel unit/dtype dicts |
 | `13-aps.ipynb` | Dual aerodynamic/optical distributions | `.aerodynamic`, `.optical`, `.is_correlated`, `.correlation`, `as_2d`, `axis_view`, `correlation_cube`, `plot_aero_vs_optical`, `plot_aero_optical_3d` |
 | `14-weather-station.ipynb` | Multi-channel weather + gas, and source direction | `Environmental1D` full channel set (`wind_speed`, `wind_direction`, `CO`, `CO2`, `NO2`, `pressure`), `wind_rose` |
@@ -95,21 +95,22 @@ four sections below.
 
 ## Blocked / open
 
-- **`ZZ_am-sensor_7.csv` is not a DustTrak file.** Its columns (`bin0`-`bin23`,
-  `MTof_bin*`, `period`, `flowrate`, `pm1/pm2.5/pm10`, `checksum`) are the
-  Alphasense OPC-N3 signature; the DustTrak loader expects a 35-row metadata
-  header and `PM1 [mg/m3]`-style columns. It fails both loaders, and
-  `detect_instrument` already routes it to OPC-N3, where parsing then fails —
-  so it is an OPC-N3 *variant* the current loader cannot read. Needs a decision:
-  extend `load_opcn3_file`, or supply a genuine DustTrak export. Until then
-  **DustTrak stays undocumented** beyond the API reference.
-- **`Environmental1D` accessors do not match the DevLabs loader's columns.**
-  `load_devlabs_file` emits `Temp` and `W_direction`, while the class requires
-  `Temperature` and `W_direc`, so `.temperature` and `.wind_direction` both
-  raise on a DevLabs file; the loader's own `unit`/`dtype` dicts are keyed a
-  third way again. Not fixed here: it needs a naming decision from the author,
-  and there is no DevLabs sample to verify against. **#14 is blocked on this.**
-- No DevLabs sample file exists in `tests/data/`.
+- **#14 weather station is deferred.** There is no weather-station data yet, and
+  the maintainer expects the incoming format to differ from what is currently
+  coded, so the loader will change. Related known defect, to resolve when that
+  data arrives: `load_devlabs_file` emits columns `Temp` and `W_direction`,
+  while `Environmental1D` requires `Temperature` and `W_direc`, so
+  `.temperature` and `.wind_direction` both raise on a DevLabs file — and the
+  loader's own `unit`/`dtype` dicts are keyed a third way again. `wind_rose`
+  reads `W_direction`, matching the loader rather than the class.
+- **DustTrak is unblocked** (2026-08-18). `Sample_DustTrak.csv` is a real
+  DustTrak DRX 8533 export and loads correctly; it is covered in #11. The
+  earlier `ZZ_am-sensor_7.csv` turned out to be an Alphasense OPC-N3 file and
+  has been removed.
+
+Resolved along the way: DustTrak exports were auto-detected as OPS, because both
+headers open with `Instrument Name` plus a model line and OPS is sniffed first.
+Fixed in the loader registry, with a regression test.
 
 ---
 
@@ -120,7 +121,8 @@ four sections below.
 3. #06, #07 — transformations.
 4. #08-#10b — analysis.
 5. #11-#13, #15 — instruments (data already available).
-6. #14 — last, once the `Environmental1D` naming is resolved.
+6. #14 — deferred until weather-station data exists; the loader is expected to
+   change when it does, so writing the notebook now would be wasted work.
 
 Build time grows with notebook count: seven currently take ~80 s, and fifteen
 (several fitting curves, one building an APS correlation cube) will likely run
