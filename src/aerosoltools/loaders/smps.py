@@ -271,7 +271,7 @@ def load_smps_file(file: str, extra_data: bool = True) -> Aerosol2D:
 
     # Unit / dtype interpretation
     density = 1.0
-    unit_dict = {"Nu": "cm⁻³", "Su": "nm²/cm³", "Vo": "nm³/cm³", "Ma": "ug/m³"}
+    unit_dict = {"Nu": "cm⁻³", "Su": "nm²/cm³", "Vo": "nm³/cm³", "Ma": "µg/m³"}
     dtype_dict = {"Nu": "dN", "Su": "dS", "Vo": "dV", "Ma": "dM"}
 
     try:

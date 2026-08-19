@@ -183,7 +183,7 @@ def load_ns_file(file: str, extra_data: bool = True) -> Aerosol2D:
         "dN": "cm⁻³",
         "dS": "nm²/cm³",
         "dV": "nm³/cm³",
-        "dM": "ug/m³",
+        "dM": "µg/m³",
     }
     try:
         unit = unit_dict[dtype[:2]]

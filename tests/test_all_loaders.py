@@ -1,4 +1,5 @@
 import os
+import re
 
 import pandas as pd
 import pytest
@@ -28,33 +29,34 @@ from aerosoltools.loaders.discmini import (
     _normalize_serial,
 )
 
+#: Every loader paired with a sample file it can read. Shared by the smoke test
+#: and the unit-spelling test so a new loader is covered by both at once.
+LOADER_CASES = [
+    (load_aethalometer_file, "Sample_Aethalometer.csv"),
+    (load_aps_file, "Sample_APS_aero.txt"),
+    (load_aps_file, "Sample_APS_correlated.txt"),
+    (load_cpc_file, "Sample_CPC_Direct.txt"),
+    (load_discmini_file, "Sample_Discmini.txt"),
+    (load_elpi_file, "Sample_ELPI.txt"),
+    (load_elpi_file, "Sample_ELPI2.txt"),
+    (load_fmps_file, "Sample_FMPS.txt"),
+    (load_fmps_file, "Sample_FMPS2.txt"),
+    (load_fourtec_file, "Sample_Fourtec.xlsx"),
+    (load_grimm_file, "Sample_Grimm.txt"),
+    (load_ns_file, "Sample_NS.csv"),
+    (load_opcn3_file, "Sample_OPCN3.txt"),
+    (load_ops_file, "Sample_OPS.csv"),
+    (load_ops_file, "Sample_OPS2.txt"),
+    (load_partector_file, "Sample_Partector.txt"),
+    (load_ranger_file, "Sample_Ranger.csv"),
+    (load_smps_file, "Sample_SMPS.txt"),
+    (load_simple_acsm_file, "Sample_ACSM.csv"),
+    (load_tiger_file, "Sample_Tiger.csv"),
+    (load_dusttrak_file, "Sample_DustTrak.csv"),
+]
 
-@pytest.mark.parametrize(
-    "loader_func, filename",
-    [
-        (load_aethalometer_file, "Sample_Aethalometer.csv"),
-        (load_aps_file, "Sample_APS_aero.txt"),
-        (load_aps_file, "Sample_APS_correlated.txt"),
-        (load_cpc_file, "Sample_CPC_Direct.txt"),
-        (load_discmini_file, "Sample_Discmini.txt"),
-        (load_elpi_file, "Sample_ELPI.txt"),
-        (load_elpi_file, "Sample_ELPI2.txt"),
-        (load_fmps_file, "Sample_FMPS.txt"),
-        (load_fmps_file, "Sample_FMPS2.txt"),
-        (load_fourtec_file, "Sample_Fourtec.xlsx"),
-        (load_grimm_file, "Sample_Grimm.txt"),
-        (load_ns_file, "Sample_NS.csv"),
-        (load_opcn3_file, "Sample_OPCN3.txt"),
-        (load_ops_file, "Sample_OPS.csv"),
-        (load_ops_file, "Sample_OPS2.txt"),
-        (load_partector_file, "Sample_Partector.txt"),
-        (load_ranger_file, "Sample_Ranger.csv"),
-        (load_smps_file, "Sample_SMPS.txt"),
-        (load_simple_acsm_file, "Sample_ACSM.csv"),
-        (load_tiger_file, "Sample_Tiger.csv"),
-        (load_dusttrak_file, "Sample_DustTrak.csv"),
-    ],
-)
+
+@pytest.mark.parametrize("loader_func, filename", LOADER_CASES)
 def test_loader_smoke(loader_func, filename):
     test_file = os.path.join(os.path.dirname(__file__), "data", filename)
     assert os.path.exists(test_file), f"Missing test file: {filename}"
@@ -1382,6 +1384,73 @@ def test_new_instruments_are_registered():
 
     assert INSTRUMENT_LOADERS["ACSM"] is load_simple_acsm_file
     assert INSTRUMENT_LOADERS["Tiger"] is load_tiger_file
+
+
+# ---------------------------------------------------------------------------
+# Unit spelling
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("loader_func, filename", LOADER_CASES)
+def test_loaders_emit_canonically_spelled_units(loader_func, filename):
+    """Every emitted unit uses the µ/superscript spelling, not an ASCII variant.
+
+    The GUI merges comparable metrics across instruments by unit string, and
+    ``_UNIT_TABLE`` only recognises the spellings registered in it. Emitting
+    ``"ug/m³"`` from one loader and ``"µg/m³"`` from another also shows two
+    different axis labels for the same quantity, so the spelling is pinned here
+    rather than left to whoever writes the next loader.
+    """
+    from aerosoltools._core.metrics import classify_unit
+
+    obj = loader_func(_data_path(filename))
+    if isinstance(obj, list):  # multi-component files (e.g. Ranger)
+        objs = obj
+    else:
+        objs = [obj]
+
+    for one in objs:
+        units = []
+        raw = one._meta.get("unit")
+        units += list(raw.values()) if isinstance(raw, dict) else [raw]
+        units += list((one._meta.get("column_units") or {}).values())
+
+        for unit in units:
+            if not isinstance(unit, str) or not unit:
+                continue
+            assert "ug/" not in unit, f"{filename}: ASCII micro in {unit!r}"
+            assert not re.search(
+                r"(?<![\d.])m3\b|cm3\b|nm2\b", unit
+            ), f"{filename}: ASCII exponent in {unit!r}"
+            # And it must still be a unit the registry can place, so the GUI can
+            # convert it when merging.
+            assert classify_unit(unit) is not None
+
+
+def test_loader_sources_use_the_canonical_micro_spelling():
+    """No loader *source* writes an ASCII-micro unit literal.
+
+    The runtime test above can only check what the bundled samples exercise, and
+    several loaders pick their unit from a table keyed by the file's declared
+    weighting -- so a wrong ``dM``/``Ma`` entry stays invisible until someone
+    loads a file exported in mass units, of which there is no sample. This
+    checks the literals directly instead.
+    """
+    import pathlib
+
+    loaders = pathlib.Path(__file__).resolve().parents[1] / "src/aerosoltools/loaders"
+    offenders = []
+    for path in sorted(loaders.rglob("*.py")):
+        for lineno, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            # "ug/m3" (ASCII 3) and "µg/m3" appear as *keys* in the loaders'
+            # input-normalisation tables, mapping a spelling found in a file to
+            # the canonical one; those are correct, so only flag non-key uses.
+            for bad in ('"ug/m³"', '"µg/m3"'):
+                if bad in line and f"{bad}:" not in line:
+                    offenders.append(f"{path.name}:{lineno}: {line.strip()}")
+    assert not offenders, "non-canonical unit literals:\n" + "\n".join(offenders)
 
 
 # ---------------------------------------------------------------------------

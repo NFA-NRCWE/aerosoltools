@@ -161,7 +161,7 @@ def load_devlabs_file(
         "RH": "%",
         "W_speed": "m/s",
         "W_direc": "°",
-        "PM2.5": "µg/m3",
+        "PM2.5": "µg/m³",
         "CO2": "ppm",
         "CO": "ppm",
         "NO2": "ppb",

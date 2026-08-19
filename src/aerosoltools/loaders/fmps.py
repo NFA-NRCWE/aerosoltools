@@ -234,7 +234,7 @@ def _load_fmps_software(file: str, encoding: str, delimiter: str) -> Aerosol2D:
 
     # Infer dtype and unit from the datatype marker
     dtype_dict = {"Co": "dN", "dN": "dN", "Su": "dS", "Vo": "dV", "Ma": "dM"}
-    unit_dict = {"dN": "cm⁻³", "dS": "nm²/cm³", "dV": "nm³/cm³", "dM": "ug/m³"}
+    unit_dict = {"dN": "cm⁻³", "dS": "nm²/cm³", "dV": "nm³/cm³", "dM": "µg/m³"}
 
     try:
         if "dlogDp" in datatype:

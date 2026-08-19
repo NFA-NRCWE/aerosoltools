@@ -562,7 +562,7 @@ def load_elpi_file_txt(
     dist_data = _extract_ELPI_stage_block(df)
     extra_df = _make_ELPI_extra_data(df)
 
-    unit_map = {"Nu": "cm⁻³", "Su": "nm²/cm³", "Vo": "nm³/cm³", "Ma": "ug/m³"}
+    unit_map = {"Nu": "cm⁻³", "Su": "nm²/cm³", "Vo": "nm³/cm³", "Ma": "µg/m³"}
     dtype_map = {"Nu": "dN", "Su": "dS", "Vo": "dV", "Ma": "dM"}
 
     try:
