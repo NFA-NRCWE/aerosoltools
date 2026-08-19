@@ -46,12 +46,16 @@ dev = [
 gui = [
     "PyQt5>=5.15",
 ]
+# Floors track the major versions CI installs. They were far lower, so a fresh
+# CI environment built the docs with Sphinx 9 while a developer's older
+# environment used Sphinx 8 -- and Sphinx 9 reports ambiguous cross-references
+# that 8 did not, so the build passed locally and failed in CI.
 docs = [
-  "sphinx>=7.3",
+  "sphinx>=9.0",
   "furo>=2024.8.6",
-  "myst-parser>=2.0.0",
-  "sphinx-autoapi>=3.2.1",
-  "sphinx-autodoc-typehints>=2.2.3",
+  "myst-parser>=5.0",
+  "sphinx-autoapi>=3.8",
+  "sphinx-autodoc-typehints>=3.6",
   # Example notebooks are executed at build time (see docs/conf.py).
   # nbsphinx also needs the `pandoc` binary, installed by the docs workflow.
   "nbsphinx>=0.9",

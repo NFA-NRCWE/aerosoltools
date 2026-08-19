@@ -416,7 +416,8 @@ def calibrate_against_reference(
             settings (see :func:`fit_calibration`).
 
     Returns:
-        tuple[data, CalibrationModel]: The calibrated dataset and the model used.
+        tuple[Aerosol1D, CalibrationModel]: The calibrated dataset and the model
+            used. The dataset keeps ``target``'s own class.
 
     Raises:
         CalibrationError: If the datasets are incompatible or lack overlap.
