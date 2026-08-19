@@ -5,7 +5,7 @@ import pandas as pd
 
 from ..aerosol1d import Aerosol1D
 from ..aerosol2d import Aerosol2D
-from .support.construct import build_2d
+from .support.construct import build_1d, build_2d
 from .support.exceptions import FileFormatError
 from .support.reading import read_cells, read_table, sniff
 from .support.units import resolve_extra_columns
@@ -548,19 +548,19 @@ def _load_opcn3_file_pm_old(
 
     final_df = pd.concat([df["Datetime"], total_df, PM_df], axis=1)
 
-    OPCN = Aerosol1D(final_df)
-    OPCN._meta = {
-        "instrument": "OPCN",
-        "density": 1.65,
-        "serial_number": "unknown",
-        "unit": {
+    OPCN = build_1d(
+        final_df,
+        instrument="OPCN",
+        serial_number="unknown",
+        unit={
             "Total_conc": "cm⁻³",
             "PM1": "ug/m³",
             "PM2.5": "ug/m³",
             "PM10": "ug/m³",
         },
-        "dtype": {"Total_conc": "dN", "PM1": "dM", "PM2.5": "dM", "PM10": "dM"},
-    }
+        dtype={"Total_conc": "dN", "PM1": "dM", "PM2.5": "dM", "PM10": "dM"},
+        extra_meta={"density": 1.65},
+    )
 
     if extra_data:
         OPCN._extra_data = extra_df
@@ -668,19 +668,19 @@ def _load_opcn3_file_pm_new(
 
     final_df = pd.concat([df["Datetime"], total_df, PM_df], axis=1)
 
-    OPCN = Aerosol1D(final_df)
-    OPCN._meta = {
-        "instrument": "OPCN",
-        "density": 1.65,
-        "serial_number": "unknown",
-        "unit": {
+    OPCN = build_1d(
+        final_df,
+        instrument="OPCN",
+        serial_number="unknown",
+        unit={
             "Total_conc": "cm⁻³",
             "PM1": "ug/m³",
             "PM2.5": "ug/m³",
             "PM10": "ug/m³",
         },
-        "dtype": {"Total_conc": "dN", "PM1": "dM", "PM2.5": "dM", "PM10": "dM"},
-    }
+        dtype={"Total_conc": "dN", "PM1": "dM", "PM2.5": "dM", "PM10": "dM"},
+        extra_meta={"density": 1.65},
+    )
 
     if extra_data:
         OPCN._extra_data = extra_df

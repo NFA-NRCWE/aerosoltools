@@ -1385,6 +1385,48 @@ def test_new_instruments_are_registered():
 
 
 # ---------------------------------------------------------------------------
+# OPC-N3
+# ---------------------------------------------------------------------------
+
+
+def test_opcn3_pm_focus_returns_pm_timeseries():
+    """PM_focus=True yields a 1-D PM series instead of the size distribution."""
+    from aerosoltools import Aerosol1D, Aerosol2D
+
+    sized = load_opcn3_file(_data_path("Sample_OPCN3.txt"))
+    pm = load_opcn3_file(_data_path("Sample_OPCN3.txt"), PM_focus=True)
+
+    # The default keeps the size bins; PM_focus drops them for the PM channels.
+    assert isinstance(sized, Aerosol2D)
+    assert isinstance(pm, Aerosol1D) and not isinstance(pm, Aerosol2D)
+    assert [c for c in pm.data.columns if c != "All data"] == [
+        "Total_conc",
+        "PM1",
+        "PM2.5",
+        "PM10",
+    ]
+
+    # Both views cover the same record and agree on the total concentration.
+    assert len(pm.data) == len(sized.data)
+    assert pm.data["Total_conc"].equals(sized.data["Total_conc"])
+
+    assert pm.metadata["instrument"] == "OPCN"
+    assert pm.metadata["dtype"]["PM1"] == "dM"
+    assert pm.metadata["dtype"]["Total_conc"] == "dN"
+
+
+def test_opcn3_pm_focus_extra_data_toggle():
+    """Non-core channels follow the extra_data flag on the PM path too."""
+    with_extra = load_opcn3_file(_data_path("Sample_OPCN3.txt"), PM_focus=True)
+    without = load_opcn3_file(
+        _data_path("Sample_OPCN3.txt"), PM_focus=True, extra_data=False
+    )
+
+    assert not with_extra.extra_data.empty
+    assert without.extra_data.empty
+
+
+# ---------------------------------------------------------------------------
 # DustTrak DRX
 # ---------------------------------------------------------------------------
 
