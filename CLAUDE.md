@@ -96,14 +96,18 @@ top level so its pip-generated launcher path doesn't break on a reorg):
 
 ## Branch & git workflow
 
-- **Work on the `GUI_test` branch** (checked out in the main working directory).
-  This branch contains the GUI and is ahead of `main`; `origin/main` does **not**
-  contain the GUI. Note: Claude Code worktrees branch from `main`, so a worktree
-  will *not* have `gui/` — edit in the main `GUI_test` checkout.
+- **Work on the `Dev-ABL` branch** (checked out in the main working directory).
+  It is the maintainer's development branch and, since the v1.0.0 release, starts
+  from `main` — so `main`, `Dev-ABL` and the published package all contain the
+  GUI. (The old `GUI_test` branch was merged into `main` in PR #28 and deleted;
+  ignore any lingering reference to it.)
 - **Commit after each change** (a coherent unit of work), with a clear message.
-- **Push to GitHub only when explicitly told** (`git push origin GUI_test`).
-- **Never merge.** Do not merge `GUI_test` into `main`, and do not open/merge
-  PRs — the maintainer handles all merges manually.
+- **Push to GitHub only when explicitly told** (`git push origin Dev-ABL`).
+- **Never merge to `main`.** Do not merge `Dev-ABL` into `main`, and do not
+  open/merge PRs unless asked — the maintainer handles releases. `main` is the
+  released branch: it feeds PyPI on a `v*` tag and the published documentation.
+- **Releases come from git tags**, not a version in `pyproject.toml` — see the
+  `release-process` memory before advising on one.
 
 ## Implementation rules
 
