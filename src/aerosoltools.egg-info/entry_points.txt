@@ -1,5 +1,0 @@
-[console_scripts]
-aerosoltools-gui-shortcut = aerosoltools.gui.shortcut:main
-
-[gui_scripts]
-aerosoltools-gui = aerosoltools.gui:main
