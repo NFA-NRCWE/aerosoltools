@@ -58,6 +58,32 @@ are executed** (see below).
   slashes: a Windows-style `r"..\..\tests\data\x.txt"` works locally and breaks
   on the Linux CI runner.
 
+## Writing example notebooks
+
+The notebooks in `docs/examples/` follow a few conventions that keep them short
+and stop them drifting into each other:
+
+- **One theme per notebook.** The set was restructured in 2026-08 precisely
+  because the old notebooks each mixed several topics and repeated the same
+  material.
+- **Each topic is explained in exactly one place.** Every notebook may *use*
+  plots and activities freely, but only `05-plotting` explains the plotting API
+  and only `03-activities` explains activities. Elsewhere they appear in a line
+  or two, uncommented, with a cross-reference. A notebook that needs a plot to
+  show what it did is fine — it just does not explain `y_3d` again.
+- **Open with the theme.** One line stating what the notebook covers, plus links
+  to the notebooks either side of it.
+- **Name them `NN-topic.ipynb`.** The old spaces-and-commas names produced URLs
+  like `3%20-%20Defining%20time%20segments%2C...`.
+- **Use forward slashes for sample-data paths**, relative to `docs/examples/`. A
+  Windows-style `r"..\..\tests\data\x.txt"` works locally and breaks on the
+  Linux CI runner.
+- **Crop sample data** where it does not weaken the example — every notebook is
+  executed on every build, so runtime is a shared cost.
+
+A weather-station notebook is deliberately missing: there is no weather-station
+data yet, and the DevLabs loader is expected to change when it arrives.
+
 ## Regenerating the GUI screenshots
 
 Every screenshot in `docs/gui/` is produced by one script:

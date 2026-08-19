@@ -20,7 +20,8 @@
 - **Instrument-specific classes** with their own physics and accessors —
   `DiSCmini`, `DustTrak`, `ELPI`
 - **Non-particle instruments** — `Gas1D`, `Aethalometer`, `Environmental1D`,
-  `Partector` (these expose domain accessors instead of `total_concentration`)
+  `Partector`, `ACSM_simple` (these expose domain accessors instead of
+  `total_concentration`)
 
 The package includes loaders for common instrument exports, tools for activity segmentation, and convenience methods for **task-based statistics** and **exposure assessment** (e.g. 8 h TWA, short-term limits, peaks).
 
@@ -30,6 +31,8 @@ see the **Desktop GUI** section below.
 For full documentation and usage examples, see:
 
 👉 [View the documentation](https://nfa-nrcwe.github.io/aerosoltools/)
+— including [worked examples](https://nfa-nrcwe.github.io/aerosoltools/examples/index.html)
+for each topic and a [guide to the desktop GUI](https://nfa-nrcwe.github.io/aerosoltools/gui/index.html).
 
 ---
 
@@ -37,6 +40,7 @@ For full documentation and usage examples, see:
 
 | Instrument             | Function                    | Company                   |
 | ---------------------- | --------------------------- | ------------------------- |
+| ACSM                   | `load_simple_acsm_file()`   | **Aerodyne Research**     |
 | Aethalometer           | `load_aethalometer_file()`  | **AethLabs**              |
 | APS                    | `load_aps_file()`           | **TSI Inc.**              |
 | CPC                    | `load_cpc_file()`           | **TSI Inc.**              |
@@ -53,6 +57,7 @@ For full documentation and usage examples, see:
 | Partector              | `load_partector_file()`     | **naneos GmbH**           |
 | Ranger                 | `load_ranger_file()`        | **Aeroqual**              |
 | SMPS                   | `load_smps_file()`          | **TSI Inc.**              |
+| Tiger (VOC)            | `load_tiger_file()`         | **Ion Science**           |
 | Weather station        | `load_devlabs_file()`       | **DevLabs**               |
 
 Don't know which loader you need? `load_file()` auto-detects the instrument
@@ -93,7 +98,22 @@ from the file itself, and `detect_instrument()` reports what it found.
 - **Plotting**
   - Timeseries plots (with activity shading)
   - Particle size distributions (PSD)
+  - Time–size heatmaps and stacked PM bands
   - Simple correlation/comparison plots
+
+- **Curve fitting**
+  - `fit_psd()` – lognormal mode fitting of size distributions
+    (`lognormal_modes`, `PSDFitResult`)
+  - `fit_decay()` – single-zone emission + decay fitting, giving source
+    strength, air exchange and wall-loss rates (`decay_curve`, `DecayResult`)
+
+- **Comparing instruments** (`aerosoltools.intercomparison`)
+  - `plot_correlation()` and `bland_altman_analysis()` for agreement, with
+    exact / nearest / rebin time alignment
+  - `fit_calibration()`, `apply_calibration()`, `calibrate_against_reference()`
+    to bring one instrument onto another's scale (`CalibrationModel`)
+  - `combine_measurements()` to join consecutive recordings, and
+    `combine_size_ranges()` to stitch two instruments into one distribution
 
 - **Batch loading**
   - `load_data_from_folder()` to apply a loader across a folder of files

@@ -10,7 +10,10 @@ _shots/
 
 # Build / packaging artifacts
 *.egg-info/
+build/
+dist/
 .pytest_cache/
+.ruff_cache/
 
 # Sphinx AutoAPI output (regenerated on every build)
 docs/api/
