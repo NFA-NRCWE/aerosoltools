@@ -395,6 +395,11 @@ def test_psd_fit_and_evaluator_single_sourced():
     import numpy as np
 
     import aerosoltools as at
+
+    # Importing the GUI tabs package pulls in gui.qt, which selects the QtAgg
+    # matplotlib backend -- so this assertion needs the optional gui extra, even
+    # though everything it checks about the core is importable without it.
+    pytest.importorskip("PyQt5")
     from aerosoltools.gui.tabs import _psdfit
 
     # The GUI overlay evaluator is literally the API function (one implementation).

@@ -13,16 +13,25 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
+# Lower bounds are tested, not guessed: the suite is run against exactly these
+# versions on Python 3.10 (the oldest supported) in CI. The previous bounds
+# (pandas>=1.0, numpy>=1.20, matplotlib>=3.1) resolved to releases that predate
+# Python 3.10 entirely and could not be installed at all.
 dependencies = [
-    "pandas>=1.0",
-    "numpy>=1.20",
-    "matplotlib>=3.1.0",
-    "tabulate>=0.8.0",
-    "openpyxl",
+    # 1.5 raises "mixed datetimes and integers" building the plot_timeseries index.
+    "pandas>=2.0",
+    "numpy>=1.23",
+    # 3.6 has no ColormapRegistry.get_cmap, used by plot_psd and the shading helper.
+    "matplotlib>=3.7",
+    "tabulate>=0.9",
+    "openpyxl>=3.1",
     "scipy>=1.10",
-    "tqdm>=4.0",
-    "typing_extensions>=4.0",
+    "tqdm>=4.64",
+    # 4.4 is where typing_extensions gained `override`, which the mixins import
+    # as the pre-3.12 fallback.
+    "typing_extensions>=4.4",
 ]
 
 [project.optional-dependencies]

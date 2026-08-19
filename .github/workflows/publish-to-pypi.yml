@@ -9,7 +9,38 @@ permissions:
   contents: read
 
 jobs:
+  # Gate the release on the suite passing everywhere the package claims to run.
+  # A tag push used to go straight to build + upload, so a broken commit could
+  # be published and could not be unpublished afterwards.
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true # do not waste runners once one version is known bad
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Check out exact tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package and test tooling
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e .
+          python -m pip install pytest
+
+      - name: Run tests
+        run: pytest -q
+
   build-and-upload:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Check out exact tag
@@ -40,6 +71,25 @@ jobs:
 
       - name: Build (sdist + wheel)
         run: python -m build
+
+      # The test job runs against the source tree (pytest.ini puts src/ on the
+      # path), so it cannot catch a packaging fault -- a module left out of the
+      # wheel, or a dependency that is imported but not declared. Installing the
+      # built wheel into a clean environment does.
+      - name: Smoke-test the built wheel
+        run: |
+          python -m venv /tmp/wheelcheck
+          /tmp/wheelcheck/bin/python -m pip install -q -U pip
+          /tmp/wheelcheck/bin/python -m pip install -q dist/*.whl
+          cd /tmp   # import the installed package, not the source tree
+          /tmp/wheelcheck/bin/python -c "
+          import aerosoltools as at
+          assert at.load_ops_file and at.Aerosol2D and at.plot_correlation
+          print('wheel imports cleanly:', at.__name__)
+          "
+
+      - name: Check distribution metadata
+        run: twine check dist/*
 
       - name: Upload to PyPI
         env:
