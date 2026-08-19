@@ -1,16 +1,17 @@
 import datetime
 
-import numpy as np
 import pandas as pd
 
 from ..dusttrak import DustTrak
+from .support.construct import build_1d
 from .support.exceptions import TimestampError
-from .support.parsing import _detect_delimiter
+from .support.reading import read_cells, read_table, sniff
+from .support.units import resolve_extra_columns
 
 ###############################################################################
 
 
-def load_dusttrak_file(file: str, extra_data: bool = False) -> DustTrak:
+def load_dusttrak_file(file: str, extra_data: bool = True) -> DustTrak:
     """Load a DustTrak DRX export file and return PM mass concentrations and
     total mass as a :class:`DustTrak` time series.
 
@@ -19,7 +20,8 @@ def load_dusttrak_file(file: str, extra_data: bool = False) -> DustTrak:
             Path to the DustTrak DRX data file (typically a ``.csv`` export).
         extra_data (bool, optional):
             If ``True``, non-core columns (e.g. alarms, errors, diagnostics)
-            are stored in ``extra_data``. Defaults to ``False``.
+            are stored in ``extra_data``. Defaults to ``True``, matching every
+            other loader.
 
     Returns:
         DustTrak:
@@ -92,14 +94,14 @@ def load_dusttrak_file(file: str, extra_data: bool = False) -> DustTrak:
     """
     # Try to detect encoding and delimiter from the file
     try:
-        encoding, delimiter = _detect_delimiter(file, sample_lines=30)
+        encoding, delimiter = sniff(file, sample_lines=30)
     except Exception:
         # Fallback: assume a reasonable default encoding and comma delimiter
         encoding = "latin-1"
         delimiter = ","
 
     # Read main data block
-    df = pd.read_csv(file, delimiter=delimiter, header=35, encoding=encoding)
+    df = read_table(file, encoding=encoding, delimiter=delimiter, header=35)
     df.rename(
         columns={
             "Elapsed Time [s]": "Datetime",
@@ -113,8 +115,8 @@ def load_dusttrak_file(file: str, extra_data: bool = False) -> DustTrak:
     )
 
     # Read header metadata (instrument info and start date/time)
-    meta_lines = np.genfromtxt(
-        file, delimiter=delimiter, max_rows=8, dtype="str", encoding=encoding
+    meta_lines = read_cells(
+        file, skip_header=0, max_rows=8, encoding=encoding, delimiter=delimiter
     )
     try:
         # Typical pattern: line 7 = date, line 6 = time
@@ -133,21 +135,27 @@ def load_dusttrak_file(file: str, extra_data: bool = False) -> DustTrak:
     df[data_columns] = df[data_columns] * 1000.0
 
     # Build DustTrak object on the core columns (Datetime + 5 PM channels)
-    Dust = DustTrak(df[["Datetime", *data_columns]])
+    Dust = build_1d(
+        df[["Datetime", *data_columns]],
+        cls=DustTrak,
+        instrument=str(meta_lines[0, 1]),
+        serial_number=str(meta_lines[2, 1]),
+        unit={col: "µg/m³" for col in data_columns},
+        dtype={col: "dM" for col in data_columns},
+        extra_meta={"model_number": str(meta_lines[1, 1])},
+    )
 
-    # Core metadata
-    Dust._meta["instrument"] = str(meta_lines[0, 1])
-    Dust._meta["model_number"] = str(meta_lines[1, 1])
-    Dust._meta["serial_number"] = str(meta_lines[2, 1])
-    Dust._meta["unit"] = {col: "µg/m³" for col in data_columns}
-    Dust._meta["dtype"] = {col: "dM" for col in data_columns}
-
-    # Optional extra data (e.g. alarms / errors) indexed by time
+    # Optional extra data (e.g. alarms / errors) indexed by time. The DRX writes
+    # these headers without units, so nothing is stripped -- resolve_extra_columns
+    # simply leaves unrecognised headers alone and records no unit for them.
     if extra_data:
         extra_cols = [c for c in df.columns if c not in ["Datetime", *data_columns]]
         if extra_cols:
             extra_df = df[["Datetime", *extra_cols]].set_index("Datetime")
+            extra_df, column_units = resolve_extra_columns(extra_df)
             Dust._extra_data = extra_df
             Dust._raw_extra_data = extra_df.copy()
+            if column_units:
+                Dust._meta["column_units"] = column_units
 
     return Dust

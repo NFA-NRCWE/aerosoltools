@@ -1419,6 +1419,21 @@ def test_dusttrak_converts_mg_to_ug():
     assert dust.metadata["unit"]["PM1"] == "µg/m³"
 
 
+def test_dusttrak_keeps_extra_columns_by_default():
+    """Non-core DRX channels are kept, like every other loader's extra_data."""
+    dust = load_dusttrak_file(_data_path("Sample_DustTrak.csv"))
+
+    # Alarms/Errors are not PM channels, so they belong in extra_data -- and
+    # they must not leak into the main frame.
+    assert list(dust.extra_data.columns) == ["Alarms", "Errors"]
+    assert len(dust.extra_data) == len(dust.data)
+    assert not {"Alarms", "Errors"} & set(dust.data.columns)
+
+    # Opting out still works and leaves extra_data empty.
+    bare = load_dusttrak_file(_data_path("Sample_DustTrak.csv"), extra_data=False)
+    assert bare.extra_data.empty
+
+
 def test_dusttrak_reconstructs_timestamps_from_header():
     """Rows carry elapsed seconds; absolute time comes from the header."""
     dust = load_dusttrak_file(_data_path("Sample_DustTrak.csv"))
