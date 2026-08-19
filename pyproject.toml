@@ -35,10 +35,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Formatter versions are pinned: an unpinned `black` meant CI installed a newer
+# release than the contributor had, reformatted the source, and then failed
+# trying to push the result back. Bump these deliberately, together.
 dev = [
     "pytest",
-    "ruff",
-    "black"
+    "ruff==0.12.0",
+    "black==26.5.1",
 ]
 gui = [
     "PyQt5>=5.15",

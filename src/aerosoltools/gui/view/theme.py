@@ -141,8 +141,7 @@ _MODE = "dark"
 # Style sheet (one template, filled per palette via string.Template so the
 # literal CSS braces need no escaping)
 # ---------------------------------------------------------------------------
-_QSS = Template(
-    """
+_QSS = Template("""
 QMainWindow { background: ${BG_DEEP}; }
 QWidget {
     background: ${BG};
@@ -409,8 +408,7 @@ QToolButton { background: transparent; border-radius: 4px; padding: 3px; }
 QToolButton:hover { background: ${TOOLBAR_HOVER}; }
 QToolButton:checked { background: ${TOOLBAR_HOVER}; }
 QToolBar QLabel { color: #1b2430; background: transparent; }
-"""
-)
+""")
 
 
 def build_qss(mode: str = "dark") -> str:
