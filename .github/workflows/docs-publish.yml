@@ -1,0 +1,30 @@
+# Publish the documentation to the live site at
+# https://nfa-nrcwe.github.io/aerosoltools/
+#
+# This is the only workflow that publishes docs. Review happens locally before
+# you get here -- see docs/README.md for the build-and-serve commands -- and
+# `docs-check.yml` independently verifies the build in CI on pull requests to
+# main, so this button should be a formality rather than the first time the
+# docs are built.
+#
+# The button only appears once this file is on the default branch (main); that
+# is a GitHub rule for workflow_dispatch, not a repository setting.
+#
+# Publishing writes the built HTML to the gh-pages branch. GitHub's own
+# automatic "pages-build-deployment" job then picks that branch up and serves
+# it -- there is nothing further to run by hand.
+
+name: Docs publish (gh-pages, live)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  docs:
+    uses: ./.github/workflows/_docs-build.yml
+    with:
+      publish: true
+      publish_branch: gh-pages

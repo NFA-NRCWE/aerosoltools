@@ -1,0 +1,1 @@
+# Keeps docs/_static/ in git so html_static_path resolves cleanly.

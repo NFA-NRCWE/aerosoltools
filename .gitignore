@@ -1,0 +1,23 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+
+# Claude Code local agent state (worktrees, etc.)
+.claude/
+
+# Local screenshot scratch
+_shots/
+
+# Build / packaging artifacts
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Sphinx AutoAPI output (regenerated on every build)
+docs/api/
+docs/_build/
+
+# Jupyter checkpoint copies
+.ipynb_checkpoints/

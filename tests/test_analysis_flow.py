@@ -1,15 +1,18 @@
 import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
-from aerosoltools.loaders import Load_CPC_file, Load_ELPI_file
+from aerosoltools import Aerosol1D
+from aerosoltools._core import decay as _decay
+from aerosoltools.loaders import load_cpc_file, load_elpi_file
 
 
 def test_full_elpi_pipeline_with_plotting():
     """End-to-end ELPI pipeline + basic checks on core 2D methods."""
     test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
-    data = Load_ELPI_file(test_file)
+    data = load_elpi_file(test_file)
 
     activity_periods = {
         "Background": [("2023/09/07 09:06:50", "2023/09/07 09:07:50")],
@@ -71,7 +74,7 @@ def test_full_elpi_pipeline_with_plotting():
 def test_pm_calc_creates_and_reuses_px_columns():
     """Check that PM_calc adds P{x} columns once and reuses them on second call."""
     test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
-    data = Load_ELPI_file(test_file)
+    data = load_elpi_file(test_file)
 
     old_cols = set(data.extra_data.columns)
 
@@ -105,10 +108,97 @@ def test_pm_calc_creates_and_reuses_px_columns():
     ), "Band-limited P{x} series should not be all NaN"
 
 
+def test_bin_property_cache_is_safe_and_invalidates():
+    """Cached bin_mids/edges/_sizebin_headers stay copy-safe and refresh on change."""
+    test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
+    data = load_elpi_file(test_file)
+
+    # _sizebin_headers is memoised (same object on repeat access).
+    assert data._sizebin_headers is data._sizebin_headers
+    assert data._sizebin_headers == [str(x) for x in data.bin_mids]
+
+    # Returned bin arrays are copies — mutating them must not corrupt internals.
+    m = data.bin_mids
+    m[0] = -12345.0
+    assert data.bin_mids[0] != -12345.0
+    e = data.bin_edges
+    e[0] = -12345.0
+    assert data.bin_edges[0] != -12345.0
+
+    # Rebinning reassigns the axis; the caches must reflect the new bins.
+    n = len(data.bin_mids)
+    new_edges = np.linspace(data.bin_edges.min(), data.bin_edges.max(), n)
+    rb = data.rebin_bin_edges(new_edges, inplace=False)
+    assert len(rb.bin_mids) == n - 1
+    assert len(rb._sizebin_headers) == n - 1
+    assert len(data.bin_mids) == n  # original untouched
+
+
+def test_summarize_size_metrics_mode_median_gmd():
+    """MODE/MEDIAN/GMD size metrics compute over timesteps (numpy-row path)."""
+    test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
+    data = load_elpi_file(test_file)
+
+    out = data.summarize_activities(metrics=["MODE", "MEDIAN", "GMD"])
+    assert isinstance(out, pd.DataFrame)
+    row = out[out["Segment"] == "All data"].iloc[0]
+
+    # Each metric produces a mean column populated with an in-range diameter.
+    mids = data.bin_mids
+    lo, hi = float(mids.min()), float(mids.max())
+    got = {}
+    for label in ("Mode", "Median", "GMD"):
+        col = next(c for c in out.columns if c.startswith(label))
+        val = float(row[col])
+        assert lo <= val <= hi, f"{label}={val} outside [{lo}, {hi}]"
+        got[label] = val
+    # Sanity: on a real distribution the three central diameters are close-ish
+    # in magnitude (not orders of magnitude apart), which guards a gross regression.
+    assert 0.1 < got["Median"] / got["GMD"] < 10.0
+
+
+def test_dtype_converter_roundtrip_and_geometry_single_source():
+    """dN/dS/dV/dM conversions round-trip and share one geometry helper."""
+    from aerosoltools._core.size_distribution import (
+        SizeConversionMixin,
+        _particle_geometry,
+    )
+
+    test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
+    ops = load_elpi_file(test_file)
+
+    base = ops.size_data.to_numpy(dtype=float)  # dN base
+    for tgt in ("dS", "dV", "dM"):
+        c = ops.copy_self()
+        c.dtype_converter(tgt)
+        # Round-trip back to dN recovers the original within FP tolerance.
+        c.dtype_converter("dN")
+        np.testing.assert_allclose(
+            c.size_data.to_numpy(dtype=float), base, rtol=1e-9, equal_nan=True
+        )
+
+    # The instance converters and the array helper use the SAME geometry, so a
+    # dN->target conversion matches _convert_array exactly (byte-identical).
+    for tgt in ("dN", "dS", "dV", "dM"):
+        c = ops.copy_self()
+        c.dtype_converter(tgt)
+        via = SizeConversionMixin._convert_array(
+            base, ops.bin_mids, "dN", tgt, ops.density
+        )
+        np.testing.assert_array_equal(c.size_data.to_numpy(dtype=float), via)
+
+    # The geometry helper is the documented sphere formulae.
+    mids = np.array([100.0, 200.0])
+    vol, surf = _particle_geometry(mids)
+    r = mids / 2.0
+    np.testing.assert_allclose(vol, (4 / 3) * np.pi * r**3)
+    np.testing.assert_allclose(surf, 4 * np.pi * r**2)
+
+
 def test_aerosol2d_summarize_exposure_pm42_with_background_activity():
     """Test summarize_exposure on Aerosol2D with PM4.2 and background as activity."""
     test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_ELPI.txt")
-    data = Load_ELPI_file(test_file)
+    data = load_elpi_file(test_file)
 
     activity_periods = {
         "Background": [("2023/09/07 09:06:50", "2023/09/07 09:07:50")],
@@ -186,7 +276,7 @@ def test_aerosol2d_summarize_exposure_pm42_with_background_activity():
 def test_aerosol1d_summarize_and_exposure_pnc():
     """Test summarize_activities and summarize_exposure on a 1D CPC dataset."""
     test_file = os.path.join(os.path.dirname(__file__), "data", "Sample_CPC_Direct.txt")
-    data = Load_CPC_file(test_file)
+    data = load_cpc_file(test_file)
 
     # Simple artificial activity: first half vs second half
     times = data.time
@@ -283,3 +373,78 @@ def test_aerosol1d_summarize_and_exposure_pnc():
     # Peaks count non-negative
     peaks_col = next(c for c in cols if "Peaks" in c)
     assert row[peaks_col] >= 0
+
+
+def _make_peak_dataset(model, popt, seed=0, n=200, step_s=10):
+    """Build a 1D dataset from a known emission+decay model, plus noise."""
+    times = pd.date_range("2024-01-01 00:00", periods=n, freq=f"{step_s}s")
+    t = np.arange(n) * float(step_s)
+    y = _decay.decay_curve(model, t, popt)
+    y = y + np.random.default_rng(seed).normal(0, 0.01 * float(np.max(y)), n)
+    df = pd.DataFrame({"time": times, "Total_conc": y})
+    obj = Aerosol1D(df)
+    obj._meta["unit"] = "cm⁻³"
+    obj.mark_activities({"Peak": [(times[0], times[-1])]})
+    return obj
+
+
+def test_fit_decay_recovers_first_order_and_source_strength():
+    """A first-order emission+decay peak fit recovers k, E and source strength."""
+    # Truth: k = 1/300 /s (=12 /h), E = 50 cm-3/s, background 100, emit 100..500 s.
+    obj = _make_peak_dataset("first_order", [1 / 300.0, 100.0, 50.0, 100.0, 400.0])
+    res = obj.fit_decay("Peak", model="first_order", volume=20.0, air_exchange_rate=2.0)
+
+    from collections.abc import Mapping
+
+    from aerosoltools import DecayResult
+
+    # fit_decay returns a typed DecayResult that is *also* a read-only mapping,
+    # so attribute and item access agree and legacy `res[...]` keeps working.
+    assert isinstance(res, DecayResult)
+    assert isinstance(res, Mapping)
+    assert res.r_squared == res["r_squared"]
+    assert res.model == res["model"]
+    # Optional keys appear only when applicable (here: volume + air-exchange given).
+    assert "source_strength" in res and res.source_strength == res["source_strength"]
+    assert res.to_dict()["model"] == "first_order"
+
+    assert res["model"] == "first_order"
+    assert res["r_squared"] > 0.99
+    # Loss rate ~ 12 /h (1/300 s^-1 * 3600).
+    assert abs(res["loss_rate_per_hour"] - 12.0) < 1.0
+    # Emission rate ~ 50 cm-3/s.
+    assert abs(res["emission_rate"] - 50.0) < 5.0
+    # Wall loss = loss - known ACH.
+    assert res["wall_loss_rate_per_hour"] == res["loss_rate_per_hour"] - 2.0
+    # Source strength = E * 1e6 (cm3/m3) * volume; unit is a per-second rate.
+    assert res["source_strength"] > 0
+    assert res["source_strength_unit"].endswith("/s")
+    assert res["half_life_hours"] > 0
+
+
+def test_fit_decay_auto_selects_and_supports_tuple_window():
+    """Auto mode picks a good model and a (start, end) window works."""
+    obj = _make_peak_dataset(
+        "first_order", [1 / 250.0, 80.0, 40.0, 120.0, 350.0], seed=1
+    )
+    span = (obj.time.min(), obj.time.max())
+    res = obj.fit_decay(span, model="auto")
+    assert res["model"] in {"first_order", "second_order", "combined"}
+    assert res["r_squared"] > 0.98
+    # Model params are echoed with a P0/E and the timing fields.
+    for key in ("P0", "E", "t0", "tp"):
+        assert key in res["params"]
+    # No volume given -> source-strength fields are omitted from the mapping view
+    # (the attribute is still present and None), matching the historical dict.
+    assert "source_strength" not in res
+    assert res.source_strength is None
+
+
+def test_fit_decay_second_order_recovers_rate():
+    """A second-order (coagulation) peak fit recovers the C rate constant."""
+    obj = _make_peak_dataset("second_order", [2e-5, 100.0, 50.0, 100.0, 400.0], seed=2)
+    res = obj.fit_decay("Peak", model="second_order")
+    assert res["r_squared"] > 0.99
+    assert abs(res["second_order_rate"] - 2e-5) < 1e-5
+    # A pure second-order model reports no first-order loss term.
+    assert "loss_rate_per_hour" not in res

@@ -1,0 +1,128 @@
+import numpy as np
+import pandas as pd
+
+from ..gas1d import Gas1D
+from .support.reading import sniff
+
+###############################################################################
+
+
+def load_tiger_file(file: str, year=2026) -> Gas1D:
+    """Description:
+        Load a Tiger LDSA text export and return it as an
+        :class:`Gas1D` time series with TEM sampling metadata.
+
+    Args:
+        file (str):
+            Path to the Tiger ``.txt`` export file.
+        year (int, optional):
+            Due to inconsistency in dating for the software, it is required to
+            provide the year of the onset of the data, which will then
+            correct the year. It is still required to perform time_shift to
+            ensure that the month, day, hour, minute and second fits.
+
+    Returns:
+        Gas1D:
+            Tiger total VOC time series with a datetime index, TVOC
+            and associated metadata.
+
+    Raises:
+        FileNotFoundError:
+            If ``file`` does not exist or cannot be opened.
+        UnicodeDecodeError:
+            If the file cannot be decoded using the encodings tried by
+            :func:`sniff`.
+
+    Notes:
+        Detailed description:
+            This loader is tailored to Tiger text exports that provide
+            Total VOC measurements as a function of time.
+
+            Internally, the function:
+
+            - Attempts to infer encoding and delimiter via
+              :func:`sniff`. If delimiter detection fails.
+            - Reads the main data block with :func:`numpy.genfromtxt`, starting
+              at the Tiger data header (``header=14``).
+            - Renames core columns:
+
+              - ``"Date"`` → ``"Datetime"``,
+              - ``"TVOC (ppb)"`` → ``"Concentration"`` (the species is kept
+                in ``dtype``, per the :class:`Gas1D` contract).
+
+            - Reads the header region (first 8 lines) via
+              :func:`numpy.genfromtxt`.
+            - Converts the ``"Date"`` and ``"Time"`` columns from date and time
+              to absolute timestamps by suptracting the difference in year from
+              the recorded year.
+
+            - Constructs a :class:`Gas1D` object using the core columns:
+
+              - ``Datetime``,
+              - ``Concentration``,
+
+            - Populates metadata:
+
+              - ``instrument`` set to ``"Tiger"``,
+              - ``serial_number`` from the first header line (last 3
+                characters),
+
+              - ``unit`` mapping:
+
+                - ``"VOC"`` → ``"ppb"`` or ``"ppm"``,
+
+
+        Theory:
+            The Tiger logs total VOC in either ppb or ppm
+
+      Examples:
+          Typical usage is to load a Tiger file and inspect VOC
+          sampling information:
+
+          .. code-block:: python
+
+              import aerosoltools as at
+
+              # Load Tiger VOC data
+              tiger = at.Load_Tiger_file("data/Tiger_export.txt",
+                                            extra_data=True)
+
+              # Inspect the main time series
+              print(tiger.data.head())
+
+              # Plot VOC over time
+              fig, ax = tiger.plot_total_conc()
+    """
+
+    enc, delim = sniff(file)
+
+    # Read main data
+    df = pd.read_csv(file, delimiter=delim, header=14)
+    # Gas1D's contract is a single column named "Concentration"; the species
+    # itself is carried in ``dtype`` (set to "TVOC" below), the same way the
+    # Ranger loader handles its interchangeable heads.
+    df.rename(
+        columns={"Date": "Datetime", df.columns[2]: "Concentration"}, inplace=True
+    )
+
+    # # Read header metadata
+    meta_lines = dict(np.genfromtxt(file, delimiter=delim, max_rows=8, dtype="str"))
+    # Create new columns
+    parts = df["Datetime"].str.split("-", expand=True)
+
+    df["DayMonth"] = parts[0] + "-" + parts[1]
+    # Corrects the year, as it is incorrectly stored in the software.
+    df["Year"] = (parts[2].astype(int) - [int(parts[2][0]) - year]).astype(str)
+    # Convert time column to absolute datetime
+    df["Datetime"] = pd.to_datetime(
+        df["DayMonth"] + "-" + df["Year"] + " " + df["Time"], format="%d-%m-%Y %H:%M:%S"
+    )
+
+    # Create Gas1D object
+    Tiger = Gas1D(df[["Datetime", "Concentration"]])
+    Tiger._meta["instrument"] = "Tiger"
+    Tiger._meta["serial_number"] = [meta_lines[h] for h in meta_lines if "IRN" in h]
+    Tiger._meta["unit"] = meta_lines["Units"]
+    Tiger._meta["dtype"] = "TVOC"
+
+    return Tiger

@@ -1,0 +1,26 @@
+# Pull-request safety net: build the docs without publishing them, so a change
+# that breaks an example notebook or introduces a Sphinx warning is caught
+# before a release rather than during one.
+
+name: Docs check (build only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "src/**"
+      - "README.md"
+      - "pyproject.toml"
+      - ".github/workflows/_docs-build.yml"
+      - ".github/workflows/docs-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    uses: ./.github/workflows/_docs-build.yml
+    with:
+      publish: false
