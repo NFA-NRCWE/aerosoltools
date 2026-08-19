@@ -69,7 +69,7 @@ def load_partector_file(
             If ``file`` does not exist or cannot be opened.
         UnicodeDecodeError:
             If the file cannot be decoded using the encodings tried by
-            ``_detect_delimiter``.
+            ``sniff``.
         ValueError:
             If the start datetime cannot be parsed from the header, or if
             there are too few TEM sampling points to estimate a sampling
@@ -84,7 +84,7 @@ def load_partector_file(
             Internally, the function:
 
             - Attempts to infer encoding and delimiter via
-              ``_detect_delimiter``. If delimiter detection fails, it
+              ``sniff``. If delimiter detection fails, it
               falls back to tab (``"\\t"``).
             - Reads the main data block with :func:`pandas.read_csv`, starting
               at the Partector data header (``header=10``).

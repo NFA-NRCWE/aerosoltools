@@ -38,7 +38,7 @@ def load_ops_file(file: str, extra_data: bool = True):
             If ``file`` does not exist or cannot be opened.
         UnicodeDecodeError:
             If the file cannot be decoded using the encodings tried by
-            ``_detect_delimiter``.
+            ``sniff``.
         FileFormatError:
             If the first header line cannot be recognised as either an AIM
             export (``"Sample File"``) or a direct OPS export
@@ -54,7 +54,7 @@ def load_ops_file(file: str, extra_data: bool = True):
 
             Internally, the function:
 
-            - Uses ``_detect_delimiter`` to infer file encoding and field
+            - Uses ``sniff`` to infer file encoding and field
               delimiter.
             - Reads the first line of the file using :func:`numpy.genfromtxt`
               and inspects the first token:

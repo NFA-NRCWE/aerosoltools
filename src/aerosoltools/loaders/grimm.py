@@ -30,7 +30,7 @@ def load_grimm_file(file: str) -> Aerosol2D:
             If ``file`` does not exist or cannot be opened.
         UnicodeDecodeError:
             If the file cannot be decoded using the encodings tried by
-            ``_detect_delimiter``.
+            ``sniff``.
         ValueError:
             If the file header cannot be recognised as either an
             instrument-direct export or a software export, or if subsequent
@@ -44,7 +44,7 @@ def load_grimm_file(file: str) -> Aerosol2D:
 
             Internally, the function:
 
-            - Uses ``_detect_delimiter`` to infer file encoding and field
+            - Uses ``sniff`` to infer file encoding and field
               delimiter.
             - Reads the first header line with :func:`numpy.genfromtxt` and
               inspects its first cell to decide which parser to use:

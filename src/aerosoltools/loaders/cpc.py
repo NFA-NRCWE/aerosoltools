@@ -50,10 +50,10 @@ def load_cpc_file(file: str, extra_data: bool = True) -> Aerosol1D:
             Verify the path and that you have read permissions.
         UnicodeDecodeError:
             If the file cannot be decoded using the encodings tried by
-            ``_detect_delimiter``. Check that the file is a valid CPC
+            ``sniff``. Check that the file is a valid CPC
             export and not a binary or corrupted file.
         ValueError:
-            If ``_detect_delimiter`` cannot reliably determine a delimiter
+            If ``sniff`` cannot reliably determine a delimiter
             from the sampled lines. This can happen for very short or malformed
             files.
         FileFormatError:

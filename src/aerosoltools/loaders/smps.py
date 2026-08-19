@@ -90,7 +90,7 @@ def load_smps_file(file: str, extra_data: bool = True) -> Aerosol2D:
             If ``file`` does not exist or cannot be opened.
         UnicodeDecodeError:
             If the file cannot be decoded using the encodings tried by
-            ``_detect_delimiter``.
+            ``sniff``.
         ValueError:
             If CSV parsing fails in a way that prevents reading the header or
             main data table.
@@ -106,7 +106,7 @@ def load_smps_file(file: str, extra_data: bool = True) -> Aerosol2D:
 
             Internally, the function:
 
-            - Uses ``_detect_delimiter`` to infer file encoding and field
+            - Uses ``sniff`` to infer file encoding and field
               delimiter, then reads the main data block with
               :func:`pandas.read_csv` using ``header=25``.
             - Calls :func:`_load_SMPS_metadata` to parse the first ~25 lines

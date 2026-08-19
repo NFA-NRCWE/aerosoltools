@@ -33,7 +33,7 @@ def load_ns_file(file: str, extra_data: bool = True) -> Aerosol2D:
             If ``file`` does not exist or cannot be opened.
         UnicodeDecodeError:
             If the CSV file cannot be decoded using the encodings tried by
-            ``_detect_delimiter``.
+            ``sniff``.
         ValueError:
             If the reported data type/unit string cannot be mapped to a known
             NanoScan format (e.g. dN, dS, dV, dM), or if the datetime column
@@ -51,7 +51,7 @@ def load_ns_file(file: str, extra_data: bool = True) -> Aerosol2D:
 
             Internally, the function:
 
-            - Uses ``_detect_delimiter`` to infer file encoding and field
+            - Uses ``sniff`` to infer file encoding and field
               delimiter.
             - Reads the main data table, starting at the NanoScan data header
               (``header=5``).
