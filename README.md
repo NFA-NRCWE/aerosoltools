@@ -172,6 +172,9 @@ data = at.load_data_from_folder(folder_path, at.load_cpc_file)
 datasets, marking shared tasks, and exploring time series, size distributions,
 summaries, overlays and instrument correlations — no coding required.
 
+📖 **[Full GUI documentation](https://nfa-nrcwe.github.io/aerosoltools/gui/index.html)**
+— a guided tour of the window plus a page for every tab.
+
 First install the GUI extra (adds PyQt5):
 
 ```bash
