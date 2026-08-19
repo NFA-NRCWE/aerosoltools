@@ -1,0 +1,52 @@
+aerosoltools.loaders.support.reading
+====================================
+
+.. py:module:: aerosoltools.loaders.support.reading
+
+.. autoapi-nested-parse::
+
+   Shared file-reading helpers for the instrument loaders.
+
+   Every loader used to hand-roll the same "detect encoding/delimiter, then read"
+   dance — often calling :func:`~aerosoltools.loaders.support.parsing._detect_delimiter`
+   several times and re-parsing the file with :func:`numpy.genfromtxt`/
+   :func:`pandas.read_csv` more than once. These helpers give one place to sniff a
+   file and read its data table, so a loader detects once and reads once.
+
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: sniff(file, encoding = None, delimiter = None, **detect_kwargs)
+
+   Return ``(encoding, delimiter)`` for ``file``, detecting what is missing.
+
+   Pass a value you already know to skip detecting it; pass neither to detect
+   both. ``detect_kwargs`` (e.g. ``sample_lines=30``) are forwarded to
+   :func:`~aerosoltools.loaders.support.parsing._detect_delimiter` so loaders
+   that need a larger sample keep their exact detection behaviour.
+
+
+.. py:function:: read_table(file, *, encoding = None, delimiter = None, **read_csv_kwargs)
+
+   Read ``file`` as a delimited table with :func:`pandas.read_csv`.
+
+   Detects the encoding and delimiter (via :func:`sniff`) when they are not
+   supplied, then forwards ``read_csv_kwargs`` (``header``, ``usecols``,
+   ``skipfooter``, ``engine``, ``nrows``, …) unchanged to
+   :func:`pandas.read_csv`.
+
+
+.. py:function:: read_cells(file, *, skip_header, max_rows = 1, encoding = None, delimiter = None, **genfromtxt_kwargs)
+
+   Read a small block of header cells as strings via :func:`numpy.genfromtxt`.
+
+   A thin wrapper for the ``genfromtxt(..., skip_header=N, max_rows=1,
+   dtype=str)`` metadata pluck the loaders repeat, with encoding/delimiter
+   detection folded in. Keeps genfromtxt's exact tokenising, so results are
+   identical to the previous inline calls.
+
+

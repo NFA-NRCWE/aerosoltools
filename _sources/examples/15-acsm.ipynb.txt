@@ -1,0 +1,261 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 15 — ACSM: chemical speciation\n",
+    "\n",
+    "**Theme:** what the aerosol mass is *made of*, rather than how large it is.\n",
+    "\n",
+    "An Aerosol Chemical Speciation Monitor vaporises the non-refractory submicron\n",
+    "aerosol and measures the mass of each chemical species. Where a sizing\n",
+    "instrument tells you about particle diameter, this tells you about composition —\n",
+    "the two are complementary."
+   ],
+   "id": "cell-00"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import aerosoltools as at\n",
+    "\n",
+    "acsm = at.load_simple_acsm_file(\"../../tests/data/Sample_ACSM.csv\")\n",
+    "\n",
+    "print(\"instrument:\", acsm.instrument)\n",
+    "print(\"columns   :\", list(acsm.data))\n",
+    "print(\"unit      :\", acsm.unit)\n",
+    "print(\"samples   :\", len(acsm.data))"
+   ],
+   "id": "cell-01"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## The species\n",
+    "\n",
+    "Five species are reported, each as a mass concentration."
+   ],
+   "id": "cell-02"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for name in [\"org\", \"sulfate\", \"nitrate\", \"ammonia\", \"chlorine\"]:\n",
+    "    series = getattr(acsm, name)\n",
+    "    print(f\"{name:9s} mean {series.mean():8.3f}   max {series.max():8.3f}\")"
+   ],
+   "id": "cell-03"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Organics usually dominate submicron mass, with sulfate and nitrate next.\n",
+    "Chlorine is typically minor except near specific sources."
+   ],
+   "id": "cell-04"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = plt.subplots(figsize=(11, 4))\n",
+    "for name, colour in [(\"org\", \"tab:green\"), (\"sulfate\", \"tab:red\"),\n",
+    "                     (\"nitrate\", \"tab:blue\"), (\"ammonia\", \"tab:orange\"),\n",
+    "                     (\"chlorine\", \"tab:purple\")]:\n",
+    "    ax.plot(acsm.time, getattr(acsm, name), label=name, lw=0.8, color=colour)\n",
+    "ax.set_ylabel(f\"Mass concentration [{acsm.unit}]\")\n",
+    "ax.set_title(\"Chemical composition over time\")\n",
+    "ax.legend(ncol=5, loc=\"lower center\", bbox_to_anchor=(0.5, 1.06), frameon=False)\n",
+    "plt.tight_layout()"
+   ],
+   "id": "cell-05"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Composition as a whole\n",
+    "\n",
+    "The relative contributions are usually more informative than the absolute\n",
+    "values, because they are what distinguishes one source or air mass from another."
+   ],
+   "id": "cell-06"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "species = [\"org\", \"sulfate\", \"nitrate\", \"ammonia\", \"chlorine\"]\n",
+    "means = {name: getattr(acsm, name).mean() for name in species}\n",
+    "total = sum(means.values())\n",
+    "\n",
+    "for name, value in means.items():\n",
+    "    print(f\"{name:9s} {value:8.3f}  ({100 * value / total:5.1f} %)\")"
+   ],
+   "id": "cell-07"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = plt.subplots(figsize=(5, 5))\n",
+    "ax.pie(means.values(), labels=list(means), autopct=\"%1.1f%%\",\n",
+    "       colors=[\"tab:green\", \"tab:red\", \"tab:blue\", \"tab:orange\", \"tab:purple\"])\n",
+    "ax.set_title(\"Mean submicron composition\")"
+   ],
+   "id": "cell-08"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Negative values appear in ACSM data — they are the noise of a difference\n",
+    "measurement around a small signal, not physically negative mass. They matter\n",
+    "when averaging over short periods, where they can dominate; over longer periods\n",
+    "they average out.\n",
+    "\n",
+    "## Summarising every species\n",
+    "\n",
+    "`summarize_activities` reports only the dataset's *default* metric unless told\n",
+    "otherwise, and for an ACSM that default is the organic fraction — the largest\n",
+    "single component."
+   ],
+   "id": "cell-09"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "acsm.available_metrics()"
+   ],
+   "id": "cell-10"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`default=True` on `Org` alone is why a plain call reports only that species. For\n",
+    "a speciation instrument you almost always want all of them, so name them\n",
+    "explicitly."
+   ],
+   "id": "cell-11"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "midpoint = len(acsm.time) // 2\n",
+    "acsm.mark_activities({\n",
+    "    \"First half\":  [(str(acsm.time[0]), str(acsm.time[midpoint]))],\n",
+    "    \"Second half\": [(str(acsm.time[midpoint + 1]), str(acsm.time[-1]))],\n",
+    "})\n",
+    "\n",
+    "acsm.summarize_activities(metrics=[\"Org\", \"SO4\", \"NO3\", \"NH4\", \"Chlorine\"])"
+   ],
+   "id": "cell-12"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The metric keys are the column names, which `available_metrics` lists — note\n",
+    "they are the instrument's own labels (`SO4`, `NH4`), not the accessor names\n",
+    "(`sulfate`, `ammonia`).\n",
+    "\n",
+    "## It is a non-particle class\n",
+    "\n",
+    "The ACSM measures mass by species, not a particle number concentration, so\n",
+    "`total_concentration` deliberately raises."
+   ],
+   "id": "cell-13"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "try:\n",
+    "    acsm.total_concentration\n",
+    "except AttributeError as err:\n",
+    "    print(\"AttributeError:\", str(err)[:120])"
+   ],
+   "id": "cell-14"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Rebinning\n",
+    "\n",
+    "Rebinning is often the first thing to do with an ACSM record: the instrument\n",
+    "samples every 30 seconds or so, and composition rarely changes that fast, so\n",
+    "averaging to a few minutes suppresses the noise without losing signal."
+   ],
+   "id": "cell-15"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "hourly = acsm.timerebin(\"1h\", inplace=False)\n",
+    "\n",
+    "fig, ax = plt.subplots(figsize=(11, 3.5))\n",
+    "ax.plot(acsm.time, acsm.org, lw=0.5, alpha=0.4, label=\"as measured\")\n",
+    "ax.plot(hourly.time, hourly.org, lw=2, label=\"hourly average\")\n",
+    "ax.set_ylabel(f\"Organics [{acsm.unit}]\")\n",
+    "ax.legend(loc=\"upper right\")\n",
+    "ax.set_title(\"Rebinning suppresses the measurement noise\")\n",
+    "plt.tight_layout()"
+   ],
+   "id": "cell-16"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "\n",
+    "That is the end of the current examples. The weather-station notebook (14) is\n",
+    "still to come."
+   ],
+   "id": "cell-17"
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

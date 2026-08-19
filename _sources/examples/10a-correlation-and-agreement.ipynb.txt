@@ -1,0 +1,293 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 10a — Correlation and agreement\n",
+    "\n",
+    "**Theme:** do two instruments measuring the same air report the same thing?\n",
+    "\n",
+    "This is the usual first step of an intercomparison: run two instruments side by\n",
+    "side, then quantify how they relate. The follow-on — turning a measured\n",
+    "disagreement into a correction — is\n",
+    "[10b — Calibration](10b-calibration.ipynb)."
+   ],
+   "id": "cell-00"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import aerosoltools as at\n",
+    "\n",
+    "ns1 = at.load_ns_file(\"../../tests/data/Combine_example_NS.csv\")\n",
+    "ns2 = at.load_ns_file(\"../../tests/data/Correlation_example_NS2.csv\")\n",
+    "\n",
+    "print(f\"instrument 1: {len(ns1.data)} samples, {ns1.time[0]} -> {ns1.time[-1]}\")\n",
+    "print(f\"instrument 2: {len(ns2.data)} samples, {ns2.time[0]} -> {ns2.time[-1]}\")"
+   ],
+   "id": "cell-01"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Aligning in time first\n",
+    "\n",
+    "Two instruments rarely share timestamps exactly. Every function here takes a\n",
+    "`match` argument:\n",
+    "\n",
+    "- `\"exact\"` (default) — keep only timestamps present in both\n",
+    "- `\"nearest\"` — pair each sample with the closest one within `tolerance`\n",
+    "- `\"rebin\"` — put both onto a common grid, set by `rebin_freq`\n",
+    "\n",
+    "With clocks that differ by seconds, `\"exact\"` finds nothing at all, so\n",
+    "`\"nearest\"` is usually the right choice.\n",
+    "\n",
+    "## Correlation\n",
+    "\n",
+    "`plot_correlation` fits a regression, draws the 1:1 line for reference, and\n",
+    "reports R²."
+   ],
+   "id": "cell-02"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = at.plot_correlation(ns1, ns2, match=\"nearest\", tolerance=\"45s\")"
+   ],
+   "id": "cell-03"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Restricting to a period when both instruments sampled the same air — a\n",
+    "side-by-side run before the experiment — gives a cleaner comparison than the\n",
+    "whole record."
+   ],
+   "id": "cell-04"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = at.plot_correlation(\n",
+    "    ns1, ns2,\n",
+    "    start_time=\"2023-10-23 13:27:00\",\n",
+    "    end_time=\"2023-10-24 07:00:00\",\n",
+    "    match=\"nearest\",\n",
+    "    tolerance=\"45s\",\n",
+    ")"
+   ],
+   "id": "cell-05"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Comparing something other than the total\n",
+    "\n",
+    "`parameter` selects the column, looked up first in `.data` and then in\n",
+    "`.extra_data`. That includes individual size bins."
+   ],
+   "id": "cell-06"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = at.plot_correlation(\n",
+    "    ns1, ns2, parameter=\"36.5\",\n",
+    "    match=\"nearest\", tolerance=\"45s\",\n",
+    "    intercept=False, outlier_influence=False,\n",
+    ")\n",
+    "ax.set_title(\"Correlation for the 36.5 nm bin\")"
+   ],
+   "id": "cell-07"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Two arguments control the fit itself:\n",
+    "\n",
+    "- `intercept=False` forces the regression through the origin, which is right\n",
+    "  when zero should mean zero for both instruments.\n",
+    "- `outlier_influence=False` drops the diagnostic of how strongly individual\n",
+    "  points pull the fit.\n",
+    "\n",
+    "Columns in `.extra_data` work the same way."
+   ],
+   "id": "cell-08"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "list(ns1.extra_data)"
+   ],
+   "id": "cell-09"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = at.plot_correlation(\n",
+    "    ns1, ns2, parameter=\"Median\",\n",
+    "    match=\"nearest\", tolerance=\"45s\", intercept=False,\n",
+    ")\n",
+    "ax.set_title(\"Correlation of the median diameter\")"
+   ],
+   "id": "cell-10"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Bland-Altman: agreement, not correlation\n",
+    "\n",
+    "A high R² only says two instruments move together — it does not say they\n",
+    "*agree*. An instrument reading twice another correlates perfectly. Bland-Altman\n",
+    "plots the difference between the two against their mean, which exposes a\n",
+    "constant offset or a difference that grows with concentration."
+   ],
+   "id": "cell-11"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = at.bland_altman_analysis(ns1, ns2, match=\"nearest\", tolerance=\"45s\")"
+   ],
+   "id": "cell-12"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The centre line is the mean difference (the bias) and the outer lines are the\n",
+    "limits of agreement. A trend across the x-axis means the disagreement is\n",
+    "concentration-dependent, which a single scaling factor cannot fix.\n",
+    "\n",
+    "`C` sets the confidence level for the limits."
+   ],
+   "id": "cell-13"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = at.bland_altman_analysis(\n",
+    "    ns1, ns2, C=0.99, match=\"nearest\", tolerance=\"45s\",\n",
+    ")\n",
+    "ax.set_title(\"Bland-Altman with 99% limits of agreement\")"
+   ],
+   "id": "cell-14"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Fitting a relationship\n",
+    "\n",
+    "`fit_data` returns the fitted parameters rather than a plot. It needs the two\n",
+    "series on shared timestamps, so rebin both to a common grid first."
+   ],
+   "id": "cell-15"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "a = ns1.timerebin(\"1min\", inplace=False)\n",
+    "b = ns2.timerebin(\"1min\", inplace=False)\n",
+    "\n",
+    "params, errors, r_squared = at.fit_data(a, b, parameter=\"Total_conc\")\n",
+    "\n",
+    "print(f\"slope    : {params['m']:.4f} +/- {errors['m']:.4f}\")\n",
+    "print(f\"R squared: {r_squared}\")"
+   ],
+   "id": "cell-16"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "By default it fits a proportional relationship, `y = m * x`. Supply your own\n",
+    "`fit_function` and a starting guess for each of its parameters to fit something\n",
+    "else."
+   ],
+   "id": "cell-17"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def linear(x, m, b):\n",
+    "    return m * x + b\n",
+    "\n",
+    "\n",
+    "params, errors, r_squared = at.fit_data(\n",
+    "    a, b, parameter=\"Total_conc\",\n",
+    "    fit_function=linear,\n",
+    "    variable_guess={\"m\": 1.0, \"b\": 0.0},\n",
+    ")\n",
+    "\n",
+    "print(f\"slope     : {params['m']:.4f} +/- {errors['m']:.4f}\")\n",
+    "print(f\"intercept : {params['b']:.1f} +/- {errors['b']:.1f}\")\n",
+    "print(f\"R squared : {r_squared}\")"
+   ],
+   "id": "cell-18"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "A slope near 1 with an intercept near 0 means the instruments agree. This one\n",
+    "reads about 20% high — which is exactly the situation\n",
+    "[10b — Calibration](10b-calibration.ipynb) corrects.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "**Next:** [10b — Calibration](10b-calibration.ipynb)."
+   ],
+   "id": "cell-19"
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

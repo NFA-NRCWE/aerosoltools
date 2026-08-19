@@ -1,0 +1,1167 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
+
+    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+        <title>aerosoltools.loaders.discmini - aerosoltools</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../gui/index.html">Desktop GUI</a><input aria-label="Toggle navigation of Desktop GUI" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/raw-data.html">Raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/metadata.html">Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/time-series.html">Time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/decay.html">Decay / Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/heatmap.html">2D heatmap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/pm-bands.html">PM bands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/psd.html">PSD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/aero-optical.html">Aero ↔ Optical</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/summary.html">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/overlay.html">Overlay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/correlation.html">Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/psd-comparison.html">PSD comparison</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/01-loading-data.html">1 — Loading data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/02-time-adjustments.html">2 — Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/03-activities.html">3 — Activities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/04-statistics-and-exposure.html">4 — Statistics and exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/05-plotting.html">5 — Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/06-dtypes-density-corrections.html">6 — Dtypes, density and corrections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/07-combining-datasets.html">7 — Combining datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/08-psd-fitting.html">8 — PSD fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/09-decay-and-source.html">9 — Decay and source fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10a-correlation-and-agreement.html">10a — Correlation and agreement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10b-calibration.html">10b — Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/11-simple-instruments.html">11 — Simple instruments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/12-aethalometer.html">12 — Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/13-aps.html">13 — APS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/15-acsm.html">15 — ACSM</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/aerosoltools/index.html">aerosoltools documentation</a><input aria-label="Toggle navigation of aerosoltools documentation" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/acsm_simple/index.html">aerosoltools.acsm_simple</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol1d/index.html">aerosoltools.aerosol1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol2d/index.html">aerosoltools.aerosol2d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol3d/index.html">aerosoltools.aerosol3d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aethalometer/index.html">aerosoltools.aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/discmini/index.html">aerosoltools.discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/dusttrak/index.html">aerosoltools.dusttrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/elpi/index.html">aerosoltools.elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/environmental/index.html">aerosoltools.environmental</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/gas1d/index.html">aerosoltools.gas1d</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/index.html">aerosoltools.intercomparison</a><input aria-label="Toggle navigation of aerosoltools.intercomparison" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/calibration/index.html">aerosoltools.intercomparison.calibration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/combination/index.html">aerosoltools.intercomparison.combination</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/correlation/index.html">aerosoltools.intercomparison.correlation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/aerosoltools/loaders/index.html">aerosoltools.loaders</a><input aria-label="Toggle navigation of aerosoltools.loaders" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/acsm/index.html">aerosoltools.loaders.acsm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/aethalometer/index.html">aerosoltools.loaders.aethalometer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/aps/index.html">aerosoltools.loaders.aps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/cpc/index.html">aerosoltools.loaders.cpc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/dev_weather/index.html">aerosoltools.loaders.dev_weather</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/discmini/index.html">aerosoltools.loaders.discmini</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/dusttrak/index.html">aerosoltools.loaders.dusttrak</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/elpi/index.html">aerosoltools.loaders.elpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/fmps/index.html">aerosoltools.loaders.fmps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/fourtec/index.html">aerosoltools.loaders.fourtec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/grimm/index.html">aerosoltools.loaders.grimm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ns/index.html">aerosoltools.loaders.ns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/opcn3/index.html">aerosoltools.loaders.opcn3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ops/index.html">aerosoltools.loaders.ops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/partector/index.html">aerosoltools.loaders.partector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ranger/index.html">aerosoltools.loaders.ranger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/registry/index.html">aerosoltools.loaders.registry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/smps/index.html">aerosoltools.loaders.smps</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/index.html">aerosoltools.loaders.support</a><input aria-label="Toggle navigation of aerosoltools.loaders.support" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/construct/index.html">aerosoltools.loaders.support.construct</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/exceptions/index.html">aerosoltools.loaders.support.exceptions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/parsing/index.html">aerosoltools.loaders.support.parsing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/reading/index.html">aerosoltools.loaders.support.reading</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/units/index.html">aerosoltools.loaders.support.units</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/tiger/index.html">aerosoltools.loaders.tiger</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/partector/index.html">aerosoltools.partector</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for aerosoltools.loaders.discmini</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..discmini</span><span class="w"> </span><span class="kn">import</span> <span class="n">DiSCmini</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.construct</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_1d</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyFileError</span><span class="p">,</span> <span class="n">FileFormatError</span><span class="p">,</span> <span class="n">TimestampError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.reading</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_table</span><span class="p">,</span> <span class="n">sniff</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_extra_columns</span>
+
+<span class="c1">###############################################################################</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_serial</span><span class="p">(</span><span class="n">raw</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Normalize a DiSCmini serial number so it matches across export formats.</span>
+
+<span class="sd">    DiSCmini files write the serial inconsistently across firmware / software</span>
+<span class="sd">    versions — sometimes with an ``"SN"`` prefix (``"SN101923"``) and sometimes</span>
+<span class="sd">    as bare digits (``"101670"``). Combining datasets keys on the serial, so a</span>
+<span class="sd">    prefix mismatch makes two files from the *same* instrument look like</span>
+<span class="sd">    different instruments. This strips a leading ``SN`` (case-insensitive) and</span>
+<span class="sd">    any surrounding punctuation/whitespace so the stored serial is just the</span>
+<span class="sd">    identifier itself.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        raw: The serial token as read from the file, or ``None``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The normalized serial (e.g. ``"101923"``), or ``None`` when ``raw`` is</span>
+<span class="sd">        empty/``None``.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">raw</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"[]()</span><span class="si">{}</span><span class="s2">"</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="c1"># Drop a leading "SN" (optionally followed by a separator), case-insensitive.</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[sS][nN][\s:_-]*"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">s</span> <span class="ow">or</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_extract_serial_and_firmware</span><span class="p">(</span>
+    <span class="n">header_lines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Pull the (normalized) serial number and firmware/software version.</span>
+
+<span class="sd">    Handles the header variants seen across DiSCmini exports:</span>
+
+<span class="sd">    * Vendor-processed files:</span>
+<span class="sd">      ``[Data recorded with testo DiSCmini SN101923 running firmware 3,42]``</span>
+<span class="sd">    * Raw instrument files: a ``CalData:`` line whose first token is the serial,</span>
+<span class="sd">      e.g. ``CalData: SN101923   0.28 ...`` or ``CalData: 101670   6.02 ...``.</span>
+<span class="sd">    * Older exports: any line containing ``"serial"``.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        header_lines: The first handful of lines of the file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A ``(serial, firmware)`` tuple; either element may be ``None`` when it</span>
+<span class="sd">        cannot be found. ``serial`` is normalized via :func:`_normalize_serial`.</span>
+<span class="sd">    """</span>
+    <span class="n">serial</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">firmware</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">header_lines</span><span class="p">:</span>
+        <span class="n">low</span> <span class="o">=</span> <span class="n">ln</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="c1"># Processed header: "...DiSCmini &lt;serial&gt; running firmware &lt;ver&gt;..."</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+            <span class="sa">r</span><span class="s2">"disc[m]?ini\s+(\S+)\s+running\s+firmware\s+([\d.,]+)"</span><span class="p">,</span> <span class="n">ln</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+            <span class="n">serial</span> <span class="o">=</span> <span class="n">serial</span> <span class="ow">or</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">firmware</span> <span class="o">=</span> <span class="n">firmware</span> <span class="ow">or</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="s2">"."</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="c1"># Raw calibration line: "CalData: &lt;serial&gt;  &lt;cal values...&gt;"</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">"caldata:\s*(\S+)"</span><span class="p">,</span> <span class="n">ln</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">m</span> <span class="ow">and</span> <span class="n">serial</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">serial</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="c1"># Software/firmware version on the first raw line ("... SW-Ver 3.42").</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s2">"sw-?ver\s*([\d.,]+)"</span><span class="p">,</span> <span class="n">low</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">m</span> <span class="ow">and</span> <span class="n">firmware</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">firmware</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="s2">"."</span><span class="p">)</span>
+        <span class="c1"># Legacy fallback: an explicit "serial" line.</span>
+        <span class="k">if</span> <span class="n">serial</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">"serial"</span> <span class="ow">in</span> <span class="n">low</span><span class="p">:</span>
+            <span class="n">toks</span> <span class="o">=</span> <span class="n">ln</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="s2">" "</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">toks</span><span class="p">:</span>
+                <span class="n">serial</span> <span class="o">=</span> <span class="n">toks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">_normalize_serial</span><span class="p">(</span><span class="n">serial</span><span class="p">),</span> <span class="n">firmware</span>
+
+
+<span class="c1">###############################################################################</span>
+
+
+<div class="viewcode-block" id="load_discmini_file">
+<a class="viewcode-back" href="../../../api/aerosoltools/loaders/discmini/index.html#aerosoltools.loaders.discmini.load_discmini_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_discmini_file</span><span class="p">(</span><span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">extra_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DiSCmini</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Load a converted DiSCmini export file and return total number</span>
+<span class="sd">    concentration, mean size, and LDSA as a :class:`DiSCmini` time</span>
+<span class="sd">    series.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file (str):</span>
+<span class="sd">            Path to the DiSCmini ``.txt`` file exported and converted by the</span>
+<span class="sd">            vendor software.</span>
+<span class="sd">        extra_data (bool, optional):</span>
+<span class="sd">            If ``True``, columns that are not part of the core time series</span>
+<span class="sd">            (datetime, total concentration, mean size, LDSA) are stored in</span>
+<span class="sd">            the returned object's ``.extra_data`` (and ``._raw_extra_data``)</span>
+<span class="sd">            DataFrames, indexed by ``Datetime``. Defaults to ``True`` —</span>
+<span class="sd">            everything in the file is kept.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        DiSCmini:</span>
+<span class="sd">            A :class:`~aerosoltools.DiSCmini` instance with</span>
+<span class="sd">            the loaded data</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        FileNotFoundError:</span>
+<span class="sd">            If ``file`` does not exist or cannot be opened. Check the path</span>
+<span class="sd">            and file permissions.</span>
+<span class="sd">        UnicodeDecodeError:</span>
+<span class="sd">            If the file cannot be decoded using the encodings tried by</span>
+<span class="sd">            ``sniff``. This usually indicates a corrupted</span>
+<span class="sd">            or non-text file.</span>
+<span class="sd">        ValueError:</span>
+<span class="sd">            If timestamps or header-derived start date/time strings are in</span>
+<span class="sd">            an unsupported format and cannot be parsed. Check that the file</span>
+<span class="sd">            was exported using a supported DiSCmini software version and</span>
+<span class="sd">            that the regional date/time settings are compatible.</span>
+<span class="sd">        KeyError:</span>
+<span class="sd">            If expected columns such as ``"TimeStamp"``/``"Time"``,</span>
+<span class="sd">            ``"Number"``, or size/LDSA columns are missing or renamed in an</span>
+<span class="sd">            unexpected way. Verify that the file is an unmodified DiSCmini</span>
+<span class="sd">            export.</span>
+<span class="sd">        TimestampError:</span>
+<span class="sd">            If neither direct parsing nor reconstruction of the datetime</span>
+<span class="sd">            column succeeds, or if a valid ``"Datetime"`` column cannot be</span>
+<span class="sd">            produced after all attempts. The raised message will typically</span>
+<span class="sd">            indicate that the file has not been converted correctly or that</span>
+<span class="sd">            the datetime format is unsupported.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        Detailed description:</span>
+<span class="sd">            ``load_discmini_file`` is designed for DiSCmini data that have</span>
+<span class="sd">            already been converted by the vendor software to a tab-delimited</span>
+<span class="sd">            text format.</span>
+
+<span class="sd">            Internally, the function:</span>
+
+<span class="sd">            - Reads a subset of columns (up to 7) as strings to robustly</span>
+<span class="sd">              handle locale-specific decimal separators and whitespace.</span>
+<span class="sd">            - Normalizes column names.</span>
+<span class="sd">            - Attempts to parse the ``"Datetime"`` column using two common</span>
+<span class="sd">              formats:</span>
+
+<span class="sd">              - ``"%d-%b-%Y %H:%M:%S"`` (e.g. ``01-Oct-2023 12:00:00``)</span>
+<span class="sd">              - ``"%d-%m-%Y %H:%M:%S"`` (e.g. ``01-10-2023 12:00:00``)</span>
+
+<span class="sd">            - If both direct parses fail, it falls back to reconstructing</span>
+<span class="sd">              absolute time from header information:</span>
+
+<span class="sd">              - Searches the header for lines containing ``"start date:"``</span>
+<span class="sd">                and ``"start time:"``.</span>
+<span class="sd">              - Parses those as a start datetime.</span>
+<span class="sd">              - Interprets the ``"Datetime"`` column as elapsed seconds</span>
+<span class="sd">                since that start time, then creates a real timestamp series.</span>
+
+<span class="sd">            - Normalizes numeric fields by:</span>
+
+<span class="sd">              - Replacing commas with dots as decimal separators.</span>
+<span class="sd">              - Removing extraneous whitespace.</span>
+<span class="sd">              - Coercing invalid entries to ``NaN``.</span>
+
+<span class="sd">            - Extracts and **normalizes** the serial number (and firmware</span>
+<span class="sd">              version) from the header via</span>
+<span class="sd">              :func:`_extract_serial_and_firmware`, stripping any ``"SN"``</span>
+<span class="sd">              prefix so files from the same instrument match regardless of the</span>
+<span class="sd">              export's serial-format convention.</span>
+
+<span class="sd">            - Builds the core :class:`DiSCmini` object from the subset of</span>
+<span class="sd">              columns that includes</span>
+
+<span class="sd">              - ``"Datetime"`` — measurement timestamps.</span>
+<span class="sd">              - ``"Total_conc"`` — particle number concentration (cm⁻³).</span>
+<span class="sd">              - ``"Size"`` — mean particle diameter (nm).</span>
+<span class="sd">              - ``"LDSA"`` — lung-deposited surface area (nm²/cm³).</span>
+
+<span class="sd">            - Populates the ``.meta`` dictionary with, e.g.:</span>
+
+<span class="sd">              - ``"instrument"`` — set to ``"DiSCmini"``.</span>
+<span class="sd">              - ``"serial_number"`` — serial number parsed from the header.</span>
+<span class="sd">              - ``"unit"`` — mapping of variable names to units.</span>
+<span class="sd">              - ``"dtype"`` — mapping of variable names to data types</span>
+<span class="sd">                (e.g. ``"dN"`` for number concentration, ``"dS"`` for LDSA).</span>
+
+<span class="sd">            - Optionally collects all remaining non-core columns into</span>
+<span class="sd">              ``.extra_data`` (and ``._raw_extra_data``) when</span>
+<span class="sd">              ``extra_data=True``.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        A typical workflow is to convert a DiSCmini file using the vendor</span>
+<span class="sd">        software and then load it for analysis or plotting:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import aerosoltools as at</span>
+
+<span class="sd">            # Load DiSCmini data with core metrics only</span>
+<span class="sd">            dm = at.load_discmini_file("data/discmini_converted.txt")</span>
+
+<span class="sd">            # Quick look at total concentration and LDSA</span>
+<span class="sd">            print(dm.data[["Total_conc", "LDSA"]])</span>
+
+<span class="sd">            # List available extra channels</span>
+<span class="sd">            print(dm_full.extra_data.columns)</span>
+
+<span class="sd">            # Plot LDSA over time</span>
+<span class="sd">            fig, ax = dm.plot_timeseries()</span>
+<span class="sd">    """</span>
+    <span class="c1"># Detect encoding + delimiter</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">enc</span><span class="p">,</span> <span class="n">delim</span> <span class="o">=</span> <span class="n">sniff</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">sample_lines</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>  <span class="c1"># -&gt; (str, str)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">FileFormatError</span><span class="p">(</span>
+            <span class="s2">"DiSCmini data has not been converted or delimiter could not be detected."</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+    <span class="c1"># Read first 7 columns as strings; coerce later</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">read_table</span><span class="p">(</span>
+        <span class="n">file</span><span class="p">,</span>
+        <span class="n">header</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+        <span class="n">encoding</span><span class="o">=</span><span class="n">enc</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="o">=</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span>
+        <span class="n">usecols</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="s2">"string"</span><span class="p">,</span>
+        <span class="n">na_values</span><span class="o">=</span><span class="p">[</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"NA"</span><span class="p">,</span> <span class="s2">"N/A"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="s2">"--"</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Drop phantom columns produced by a trailing delimiter in the export header</span>
+    <span class="c1"># (e.g. "…Filter\tDiff\t" yields an unnamed, all-empty 7th column). Left in,</span>
+    <span class="c1"># such a column would show up as an empty "Unnamed: N" series in the GUI.</span>
+    <span class="n">phantom</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"Unnamed"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">df</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="n">phantom</span><span class="p">:</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">phantom</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Normalize expected column names</span>
+    <span class="c1"># Some files use "TimeStamp" (with a separate "Time" column); others use "Time"</span>
+    <span class="k">if</span> <span class="s2">"TimeStamp"</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="c1"># keep "TimeStamp" as datetime-like text; "Time" is redundant in these exports</span>
+        <span class="k">if</span> <span class="s2">"Time"</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"Time"</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"TimeStamp"</span><span class="p">:</span> <span class="s2">"Datetime"</span><span class="p">,</span> <span class="s2">"Number"</span><span class="p">:</span> <span class="s2">"Total_conc"</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"Time"</span><span class="p">:</span> <span class="s2">"Datetime"</span><span class="p">,</span> <span class="s2">"Number"</span><span class="p">:</span> <span class="s2">"Total_conc"</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Parse datetime with two known formats; if both fail, attempt reconstruction from header</span>
+    <span class="n">dt_parsed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">"Datetime"</span><span class="p">],</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"</span><span class="si">%d</span><span class="s2">-%b-%Y %H:%M:%S"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">dt_parsed</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="n">dt_parsed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span>
+            <span class="n">df</span><span class="p">[</span><span class="s2">"Datetime"</span><span class="p">],</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"</span><span class="si">%d</span><span class="s2">-%m-%Y %H:%M:%S"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">dt_parsed</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="c1"># Fallback: reconstruct absolute time from a start date/time in the file header</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># read minimal header with Python I/O to avoid numpy-encoding stub issues</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">enc</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+                <span class="n">header_lines</span> <span class="o">=</span> <span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">)]</span>
+            <span class="c1"># common patterns:</span>
+            <span class="c1">#   "[...] start date: YYYY.MM.DD]"</span>
+            <span class="c1">#   "[...] start time: HH:MM:SS]"</span>
+            <span class="n">start_date_line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">ln</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">header_lines</span> <span class="k">if</span> <span class="s2">"start date:"</span> <span class="ow">in</span> <span class="n">ln</span><span class="p">),</span> <span class="kc">None</span>
+            <span class="p">)</span>
+            <span class="n">start_time_line</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">ln</span> <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">header_lines</span> <span class="k">if</span> <span class="s2">"start time:"</span> <span class="ow">in</span> <span class="n">ln</span><span class="p">),</span> <span class="kc">None</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">start_date_line</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">start_time_line</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">TimestampError</span><span class="p">(</span><span class="s2">"Start date/time not found in header."</span><span class="p">)</span>
+
+            <span class="n">start_date</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span>
+                <span class="n">start_date_line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"start date: "</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"]"</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"%Y.%m.</span><span class="si">%d</span><span class="s2">"</span>
+            <span class="p">)</span>
+            <span class="n">start_time</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span>
+                <span class="n">start_time_line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"start time: "</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"]"</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"%H:%M:%S"</span>
+            <span class="p">)</span>
+            <span class="n">start_dt</span> <span class="o">=</span> <span class="n">start_date</span> <span class="o">+</span> <span class="n">dt</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span>
+                <span class="n">seconds</span><span class="o">=</span><span class="n">start_time</span><span class="o">.</span><span class="n">hour</span> <span class="o">*</span> <span class="mi">3600</span>
+                <span class="o">+</span> <span class="n">start_time</span><span class="o">.</span><span class="n">minute</span> <span class="o">*</span> <span class="mi">60</span>
+                <span class="o">+</span> <span class="n">start_time</span><span class="o">.</span><span class="n">second</span>
+            <span class="p">)</span>
+
+            <span class="c1"># When this path is used, the "Datetime" column typically holds elapsed seconds</span>
+            <span class="c1"># Convert strings like "  12,3" -&gt; "12.3" then to float seconds</span>
+            <span class="n">sec</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">df</span><span class="p">[</span><span class="s2">"Datetime"</span><span class="p">]</span>
+                <span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="s2">"."</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s+"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">sec_f</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">sec</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">sec_f</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">TimestampError</span><span class="p">(</span><span class="s2">"Elapsed seconds column could not be parsed."</span><span class="p">)</span>
+            <span class="n">dt_parsed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">sec_f</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"s"</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">start_dt</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">TimestampError</span><span class="p">(</span>
+                <span class="s2">"Datetime does not match expected format. Ensure file is converted correctly."</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+    <span class="n">df</span><span class="p">[</span><span class="s2">"Datetime"</span><span class="p">]</span> <span class="o">=</span> <span class="n">dt_parsed</span>
+
+    <span class="c1"># Coerce key numeric columns; accept both commas and dots as decimal separators</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_to_num</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="s2">"."</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\s+"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span>
+
+    <span class="c1"># Some exports use "Size" / "LDSA" names consistently</span>
+    <span class="k">if</span> <span class="s2">"Size"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s2">"LDSA"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="c1"># Try common alternates if present</span>
+        <span class="k">for</span> <span class="n">guess</span><span class="p">,</span> <span class="n">canonical</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">"AvgSize"</span><span class="p">,</span> <span class="s2">"Size"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"LungDepSurfArea"</span><span class="p">,</span> <span class="s2">"LDSA"</span><span class="p">)]:</span>
+            <span class="k">if</span> <span class="n">guess</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="n">canonical</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="n">guess</span><span class="p">:</span> <span class="n">canonical</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"Total_conc"</span><span class="p">,</span> <span class="s2">"Size"</span><span class="p">,</span> <span class="s2">"LDSA"</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">_to_num</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">])</span>
+
+    <span class="c1"># Extract the serial number + firmware from the header. The serial is</span>
+    <span class="c1"># normalized (leading "SN" stripped) so files from the same instrument match</span>
+    <span class="c1"># regardless of the export's prefix convention (see _extract_serial_and_firmware).</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">enc</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+        <span class="n">first_lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">ln</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">ln</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">fh</span><span class="p">)]</span>
+    <span class="n">serial_number</span><span class="p">,</span> <span class="n">firmware</span> <span class="o">=</span> <span class="n">_extract_serial_and_firmware</span><span class="p">(</span><span class="n">first_lines</span><span class="p">)</span>
+
+    <span class="c1"># Build DiSCmini on the core four columns (order: Datetime, Total_conc, Size, LDSA)</span>
+    <span class="n">needed</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Datetime"</span><span class="p">,</span> <span class="s2">"Total_conc"</span><span class="p">,</span> <span class="s2">"Size"</span><span class="p">,</span> <span class="s2">"LDSA"</span><span class="p">]</span>
+    <span class="n">present</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">needed</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">present</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="p">[</span><span class="s2">"Datetime"</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="n">TimestampError</span><span class="p">(</span><span class="s2">"Datetime column missing after parsing."</span><span class="p">)</span>
+    <span class="n">DM</span> <span class="o">=</span> <span class="n">build_1d</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">[</span><span class="n">present</span><span class="p">],</span>
+        <span class="bp">cls</span><span class="o">=</span><span class="n">DiSCmini</span><span class="p">,</span>
+        <span class="n">instrument</span><span class="o">=</span><span class="s2">"DiSCmini"</span><span class="p">,</span>
+        <span class="n">serial_number</span><span class="o">=</span><span class="n">serial_number</span><span class="p">,</span>
+        <span class="n">unit</span><span class="o">=</span><span class="p">{</span><span class="s2">"Total_conc"</span><span class="p">:</span> <span class="s2">"cm⁻³"</span><span class="p">,</span> <span class="s2">"Size"</span><span class="p">:</span> <span class="s2">"nm"</span><span class="p">,</span> <span class="s2">"LDSA"</span><span class="p">:</span> <span class="s2">"nm²/cm³"</span><span class="p">},</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="p">{</span><span class="s2">"Total_conc"</span><span class="p">:</span> <span class="s2">"dN"</span><span class="p">,</span> <span class="s2">"Size"</span><span class="p">:</span> <span class="s2">"l"</span><span class="p">,</span> <span class="s2">"LDSA"</span><span class="p">:</span> <span class="s2">"dS"</span><span class="p">},</span>
+        <span class="n">extra_meta</span><span class="o">=</span><span class="p">{</span><span class="s2">"firmware"</span><span class="p">:</span> <span class="n">firmware</span><span class="p">}</span> <span class="k">if</span> <span class="n">firmware</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Optional extra data (everything except the main 3 numeric cols) indexed by</span>
+    <span class="c1"># time. Columns are read as strings; coerce the numeric ones (e.g. the</span>
+    <span class="c1"># Filter/Diff currents) so they are proper numbers for downstream use/plots.</span>
+    <span class="k">if</span> <span class="n">extra_data</span><span class="p">:</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s2">"Datetime"</span><span class="p">,</span> <span class="s2">"Total_conc"</span><span class="p">,</span> <span class="s2">"Size"</span><span class="p">,</span> <span class="s2">"LDSA"</span><span class="p">])</span>
+        <span class="n">extra_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">keep</span><span class="p">]</span>
+        <span class="n">extra_df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s2">"Datetime"</span><span class="p">,</span> <span class="o">*</span><span class="n">extra_cols</span><span class="p">]]</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"Datetime"</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">extra_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">coerced</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">extra_df</span><span class="p">[</span><span class="n">col</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">coerced</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                <span class="n">extra_df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">coerced</span>
+        <span class="n">extra_df</span><span class="p">,</span> <span class="n">column_units</span> <span class="o">=</span> <span class="n">resolve_extra_columns</span><span class="p">(</span><span class="n">extra_df</span><span class="p">)</span>
+        <span class="n">DM</span><span class="o">.</span><span class="n">_extra_data</span> <span class="o">=</span> <span class="n">extra_df</span>
+        <span class="n">DM</span><span class="o">.</span><span class="n">_raw_extra_data</span> <span class="o">=</span> <span class="n">extra_df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"column_units"</span><span class="p">]</span> <span class="o">=</span> <span class="n">column_units</span>
+
+    <span class="k">return</span> <span class="n">DM</span></div>
+
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Raw-file loading (reproduce the vendor "java tool" processing from raw data)</span>
+<span class="c1">###############################################################################</span>
+
+<span class="c1">#: Column layout of the raw DiSCmini data table (after the header block).</span>
+<span class="n">_RAW_COLUMNS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"Time"</span><span class="p">,</span>
+    <span class="s2">"Diffusion"</span><span class="p">,</span>
+    <span class="s2">"Filter"</span><span class="p">,</span>
+    <span class="s2">"Temp"</span><span class="p">,</span>
+    <span class="s2">"Idiff"</span><span class="p">,</span>
+    <span class="s2">"Ucor"</span><span class="p">,</span>
+    <span class="s2">"Flow"</span><span class="p">,</span>
+    <span class="s2">"Batt"</span><span class="p">,</span>
+    <span class="s2">"Status"</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_raw_header</span><span class="p">(</span><span class="n">header_lines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Parse the metadata block at the top of a raw DiSCmini ``.TXT`` file.</span>
+
+<span class="sd">    The raw header (before the ``Time  Diffusion  Filter ...`` column row)</span>
+<span class="sd">    carries the software version, start date/time, the per-instrument</span>
+<span class="sd">    calibration constants and electrometer offsets, e.g.::</span>
+
+<span class="sd">        nw PERSONAL AEROSOL MONITOR Data written with SW-Ver 3.42</span>
+<span class="sd">        Filename: 6605G55D.TXT</span>
+<span class="sd">        Averaging Period: 1 sec</span>
+<span class="sd">        Date and Time: 2026.06.05 06:55:26</span>
+<span class="sd">        CalData: SN101923    0.28   30.73   -6.45    1.28    1.1319808.76    0.68</span>
+<span class="sd">         NaCl 2017_02_03</span>
+<span class="sd">            0.28    30.73    -6.45    1.28    1.13    19808.76    0.68</span>
+<span class="sd">        Offsets:    -0.75    -0.69</span>
+<span class="sd">        Sampled:   149393 pC   C:     395   W:      41</span>
+
+<span class="sd">    The ``CalData:`` line itself is unreliable for the constants (adjacent</span>
+<span class="sd">    values can run together, e.g. ``1.1319808.76``); the clean, tab-separated</span>
+<span class="sd">    copy on the line just above ``Offsets:`` is used instead.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        header_lines: Lines of the file up to (and including) the column-header</span>
+<span class="sd">            row.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: With keys ``serial``, ``firmware``, ``start`` (a</span>
+<span class="sd">        :class:`datetime.datetime` or ``None``), ``cal`` (list of 7 floats or</span>
+<span class="sd">        ``None``), ``offsets`` (list of 2 floats or ``None``) and</span>
+<span class="sd">        ``header_rows`` (number of lines to skip before the data table).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the seven calibration constants cannot be located.</span>
+<span class="sd">    """</span>
+    <span class="n">serial</span><span class="p">,</span> <span class="n">firmware</span> <span class="o">=</span> <span class="n">_extract_serial_and_firmware</span><span class="p">(</span><span class="n">header_lines</span><span class="p">)</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">offsets</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">cal</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">data_header_idx</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ln</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">header_lines</span><span class="p">):</span>
+        <span class="n">low</span> <span class="o">=</span> <span class="n">ln</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="s2">"date and time:"</span> <span class="ow">in</span> <span class="n">low</span> <span class="ow">and</span> <span class="n">start</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="n">ln</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"%Y.%m.</span><span class="si">%d</span><span class="s2"> %H:%M:%S"</span><span class="p">,</span> <span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S"</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">start</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">fmt</span><span class="p">)</span>
+                    <span class="k">break</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="k">continue</span>
+        <span class="k">elif</span> <span class="n">low</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"offsets:"</span><span class="p">):</span>
+            <span class="n">offsets</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">"-?\d+\.?\d*"</span><span class="p">,</span> <span class="n">ln</span><span class="p">)]</span>
+            <span class="c1"># The clean calibration-constant row is the line directly above.</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">nums</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">"-?\d+\.\d+"</span><span class="p">,</span> <span class="n">header_lines</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nums</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">7</span><span class="p">:</span>
+                    <span class="n">cal</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">nums</span><span class="p">[:</span><span class="mi">7</span><span class="p">]]</span>
+        <span class="k">elif</span> <span class="n">low</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"time"</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">"diffusion"</span> <span class="ow">in</span> <span class="n">low</span><span class="p">:</span>
+            <span class="n">data_header_idx</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">break</span>
+
+    <span class="k">if</span> <span class="n">cal</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"Could not read the 7 DiSCmini calibration constants from the raw "</span>
+            <span class="s2">"header. Verify the file is an unmodified raw instrument export."</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"serial"</span><span class="p">:</span> <span class="n">serial</span><span class="p">,</span>
+        <span class="s2">"firmware"</span><span class="p">:</span> <span class="n">firmware</span><span class="p">,</span>
+        <span class="s2">"start"</span><span class="p">:</span> <span class="n">start</span><span class="p">,</span>
+        <span class="s2">"cal"</span><span class="p">:</span> <span class="n">cal</span><span class="p">,</span>
+        <span class="s2">"offsets"</span><span class="p">:</span> <span class="n">offsets</span><span class="p">,</span>
+        <span class="s2">"header_rows"</span><span class="p">:</span> <span class="p">(</span><span class="n">data_header_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">data_header_idx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="p">}</span>
+
+
+<span class="c1">#: Upper diameter the vendor reports; the sizing calibration is only valid</span>
+<span class="c1">#: below the diffusion stage's diameter of maximum penetration, so larger</span>
+<span class="c1">#: results are saturated here (matching the vendor output, which caps at 300 nm).</span>
+<span class="n">_DISC_SIZE_MAX</span> <span class="o">=</span> <span class="mf">300.0</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_disc_size_from_ratio</span><span class="p">(</span><span class="n">ratio</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">cal</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Mean particle diameter (nm) from the filter/diffusion current ratio.</span>
+
+<span class="sd">    The DiSC derives the average particle size from the ratio of the two</span>
+<span class="sd">    electrometer stage currents, ``R = I_filter / I_diffusion`` — smaller</span>
+<span class="sd">    particles undergo more Brownian diffusion and are preferentially captured</span>
+<span class="sd">    in the diffusion stage, so ``R`` grows with particle size. The exact</span>
+<span class="sd">    ``R → d`` relation is the diffusion-stage capture calibration, which the</span>
+<span class="sd">    instrument stores as a **cubic polynomial** (Fierz et al. 2011, *Design,</span>
+<span class="sd">    Calibration, and Field Performance of a Miniature Diffusion Size</span>
+<span class="sd">    Classifier*, AS&amp;T 45:1-10). Its four coefficients are the first four values</span>
+<span class="sd">    of the file's ``CalData`` block::</span>
+
+<span class="sd">        d = cal[0] + cal[1]·R + cal[2]·R² + cal[3]·R³</span>
+
+<span class="sd">    Verified against vendor-processed files to a median error &lt; 1 %.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ratio: Filter/diffusion current ratio (``I_filter / I_diffusion``).</span>
+<span class="sd">        cal: The 7 calibration constants from the file header.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        numpy.ndarray: Mean diameter in nm, clipped to ``(0, 300]`` (the</span>
+<span class="sd">        polynomial is only calibrated below the ~500 nm diameter of maximum</span>
+<span class="sd">        penetration; the vendor likewise saturates the reported size).</span>
+<span class="sd">    """</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">cal</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">cal</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">r</span> <span class="o">+</span> <span class="n">cal</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">r</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">cal</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">r</span><span class="o">**</span><span class="mi">3</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">_DISC_SIZE_MAX</span><span class="p">)</span>
+
+
+<span class="c1">#: Empirical size-dependent LDSA refinement. ``LDSA = cal[6]·I_total`` slightly</span>
+<span class="c1">#: underestimates the vendor's LDSA, by an amount that grows smoothly with the</span>
+<span class="c1">#: mean particle size (consistent with the flat charge-signal approximation</span>
+<span class="c1">#: diverging from the true size-weighted lung deposition; cf. Fierz 2011 note</span>
+<span class="c1">#: #8). A quadratic-in-diameter factor fit to paired raw/processed files removes</span>
+<span class="c1">#: most of it; leave-one-out validation across the reference instruments cut the</span>
+<span class="c1">#: LDSA error by ~35 % on each held-out instrument, so the trend generalises.</span>
+<span class="n">_LDSA_CORR</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.003627</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.126074e-4</span><span class="p">,</span> <span class="mf">4.279956e-6</span><span class="p">)</span>  <span class="c1"># (c0, c1, c2) in 1/nm powers</span>
+<span class="n">_LDSA_CORR_SIZE_CAP</span> <span class="o">=</span> <span class="mf">150.0</span>  <span class="c1"># the fit is only supported up to ~150 nm</span>
+<span class="n">_LDSA_CORR_CLIP</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.98</span><span class="p">,</span> <span class="mf">1.06</span><span class="p">)</span>  <span class="c1"># bound the factor against extrapolation</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_ldsa_size_factor</span><span class="p">(</span><span class="n">size</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the empirical size-dependent LDSA correction factor (see _LDSA_CORR)."""</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">_LDSA_CORR_SIZE_CAP</span><span class="p">)</span>
+    <span class="n">c0</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">c2</span> <span class="o">=</span> <span class="n">_LDSA_CORR</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">c0</span> <span class="o">+</span> <span class="n">c1</span> <span class="o">*</span> <span class="n">s</span> <span class="o">+</span> <span class="n">c2</span> <span class="o">*</span> <span class="n">s</span> <span class="o">*</span> <span class="n">s</span><span class="p">,</span> <span class="o">*</span><span class="n">_LDSA_CORR_CLIP</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_zero_offset_series</span><span class="p">(</span><span class="n">raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">offsets_hdr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build the time-varying electrometer zero offsets from a raw record.</span>
+
+<span class="sd">    The DiSCmini re-measures its electrometer zero offsets during a ~1 minute</span>
+<span class="sd">    pump-/charger-off period every hour (Testo DiSCmini manual, "Zero offsets").</span>
+<span class="sd">    The vendor software subtracts these (slowly drifting) offsets from the two</span>
+<span class="sd">    stage currents before computing number/size/LDSA. Those offset measurements</span>
+<span class="sd">    are recoverable straight from the raw file: during each idle period the</span>
+<span class="sd">    charging current ``Idiff`` falls to ≈ 0, and the diffusion/filter readings</span>
+<span class="sd">    then are the pure electrometer zeros. This returns anchor points for a</span>
+<span class="sd">    linear interpolation of each stage's offset over time, seeded at ``t = 0``</span>
+<span class="sd">    with the header ``Offsets:`` values (the instrument's start-up zeros).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        raw: The full raw data table (all rows, incl. idle) with numeric</span>
+<span class="sd">            ``Time``/``Diffusion``/``Filter``/``Idiff`` and a ``Status`` column.</span>
+<span class="sd">        offsets_hdr: The two header ``Offsets:`` values, or ``None``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ``(times, off_diff, off_filter)`` numpy arrays of anchor times (s) and</span>
+<span class="sd">        the corresponding diffusion/filter zero offsets, or ``None`` when no</span>
+<span class="sd">        offset information is available.</span>
+<span class="sd">    """</span>
+    <span class="n">times</span><span class="p">,</span> <span class="n">off_d</span><span class="p">,</span> <span class="n">off_f</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">offsets_hdr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">offsets_hdr</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">times</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">off_d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">offsets_hdr</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">off_f</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">offsets_hdr</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="n">idle</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="o">~</span><span class="n">raw</span><span class="p">[</span><span class="s2">"Status"</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"b"</span><span class="p">,</span> <span class="n">na</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">idle</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="c1"># Split the idle rows into consecutive runs (the hourly offset periods).</span>
+        <span class="n">breaks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">idle</span><span class="p">[</span><span class="s2">"Time"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">idle</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="n">breaks</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">seg</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">run</span><span class="p">]</span>
+            <span class="n">settled</span> <span class="o">=</span> <span class="n">seg</span><span class="p">[</span><span class="n">seg</span><span class="p">[</span><span class="s2">"Idiff"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">]</span>  <span class="c1"># charger fully off → pure zero</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">settled</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="n">times</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">settled</span><span class="p">[</span><span class="s2">"Time"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+                <span class="n">off_d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">settled</span><span class="p">[</span><span class="s2">"Diffusion"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+                <span class="n">off_f</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">settled</span><span class="p">[</span><span class="s2">"Filter"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">times</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">times</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">times</span><span class="p">)[</span><span class="n">order</span><span class="p">],</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">off_d</span><span class="p">)[</span><span class="n">order</span><span class="p">],</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">off_f</span><span class="p">)[</span><span class="n">order</span><span class="p">],</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="load_discmini_raw_file">
+<a class="viewcode-back" href="../../../api/aerosoltools/loaders/discmini/index.html#aerosoltools.loaders.discmini.load_discmini_raw_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_discmini_raw_file</span><span class="p">(</span>
+    <span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">extra_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">period</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="n">zero_offset_correction</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">ldsa_correction</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DiSCmini</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Load a **raw** DiSCmini ``.TXT`` file and reproduce the vendor</span>
+<span class="sd">    software's processed output (total number concentration, mean size</span>
+<span class="sd">    and LDSA) directly, without the intermediate commercial conversion.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file (str):</span>
+<span class="sd">            Path to a raw DiSCmini ``.TXT`` file (the file written by the</span>
+<span class="sd">            instrument, with the ``CalData:``/``Offsets:`` header and the</span>
+<span class="sd">            ``Time  Diffusion  Filter ...`` data table).</span>
+<span class="sd">        extra_data (bool, optional):</span>
+<span class="sd">            If ``True``, the averaged diagnostic channels (diffusion/filter</span>
+<span class="sd">            currents, temperature, flow, battery, …) are stored in</span>
+<span class="sd">            ``.extra_data``. Defaults to ``True`` — everything in the file is</span>
+<span class="sd">            kept.</span>
+<span class="sd">        period (int, optional):</span>
+<span class="sd">            Averaging period in seconds. The vendor tool averages the raw</span>
+<span class="sd">            1 Hz data into 10 s windows; this reproduces that with</span>
+<span class="sd">            ``period=10`` (the default).</span>
+<span class="sd">        zero_offset_correction (bool, optional):</span>
+<span class="sd">            Subtract the time-varying electrometer zero offsets (recovered from</span>
+<span class="sd">            the hourly pump-off offset measurements, see</span>
+<span class="sd">            :func:`_zero_offset_series`) from the stage currents before</span>
+<span class="sd">            computing, as the vendor software does. This markedly improves</span>
+<span class="sd">            agreement for instruments whose electrometer baseline drifts.</span>
+<span class="sd">            Defaults to ``True``.</span>
+<span class="sd">        ldsa_correction (bool, optional):</span>
+<span class="sd">            Apply an **empirical** size-dependent multiplier to LDSA (see</span>
+<span class="sd">            :data:`_LDSA_CORR`). The simple ``cal[6]·I_total`` LDSA slightly</span>
+<span class="sd">            underestimates the vendor value by an amount that grows with mean</span>
+<span class="sd">            particle size; this factor (fit to paired raw/processed files and</span>
+<span class="sd">            leave-one-out validated) removes most of it. It is *not* a</span>
+<span class="sd">            documented vendor formula, so it defaults to ``False``; enable it</span>
+<span class="sd">            for closer agreement with the vendor LDSA.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        DiSCmini:</span>
+<span class="sd">            A :class:`~aerosoltools.DiSCmini` with</span>
+<span class="sd">            ``Total_conc`` (cm⁻³), ``Size`` (nm) and ``LDSA`` (nm²/cm³) at the</span>
+<span class="sd">            chosen averaging period, indexed by **real** timestamps (unlike the</span>
+<span class="sd">            vendor output, which renumbers time contiguously across gaps).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError:</span>
+<span class="sd">            If the calibration constants cannot be parsed from the header (see</span>
+<span class="sd">            :func:`_parse_raw_header`).</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        Detailed description:</span>
+<span class="sd">            The reproduction was reverse-engineered from paired raw/processed</span>
+<span class="sd">            DiSCmini files:</span>
+
+<span class="sd">            - **Row selection.** Only rows whose ``Status`` byte marks an active</span>
+<span class="sd">              measurement (low nibble ``B``, e.g. ``"8B"``) are kept; idle /</span>
+<span class="sd">              pump-off rows (``"88"``/``"89"``, flow ≈ 0.37) are dropped.</span>
+<span class="sd">            - **Averaging.** Kept rows are averaged into fixed ``period``-second</span>
+<span class="sd">              wall-clock windows (``floor(Time / period)``), as the vendor tool</span>
+<span class="sd">              does; fully idle windows drop out. (Grouping on time rather than on</span>
+<span class="sd">              every N-th valid row keeps windows aligned when idle rows are</span>
+<span class="sd">              interspersed through the record.)</span>
+<span class="sd">            - **LDSA** ``= cal[6] · (I_diffusion + I_filter)`` — reproduces the</span>
+<span class="sd">              vendor value essentially exactly. This follows from the diffusion</span>
+<span class="sd">              charger physics (miniDiSC application note #8): the charger signal,</span>
+<span class="sd">              i.e. the total current, is directly proportional to LDSA.</span>
+<span class="sd">            - **Size** ``= cal[0] + cal[1]·R + cal[2]·R² + cal[3]·R³`` where</span>
+<span class="sd">              ``R = I_filter / I_diffusion``. This is the DiSC diffusion-stage</span>
+<span class="sd">              current-ratio calibration, stored on the instrument as a cubic</span>
+<span class="sd">              polynomial (Fierz et al. 2011); see :func:`_disc_size_from_ratio`.</span>
+<span class="sd">            - **Number** ``= cal[5] · (I_diffusion + I_filter) / Size**cal[4]``.</span>
+<span class="sd">              The average charge per particle scales as ``q ∝ d**1.1`` (Fierz</span>
+<span class="sd">              2011; miniDiSC note #8), so the total current is ``N · q``;</span>
+<span class="sd">              inverting gives this expression with ``cal[4] ≈ 1.1``.</span>
+
+<span class="sd">            ``cal[0..3]`` are the cubic size-calibration coefficients,</span>
+<span class="sd">            ``cal[4]`` the charge/size exponent (≈ 1.1), ``cal[5]`` the</span>
+<span class="sd">            number-calibration factor and ``cal[6]`` the LDSA-per-current</span>
+<span class="sd">            factor. All were validated against vendor-processed files.</span>
+
+<span class="sd">            A drifting electrometer **zero offset** is removed before computing</span>
+<span class="sd">            (``zero_offset_correction``): the instrument re-measures its zero</span>
+<span class="sd">            offsets during a ~1 min pump-off period every hour (Testo DiSCmini</span>
+<span class="sd">            manual), and those measurements are recovered from the idle periods</span>
+<span class="sd">            in the raw file and subtracted from the stage currents, as the</span>
+<span class="sd">            vendor software does (see :func:`_zero_offset_series`). This is the</span>
+<span class="sd">            dominant source of raw-vs-vendor disagreement for instruments whose</span>
+<span class="sd">            baseline drifts.</span>
+
+<span class="sd">            Accuracy: the *inversion* fed the vendor's own currents matches</span>
+<span class="sd">            Size/Number to a median error &lt; 1 %; end-to-end from the raw file</span>
+<span class="sd">            (with the zero-offset correction) Size/Number agree with the vendor</span>
+<span class="sd">            output to roughly 1-3 % across the reference instruments. A small</span>
+<span class="sd">            residual remains from effects not reproduced here — the optional</span>
+<span class="sd">            *induction correction* (subtracting a term proportional to the</span>
+<span class="sd">            filter-signal time-derivative from the diffusion stage, which the</span>
+<span class="sd">            vendor leaves off by default and which only matters during rapid</span>
+<span class="sd">            transients), the sensor-signal-to-l/min flow conversion, and the</span>
+<span class="sd">            2-decimal rounding of the raw currents. The averaged</span>
+<span class="sd">            diffusion/filter currents are exposed via ``extra_data``.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import aerosoltools as at</span>
+
+<span class="sd">            dm = at.load_discmini_raw_file("data/6605G55D.TXT")</span>
+<span class="sd">            print(dm.data[["Total_conc", "Size", "LDSA"]])</span>
+<span class="sd">    """</span>
+    <span class="n">enc</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">sniff</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">sample_lines</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>
+
+    <span class="c1"># Read the header block (enough lines to reach the data-table header row).</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">enc</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+        <span class="n">header_lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">ln</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">ln</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">15</span><span class="p">),</span> <span class="n">fh</span><span class="p">)]</span>
+    <span class="n">meta</span> <span class="o">=</span> <span class="n">_parse_raw_header</span><span class="p">(</span><span class="n">header_lines</span><span class="p">)</span>
+    <span class="n">cal</span> <span class="o">=</span> <span class="n">meta</span><span class="p">[</span><span class="s2">"cal"</span><span class="p">]</span>
+
+    <span class="c1"># Read the data table.</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+        <span class="n">file</span><span class="p">,</span>
+        <span class="n">sep</span><span class="o">=</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span>
+        <span class="n">skiprows</span><span class="o">=</span><span class="n">meta</span><span class="p">[</span><span class="s2">"header_rows"</span><span class="p">],</span>
+        <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">engine</span><span class="o">=</span><span class="s2">"python"</span><span class="p">,</span>
+        <span class="n">names</span><span class="o">=</span><span class="n">_RAW_COLUMNS</span> <span class="o">+</span> <span class="p">[</span><span class="s2">"_extra"</span><span class="p">],</span>
+        <span class="n">usecols</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">_RAW_COLUMNS</span><span class="p">)),</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"Time"</span><span class="p">,</span> <span class="s2">"Diffusion"</span><span class="p">,</span> <span class="s2">"Filter"</span><span class="p">,</span> <span class="s2">"Temp"</span><span class="p">,</span> <span class="s2">"Idiff"</span><span class="p">,</span> <span class="s2">"Ucor"</span><span class="p">,</span> <span class="s2">"Flow"</span><span class="p">,</span> <span class="s2">"Batt"</span><span class="p">]:</span>
+        <span class="n">raw</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">col</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span>
+    <span class="n">raw</span><span class="p">[</span><span class="s2">"Status"</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="s2">"Status"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"string"</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="c1"># Subtract the drifting electrometer zero offsets (recovered from the hourly</span>
+    <span class="c1"># pump-off offset measurements) from the stage currents, as the vendor does.</span>
+    <span class="n">offsets</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">_zero_offset_series</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">meta</span><span class="p">[</span><span class="s2">"offsets"</span><span class="p">])</span> <span class="k">if</span> <span class="n">zero_offset_correction</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">offsets</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ot</span><span class="p">,</span> <span class="n">od</span><span class="p">,</span> <span class="n">of</span> <span class="o">=</span> <span class="n">offsets</span>
+        <span class="n">raw</span><span class="p">[</span><span class="s2">"Diffusion"</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="s2">"Diffusion"</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="s2">"Time"</span><span class="p">],</span> <span class="n">ot</span><span class="p">,</span> <span class="n">od</span><span class="p">)</span>
+        <span class="n">raw</span><span class="p">[</span><span class="s2">"Filter"</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="s2">"Filter"</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="s2">"Time"</span><span class="p">],</span> <span class="n">ot</span><span class="p">,</span> <span class="n">of</span><span class="p">)</span>
+
+    <span class="c1"># Keep only active-measurement rows (Status low nibble "B", e.g. "8B").</span>
+    <span class="n">valid</span> <span class="o">=</span> <span class="n">raw</span><span class="p">[</span><span class="n">raw</span><span class="p">[</span><span class="s2">"Status"</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"b"</span><span class="p">,</span> <span class="n">na</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">valid</span> <span class="o">=</span> <span class="n">valid</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">"Time"</span><span class="p">,</span> <span class="s2">"Diffusion"</span><span class="p">,</span> <span class="s2">"Filter"</span><span class="p">])</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">valid</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">EmptyFileError</span><span class="p">(</span>
+            <span class="s2">"No valid measurement rows found in the raw DiSCmini file."</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Average the valid rows into fixed ``period``-second wall-clock windows,</span>
+    <span class="c1"># grouping on the elapsed-time column (``floor(Time / period)``) exactly as</span>
+    <span class="c1"># the vendor tool does. Grouping on time — rather than on every N-th valid</span>
+    <span class="c1"># row — keeps windows aligned even when idle rows are interspersed through</span>
+    <span class="c1"># the record. A window is only emitted when at least ``min_valid`` of its</span>
+    <span class="c1"># ``period`` seconds are valid (the vendor keeps windows with &gt;= 8 of 10</span>
+    <span class="c1"># valid samples); this drops fully/partly idle windows at gap edges so the</span>
+    <span class="c1"># output row sequence matches the vendor's — otherwise a spurious partial</span>
+    <span class="c1"># window at each gap would shift every later row and accumulate a drift.</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Diffusion"</span><span class="p">,</span> <span class="s2">"Filter"</span><span class="p">,</span> <span class="s2">"Temp"</span><span class="p">,</span> <span class="s2">"Idiff"</span><span class="p">,</span> <span class="s2">"Ucor"</span><span class="p">,</span> <span class="s2">"Flow"</span><span class="p">,</span> <span class="s2">"Batt"</span><span class="p">]</span>
+    <span class="n">min_valid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mf">0.8</span> <span class="o">*</span> <span class="n">period</span><span class="p">))</span>
+    <span class="n">window</span> <span class="o">=</span> <span class="p">(</span><span class="n">valid</span><span class="p">[</span><span class="s2">"Time"</span><span class="p">]</span> <span class="o">//</span> <span class="n">period</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"int64"</span><span class="p">)</span>
+    <span class="n">grp</span> <span class="o">=</span> <span class="n">valid</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">window</span><span class="p">)</span>
+    <span class="n">counts</span> <span class="o">=</span> <span class="n">grp</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">avg</span> <span class="o">=</span> <span class="n">grp</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="n">counts</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">counts</span> <span class="o">&gt;=</span> <span class="n">min_valid</span><span class="p">]</span>
+    <span class="n">avg</span> <span class="o">=</span> <span class="n">avg</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span>
+    <span class="n">win_index</span> <span class="o">=</span> <span class="n">avg</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">avg</span> <span class="o">=</span> <span class="n">avg</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">avg</span><span class="p">[</span><span class="s2">"Diffusion"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">avg</span><span class="p">[</span><span class="s2">"Filter"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="n">itot</span> <span class="o">=</span> <span class="n">diff</span> <span class="o">+</span> <span class="n">filt</span>
+
+    <span class="c1"># LDSA = cal[6]·I_total; Size from the current-ratio calibration polynomial;</span>
+    <span class="c1"># Number = cal[5]·I_total / d**cal[4] (charge law q ∝ d**cal[4], cal[4]≈1.1).</span>
+    <span class="n">ldsa</span> <span class="o">=</span> <span class="n">cal</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">*</span> <span class="n">itot</span>
+    <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">):</span>
+        <span class="n">ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">diff</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">filt</span> <span class="o">/</span> <span class="n">diff</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">_disc_size_from_ratio</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="n">cal</span><span class="p">)</span>
+    <span class="n">number</span> <span class="o">=</span> <span class="n">cal</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">*</span> <span class="n">itot</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">cal</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+    <span class="c1"># Optional empirical size-dependent LDSA refinement (does not feed Number).</span>
+    <span class="k">if</span> <span class="n">ldsa_correction</span><span class="p">:</span>
+        <span class="n">ldsa</span> <span class="o">=</span> <span class="n">ldsa</span> <span class="o">*</span> <span class="n">_ldsa_size_factor</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+
+    <span class="c1"># Real timestamps at each window's centre (start + win*period + (period-1)/2),</span>
+    <span class="c1"># matching the vendor's time labelling and preserving real elapsed time.</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">meta</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]</span> <span class="ow">or</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">1970</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">centre_s</span> <span class="o">=</span> <span class="n">win_index</span> <span class="o">*</span> <span class="n">period</span> <span class="o">+</span> <span class="p">(</span><span class="n">period</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">start</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span><span class="n">centre_s</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"s"</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">"Datetime"</span><span class="p">:</span> <span class="n">times</span><span class="p">,</span>
+            <span class="s2">"Total_conc"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">number</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span>
+            <span class="s2">"Size"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="s2">"LDSA"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">ldsa</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="n">DM</span> <span class="o">=</span> <span class="n">DiSCmini</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"instrument"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"DiSCmini"</span>
+    <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"serial_number"</span><span class="p">]</span> <span class="o">=</span> <span class="n">meta</span><span class="p">[</span><span class="s2">"serial"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">meta</span><span class="p">[</span><span class="s2">"firmware"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"firmware"</span><span class="p">]</span> <span class="o">=</span> <span class="n">meta</span><span class="p">[</span><span class="s2">"firmware"</span><span class="p">]</span>
+    <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"calibration"</span><span class="p">]</span> <span class="o">=</span> <span class="n">cal</span>
+    <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"offsets"</span><span class="p">]</span> <span class="o">=</span> <span class="n">meta</span><span class="p">[</span><span class="s2">"offsets"</span><span class="p">]</span>
+    <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"averaging_period_s"</span><span class="p">]</span> <span class="o">=</span> <span class="n">period</span>
+    <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"zero_offset_correction"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">offsets</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"ldsa_correction"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">ldsa_correction</span><span class="p">)</span>
+    <span class="c1"># Size uses the instrument's stored cubic current-ratio calibration</span>
+    <span class="c1"># (Fierz 2011); reproduces the vendor output to a median error &lt; 1 %.</span>
+    <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"size_inversion"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"cubic_ratio_polynomial"</span>
+    <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"unit"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"Total_conc"</span><span class="p">:</span> <span class="s2">"cm⁻³"</span><span class="p">,</span>
+        <span class="s2">"Size"</span><span class="p">:</span> <span class="s2">"nm"</span><span class="p">,</span>
+        <span class="s2">"LDSA"</span><span class="p">:</span> <span class="s2">"nm²/cm³"</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"dtype"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"Total_conc"</span><span class="p">:</span> <span class="s2">"dN"</span><span class="p">,</span> <span class="s2">"Size"</span><span class="p">:</span> <span class="s2">"l"</span><span class="p">,</span> <span class="s2">"LDSA"</span><span class="p">:</span> <span class="s2">"dS"</span><span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">extra_data</span><span class="p">:</span>
+        <span class="n">extra</span> <span class="o">=</span> <span class="n">avg</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">extra</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">"Datetime"</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span>
+        <span class="n">extra</span> <span class="o">=</span> <span class="n">extra</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"Datetime"</span><span class="p">)</span>
+        <span class="n">extra</span><span class="p">,</span> <span class="n">column_units</span> <span class="o">=</span> <span class="n">resolve_extra_columns</span><span class="p">(</span><span class="n">extra</span><span class="p">)</span>
+        <span class="n">DM</span><span class="o">.</span><span class="n">_extra_data</span> <span class="o">=</span> <span class="n">extra</span>
+        <span class="n">DM</span><span class="o">.</span><span class="n">_raw_extra_data</span> <span class="o">=</span> <span class="n">extra</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">DM</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"column_units"</span><span class="p">]</span> <span class="o">=</span> <span class="n">column_units</span>
+
+    <span class="k">return</span> <span class="n">DM</span></div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

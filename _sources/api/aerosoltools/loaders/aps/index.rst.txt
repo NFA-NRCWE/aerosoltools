@@ -1,0 +1,66 @@
+aerosoltools.loaders.aps
+========================
+
+.. py:module:: aerosoltools.loaders.aps
+
+.. autoapi-nested-parse::
+
+   Loader for TSI Aerodynamic Particle Sizer (APS 3321) AIM exports.
+
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: load_aps_file(file)
+
+   Load a TSI APS 3321 AIM text export and return the size distribution.
+
+       The APS sizes each particle both **aerodynamically** (time of flight)
+       and, in *correlated* mode, **optically** (side scatter). This loader
+       returns an :class:`~aerosoltools.aerosol3d.Aerosol3d` carrying both axes
+       when the file is correlated, and a plain
+       :class:`~aerosoltools.aerosol2d.Aerosol2D` (aerodynamic) when the APS was
+       run in aerodynamic-only mode. The delimiter (comma or tab — an export
+       choice) is sniffed automatically.
+
+   :param file: Path to the APS ``.txt`` export.
+   :type file: str
+
+   :returns: The aerodynamic distribution (dN, cm⁻³). A
+             correlated file additionally carries the optical distribution
+             (``.optical``) and the optical×aerodynamic matrix (``.correlation``),
+             for :meth:`~aerosoltools.aerosol3d.Aerosol3d.plot_aero_vs_optical`.
+   :rtype: Aerosol2D | Aerosol3d
+
+   :raises ValueError: If the file does not look like an APS AIM export.
+
+   .. rubric:: Notes
+
+   Units: exports weighted as "Raw Counts" are converted to number
+   concentration with the APS 1 L/min aerosol flow and the header's sample
+   time (verified against the instrument's reported Total Conc.);
+   concentration-weighted (correlated) exports are used as-is.
+
+   Optical axis: per the APS 3321 manual the optical "channels" are equal
+   bins of the raw side-scatter *intensity* (their count set by the SCR
+   command — 16 in these files), and the instrument calibrates only the
+   aerodynamic axis (SCA), not scatter→size. The optical channels are
+   therefore given a nominal log-spaced diameter over the manual's
+   0.5–20 µm light-scattering range (``optical_nominal`` flag; the raw
+   1–N channel indices are kept in ``optical_channel_index``).
+
+   .. rubric:: Examples
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       aps = at.load_aps_file("KOBOT correlated AIM1.txt")
+       aps.plot_psd()                 # aerodynamic PSD (inherited 2D API)
+       if aps.is_correlated:
+           aps.plot_aero_vs_optical()  # optical vs aerodynamic comparison
+
+

@@ -1,0 +1,238 @@
+aerosoltools.loaders.discmini
+=============================
+
+.. py:module:: aerosoltools.loaders.discmini
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: load_discmini_file(file, extra_data = True)
+
+   Load a converted DiSCmini export file and return total number
+   concentration, mean size, and LDSA as a :class:`DiSCmini` time
+   series.
+
+   :param file: Path to the DiSCmini ``.txt`` file exported and converted by the
+                vendor software.
+   :type file: str
+   :param extra_data: If ``True``, columns that are not part of the core time series
+                      (datetime, total concentration, mean size, LDSA) are stored in
+                      the returned object's ``.extra_data`` (and ``._raw_extra_data``)
+                      DataFrames, indexed by ``Datetime``. Defaults to ``True`` —
+                      everything in the file is kept.
+   :type extra_data: bool, optional
+
+   :returns:     A :class:`~aerosoltools.DiSCmini` instance with
+                 the loaded data
+   :rtype: DiSCmini
+
+   :raises FileNotFoundError: If ``file`` does not exist or cannot be opened. Check the path
+       and file permissions.
+   :raises UnicodeDecodeError: If the file cannot be decoded using the encodings tried by
+       ``sniff``. This usually indicates a corrupted
+       or non-text file.
+   :raises ValueError: If timestamps or header-derived start date/time strings are in
+       an unsupported format and cannot be parsed. Check that the file
+       was exported using a supported DiSCmini software version and
+       that the regional date/time settings are compatible.
+   :raises KeyError: If expected columns such as ``"TimeStamp"``/``"Time"``,
+       ``"Number"``, or size/LDSA columns are missing or renamed in an
+       unexpected way. Verify that the file is an unmodified DiSCmini
+       export.
+   :raises TimestampError: If neither direct parsing nor reconstruction of the datetime
+       column succeeds, or if a valid ``"Datetime"`` column cannot be
+       produced after all attempts. The raised message will typically
+       indicate that the file has not been converted correctly or that
+       the datetime format is unsupported.
+
+   .. rubric:: Notes
+
+   Detailed description:
+       ``load_discmini_file`` is designed for DiSCmini data that have
+       already been converted by the vendor software to a tab-delimited
+       text format.
+
+       Internally, the function:
+
+       - Reads a subset of columns (up to 7) as strings to robustly
+         handle locale-specific decimal separators and whitespace.
+       - Normalizes column names.
+       - Attempts to parse the ``"Datetime"`` column using two common
+         formats:
+
+         - ``"%d-%b-%Y %H:%M:%S"`` (e.g. ``01-Oct-2023 12:00:00``)
+         - ``"%d-%m-%Y %H:%M:%S"`` (e.g. ``01-10-2023 12:00:00``)
+
+       - If both direct parses fail, it falls back to reconstructing
+         absolute time from header information:
+
+         - Searches the header for lines containing ``"start date:"``
+           and ``"start time:"``.
+         - Parses those as a start datetime.
+         - Interprets the ``"Datetime"`` column as elapsed seconds
+           since that start time, then creates a real timestamp series.
+
+       - Normalizes numeric fields by:
+
+         - Replacing commas with dots as decimal separators.
+         - Removing extraneous whitespace.
+         - Coercing invalid entries to ``NaN``.
+
+       - Extracts and **normalizes** the serial number (and firmware
+         version) from the header via
+         :func:`_extract_serial_and_firmware`, stripping any ``"SN"``
+         prefix so files from the same instrument match regardless of the
+         export's serial-format convention.
+
+       - Builds the core :class:`DiSCmini` object from the subset of
+         columns that includes
+
+         - ``"Datetime"`` — measurement timestamps.
+         - ``"Total_conc"`` — particle number concentration (cm⁻³).
+         - ``"Size"`` — mean particle diameter (nm).
+         - ``"LDSA"`` — lung-deposited surface area (nm²/cm³).
+
+       - Populates the ``.meta`` dictionary with, e.g.:
+
+         - ``"instrument"`` — set to ``"DiSCmini"``.
+         - ``"serial_number"`` — serial number parsed from the header.
+         - ``"unit"`` — mapping of variable names to units.
+         - ``"dtype"`` — mapping of variable names to data types
+           (e.g. ``"dN"`` for number concentration, ``"dS"`` for LDSA).
+
+       - Optionally collects all remaining non-core columns into
+         ``.extra_data`` (and ``._raw_extra_data``) when
+         ``extra_data=True``.
+
+   .. rubric:: Examples
+
+   A typical workflow is to convert a DiSCmini file using the vendor
+   software and then load it for analysis or plotting:
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       # Load DiSCmini data with core metrics only
+       dm = at.load_discmini_file("data/discmini_converted.txt")
+
+       # Quick look at total concentration and LDSA
+       print(dm.data[["Total_conc", "LDSA"]])
+
+       # List available extra channels
+       print(dm_full.extra_data.columns)
+
+       # Plot LDSA over time
+       fig, ax = dm.plot_timeseries()
+
+
+.. py:function:: load_discmini_raw_file(file, extra_data = True, period = 10, zero_offset_correction = True, ldsa_correction = False)
+
+   Load a **raw** DiSCmini ``.TXT`` file and reproduce the vendor
+   software's processed output (total number concentration, mean size
+   and LDSA) directly, without the intermediate commercial conversion.
+
+   :param file: Path to a raw DiSCmini ``.TXT`` file (the file written by the
+                instrument, with the ``CalData:``/``Offsets:`` header and the
+                ``Time  Diffusion  Filter ...`` data table).
+   :type file: str
+   :param extra_data: If ``True``, the averaged diagnostic channels (diffusion/filter
+                      currents, temperature, flow, battery, …) are stored in
+                      ``.extra_data``. Defaults to ``True`` — everything in the file is
+                      kept.
+   :type extra_data: bool, optional
+   :param period: Averaging period in seconds. The vendor tool averages the raw
+                  1 Hz data into 10 s windows; this reproduces that with
+                  ``period=10`` (the default).
+   :type period: int, optional
+   :param zero_offset_correction: Subtract the time-varying electrometer zero offsets (recovered from
+                                  the hourly pump-off offset measurements, see
+                                  :func:`_zero_offset_series`) from the stage currents before
+                                  computing, as the vendor software does. This markedly improves
+                                  agreement for instruments whose electrometer baseline drifts.
+                                  Defaults to ``True``.
+   :type zero_offset_correction: bool, optional
+   :param ldsa_correction: Apply an **empirical** size-dependent multiplier to LDSA (see
+                           :data:`_LDSA_CORR`). The simple ``cal[6]·I_total`` LDSA slightly
+                           underestimates the vendor value by an amount that grows with mean
+                           particle size; this factor (fit to paired raw/processed files and
+                           leave-one-out validated) removes most of it. It is *not* a
+                           documented vendor formula, so it defaults to ``False``; enable it
+                           for closer agreement with the vendor LDSA.
+   :type ldsa_correction: bool, optional
+
+   :returns:     A :class:`~aerosoltools.DiSCmini` with
+                 ``Total_conc`` (cm⁻³), ``Size`` (nm) and ``LDSA`` (nm²/cm³) at the
+                 chosen averaging period, indexed by **real** timestamps (unlike the
+                 vendor output, which renumbers time contiguously across gaps).
+   :rtype: DiSCmini
+
+   :raises ValueError: If the calibration constants cannot be parsed from the header (see
+       :func:`_parse_raw_header`).
+
+   .. rubric:: Notes
+
+   Detailed description:
+       The reproduction was reverse-engineered from paired raw/processed
+       DiSCmini files:
+
+       - **Row selection.** Only rows whose ``Status`` byte marks an active
+         measurement (low nibble ``B``, e.g. ``"8B"``) are kept; idle /
+         pump-off rows (``"88"``/``"89"``, flow ≈ 0.37) are dropped.
+       - **Averaging.** Kept rows are averaged into fixed ``period``-second
+         wall-clock windows (``floor(Time / period)``), as the vendor tool
+         does; fully idle windows drop out. (Grouping on time rather than on
+         every N-th valid row keeps windows aligned when idle rows are
+         interspersed through the record.)
+       - **LDSA** ``= cal[6] · (I_diffusion + I_filter)`` — reproduces the
+         vendor value essentially exactly. This follows from the diffusion
+         charger physics (miniDiSC application note #8): the charger signal,
+         i.e. the total current, is directly proportional to LDSA.
+       - **Size** ``= cal[0] + cal[1]·R + cal[2]·R² + cal[3]·R³`` where
+         ``R = I_filter / I_diffusion``. This is the DiSC diffusion-stage
+         current-ratio calibration, stored on the instrument as a cubic
+         polynomial (Fierz et al. 2011); see :func:`_disc_size_from_ratio`.
+       - **Number** ``= cal[5] · (I_diffusion + I_filter) / Size**cal[4]``.
+         The average charge per particle scales as ``q ∝ d**1.1`` (Fierz
+         2011; miniDiSC note #8), so the total current is ``N · q``;
+         inverting gives this expression with ``cal[4] ≈ 1.1``.
+
+       ``cal[0..3]`` are the cubic size-calibration coefficients,
+       ``cal[4]`` the charge/size exponent (≈ 1.1), ``cal[5]`` the
+       number-calibration factor and ``cal[6]`` the LDSA-per-current
+       factor. All were validated against vendor-processed files.
+
+       A drifting electrometer **zero offset** is removed before computing
+       (``zero_offset_correction``): the instrument re-measures its zero
+       offsets during a ~1 min pump-off period every hour (Testo DiSCmini
+       manual), and those measurements are recovered from the idle periods
+       in the raw file and subtracted from the stage currents, as the
+       vendor software does (see :func:`_zero_offset_series`). This is the
+       dominant source of raw-vs-vendor disagreement for instruments whose
+       baseline drifts.
+
+       Accuracy: the *inversion* fed the vendor's own currents matches
+       Size/Number to a median error < 1 %; end-to-end from the raw file
+       (with the zero-offset correction) Size/Number agree with the vendor
+       output to roughly 1-3 % across the reference instruments. A small
+       residual remains from effects not reproduced here — the optional
+       *induction correction* (subtracting a term proportional to the
+       filter-signal time-derivative from the diffusion stage, which the
+       vendor leaves off by default and which only matters during rapid
+       transients), the sensor-signal-to-l/min flow conversion, and the
+       2-decimal rounding of the raw currents. The averaged
+       diffusion/filter currents are exposed via ``extra_data``.
+
+   .. rubric:: Examples
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       dm = at.load_discmini_raw_file("data/6605G55D.TXT")
+       print(dm.data[["Total_conc", "Size", "LDSA"]])
+
+

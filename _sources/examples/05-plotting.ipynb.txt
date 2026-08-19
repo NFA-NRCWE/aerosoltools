@@ -1,0 +1,346 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 5 — Plotting\n",
+    "\n",
+    "**Theme:** the built-in plots and the arguments that control them.\n",
+    "\n",
+    "Four plotting methods cover most needs. Every one returns the Matplotlib\n",
+    "figure and axes, so anything not offered as an argument can still be done\n",
+    "afterwards with ordinary Matplotlib.\n",
+    "\n",
+    "Specialised plots live with their topics:\n",
+    "[8 — PSD fitting](08-psd-fitting.ipynb),\n",
+    "[10a — Correlation and agreement](10a-correlation-and-agreement.ipynb) and\n",
+    "[13 — APS](13-aps.ipynb)."
+   ],
+   "id": "cell-00"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import aerosoltools as at\n",
+    "\n",
+    "elpi = at.load_elpi_file(\"../../tests/data/Sample_ELPI.txt\")\n",
+    "elpi.mark_activities({\n",
+    "    \"Background\": [(\"2023-09-07 09:06:50\", \"2023-09-07 09:07:50\")],\n",
+    "    \"Emission\":   [(\"2023-09-07 09:07:55\", \"2023-09-07 09:08:30\")],\n",
+    "    \"Decay\":      [(\"2023-09-07 09:09:00\", \"2023-09-07 09:10:50\")],\n",
+    "})"
+   ],
+   "id": "cell-01"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Total concentration over time\n",
+    "\n",
+    "`plot_total_conc` is the simplest view: one line, whatever the instrument's\n",
+    "primary measurement is. It works on every class."
+   ],
+   "id": "cell-02"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = elpi.plot_total_conc()"
+   ],
+   "id": "cell-03"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`mark_activities=True` shades the marked periods, which is usually what makes a\n",
+    "time series readable."
+   ],
+   "id": "cell-04"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = elpi.plot_total_conc(mark_activities=True)"
+   ],
+   "id": "cell-05"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Pass a list instead of `True` to shade only some activities."
+   ],
+   "id": "cell-06"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = elpi.plot_total_conc(mark_activities=[\"Emission\"])"
+   ],
+   "id": "cell-07"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Size-resolved time series\n",
+    "\n",
+    "For size-resolved data `plot_timeseries` adds a heat map of the size\n",
+    "distribution below the total concentration."
+   ],
+   "id": "cell-08"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, axs = elpi.plot_timeseries()"
+   ],
+   "id": "cell-09"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Two arguments control the axes:\n",
+    "\n",
+    "- `y_tot` — limits for the total-concentration panel\n",
+    "- `y_3d` — colour limits for the heat map\n",
+    "\n",
+    "In both, `0` means \"use the data\". The lower bound on `y_3d` matters: the\n",
+    "colour scale is logarithmic by default, and bins reading exactly zero cannot be\n",
+    "shown on a log scale, so setting a floor of 1 avoids a mostly empty plot."
+   ],
+   "id": "cell-10"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, axs = elpi.plot_timeseries(y_3d=(1, 0), y_tot=(0, 4e6), mark_activities=True)"
+   ],
+   "id": "cell-11"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`log=False` switches the heat map to a linear colour scale."
+   ],
+   "id": "cell-12"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, axs = elpi.plot_timeseries(y_3d=(1, 5e5), log=False)"
+   ],
+   "id": "cell-13"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Size distributions\n",
+    "\n",
+    "`plot_psd` draws the average size distribution. With activities marked it draws\n",
+    "one curve per activity, which is the quickest way to see how a process changed\n",
+    "the distribution."
+   ],
+   "id": "cell-14"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = elpi.plot_psd()"
+   ],
+   "id": "cell-15"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`activities` selects which curves to draw."
+   ],
+   "id": "cell-16"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = elpi.plot_psd(activities=[\"Background\", \"Emission\"])"
+   ],
+   "id": "cell-17"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`normalize` controls dlogDp normalisation. Normalised distributions\n",
+    "(`dN/dlogDp`, the default) are comparable between instruments with different\n",
+    "bin widths; unnormalised ones show the raw per-bin concentration."
+   ],
+   "id": "cell-18"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, axs = plt.subplots(ncols=2, figsize=(12, 4))\n",
+    "elpi.plot_psd(normalize=True, ax=axs[0])\n",
+    "axs[0].set_title(\"Normalised (dN/dlogDp)\")\n",
+    "elpi.plot_psd(normalize=False, ax=axs[1])\n",
+    "axs[1].set_title(\"Not normalised (dN)\")\n",
+    "plt.tight_layout()"
+   ],
+   "id": "cell-19"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## PM fractions over time\n",
+    "\n",
+    "`plot_PM_timeseries` draws cumulative mass fractions. `PM_values` chooses the\n",
+    "cut diameters, in µm."
+   ],
+   "id": "cell-20"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = elpi.plot_PM_timeseries(PM_values=[1, 2.5, 4.2, 10])"
+   ],
+   "id": "cell-21"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`fraction=True` plots each cut as a share of the total rather than an absolute\n",
+    "concentration — useful for seeing a shift between coarse and fine particles\n",
+    "that an absolute plot hides."
+   ],
+   "id": "cell-22"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = elpi.plot_PM_timeseries(PM_values=[1, 2.5, 10], fraction=True,\n",
+    "                                  mark_activities=True)"
+   ],
+   "id": "cell-23"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Supplying your own axes\n",
+    "\n",
+    "Every method takes an axes argument (`ax`, or `ax1`/`ax2` for the two-panel\n",
+    "time series), so plots can be composed into a figure you control."
+   ],
+   "id": "cell-24"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, axs = plt.subplots(nrows=2, figsize=(9, 6))\n",
+    "\n",
+    "elpi.plot_total_conc(axs[0], mark_activities=True)\n",
+    "axs[0].set_title(\"Total concentration\")\n",
+    "\n",
+    "elpi.plot_psd(ax=axs[1])\n",
+    "axs[1].set_title(\"Size distribution per activity\")\n",
+    "\n",
+    "plt.tight_layout()"
+   ],
+   "id": "cell-25"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Because the figure and axes are returned, the result is an ordinary Matplotlib\n",
+    "figure — restyle, annotate or save it however you normally would."
+   ],
+   "id": "cell-26"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = elpi.plot_total_conc(mark_activities=True)\n",
+    "ax.set_ylabel(\"Particle number concentration\")\n",
+    "ax.axhline(2e6, linestyle=\"--\", color=\"firebrick\", label=\"illustrative limit\")\n",
+    "ax.legend(loc=\"upper right\")\n",
+    "fig.set_size_inches(9, 3.5)"
+   ],
+   "id": "cell-27"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "\n",
+    "**Next:** [6 — Dtypes, density and corrections](06-dtypes-density-corrections.ipynb)."
+   ],
+   "id": "cell-28"
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

@@ -1,0 +1,1359 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="5 — Plotting" href="05-plotting.html"><link rel="prev" title="3 — Activities" href="03-activities.html">
+
+    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+        <title>4 — Statistics and exposure - aerosoltools</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../gui/index.html">Desktop GUI</a><input aria-label="Toggle navigation of Desktop GUI" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../gui/raw-data.html">Raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/metadata.html">Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/time-series.html">Time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/decay.html">Decay / Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/heatmap.html">2D heatmap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/pm-bands.html">PM bands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/psd.html">PSD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/aero-optical.html">Aero ↔ Optical</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/summary.html">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/overlay.html">Overlay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/correlation.html">Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gui/psd-comparison.html">PSD comparison</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Examples</a><input aria-label="Toggle navigation of Examples" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01-loading-data.html">1 — Loading data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02-time-adjustments.html">2 — Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03-activities.html">3 — Activities</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">4 — Statistics and exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05-plotting.html">5 — Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06-dtypes-density-corrections.html">6 — Dtypes, density and corrections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07-combining-datasets.html">7 — Combining datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08-psd-fitting.html">8 — PSD fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="09-decay-and-source.html">9 — Decay and source fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="10a-correlation-and-agreement.html">10a — Correlation and agreement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="10b-calibration.html">10b — Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="11-simple-instruments.html">11 — Simple instruments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="12-aethalometer.html">12 — Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="13-aps.html">13 — APS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="15-acsm.html">15 — ACSM</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/aerosoltools/index.html">aerosoltools documentation</a><input aria-label="Toggle navigation of aerosoltools documentation" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/acsm_simple/index.html">aerosoltools.acsm_simple</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/aerosol1d/index.html">aerosoltools.aerosol1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/aerosol2d/index.html">aerosoltools.aerosol2d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/aerosol3d/index.html">aerosoltools.aerosol3d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/aethalometer/index.html">aerosoltools.aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/discmini/index.html">aerosoltools.discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/dusttrak/index.html">aerosoltools.dusttrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/elpi/index.html">aerosoltools.elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/environmental/index.html">aerosoltools.environmental</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/gas1d/index.html">aerosoltools.gas1d</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/aerosoltools/intercomparison/index.html">aerosoltools.intercomparison</a><input aria-label="Toggle navigation of aerosoltools.intercomparison" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/intercomparison/calibration/index.html">aerosoltools.intercomparison.calibration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/intercomparison/combination/index.html">aerosoltools.intercomparison.combination</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/intercomparison/correlation/index.html">aerosoltools.intercomparison.correlation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../api/aerosoltools/loaders/index.html">aerosoltools.loaders</a><input aria-label="Toggle navigation of aerosoltools.loaders" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/acsm/index.html">aerosoltools.loaders.acsm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/aethalometer/index.html">aerosoltools.loaders.aethalometer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/aps/index.html">aerosoltools.loaders.aps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/cpc/index.html">aerosoltools.loaders.cpc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/dev_weather/index.html">aerosoltools.loaders.dev_weather</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/discmini/index.html">aerosoltools.loaders.discmini</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/dusttrak/index.html">aerosoltools.loaders.dusttrak</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/elpi/index.html">aerosoltools.loaders.elpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/fmps/index.html">aerosoltools.loaders.fmps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/fourtec/index.html">aerosoltools.loaders.fourtec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/grimm/index.html">aerosoltools.loaders.grimm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/ns/index.html">aerosoltools.loaders.ns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/opcn3/index.html">aerosoltools.loaders.opcn3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/ops/index.html">aerosoltools.loaders.ops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/partector/index.html">aerosoltools.loaders.partector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/ranger/index.html">aerosoltools.loaders.ranger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/registry/index.html">aerosoltools.loaders.registry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/smps/index.html">aerosoltools.loaders.smps</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../api/aerosoltools/loaders/support/index.html">aerosoltools.loaders.support</a><input aria-label="Toggle navigation of aerosoltools.loaders.support" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../api/aerosoltools/loaders/support/construct/index.html">aerosoltools.loaders.support.construct</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/aerosoltools/loaders/support/exceptions/index.html">aerosoltools.loaders.support.exceptions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/aerosoltools/loaders/support/parsing/index.html">aerosoltools.loaders.support.parsing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/aerosoltools/loaders/support/reading/index.html">aerosoltools.loaders.support.reading</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/aerosoltools/loaders/support/units/index.html">aerosoltools.loaders.support.units</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../api/aerosoltools/loaders/tiger/index.html">aerosoltools.loaders.tiger</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api/aerosoltools/partector/index.html">aerosoltools.partector</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/examples/04-statistics-and-exposure.ipynb.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="4-—-Statistics-and-exposure">
+<h1>4 — Statistics and exposure<a class="headerlink" href="#4-—-Statistics-and-exposure" title="Link to this heading">¶</a></h1>
+<p><strong>Theme:</strong> turning a marked record into numbers — task statistics, and the metrics used for occupational exposure assessment.</p>
+<p>Everything here builds on the activities from <a class="reference internal" href="03-activities.html"><span class="doc">3 — Activities</span></a>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">aerosoltools</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">at</span>
+
+<span class="n">elpi</span> <span class="o">=</span> <span class="n">at</span><span class="o">.</span><span class="n">load_elpi_file</span><span class="p">(</span><span class="s2">"../../tests/data/Sample_ELPI.txt"</span><span class="p">)</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">mark_activities</span><span class="p">({</span>
+    <span class="s2">"Background"</span><span class="p">:</span> <span class="p">[(</span><span class="s2">"2023-09-07 09:06:50"</span><span class="p">,</span> <span class="s2">"2023-09-07 09:07:50"</span><span class="p">)],</span>
+    <span class="s2">"Emission"</span><span class="p">:</span>   <span class="p">[(</span><span class="s2">"2023-09-07 09:07:55"</span><span class="p">,</span> <span class="s2">"2023-09-07 09:08:30"</span><span class="p">)],</span>
+    <span class="s2">"Decay"</span><span class="p">:</span>      <span class="p">[(</span><span class="s2">"2023-09-07 09:09:00"</span><span class="p">,</span> <span class="s2">"2023-09-07 09:10:50"</span><span class="p">)],</span>
+<span class="p">})</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">activities</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm
+/home/runner/work/aerosoltools/aerosoltools/src/aerosoltools/loaders/elpi.py:525: RuntimeWarning: ELPI density is not 1.0 g/cm3; bin edges were estimated from geometric means of CalculatedDi values.
+  return load_elpi_file_txt(
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;All data&#39;, &#39;Background&#39;, &#39;Emission&#39;, &#39;Decay&#39;]
+</pre></div></div>
+</div>
+<section id="What-can-this-dataset-be-summarised-on?">
+<h2>What can this dataset be summarised on?<a class="headerlink" href="#What-can-this-dataset-be-summarised-on?" title="Link to this heading">¶</a></h2>
+<p>Which quantities are available depends on the instrument. A size-resolved instrument can produce mass and number fractions at any cut diameter; a single-channel one cannot. <code class="docutils literal notranslate"><span class="pre">available_metrics</span></code> reports what this particular dataset supports.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">elpi</span><span class="o">.</span><span class="n">available_metrics</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">metric</span><span class="o">.</span><span class="n">key</span><span class="si">:</span><span class="s2">12s</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">metric</span><span class="o">.</span><span class="n">label</span><span class="si">:</span><span class="s2">28s</span><span class="si">}</span><span class="s2"> [</span><span class="si">{</span><span class="n">metric</span><span class="o">.</span><span class="n">unit</span><span class="si">}</span><span class="s2">]"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+PNC          Number concentration         [cm⁻³]
+MASS         Mass concentration           [µg/m³]
+PM1          PM1                          [µg/m³]
+PM2.5        PM2.5                        [µg/m³]
+PM4          PM4                          [µg/m³]
+PM10         PM10                         [µg/m³]
+</pre></div></div>
+</div>
+</section>
+<section id="One-channel-at-a-time">
+<h2>One channel at a time<a class="headerlink" href="#One-channel-at-a-time" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">summarize</span></code> gives descriptive statistics for a single channel, split by activity.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Summary of Total_conc:
+
++---+------------+---------+---------+---------+--------+--------------+
+|   |  Segment   |   Min   |   Max   |  Mean   |  Std   | N datapoints |
++---+------------+---------+---------+---------+--------+--------------+
+| 0 |  All data  | 118.566 |  442.5  | 197.436 | 48.901 |     256      |
+| 1 | Background | 137.253 |  442.5  | 222.08  | 61.048 |      62      |
+| 2 |  Emission  | 138.416 | 314.828 | 202.937 | 42.281 |      37      |
+| 3 |   Decay    | 121.176 | 309.717 | 179.173 | 39.193 |     112      |
++---+------------+---------+---------+---------+--------+--------------+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Segment</th>
+      <th>Min</th>
+      <th>Max</th>
+      <th>Mean</th>
+      <th>Std</th>
+      <th>N datapoints</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>All data</td>
+      <td>118.566</td>
+      <td>442.500</td>
+      <td>197.436</td>
+      <td>48.901</td>
+      <td>256</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Background</td>
+      <td>137.253</td>
+      <td>442.500</td>
+      <td>222.080</td>
+      <td>61.048</td>
+      <td>62</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Emission</td>
+      <td>138.416</td>
+      <td>314.828</td>
+      <td>202.937</td>
+      <td>42.281</td>
+      <td>37</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Decay</td>
+      <td>121.176</td>
+      <td>309.717</td>
+      <td>179.173</td>
+      <td>39.193</td>
+      <td>112</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</section>
+<section id="Every-activity-at-once">
+<h2>Every activity at once<a class="headerlink" href="#Every-activity-at-once" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">summarize_activities</span></code> is the usual starting point: descriptive statistics per activity, including duration and — for size-resolved data — size metrics such as mode and geometric mean diameter.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">summarize_activities</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Summary of aerosol properties (transposed):
+
++------------------------+----------+------------+----------+--------+
+|                        | All data | Background | Emission | Decay  |
++------------------------+----------+------------+----------+--------+
+|    Duration (HH:MM)    |  00:04   |   00:01    |  00:00   | 00:01  |
+|       PNC [cm⁻³]       |  197.44  |   222.08   |  202.94  | 179.17 |
+|     PNC [cm⁻³] std     |   48.9   |   61.05    |  42.28   | 39.19  |
+|      PM1 [µg/m³]       |   1.29   |    1.4     |   1.31   |  1.2   |
+|    PM1 [µg/m³] std     |   0.11   |    0.08    |   0.02   |  0.04  |
+|     PM2.5 [µg/m³]      |   3.41   |    3.54    |   3.53   |  3.26  |
+|   PM2.5 [µg/m³] std    |   0.18   |    0.15    |   0.1    |  0.1   |
+|      PM4 [µg/m³]       |   5.77   |    5.63    |   6.22   |  5.7   |
+|    PM4 [µg/m³] std     |   0.59   |    0.94    |   0.28   |  0.29  |
+|      PM10 [µg/m³]      |  30.33   |   29.61    |  35.27   | 29.77  |
+|    PM10 [µg/m³] std    |   9.32   |   15.83    |   2.71   |  3.96  |
+|   Total Mass [µg/m³]   |  124.61  |   131.13   |  153.37  | 114.4  |
+| Total Mass [µg/m³] std |  51.31   |   83.91    |  25.27   | 23.13  |
+|      Mode Dp [nm]      |  125.2   |   116.4    |  129.8   | 134.3  |
+|    Mode Dp [nm] std    |  131.3   |   127.5    |  131.6   | 136.2  |
+|     Median Dp [nm]     |  224.2   |   211.8    |  227.8   | 228.6  |
+|   Median Dp [nm] std   |   68.7   |    77.5    |   66.9   |  67.6  |
+|        GMD [nm]        |  203.3   |   195.0    |  201.9   | 213.1  |
+|      GMD [nm] std      |   79.7   |    80.7    |   77.9   |  84.2  |
++------------------------+----------+------------+----------+--------+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Segment</th>
+      <th>Duration (HH:MM)</th>
+      <th>PNC [cm⁻³]</th>
+      <th>PNC [cm⁻³] std</th>
+      <th>PM1 [µg/m³]</th>
+      <th>PM1 [µg/m³] std</th>
+      <th>PM2.5 [µg/m³]</th>
+      <th>PM2.5 [µg/m³] std</th>
+      <th>PM4 [µg/m³]</th>
+      <th>PM4 [µg/m³] std</th>
+      <th>PM10 [µg/m³]</th>
+      <th>PM10 [µg/m³] std</th>
+      <th>Total Mass [µg/m³]</th>
+      <th>Total Mass [µg/m³] std</th>
+      <th>Mode Dp [nm]</th>
+      <th>Mode Dp [nm] std</th>
+      <th>Median Dp [nm]</th>
+      <th>Median Dp [nm] std</th>
+      <th>GMD [nm]</th>
+      <th>GMD [nm] std</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>All data</td>
+      <td>00:04</td>
+      <td>197.44</td>
+      <td>48.90</td>
+      <td>1.29</td>
+      <td>0.11</td>
+      <td>3.41</td>
+      <td>0.18</td>
+      <td>5.77</td>
+      <td>0.59</td>
+      <td>30.33</td>
+      <td>9.32</td>
+      <td>124.61</td>
+      <td>51.31</td>
+      <td>125.2</td>
+      <td>131.3</td>
+      <td>224.2</td>
+      <td>68.7</td>
+      <td>203.3</td>
+      <td>79.7</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Background</td>
+      <td>00:01</td>
+      <td>222.08</td>
+      <td>61.05</td>
+      <td>1.40</td>
+      <td>0.08</td>
+      <td>3.54</td>
+      <td>0.15</td>
+      <td>5.63</td>
+      <td>0.94</td>
+      <td>29.61</td>
+      <td>15.83</td>
+      <td>131.13</td>
+      <td>83.91</td>
+      <td>116.4</td>
+      <td>127.5</td>
+      <td>211.8</td>
+      <td>77.5</td>
+      <td>195.0</td>
+      <td>80.7</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Emission</td>
+      <td>00:00</td>
+      <td>202.94</td>
+      <td>42.28</td>
+      <td>1.31</td>
+      <td>0.02</td>
+      <td>3.53</td>
+      <td>0.10</td>
+      <td>6.22</td>
+      <td>0.28</td>
+      <td>35.27</td>
+      <td>2.71</td>
+      <td>153.37</td>
+      <td>25.27</td>
+      <td>129.8</td>
+      <td>131.6</td>
+      <td>227.8</td>
+      <td>66.9</td>
+      <td>201.9</td>
+      <td>77.9</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Decay</td>
+      <td>00:01</td>
+      <td>179.17</td>
+      <td>39.19</td>
+      <td>1.20</td>
+      <td>0.04</td>
+      <td>3.26</td>
+      <td>0.10</td>
+      <td>5.70</td>
+      <td>0.29</td>
+      <td>29.77</td>
+      <td>3.96</td>
+      <td>114.40</td>
+      <td>23.13</td>
+      <td>134.3</td>
+      <td>136.2</td>
+      <td>228.6</td>
+      <td>67.6</td>
+      <td>213.1</td>
+      <td>84.2</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>You can restrict it to particular metrics or statistics rather than taking the default set.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">summarize_activities</span><span class="p">(</span><span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">"PNC"</span><span class="p">,</span> <span class="s2">"PM2.5"</span><span class="p">],</span> <span class="n">stats</span><span class="o">=</span><span class="p">[</span><span class="s2">"mean"</span><span class="p">,</span> <span class="s2">"median"</span><span class="p">,</span> <span class="s2">"max"</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Summary of aerosol properties (transposed):
+
++----------------------+----------+------------+----------+--------+
+|                      | All data | Background | Emission | Decay  |
++----------------------+----------+------------+----------+--------+
+|   Duration (HH:MM)   |  00:04   |   00:01    |  00:00   | 00:01  |
+|      PNC [cm⁻³]      |  197.44  |   222.08   |  202.94  | 179.17 |
+|  PNC [cm⁻³] median   |  190.1   |   215.57   |  191.12  | 176.09 |
+|    PNC [cm⁻³] max    |  442.5   |   442.5    |  314.83  | 309.72 |
+|    PM2.5 [µg/m³]     |   3.41   |    3.54    |   3.53   |  3.26  |
+| PM2.5 [µg/m³] median |   3.4    |    3.57    |   3.56   |  3.26  |
+|  PM2.5 [µg/m³] max   |   3.95   |    3.95    |   3.73   |  3.6   |
++----------------------+----------+------------+----------+--------+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Segment</th>
+      <th>Duration (HH:MM)</th>
+      <th>PNC [cm⁻³]</th>
+      <th>PNC [cm⁻³] median</th>
+      <th>PNC [cm⁻³] max</th>
+      <th>PM2.5 [µg/m³]</th>
+      <th>PM2.5 [µg/m³] median</th>
+      <th>PM2.5 [µg/m³] max</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>All data</td>
+      <td>00:04</td>
+      <td>197.44</td>
+      <td>190.10</td>
+      <td>442.50</td>
+      <td>3.41</td>
+      <td>3.40</td>
+      <td>3.95</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Background</td>
+      <td>00:01</td>
+      <td>222.08</td>
+      <td>215.57</td>
+      <td>442.50</td>
+      <td>3.54</td>
+      <td>3.57</td>
+      <td>3.95</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Emission</td>
+      <td>00:00</td>
+      <td>202.94</td>
+      <td>191.12</td>
+      <td>314.83</td>
+      <td>3.53</td>
+      <td>3.56</td>
+      <td>3.73</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Decay</td>
+      <td>00:01</td>
+      <td>179.17</td>
+      <td>176.09</td>
+      <td>309.72</td>
+      <td>3.26</td>
+      <td>3.26</td>
+      <td>3.60</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</section>
+<section id="Exposure-assessment">
+<h2>Exposure assessment<a class="headerlink" href="#Exposure-assessment" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">summarize_exposure</span></code> answers the occupational-hygiene question: given this measurement, what is the exposure, and how does it compare with a limit?</p>
+<p>It reports a time-weighted average over <code class="docutils literal notranslate"><span class="pre">twa_window</span></code> (8 h by convention), the short-term exceedances over <code class="docutils literal notranslate"><span class="pre">short_window</span></code> (15 min by convention), peak counts, high percentiles, and the time spent above each limit.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">exposure</span> <span class="o">=</span> <span class="n">elpi</span><span class="o">.</span><span class="n">summarize_exposure</span><span class="p">(</span>
+    <span class="n">metric</span><span class="o">=</span><span class="s2">"PM4.2"</span><span class="p">,</span>              <span class="c1"># respirable dust</span>
+    <span class="n">activities</span><span class="o">=</span><span class="p">[</span><span class="s2">"Emission"</span><span class="p">],</span>
+    <span class="n">background</span><span class="o">=</span><span class="s2">"Background"</span><span class="p">,</span>     <span class="c1"># subtract the mean of this activity</span>
+    <span class="n">exposure_hours</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>         <span class="c1"># None -&gt; use the measured task duration</span>
+    <span class="n">short_limit</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>             <span class="c1"># STEL, in metric units</span>
+    <span class="n">long_limit</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>              <span class="c1"># 8 h OEL, in metric units</span>
+    <span class="n">short_window</span><span class="o">=</span><span class="s2">"15min"</span><span class="p">,</span>
+    <span class="n">twa_window</span><span class="o">=</span><span class="s2">"8h"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">exposure</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Exposure summary by segment for metric &#39;PM4.2&#39; (µg/m³):
+
++---------------------------------+----------+
+|             Metric              | Emission |
++---------------------------------+----------+
+|             Metric              |  PM4.2   |
+|        Duration [HH:MM]         |  00:00   |
+|           Max [µg/m³]           |  7.473   |
+|     95th percentile [µg/m³]     |  7.215   |
+|     75th percentile [µg/m³]     |  6.951   |
+|     50th percentile [µg/m³]     |  6.648   |
+|     25th percentile [µg/m³]     |  6.557   |
+|     5th percentile [µg/m³]      |  6.276   |
+|          Peaks [count]          |    0     |
+|          STEL [µg/m³]           |   1.0    |
+|      STEL window [offset]       |  15min   |
+|      STEL exceedance [min]      |   0.02   |
+|      STEL episodes [count]      |    1     |
+|     Exposure limit [µg/m³]      |   1.0    |
+| Exposure limit exceedance [min] |   0.62   |
+|    TWA concentration [µg/m³]    |  6.018   |
+|       TWA window [offset]       |    8h    |
++---------------------------------+----------+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Segment</th>
+      <th>Metric</th>
+      <th>Duration [HH:MM]</th>
+      <th>Max [µg/m³]</th>
+      <th>95th percentile [µg/m³]</th>
+      <th>75th percentile [µg/m³]</th>
+      <th>50th percentile [µg/m³]</th>
+      <th>25th percentile [µg/m³]</th>
+      <th>5th percentile [µg/m³]</th>
+      <th>Peaks [count]</th>
+      <th>STEL [µg/m³]</th>
+      <th>STEL window [offset]</th>
+      <th>STEL exceedance [min]</th>
+      <th>STEL episodes [count]</th>
+      <th>Exposure limit [µg/m³]</th>
+      <th>Exposure limit exceedance [min]</th>
+      <th>TWA concentration [µg/m³]</th>
+      <th>TWA window [offset]</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Emission</td>
+      <td>PM4.2</td>
+      <td>00:00</td>
+      <td>7.473</td>
+      <td>7.215</td>
+      <td>6.951</td>
+      <td>6.648</td>
+      <td>6.557</td>
+      <td>6.276</td>
+      <td>0</td>
+      <td>1.0</td>
+      <td>15min</td>
+      <td>0.02</td>
+      <td>1</td>
+      <td>1.0</td>
+      <td>0.62</td>
+      <td>6.018</td>
+      <td>8h</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>Three arguments carry most of the meaning:</p>
+<ul class="simple">
+<li><p><strong>``background``</strong> — either a number, or the name of an activity whose average is used. Subtracting a measured background separates the process contribution from what was already in the room.</p></li>
+<li><p><strong>``exposure_hours``</strong> — how long the worker is assumed to be exposed. <code class="docutils literal notranslate"><span class="pre">None</span></code> uses the measured duration of the activity; give a number to extrapolate a short measurement to a full shift.</p></li>
+<li><p><strong>``metric``</strong> — which quantity the limit applies to.</p></li>
+</ul>
+<p>Compare a short task assumed to last the whole shift against the same task taken at its measured length:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">measured</span> <span class="o">=</span> <span class="n">elpi</span><span class="o">.</span><span class="n">summarize_exposure</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">"PM4.2"</span><span class="p">,</span> <span class="n">activities</span><span class="o">=</span><span class="p">[</span><span class="s2">"Emission"</span><span class="p">],</span>
+                                   <span class="n">background</span><span class="o">=</span><span class="s2">"Background"</span><span class="p">,</span> <span class="n">exposure_hours</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">full_shift</span> <span class="o">=</span> <span class="n">elpi</span><span class="o">.</span><span class="n">summarize_exposure</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="s2">"PM4.2"</span><span class="p">,</span> <span class="n">activities</span><span class="o">=</span><span class="p">[</span><span class="s2">"Emission"</span><span class="p">],</span>
+                                     <span class="n">background</span><span class="o">=</span><span class="s2">"Background"</span><span class="p">,</span> <span class="n">exposure_hours</span><span class="o">=</span><span class="mf">8.0</span><span class="p">)</span>
+
+<span class="n">twa_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">measured</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="s2">"TWA"</span> <span class="ow">in</span> <span class="n">c</span><span class="p">]</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"assumed duration = measured task length"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">measured</span><span class="p">[[</span><span class="s2">"Segment"</span><span class="p">]</span> <span class="o">+</span> <span class="n">twa_cols</span><span class="p">]</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"assumed duration = 8 h"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">full_shift</span><span class="p">[[</span><span class="s2">"Segment"</span><span class="p">]</span> <span class="o">+</span> <span class="n">twa_cols</span><span class="p">]</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Exposure summary by segment for metric &#39;PM4.2&#39; (µg/m³):
+
++---------------------------------+----------+
+|             Metric              | Emission |
++---------------------------------+----------+
+|             Metric              |  PM4.2   |
+|        Duration [HH:MM]         |  00:00   |
+|           Max [µg/m³]           |  7.473   |
+|     95th percentile [µg/m³]     |  7.215   |
+|     75th percentile [µg/m³]     |  6.951   |
+|     50th percentile [µg/m³]     |  6.648   |
+|     25th percentile [µg/m³]     |  6.557   |
+|     5th percentile [µg/m³]      |  6.276   |
+|          Peaks [count]          |    0     |
+|          STEL [µg/m³]           |   1.0    |
+|      STEL window [offset]       |  15min   |
+|      STEL exceedance [min]      |   0.02   |
+|      STEL episodes [count]      |    1     |
+|     Exposure limit [µg/m³]      |   1.0    |
+| Exposure limit exceedance [min] |   0.62   |
+|    TWA concentration [µg/m³]    |  6.018   |
+|       TWA window [offset]       |    8h    |
++---------------------------------+----------+
+
+Exposure summary by segment for metric &#39;PM4.2&#39; (µg/m³):
+
++---------------------------------+----------+
+|             Metric              | Emission |
++---------------------------------+----------+
+|             Metric              |  PM4.2   |
+|        Duration [HH:MM]         |  00:00   |
+|           Max [µg/m³]           |  7.473   |
+|     95th percentile [µg/m³]     |  7.215   |
+|     75th percentile [µg/m³]     |  6.951   |
+|     50th percentile [µg/m³]     |  6.648   |
+|     25th percentile [µg/m³]     |  6.557   |
+|     5th percentile [µg/m³]      |  6.276   |
+|          Peaks [count]          |    0     |
+|          STEL [µg/m³]           |   1.0    |
+|      STEL window [offset]       |  15min   |
+|      STEL exceedance [min]      |   0.02   |
+|      STEL episodes [count]      |    1     |
+|     Exposure limit [µg/m³]      |   1.0    |
+| Exposure limit exceedance [min] |   0.62   |
+|    TWA concentration [µg/m³]    |  6.722   |
+|       TWA window [offset]       |    8h    |
++---------------------------------+----------+
+assumed duration = measured task length
+ Segment  TWA concentration [µg/m³] TWA window [offset]
+Emission                      6.018                  8h
+
+assumed duration = 8 h
+ Segment  TWA concentration [µg/m³] TWA window [offset]
+Emission                      6.722                  8h
+</pre></div></div>
+</div>
+</section>
+<section id="Choosing-a-metric">
+<h2>Choosing a metric<a class="headerlink" href="#Choosing-a-metric" title="Link to this heading">¶</a></h2>
+<p>For size-resolved data the metric can be any of:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;PNC&quot;</span></code> — total number concentration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;MASS&quot;</span></code> — total mass concentration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;PM&lt;x&gt;&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;PN&lt;x&gt;&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;PS&lt;x&gt;&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;PV&lt;x&gt;&quot;</span></code> — cumulative mass, number, surface or volume below cut diameter <code class="docutils literal notranslate"><span class="pre">&lt;x&gt;</span></code> in µm, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;PM2.5&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;PM&lt;a&gt;-&lt;b&gt;&quot;</span></code> — the band between two diameters, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;PM1-4&quot;</span></code>, computed with the EN 481 / ISO 7708 penetration curves</p></li>
+</ul>
+<p>Several activities can be summarised in one call, which is the convenient form when comparing tasks.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">summarize_exposure</span><span class="p">(</span>
+    <span class="n">metric</span><span class="o">=</span><span class="s2">"PM10"</span><span class="p">,</span>
+    <span class="n">activities</span><span class="o">=</span><span class="p">[</span><span class="s2">"Emission"</span><span class="p">,</span> <span class="s2">"Decay"</span><span class="p">],</span>
+    <span class="n">background</span><span class="o">=</span><span class="s2">"Background"</span><span class="p">,</span>
+    <span class="n">long_limit</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
+    <span class="n">short_limit</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Exposure summary by segment for metric &#39;PM10&#39; (µg/m³):
+
++---------------------------------+----------+-------+
+|             Metric              | Emission | Decay |
++---------------------------------+----------+-------+
+|             Metric              |   PM10   | PM10  |
+|        Duration [HH:MM]         |  00:00   | 00:01 |
+|           Max [µg/m³]           |  0.246   | 0.208 |
+|     95th percentile [µg/m³]     |  0.194   | 0.153 |
+|     75th percentile [µg/m³]     |  0.165   | 0.126 |
+|     50th percentile [µg/m³]     |  0.154   | 0.111 |
+|     25th percentile [µg/m³]     |  0.139   | 0.099 |
+|     5th percentile [µg/m³]      |  0.121   | 0.084 |
+|          Peaks [count]          |    1     |   0   |
+|          STEL [µg/m³]           |   10.0   | 10.0  |
+|      STEL window [offset]       |  15min   | 15min |
+|      STEL exceedance [min]      |   0.0    |  0.0  |
+|      STEL episodes [count]      |    0     |   0   |
+|     Exposure limit [µg/m³]      |   5.0    |  5.0  |
+| Exposure limit exceedance [min] |   0.0    |  0.0  |
+|    TWA concentration [µg/m³]    |  0.132   | 0.131 |
+|       TWA window [offset]       |    8h    |  8h   |
++---------------------------------+----------+-------+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Segment</th>
+      <th>Metric</th>
+      <th>Duration [HH:MM]</th>
+      <th>Max [µg/m³]</th>
+      <th>95th percentile [µg/m³]</th>
+      <th>75th percentile [µg/m³]</th>
+      <th>50th percentile [µg/m³]</th>
+      <th>25th percentile [µg/m³]</th>
+      <th>5th percentile [µg/m³]</th>
+      <th>Peaks [count]</th>
+      <th>STEL [µg/m³]</th>
+      <th>STEL window [offset]</th>
+      <th>STEL exceedance [min]</th>
+      <th>STEL episodes [count]</th>
+      <th>Exposure limit [µg/m³]</th>
+      <th>Exposure limit exceedance [min]</th>
+      <th>TWA concentration [µg/m³]</th>
+      <th>TWA window [offset]</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Emission</td>
+      <td>PM10</td>
+      <td>00:00</td>
+      <td>0.246</td>
+      <td>0.194</td>
+      <td>0.165</td>
+      <td>0.154</td>
+      <td>0.139</td>
+      <td>0.121</td>
+      <td>1</td>
+      <td>10.0</td>
+      <td>15min</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>5.0</td>
+      <td>0.0</td>
+      <td>0.132</td>
+      <td>8h</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Decay</td>
+      <td>PM10</td>
+      <td>00:01</td>
+      <td>0.208</td>
+      <td>0.153</td>
+      <td>0.126</td>
+      <td>0.111</td>
+      <td>0.099</td>
+      <td>0.084</td>
+      <td>0</td>
+      <td>10.0</td>
+      <td>15min</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>5.0</td>
+      <td>0.0</td>
+      <td>0.131</td>
+      <td>8h</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</section>
+<section id="Single-channel-instruments">
+<h2>Single-channel instruments<a class="headerlink" href="#Single-channel-instruments" title="Link to this heading">¶</a></h2>
+<p>A 1D instrument has no size distribution, so the metric is its own measurement — <code class="docutils literal notranslate"><span class="pre">&quot;PNC&quot;</span></code> for a CPC.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cpc</span> <span class="o">=</span> <span class="n">at</span><span class="o">.</span><span class="n">load_cpc_file</span><span class="p">(</span><span class="s2">"../../tests/data/Sample_CPC_AIM.txt"</span><span class="p">)</span>
+<span class="n">cpc</span><span class="o">.</span><span class="n">mark_activities</span><span class="p">({</span>
+    <span class="s2">"Task"</span><span class="p">:</span> <span class="p">[(</span><span class="s2">"2023-08-14 11:14:00"</span><span class="p">,</span> <span class="s2">"2023-08-14 11:18:00"</span><span class="p">)],</span>
+<span class="p">})</span>
+
+<span class="n">cpc</span><span class="o">.</span><span class="n">summarize_exposure</span><span class="p">(</span>
+    <span class="n">metric</span><span class="o">=</span><span class="s2">"PNC"</span><span class="p">,</span>
+    <span class="n">activities</span><span class="o">=</span><span class="p">[</span><span class="s2">"Task"</span><span class="p">],</span>
+    <span class="n">exposure_hours</span><span class="o">=</span><span class="mf">8.0</span><span class="p">,</span>
+    <span class="n">long_limit</span><span class="o">=</span><span class="mf">1e4</span><span class="p">,</span>
+    <span class="n">short_limit</span><span class="o">=</span><span class="mf">2e4</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Exposure summary by segment for metric &#39;PNC&#39; (cm⁻³) [1D]:
+
++---------------------------------+----------+
+|             Metric              |   Task   |
++---------------------------------+----------+
+|             Metric              |   PNC    |
+|        Duration [HH:MM]         |  00:03   |
+|           Max [cm⁻³]            |  1559.0  |
+|     95th percentile [cm⁻³]      |  1511.0  |
+|     75th percentile [cm⁻³]      |  1457.0  |
+|     50th percentile [cm⁻³]      |  1415.0  |
+|     25th percentile [cm⁻³]      |  1366.5  |
+|      5th percentile [cm⁻³]      |  1307.0  |
+|          Peaks [count]          |    0     |
+|           STEL [cm⁻³]           | 20000.0  |
+|      STEL window [offset]       |  15min   |
+|      STEL exceedance [min]      |   0.0    |
+|      STEL episodes [count]      |    0     |
+|      Exposure limit [cm⁻³]      | 10000.0  |
+| Exposure limit exceedance [min] |   0.0    |
+|    TWA concentration [cm⁻³]     | 1412.165 |
+|       TWA window [offset]       |    8h    |
++---------------------------------+----------+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Segment</th>
+      <th>Metric</th>
+      <th>Duration [HH:MM]</th>
+      <th>Max [cm⁻³]</th>
+      <th>95th percentile [cm⁻³]</th>
+      <th>75th percentile [cm⁻³]</th>
+      <th>50th percentile [cm⁻³]</th>
+      <th>25th percentile [cm⁻³]</th>
+      <th>5th percentile [cm⁻³]</th>
+      <th>Peaks [count]</th>
+      <th>STEL [cm⁻³]</th>
+      <th>STEL window [offset]</th>
+      <th>STEL exceedance [min]</th>
+      <th>STEL episodes [count]</th>
+      <th>Exposure limit [cm⁻³]</th>
+      <th>Exposure limit exceedance [min]</th>
+      <th>TWA concentration [cm⁻³]</th>
+      <th>TWA window [offset]</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Task</td>
+      <td>PNC</td>
+      <td>00:03</td>
+      <td>1559.0</td>
+      <td>1511.0</td>
+      <td>1457.0</td>
+      <td>1415.0</td>
+      <td>1366.5</td>
+      <td>1307.0</td>
+      <td>0</td>
+      <td>20000.0</td>
+      <td>15min</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>10000.0</td>
+      <td>0.0</td>
+      <td>1412.165</td>
+      <td>8h</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</section>
+<section id="Saving-the-result">
+<h2>Saving the result<a class="headerlink" href="#Saving-the-result" title="Link to this heading">¶</a></h2>
+<p>Both summary functions accept <code class="docutils literal notranslate"><span class="pre">filename</span></code> and append to a CSV or Excel file, so results from several measurements accumulate in one place.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">elpi</span><span class="o">.</span><span class="n">summarize_activities</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s2">"campaign_summary.xlsx"</span><span class="p">,</span>
+                          <span class="n">sheet_name</span><span class="o">=</span><span class="s2">"2023-09-07"</span><span class="p">)</span>
+</pre></div>
+</div>
+<hr class="docutils" />
+<p><strong>Next:</strong> <a class="reference internal" href="05-plotting.html"><span class="doc">5 — Plotting</span></a>.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="05-plotting.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">5 — Plotting</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="03-activities.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">3 — Activities</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">4 — Statistics and exposure</a><ul>
+<li><a class="reference internal" href="#What-can-this-dataset-be-summarised-on?">What can this dataset be summarised on?</a></li>
+<li><a class="reference internal" href="#One-channel-at-a-time">One channel at a time</a></li>
+<li><a class="reference internal" href="#Every-activity-at-once">Every activity at once</a></li>
+<li><a class="reference internal" href="#Exposure-assessment">Exposure assessment</a></li>
+<li><a class="reference internal" href="#Choosing-a-metric">Choosing a metric</a></li>
+<li><a class="reference internal" href="#Single-channel-instruments">Single-channel instruments</a></li>
+<li><a class="reference internal" href="#Saving-the-result">Saving the result</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    </body>
+</html>

@@ -1,0 +1,95 @@
+aerosoltools.loaders.tiger
+==========================
+
+.. py:module:: aerosoltools.loaders.tiger
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: load_tiger_file(file, year=2026)
+
+   Description:
+       Load a Tiger LDSA text export and return it as an
+       :class:`Gas1D` time series with TEM sampling metadata.
+
+   :param file: Path to the Tiger ``.txt`` export file.
+   :type file: str
+   :param year: Due to inconsistency in dating for the software, it is required to
+                provide the year of the onset of the data, which will then
+                correct the year. It is still required to perform time_shift to
+                ensure that the month, day, hour, minute and second fits.
+   :type year: int, optional
+
+   :returns:     Tiger total VOC time series with a datetime index, TVOC
+                 and associated metadata.
+   :rtype: Gas1D
+
+   :raises FileNotFoundError: If ``file`` does not exist or cannot be opened.
+   :raises UnicodeDecodeError: If the file cannot be decoded using the encodings tried by
+       :func:`sniff`.
+
+   .. rubric:: Notes
+
+   Detailed description:
+       This loader is tailored to Tiger text exports that provide
+       Total VOC measurements as a function of time.
+
+       Internally, the function:
+
+       - Attempts to infer encoding and delimiter via
+         :func:`sniff`. If delimiter detection fails.
+       - Reads the main data block with :func:`numpy.genfromtxt`, starting
+         at the Tiger data header (``header=14``).
+       - Renames core columns:
+
+         - ``"Date"`` → ``"Datetime"``,
+         - ``"TVOC (ppb)"`` → ``"Concentration"`` (the species is kept
+           in ``dtype``, per the :class:`Gas1D` contract).
+
+       - Reads the header region (first 8 lines) via
+         :func:`numpy.genfromtxt`.
+       - Converts the ``"Date"`` and ``"Time"`` columns from date and time
+         to absolute timestamps by suptracting the difference in year from
+         the recorded year.
+
+       - Constructs a :class:`Gas1D` object using the core columns:
+
+         - ``Datetime``,
+         - ``Concentration``,
+
+       - Populates metadata:
+
+         - ``instrument`` set to ``"Tiger"``,
+         - ``serial_number`` from the first header line (last 3
+           characters),
+
+         - ``unit`` mapping:
+
+           - ``"VOC"`` → ``"ppb"`` or ``"ppm"``,
+
+
+   Theory:
+       The Tiger logs total VOC in either ppb or ppm
+
+     Examples:
+         Typical usage is to load a Tiger file and inspect VOC
+         sampling information:
+
+         .. code-block:: python
+
+             import aerosoltools as at
+
+             # Load Tiger VOC data
+             tiger = at.Load_Tiger_file("data/Tiger_export.txt",
+                                           extra_data=True)
+
+             # Inspect the main time series
+             print(tiger.data.head())
+
+             # Plot VOC over time
+             fig, ax = tiger.plot_total_conc()
+
+

@@ -1,0 +1,91 @@
+aerosoltools.loaders.elpi
+=========================
+
+.. py:module:: aerosoltools.loaders.elpi
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: recalculate_ELPI_density(elpi, new_density)
+
+   Recompute an ELPI dataset's diameters and number for a new density.
+
+   The ELPI reports a *geometric* particle diameter that depends on the assumed
+   particle density (it actually classifies by aerodynamic behaviour). Changing
+   the density therefore must (1) move the size axis to the diameters the
+   particles would have at the new density — otherwise the reported diameters
+   are fictitious — and (2) re-attribute the per-bin number concentration,
+   because the charger efficiency (which turned current into number) is a
+   function of that diameter.
+
+   The diameters are rebuilt the way the Dekati software does it, from the
+   *fixed aerodynamic cutpoints* (``D50values``, which never change with
+   density) rather than by nudging the current midpoints: each aerodynamic
+   cutpoint is converted to its Stokes diameter at the new density
+   (:func:`_stokes_from_aerodynamic`), the lowest cutpoint is pinned at the
+   fixed 6 nm filter cutpoint (``FilterLow``, which the ELPI does not rescale),
+   and the stage midpoints are the geometric means of the resulting cutpoints.
+   Because everything is derived from the density-independent cutpoints, the
+   size axis is path-independent — changing 0.16 → 1.0 lands exactly on the
+   diameters a fresh unit-density load would give. Number is re-attributed
+   through the charger efficiency (:func:`_ELPI_charger_efficiency`), which
+   depends on that diameter.
+
+   This reproduces the Dekati software's density-dependent size axis to < 0.5 %
+   on every stage bar the filter-boundary bin (stage 1 at very low density,
+   ~5 %). All inputs are already on the object's metadata (``D50values``,
+   ``FilterLow``, ``bin_mids``, charger ``Efficiency`` coefficients and the
+   current ``density``), so no separate copy of the header is needed.
+
+   :param elpi: An :class:`~aerosoltools.Aerosol2D` produced by an ELPI loader.
+   :param new_density: The new assumed particle density in g/cm³.
+
+   :returns: ``True`` if a recalculation was performed (the object is a
+             recognised ELPI), otherwise ``False`` so the caller can fall back to the
+             generic density behaviour.
+   :rtype: bool
+
+   .. rubric:: Notes
+
+   Operates in place; number is re-attributed only while the data are plain
+   (unnormalized) number (``dN``) — the state right after loading. Set the
+   density before converting the dtype (e.g. to ``dM``) for the most
+   consistent result.
+
+
+.. py:function:: load_elpi_file(file, extra_data = True)
+
+   Load an ELPI file and return an Aerosol2D object.
+
+   This is the routing function. Already-converted Dekati exports are handled
+   by :func:`load_elpi_file_txt`. Raw-current .dat files with
+   ``CalculatedMoment=Current (fA)`` are converted by
+   :func:`load_elpi_file_dat` before constructing the Aerosol2D object.
+
+
+.. py:function:: load_elpi_file_txt(file, extra_data = False, *, encoding = None, delimiter = None, meta = None)
+
+   Load an already-converted ELPI size-distribution export.
+
+   ``encoding``/``delimiter``/``meta`` are reused when supplied (the router
+   :func:`load_elpi_file` passes what it already computed); each is derived from
+   the file only when not given, so the file's header is not re-read.
+
+
+.. py:function:: load_elpi_file_dat(file, extra_data = False, *, encoding = None, delimiter = None, meta = None)
+
+   Load a raw ELPI .dat current file and convert it to number dN.
+
+   The raw .dat file contains the measured channels and a main CAL Stage1-14
+   block in current units. This function uses the CAL stage-current block,
+   converts fA/dlogDp to fA per bin, applies ELPI charger efficiency, and
+   returns number concentration per bin in cm-3.
+
+   ``encoding``/``delimiter``/``meta`` are reused when supplied (the router
+   :func:`load_elpi_file` passes what it already computed); each is derived from
+   the file only when not given, so the file's header is not re-read.
+
+

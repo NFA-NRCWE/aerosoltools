@@ -1,0 +1,2010 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html"><link rel="next" title="aerosoltools.aerosol2d" href="../aerosol2d/index.html"><link rel="prev" title="aerosoltools.acsm_simple" href="../acsm_simple/index.html">
+
+    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+        <title>aerosoltools.aerosol1d - aerosoltools</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../gui/index.html">Desktop GUI</a><input aria-label="Toggle navigation of Desktop GUI" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/raw-data.html">Raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/metadata.html">Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/time-series.html">Time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/decay.html">Decay / Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/heatmap.html">2D heatmap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/pm-bands.html">PM bands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/psd.html">PSD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/aero-optical.html">Aero ↔ Optical</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/summary.html">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/overlay.html">Overlay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/correlation.html">Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/psd-comparison.html">PSD comparison</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/01-loading-data.html">1 — Loading data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/02-time-adjustments.html">2 — Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/03-activities.html">3 — Activities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/04-statistics-and-exposure.html">4 — Statistics and exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/05-plotting.html">5 — Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/06-dtypes-density-corrections.html">6 — Dtypes, density and corrections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/07-combining-datasets.html">7 — Combining datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/08-psd-fitting.html">8 — PSD fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/09-decay-and-source.html">9 — Decay and source fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10a-correlation-and-agreement.html">10a — Correlation and agreement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10b-calibration.html">10b — Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/11-simple-instruments.html">11 — Simple instruments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/12-aethalometer.html">12 — Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/13-aps.html">13 — APS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/15-acsm.html">15 — ACSM</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">aerosoltools documentation</a><input aria-label="Toggle navigation of aerosoltools documentation" checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../acsm_simple/index.html">aerosoltools.acsm_simple</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">aerosoltools.aerosol1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../aerosol2d/index.html">aerosoltools.aerosol2d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../aerosol3d/index.html">aerosoltools.aerosol3d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../aethalometer/index.html">aerosoltools.aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../discmini/index.html">aerosoltools.discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dusttrak/index.html">aerosoltools.dusttrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../elpi/index.html">aerosoltools.elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../environmental/index.html">aerosoltools.environmental</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../gas1d/index.html">aerosoltools.gas1d</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../intercomparison/index.html">aerosoltools.intercomparison</a><input aria-label="Toggle navigation of aerosoltools.intercomparison" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../intercomparison/calibration/index.html">aerosoltools.intercomparison.calibration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../intercomparison/combination/index.html">aerosoltools.intercomparison.combination</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../intercomparison/correlation/index.html">aerosoltools.intercomparison.correlation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../loaders/index.html">aerosoltools.loaders</a><input aria-label="Toggle navigation of aerosoltools.loaders" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/acsm/index.html">aerosoltools.loaders.acsm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/aethalometer/index.html">aerosoltools.loaders.aethalometer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/aps/index.html">aerosoltools.loaders.aps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/cpc/index.html">aerosoltools.loaders.cpc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/dev_weather/index.html">aerosoltools.loaders.dev_weather</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/discmini/index.html">aerosoltools.loaders.discmini</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/dusttrak/index.html">aerosoltools.loaders.dusttrak</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/elpi/index.html">aerosoltools.loaders.elpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/fmps/index.html">aerosoltools.loaders.fmps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/fourtec/index.html">aerosoltools.loaders.fourtec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/grimm/index.html">aerosoltools.loaders.grimm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/ns/index.html">aerosoltools.loaders.ns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/opcn3/index.html">aerosoltools.loaders.opcn3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/ops/index.html">aerosoltools.loaders.ops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/partector/index.html">aerosoltools.loaders.partector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/ranger/index.html">aerosoltools.loaders.ranger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/registry/index.html">aerosoltools.loaders.registry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/smps/index.html">aerosoltools.loaders.smps</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../loaders/support/index.html">aerosoltools.loaders.support</a><input aria-label="Toggle navigation of aerosoltools.loaders.support" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../loaders/support/construct/index.html">aerosoltools.loaders.support.construct</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../loaders/support/exceptions/index.html">aerosoltools.loaders.support.exceptions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../loaders/support/parsing/index.html">aerosoltools.loaders.support.parsing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../loaders/support/reading/index.html">aerosoltools.loaders.support.reading</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../loaders/support/units/index.html">aerosoltools.loaders.support.units</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../loaders/tiger/index.html">aerosoltools.loaders.tiger</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../partector/index.html">aerosoltools.partector</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../../../_sources/api/aerosoltools/aerosol1d/index.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="module-aerosoltools.aerosol1d">
+<span id="aerosoltools-aerosol1d"></span><h1>aerosoltools.aerosol1d<a class="headerlink" href="#module-aerosoltools.aerosol1d" title="Link to this heading">¶</a></h1>
+<p>Public 1D aerosol time-series class (<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D"><code class="xref py py-class docutils literal notranslate"><span class="pre">Aerosol1D</span></code></a>).</p>
+<p>This module holds the data model — <code class="docutils literal notranslate"><span class="pre">__init__</span></code> and the read-only properties —
+plus a couple of fundamental helpers. The heavier behaviour is grouped by topic
+into mixins under <code class="xref py py-mod docutils literal notranslate"><span class="pre">aerosoltools._core</span></code> (time operations, activities, summary
+statistics and plotting) which this class composes, so the file stays readable
+while the public API is unchanged: every method is still available on
+<code class="docutils literal notranslate"><span class="pre">Aerosol1D</span></code>.</p>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.params">
+<span class="sig-prename descclassname"><span class="pre">aerosoltools.aerosol1d.</span></span><span class="sig-name descname"><span class="pre">params</span></span><a class="headerlink" href="#aerosoltools.aerosol1d.params" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aerosoltools.aerosol1d.</span></span><span class="sig-name descname"><span class="pre">Aerosol1D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataframe</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol1d.html#Aerosol1D"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">aerosoltools._core.time_ops.TimeOpsMixin</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">aerosoltools._core.activities.ActivityMixin</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">aerosoltools._core.statistics.SummaryMixin</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">aerosoltools._core.plotting.Plot1DMixin</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">aerosoltools._core.decay.DecayFitMixin</span></code></p>
+<p>Handle 1D aerosol time-series measurements.</p>
+<p>This class manages time-indexed aerosol concentration data (for example
+total particle number or mass concentration) and provides utilities for
+resampling, smoothing, marking activity segments, cropping, shifting,
+summarizing, and plotting.</p>
+<p>It is intended for pre- and post-processing of aerosol datasets collected
+with portable or stationary particle counters that report a single
+concentration value per time step.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dataframe</strong> (<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)"><em>pandas.DataFrame</em></a>) – Input data. If the index is not a
+<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DatetimeIndex.html#pandas.DatetimeIndex" title="(in pandas v3.0.5)"><code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DatetimeIndex</span></code></a>, the first column is interpreted as
+timestamps and converted using <a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.to_datetime.html#pandas.to_datetime" title="(in pandas v3.0.5)"><code class="xref py py-func docutils literal notranslate"><span class="pre">pandas.to_datetime()</span></code></a>, then
+set as the index. The first data column is assumed to represent
+total particle concentration.</p>
+</dd>
+<dt class="field-even">Variables<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)"><em>pandas.DataFrame</em></a>) – Main data frame containing the time index,
+the total concentration column, and any activity masks (e.g.
+<code class="docutils literal notranslate"><span class="pre">&quot;All</span> <span class="pre">data&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Peak&quot;</span></code>, user-defined activities).</p></li>
+<li><p><strong>extra_data</strong> (<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)"><em>pandas.DataFrame</em></a>) – Additional columns extracted from the
+raw file that are not considered core aerosol measurements
+(e.g. environmental or meta signals).</p></li>
+<li><p><strong>activities</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – List of defined activity labels for which
+boolean mask columns exist in <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>.</p></li>
+<li><p><strong>activity_periods</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.0.5)"><em>pandas.Timestamp</em></a><em>, </em><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.0.5)"><em>pandas.Timestamp</em></a><em>]</em><em>]</em><em>]</em>) – Mapping from activity name to a list of (start, end) time intervals
+where that activity is considered active.</p></li>
+<li><p><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Dictionary of metadata such as unit, data type,
+instrument type and serial number. Internally stored in
+<code class="docutils literal notranslate"><span class="pre">self._meta</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Users are encouraged to interact with the class via its public
+properties and methods (e.g. <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>, <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.mark_activities" title="aerosoltools.aerosol1d.Aerosol1D.mark_activities"><code class="xref py py-meth docutils literal notranslate"><span class="pre">mark_activities()</span></code></a>,
+<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.timerebin" title="aerosoltools.aerosol1d.Aerosol1D.timerebin"><code class="xref py py-meth docutils literal notranslate"><span class="pre">timerebin()</span></code></a>, <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.plot_total_conc" title="aerosoltools.aerosol1d.Aerosol1D.plot_total_conc"><code class="xref py py-meth docutils literal notranslate"><span class="pre">plot_total_conc()</span></code></a>) rather than modifying
+private attributes directly.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.activities">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">activities</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.activities" title="Link to this definition">¶</a></dt>
+<dd><p>Names of all defined activity labels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Activity names for which a boolean mask column exists
+in <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a> (for example <code class="docutils literal notranslate"><span class="pre">&quot;All</span> <span class="pre">data&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Peak&quot;</span></code>, or
+user-defined labels created via <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.mark_activities" title="aerosoltools.aerosol1d.Aerosol1D.mark_activities"><code class="xref py py-meth docutils literal notranslate"><span class="pre">mark_activities()</span></code></a>).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.activity_periods">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">activity_periods</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.activity_periods" title="Link to this definition">¶</a></dt>
+<dd><p>Time periods associated with each activity label.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Mapping from activity name (str) to a list of
+<code class="docutils literal notranslate"><span class="pre">(start,</span> <span class="pre">end)</span></code> timestamp tuples, where each tuple defines a
+contiguous period during which the activity is active.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.data">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">data</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)"><span class="pre">pandas.DataFrame</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="Link to this definition">¶</a></dt>
+<dd><p>Main data frame with time index and measurement columns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The full data table, including the time index,
+the primary measurement columns (for example total concentration),
+and any boolean activity mask columns.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.dtype">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">dtype</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.dtype" title="Link to this definition">¶</a></dt>
+<dd><p>Data type descriptor for the primary measurements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A short description of the data type, for example
+<code class="docutils literal notranslate"><span class="pre">&quot;dN&quot;</span></code> (number concentration), <code class="docutils literal notranslate"><span class="pre">&quot;dM&quot;</span></code> (mass concentration),
+or <code class="docutils literal notranslate"><span class="pre">&quot;dN/dlogDp&quot;</span></code> when normalized. Falls back to
+<code class="docutils literal notranslate"><span class="pre">&quot;Unknown</span> <span class="pre">dtype&quot;</span></code> if not set in the metadata.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.extra_data">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">extra_data</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)"><span class="pre">pandas.DataFrame</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.extra_data" title="Link to this definition">¶</a></dt>
+<dd><p>Additional non-core data columns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Data frame containing extra columns that were
+extracted from the raw data file but are not considered part of the
+core aerosol time series (for example environmental or metadata
+channels). The index is aligned with <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.instrument">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">instrument</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.instrument" title="Link to this definition">¶</a></dt>
+<dd><p>Instrument used to acquire the measurements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Instrument name or description (for example model/type).
+Falls back to <code class="docutils literal notranslate"><span class="pre">&quot;Unknown</span> <span class="pre">instrument&quot;</span></code> if not set in the metadata.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.measurement">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">measurement</span></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.measurement" title="Link to this definition">¶</a></dt>
+<dd><p>Human-readable name of the measured quantity, if known.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The label describing <em>what</em> the primary series represents — for
+example <code class="docutils literal notranslate"><span class="pre">&quot;Cl₂&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;NO₂&quot;</span></code> for a gas monitor — as set by the
+loader in <code class="docutils literal notranslate"><span class="pre">metadata[&quot;measurement&quot;]</span></code>. Returns <code class="docutils literal notranslate"><span class="pre">None</span></code> when no
+explicit label was stored (in which case callers fall back to a
+generic name such as <code class="docutils literal notranslate"><span class="pre">&quot;Total</span> <span class="pre">concentration&quot;</span></code> or the channel name).
+This is distinct from <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.dtype" title="aerosoltools.aerosol1d.Aerosol1D.dtype"><code class="xref py py-attr docutils literal notranslate"><span class="pre">dtype</span></code></a> (<code class="docutils literal notranslate"><span class="pre">dN</span></code>/<code class="docutils literal notranslate"><span class="pre">dM</span></code>/…) and
+<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.unit" title="aerosoltools.aerosol1d.Aerosol1D.unit"><code class="xref py py-attr docutils literal notranslate"><span class="pre">unit</span></code></a>; it names the quantity rather than its basis or units.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.metadata">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">metadata</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.metadata" title="Link to this definition">¶</a></dt>
+<dd><p>Metadata associated with the dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dictionary containing metadata such as unit, data type,
+instrument type, and serial number. Internally stored in
+<code class="docutils literal notranslate"><span class="pre">self._meta</span></code>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.original_data">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">original_data</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)"><span class="pre">pandas.DataFrame</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.original_data" title="Link to this definition">¶</a></dt>
+<dd><p>Unmodified original main data frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A copy of the raw data as it was immediately after
+loading and initial normalization of the time index and column
+names, before any further processing steps (such as cropping,
+smoothing, or rebinning).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.original_extra_data">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">original_extra_data</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)"><span class="pre">pandas.DataFrame</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.original_extra_data" title="Link to this definition">¶</a></dt>
+<dd><p>Unmodified original extra-data frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A copy of the raw extra-data table (if any) before
+any processing steps. This will typically be empty if no extra data
+were extracted at load time.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.serial_number">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">serial_number</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.serial_number" title="Link to this definition">¶</a></dt>
+<dd><p>Instrument serial number.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Serial number of the instrument, if available in the metadata.
+Falls back to <code class="docutils literal notranslate"><span class="pre">&quot;Unknown</span> <span class="pre">serial</span> <span class="pre">number&quot;</span></code> if not set.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.time">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">time</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DatetimeIndex.html#pandas.DatetimeIndex" title="(in pandas v3.0.5)"><span class="pre">pandas.DatetimeIndex</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.time" title="Link to this definition">¶</a></dt>
+<dd><p>Time index of the measurements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The time stamps corresponding to each row in
+<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>. This is the index of the main data frame.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DatetimeIndex.html#pandas.DatetimeIndex" title="(in pandas v3.0.5)">pandas.DatetimeIndex</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.total_concentration">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">total_concentration</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v3.0.5)"><span class="pre">pandas.Series</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.total_concentration" title="Link to this definition">¶</a></dt>
+<dd><p>Total aerosol concentration time series.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The total concentration over time. If a column named
+<code class="docutils literal notranslate"><span class="pre">&quot;Total_conc&quot;</span></code> exists in <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>, that column is
+returned; otherwise the first data column is used as a fallback.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v3.0.5)">pandas.Series</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.unit">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">unit</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.unit" title="Link to this definition">¶</a></dt>
+<dd><p>Measurement unit for the primary data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Unit string, for example <code class="docutils literal notranslate"><span class="pre">&quot;#/cm³&quot;</span></code> for number concentration
+or <code class="docutils literal notranslate"><span class="pre">&quot;µg/m³&quot;</span></code> for mass concentration. Falls back to
+<code class="docutils literal notranslate"><span class="pre">&quot;Unknown</span> <span class="pre">unit&quot;</span></code> if not set in the metadata. May be a per-column
+<code class="docutils literal notranslate"><span class="pre">dict</span></code> for multi-channel instruments — prefer <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.unit_of" title="aerosoltools.aerosol1d.Aerosol1D.unit_of"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unit_of()</span></code></a> for
+a resolved per-column string.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.column_units">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">column_units</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.column_units" title="Link to this definition">¶</a></dt>
+<dd><p>Canonical unit per column name (core <em>and</em> extra columns).</p>
+<p>Populated by the loaders from the shared unit registry (see
+<code class="xref py py-func docutils literal notranslate"><span class="pre">aerosoltools._core.metrics.parse_header_unit()</span></code>), so every column a
+loader could resolve carries one canonical unit string. A column that is
+<strong>absent</strong> from this map has no known unit — callers that need an honest
+“unknown” (e.g. an axis label) should show the header text alone rather
+than borrow the primary series’ unit. Empty <code class="docutils literal notranslate"><span class="pre">dict</span></code> for objects built
+without unit resolution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">{column_name:</span> <span class="pre">canonical_unit}</span></code> (possibly empty).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.unit_of">
+<span class="sig-name descname"><span class="pre">unit_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol1d.html#Aerosol1D.unit_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.unit_of" title="Link to this definition">¶</a></dt>
+<dd><p>Return the unit for <code class="docutils literal notranslate"><span class="pre">column</span></code> as a string (per-column aware).</p>
+<p>Prefers the canonical per-column unit from <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.column_units" title="aerosoltools.aerosol1d.Aerosol1D.column_units"><code class="xref py py-attr docutils literal notranslate"><span class="pre">column_units</span></code></a> when the
+loader resolved one for <code class="docutils literal notranslate"><span class="pre">column</span></code>; otherwise handles both scalar and
+per-column-<code class="docutils literal notranslate"><span class="pre">dict</span></code> <code class="docutils literal notranslate"><span class="pre">unit</span></code> metadata. With <code class="docutils literal notranslate"><span class="pre">column=None</span></code> (or an
+unknown column with no <code class="docutils literal notranslate"><span class="pre">unit</span></code> dict entry) returns the scalar unit, or
+the first per-column unit for a multi-channel instrument.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>column</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Column/channel name to look up; <code class="docutils literal notranslate"><span class="pre">None</span></code> for the default.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The resolved unit string.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.dtype_of">
+<span class="sig-name descname"><span class="pre">dtype_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol1d.html#Aerosol1D.dtype_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.dtype_of" title="Link to this definition">¶</a></dt>
+<dd><p>Return the dtype descriptor for <code class="docutils literal notranslate"><span class="pre">column</span></code> as a string.</p>
+<p>The per-column-aware counterpart of <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.dtype" title="aerosoltools.aerosol1d.Aerosol1D.dtype"><code class="xref py py-attr docutils literal notranslate"><span class="pre">dtype</span></code></a> (see <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.unit_of" title="aerosoltools.aerosol1d.Aerosol1D.unit_of"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unit_of()</span></code></a>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>column</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Column/channel name to look up; <code class="docutils literal notranslate"><span class="pre">None</span></code> for the default.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The resolved dtype string (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;dN&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;dM&quot;</span></code>).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.apply_calibration">
+<span class="sig-name descname"><span class="pre">apply_calibration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol1d.html#Aerosol1D.apply_calibration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.apply_calibration" title="Link to this definition">¶</a></dt>
+<dd><p>Apply a fitted calibration model to this dataset.</p>
+<p>This is the single-dataset <em>application</em> half of the calibration
+workflow: the cross-dataset fitting lives in
+<code class="xref py py-func docutils literal notranslate"><span class="pre">aerosoltools.intercomparison.fit_calibration()</span></code>, which produces the
+<a class="reference internal" href="../intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel" title="aerosoltools.intercomparison.calibration.CalibrationModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">CalibrationModel</span></code></a>
+applied here. Fit once, apply to as many datasets as you like.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<a class="reference internal" href="../intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel" title="aerosoltools.intercomparison.calibration.CalibrationModel"><em>CalibrationModel</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – A model from <code class="docutils literal notranslate"><span class="pre">fit_calibration</span></code>
+(or its <code class="xref py py-meth docutils literal notranslate"><span class="pre">to_dict()</span></code> form). A
+<code class="docutils literal notranslate"><span class="pre">&quot;total&quot;</span></code> model scales the total/primary series by <code class="docutils literal notranslate"><span class="pre">gain</span></code>
+(plus <code class="docutils literal notranslate"><span class="pre">offset</span></code> when the model includes one); a <code class="docutils literal notranslate"><span class="pre">&quot;per_bin&quot;</span></code>
+model scales each size bin by its own gain and re-sums the total,
+applying only the bins the fit accepted.</p></li>
+<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Modify this object (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a deep copy
+(<code class="docutils literal notranslate"><span class="pre">False</span></code>, the default — calibration returns a new object).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The calibrated object (<code class="docutils literal notranslate"><span class="pre">self</span></code> when <code class="docutils literal notranslate"><span class="pre">inplace</span></code>).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If a per-bin model is applied to non-size-resolved data,
+or the model’s bin count does not match the dataset.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.copy_self">
+<span class="sig-name descname"><span class="pre">copy_self</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/aerosoltools/aerosol1d.html#Aerosol1D.copy_self"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.copy_self" title="Link to this definition">¶</a></dt>
+<dd><p>Create and return a deep copy of the aerosol time-series object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>A new object with independent copies of all data,</dt><dd><p>extra_data, metadata, and activity definitions.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The returned object is completely detached from the original:
+changing masks, cropping, rebinning, or smoothing on the copy
+does not affect the source instance, and vice versa. Both
+the original and the copy retain their own raw_data and
+raw_extra_data snapshots.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Use this when you want to experiment with processing steps
+without changing your original dataset:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cpc_raw</span> <span class="o">=</span> <span class="n">cpc_data</span>
+<span class="n">cpc_proc</span> <span class="o">=</span> <span class="n">cpc_data</span><span class="o">.</span><span class="n">copy_self</span><span class="p">()</span>
+<span class="n">cpc_proc</span><span class="o">.</span><span class="n">timerebin</span><span class="p">(</span><span class="s2">"1min"</span><span class="p">)</span><span class="o">.</span><span class="n">timesmooth</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.timecrop">
+<span class="sig-name descname"><span class="pre">timecrop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">focus</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crop_extra</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.timecrop" title="Link to this definition">¶</a></dt>
+<dd><p>Crop the time axis to include or exclude a time interval.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.0.5)"><em>pandas.Timestamp</em></a><em> | </em><em>None</em>) – Start of the interval.
+If None, cropping starts at the first timestamp.</p></li>
+<li><p><strong>end</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.0.5)"><em>pandas.Timestamp</em></a><em> | </em><em>None</em>) – End of the interval.
+If None, cropping ends at the last timestamp.</p></li>
+<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If True, modify the current object and return
+it. If False, return a cropped deep copy.</p></li>
+<li><p><strong>focus</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If True, keep only the interval [start, end].
+If False, remove that interval and keep data before start
+and after end.</p></li>
+<li><p><strong>crop_extra</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If True, also crop extra_data to the same
+time mask (when inplace=True or on the copy).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The cropped object (self when inplace=True, or a</dt><dd><p>new instance when inplace=False).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – May be raised by pandas.to_datetime if start or
+end strings cannot be parsed. Check the date format
+(for example “YYYY-MM-DD HH:MM:SS”).</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>A boolean mask is built over the current time index based
+on start and end. Depending on focus, this mask either
+selects or removes the specified interval. All columns in
+self.data are subset accordingly. When crop_extra is True,
+extra_data is cropped using the same mask, keeping time
+alignment between main and extra channels.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Drop a calibration period at the start of a measurement:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">timecrop</span><span class="p">(</span><span class="n">end</span><span class="o">=</span><span class="s2">"2025-01-24 09:00"</span><span class="p">,</span> <span class="n">focus</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.timerebin">
+<span class="sig-name descname"><span class="pre">timerebin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'s'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.timerebin" title="Link to this definition">¶</a></dt>
+<dd><p>Resample the time series to a new regular frequency.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>freq</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Target sampling interval as a pandas offset alias
+(for example “30s”, “1min”, “5min”, “1H”). Defaults to “s”.</p></li>
+<li><p><strong>start</strong> (<em>datetime</em><em> | </em><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.0.5)"><em>pandas.Timestamp</em></a><em> | </em><em>None</em>) – Optional start time
+for the resampling window. If None, the first timestamp is
+used.</p></li>
+<li><p><strong>end</strong> (<em>datetime</em><em> | </em><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Timestamp.html#pandas.Timestamp" title="(in pandas v3.0.5)"><em>pandas.Timestamp</em></a><em> | </em><em>None</em>) – Optional end time for
+the resampling window. If None, the last timestamp is used.</p></li>
+<li><p><strong>method</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>Callable</em>) – Aggregation function for numeric
+columns. Any aggregation accepted by pandas.DataFrame.resample
+(for example “mean”, “sum”, “median”) or a custom callable.</p></li>
+<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If True, update this object and return it. If
+False, leave this instance unchanged and return a rebinned
+deep copy.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The rebinned object (self when inplace=True, or a</dt><dd><p>new instance otherwise) with a regular DatetimeIndex and
+resampled main and extra data.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – May be raised by pandas if freq is not a valid
+offset alias or if start/end cannot be interpreted as
+timestamps.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>Numeric columns in self.data are resampled using the chosen
+method, while boolean columns are aggregated with a logical
+maximum so that any True within a bin keeps the bin True.
+The resulting DataFrame is reindexed to a fully regular
+time grid between the floored start and end times. Extra
+data, if present, are resampled in the same way and aligned
+to the new index. Activity masks such as “All data” are
+maintained and missing boolean values are filled with False.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Convert a high‑frequency logger to 1‑minute averages:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">timerebin</span><span class="p">(</span><span class="n">freq</span><span class="o">=</span><span class="s2">"1min"</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"mean"</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.timeshift">
+<span class="sig-name descname"><span class="pre">timeshift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minutes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_extra</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.timeshift" title="Link to this definition">¶</a></dt>
+<dd><p>Shift the time index by a constant offset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seconds</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Offset in seconds; positive shifts the series
+forward in time, negative backward. Defaults to 0.</p></li>
+<li><p><strong>minutes</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Offset in minutes, converted internally to
+seconds and added to seconds. Defaults to 0.</p></li>
+<li><p><strong>hours</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Offset in hours, converted internally to
+seconds and added to seconds. Defaults to 0.</p></li>
+<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If True, shift this object in place and return
+it. If False, return a shifted deep copy. Default is True.</p></li>
+<li><p><strong>shift_extra</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If True, also shift the index of
+extra_data so that main and extra channels remain aligned.
+Default is True.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Object with shifted time index (self when</dt><dd><p>inplace=True, otherwise a new instance).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>None</strong> – Unless invalid types are passed for the offset arguments.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>A pandas.Timedelta is constructed from the combined offset:
+total_shift = seconds + 60*minutes + 3600*hours.
+This timedelta is added to the index of self.data, and
+optionally to self.extra_data. Activity masks and other
+columns are left unchanged; only timestamps move.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Align measurements from two instruments with a known clock
+offset:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cpc</span><span class="o">.</span><span class="n">timeshift</span><span class="p">(</span><span class="n">minutes</span><span class="o">=+</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">timeshift</span><span class="p">(</span><span class="n">minutes</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">cpc</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">()</span>
+<span class="n">elpi</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.timesmooth">
+<span class="sig-name descname"><span class="pre">timesmooth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.timesmooth" title="Link to this definition">¶</a></dt>
+<dd><p>Apply a centered rolling smoother to numeric columns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>window</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Rolling window size in number of samples.
+Defaults to 5.</p></li>
+<li><p><strong>method</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Aggregation used for smoothing, one of
+“mean”, “median”, “sum”, “min”, “max”. Defaults to “mean”.</p></li>
+<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If True, replace the numeric columns of this
+object with their smoothed versions. If False, return a
+smoothed deep copy.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Object with smoothed numeric columns and unchanged</dt><dd><p>boolean/activity columns (self when inplace=True, otherwise
+a new instance).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If method is not among the supported names.
+Choose one of “mean”, “median”, “sum”, “min”, “max”.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method separates numeric and boolean columns in
+self.data. A centered rolling window with at least one
+valid sample (min_periods=1) is applied to numeric columns
+using the requested aggregation, producing a smoothed
+version of each numeric time series. Boolean columns
+untouched.</p>
+</dd>
+<dt>Theory:</dt><dd><p>The smoothing is a simple moving-window operation. It
+can help reduce noise in total concentration or other
+instrument channels prior to further analysis.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Smooth a noisy CPC time series while preserving activities:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">smooth</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">timesmooth</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"median"</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">smooth</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">mark_activities</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.mark_activities">
+<span class="sig-name descname"><span class="pre">mark_activities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">activity_periods</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'union'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.mark_activities" title="Link to this definition">¶</a></dt>
+<dd><p>Define or update boolean activity masks on the time axis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>activity_periods</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – <p>Mapping from activity name (str) to
+one of:</p>
+<blockquote>
+<div><ul>
+<li><p>a (start, end) tuple,</p></li>
+<li><p>a list of (start, end) tuples, or</p></li>
+<li><p>None (no active periods).</p></li>
+</ul>
+</div></blockquote>
+<p>Each start/end can be a pandas.Timestamp, datetime, or any
+string understood by pandas.to_datetime.</p>
+</p></li>
+<li><p><strong>mode</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – <p>How to combine new periods with existing masks of
+the same name. One of:</p>
+<blockquote>
+<div><ul>
+<li><p>”union”: existing OR new periods (default),</p></li>
+<li><p>”replace”: overwrite any existing mask,</p></li>
+<li><p>”intersection”: keep only overlapping periods.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The object is modified in place by adding/updating</dt><dd><p>boolean columns in self.data and entries in
+self.activity_periods.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If mode is not “union”, “replace”, or “intersection”.
+Check the spelling of mode and choose among the supported
+options.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>For each activity key, a boolean Series is built over the
+current time index. All timestamps falling between any of
+the supplied (start, end) pairs (inclusive) are set to True,
+and others to False. Depending on mode, this new mask is
+merged with any existing column of the same name. The
+normalized list of (start, end) periods is stored in
+self.activity_periods[activity].</p>
+</dd>
+<dt>Theory:</dt><dd><p>The method implements generic time segmentation. Activities
+can represent tasks, locations, process states, or anything
+else defined by the user.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Mark a measurement into “Task” and “Background” segments:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">periods</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"Task"</span><span class="p">:</span> <span class="p">[(</span><span class="s2">"2025-01-24 09:00"</span><span class="p">,</span> <span class="s2">"2025-01-24 11:00"</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">"2025-01-24 12:30"</span><span class="p">,</span> <span class="s2">"2025-01-24 14:00"</span><span class="p">)</span>
+                <span class="p">],</span>
+    <span class="s2">"Background"</span><span class="p">:</span> <span class="p">[(</span><span class="s2">"2025-01-24 08:30"</span><span class="p">,</span> <span class="s2">"2025-01-24 09:00"</span><span class="p">)]</span>
+<span class="p">}</span>
+<span class="n">data</span><span class="o">.</span><span class="n">mark_activities</span><span class="p">(</span><span class="n">periods</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">mark_activities</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.rename_activity">
+<span class="sig-name descname"><span class="pre">rename_activity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">old_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.rename_activity" title="Link to this definition">¶</a></dt>
+<dd><p>Rename an existing activity, keeping its periods and mask intact.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>old_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Current activity name.</p></li>
+<li><p><strong>new_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – New name for the activity.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The object is modified in place: the boolean mask column</dt><dd><p>in self.data and the entries in self.activities and
+self.activity_periods are renamed.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If old_name is not a known activity, or new_name is
+already used by a different activity.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.get_activity_data">
+<span class="sig-name descname"><span class="pre">get_activity_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">activity_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.get_activity_data" title="Link to this definition">¶</a></dt>
+<dd><p>Return main data restricted to one or more activity periods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>activity_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Name of the activity/boolean mask
+column to use, or multiple names. If multiple are provided, rows
+are returned only where <em>all</em> selected activities are True.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Copy of the main data for time steps where the</dt><dd><p>selected activity (or combined activities) is True, with all
+activity mask columns removed.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If any activity name is not present in self.activities.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – If activity_name is neither a string nor an iterable of strings.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.get_activity_extra_data">
+<span class="sig-name descname"><span class="pre">get_activity_extra_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">activity_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.get_activity_extra_data" title="Link to this definition">¶</a></dt>
+<dd><p>Return extra_data restricted to a given activity period.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>activity_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name of the activity/boolean mask column
+in self.data to use as a selector.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Subset of extra_data aligned to the time</dt><dd><p>periods where the chosen activity is True. If extra_data is
+empty, an empty DataFrame is returned.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If activity_name is not present in self.activities.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method uses the activity mask stored in self.data but
+returns rows from self.extra_data. This is useful to inspect
+auxiliary channels (for example temperature, pressure, or
+instrument status signals) corresponding to specific tasks
+or events, without mixing them with the primary aerosol
+time series.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Correlate environmental parameters with a task:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">env_task</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_activity_extra_data</span><span class="p">(</span><span class="s2">"Task"</span><span class="p">)</span>
+<span class="n">env_task</span><span class="p">[[</span><span class="s2">"Temperature"</span><span class="p">,</span> <span class="s2">"RelativeHumidity"</span><span class="p">]]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.Peak_finder">
+<span class="sig-name descname"><span class="pre">Peak_finder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'median'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">specific_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.Peak_finder" title="Link to this definition">¶</a></dt>
+<dd><p>Detect peaks and mark them as an activity labeled ‘Peak’.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>window</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Rolling window size in number of samples used to
+compute the local baseline and spread. Defaults to 15.</p></li>
+<li><p><strong>ratio</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Threshold factor on the rolling standard
+deviation. A time step is flagged as peak when
+value - baseline &gt; ratio * rolling_std. Defaults to 2.5.</p></li>
+<li><p><strong>method</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Aggregation used as the rolling baseline, one of
+“mean”, “median”, “sum”, “min”, “max”. Defaults to “median”.</p></li>
+<li><p><strong>specific_data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Optional column name to use for peak
+detection. If empty, the dataset’s primary channel is used
+(total concentration for particle instruments). Otherwise, the
+name is looked up first in self.data (numeric columns) and then
+in extra_data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The method adds/updates a boolean “Peak” column in</dt><dd><p>self.data and updates self.activity_periods[“Peak”].</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If method is not one of the supported names. Choose
+one of “mean”, “median”, “sum”, “min”, “max”.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If specific_data is not found as a numeric column
+in either self.data or extra_data. Check column names via
+data.columns or extra_data.columns.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The method computes a rolling baseline and rolling standard
+deviation over the chosen data series. Points where the
+deviation from the baseline exceeds ratio times the rolling
+standard deviation are marked as peaks. Contiguous True
+segments in this mask are converted to (start, end) time
+intervals and stored as the “Peak” activity.</p>
+</dd>
+<dt>Theory:</dt><dd><p>This is a simple statistical peak detector based on local
+outlier detection relative to a moving baseline and spread.
+It highlights periods where the signal is unusually high
+compared to its recent history.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Automatically tag high-exposure episodes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">Peak_finder</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">31</span><span class="p">,</span> <span class="n">ratio</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">mark_activities</span><span class="o">=</span><span class="p">[</span><span class="s2">"Peak"</span><span class="p">])</span>
+<span class="n">peak_df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_activity_data</span><span class="p">(</span><span class="s2">"Peak"</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.Mark_threshold">
+<span class="sig-name descname"><span class="pre">Mark_threshold</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">activity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold_direction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'above'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.Mark_threshold" title="Link to this definition">¶</a></dt>
+<dd><p>Mark every time step whose value lies on the requested side of a
+fixed threshold as an activity, and store the contiguous runs as
+its periods.</p>
+<blockquote>
+<div><p>This is a threshold-based segmenter: unlike <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.Peak_finder" title="aerosoltools.aerosol1d.Aerosol1D.Peak_finder"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Peak_finder()</span></code></a>
+(which compares each point to a moving baseline), it tags samples
+purely by whether they exceed — or fall below — a single, constant
+limit. It is the natural way to flag exposures above an
+occupational exposure limit (OEL) or any other fixed concentration
+cut-off.</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>activity</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name to give the marked activity (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;OEL&quot;</span></code>).</p></li>
+<li><p><strong>threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – The fixed limit each sample is compared to.</p></li>
+<li><p><strong>metric</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Column to compare against the threshold. If
+<code class="docutils literal notranslate"><span class="pre">None</span></code> (default), the first column of <code class="docutils literal notranslate"><span class="pre">self.data</span></code> (the total
+concentration) is used. Otherwise the name is looked up first
+among the numeric columns of <code class="docutils literal notranslate"><span class="pre">self.data</span></code> and then of
+<code class="docutils literal notranslate"><span class="pre">extra_data</span></code>.</p></li>
+<li><p><strong>threshold_direction</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Which side of the threshold counts as the
+activity. <code class="docutils literal notranslate"><span class="pre">&quot;above&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;&gt;&quot;</span></code> flags samples strictly greater
+than <code class="docutils literal notranslate"><span class="pre">threshold</span></code>; <code class="docutils literal notranslate"><span class="pre">&quot;below&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;&lt;&quot;</span></code> flags samples strictly
+less than it. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;above&quot;</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The method adds/updates a boolean column named <code class="docutils literal notranslate"><span class="pre">activity</span></code> in</dt><dd><p><code class="docutils literal notranslate"><span class="pre">self.data</span></code> and stores its contiguous runs in
+<code class="docutils literal notranslate"><span class="pre">self.activity_periods[activity]</span></code>.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">metric</span></code> is not found as a numeric column in either
+<code class="docutils literal notranslate"><span class="pre">self.data</span></code> or <code class="docutils literal notranslate"><span class="pre">extra_data</span></code>. Check column names via
+<code class="docutils literal notranslate"><span class="pre">data.columns</span></code> or <code class="docutils literal notranslate"><span class="pre">extra_data.columns</span></code>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">threshold_direction</span></code> is not one of the supported
+names. Choose one of <code class="docutils literal notranslate"><span class="pre">&quot;above&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;below&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&gt;&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;&lt;&quot;</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl class="simple">
+<dt>Detailed description:</dt><dd><p>The chosen metric is compared element-wise to <code class="docutils literal notranslate"><span class="pre">threshold</span></code> to
+build a boolean mask (NaN samples compare False and are never
+flagged). The mask is stored as the <code class="docutils literal notranslate"><span class="pre">activity</span></code> column, and its
+contiguous True segments are converted to <code class="docutils literal notranslate"><span class="pre">(start,</span> <span class="pre">end)</span></code> time
+intervals and stored as the activity’s periods.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Flag the periods where the total concentration exceeds an OEL and
+shade them on the time series:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">Mark_threshold</span><span class="p">(</span><span class="s2">"OEL"</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">1e4</span><span class="p">)</span>
+<span class="n">data</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">mark_activities</span><span class="o">=</span><span class="p">[</span><span class="s2">"OEL"</span><span class="p">])</span>
+<span class="n">oel_df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_activity_data</span><span class="p">(</span><span class="s2">"OEL"</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.peak_finder">
+<span class="sig-name descname"><span class="pre">peak_finder</span></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.peak_finder" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.mark_threshold">
+<span class="sig-name descname"><span class="pre">mark_threshold</span></span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.mark_threshold" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.available_metrics">
+<span class="sig-name descname"><span class="pre">available_metrics</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.available_metrics" title="Link to this definition">¶</a></dt>
+<dd><p>List the quantities this dataset can be summarised on.</p>
+<p>Each entry is a <code class="xref py py-class docutils literal notranslate"><span class="pre">MetricSpec</span></code> whose
+<code class="docutils literal notranslate"><span class="pre">key</span></code> is accepted by <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.summarize_activities" title="aerosoltools.aerosol1d.Aerosol1D.summarize_activities"><code class="xref py py-meth docutils literal notranslate"><span class="pre">summarize_activities()</span></code></a> /
+<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.summarize_exposure" title="aerosoltools.aerosol1d.Aerosol1D.summarize_exposure"><code class="xref py py-meth docutils literal notranslate"><span class="pre">summarize_exposure()</span></code></a>. The <code class="docutils literal notranslate"><span class="pre">default=True</span></code> entries are the
+instrument’s primary metrics (used when no <code class="docutils literal notranslate"><span class="pre">metrics=</span></code> is given, and
+pre-selected in the GUI picker). Size-resolved classes override this to
+add derived PNC/MASS/Pₓ metrics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The dataset’s compatible metrics.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>[MetricSpec]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.summarize">
+<span class="sig-name descname"><span class="pre">summarize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.summarize" title="Link to this definition">¶</a></dt>
+<dd><p>Summarise basic statistics of one channel by activity.</p>
+<p>Reports <code class="docutils literal notranslate"><span class="pre">Min</span> <span class="pre">/</span> <span class="pre">Max</span> <span class="pre">/</span> <span class="pre">Mean</span> <span class="pre">/</span> <span class="pre">Std</span> <span class="pre">/</span> <span class="pre">N</span></code> per activity (including
+<code class="docutils literal notranslate"><span class="pre">&quot;All</span> <span class="pre">data&quot;</span></code>) for the selected channel. Works for any dataset — for a
+single-quantity instrument <code class="docutils literal notranslate"><span class="pre">parameter=0</span></code> is the primary series; for a
+multi-channel instrument pick the channel by index or name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Optional <code class="docutils literal notranslate"><span class="pre">.xlsx</span></code> path to write the table to.</p></li>
+<li><p><strong>parameter</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Channel to summarise — positional index into
+<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a> columns (<code class="docutils literal notranslate"><span class="pre">int</span></code>) or a column label (<code class="docutils literal notranslate"><span class="pre">str</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Columns
+<code class="docutils literal notranslate"><span class="pre">[&quot;Segment&quot;,</span> <span class="pre">&quot;Min&quot;,</span> <span class="pre">&quot;Max&quot;,</span> <span class="pre">&quot;Mean&quot;,</span> <span class="pre">&quot;Std&quot;,</span> <span class="pre">&quot;N</span> <span class="pre">datapoints&quot;]</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#LookupError" title="(in Python v3.14)"><strong>LookupError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">parameter</span></code> is not a valid index or column label.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.summarize_activities">
+<span class="sig-name descname"><span class="pre">summarize_activities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stats</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.summarize_activities" title="Link to this definition">¶</a></dt>
+<dd><p>Summarize 1D aerosol metrics per activity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Optional path to a CSV or Excel file.
+If provided, the summary table is appended to the file
+(creating it if it does not exist). If None, nothing is
+written to disk.</p></li>
+<li><p><strong>metrics</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>] </em><em>| </em><em>None</em>) – <p>List of metric names to summarize.
+If None, the dataset’s natural set is used (see
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">_default_metrics()</span></code>): <code class="docutils literal notranslate"><span class="pre">[&quot;PNC&quot;]</span></code> for particle data, every
+numeric channel for a multi-channel instrument, or the named
+primary channel otherwise.</p>
+<ul>
+<li><p>”PNC” refers to the primary channel (total_concentration for
+particle instruments).</p></li>
+<li><p>Any other name is looked up in data or extra_data
+(numeric columns only).</p></li>
+</ul>
+</p></li>
+<li><p><strong>stats</strong> (<em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>] </em><em>| </em><em>None</em>) – Which per-activity statistics to
+report for each metric. If None, defaults to
+<code class="docutils literal notranslate"><span class="pre">[&quot;mean&quot;,</span> <span class="pre">&quot;std&quot;]</span></code> (the historical behaviour). Each entry
+must be one of “mean”, “std”, “min”, “max”, “median”.</p></li>
+<li><p><strong>sheet_name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>Summary table with one row per activity and
+columns:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>”Segment”</p></li>
+<li><p>”Duration (HH:MM)”</p></li>
+<li><p>For each metric M and requested stat S: “M [unit] S”.</p></li>
+</ul>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If a requested metric (other than “PNC”) cannot
+be found in data or extra_data, or if <code class="docutils literal notranslate"><span class="pre">stats</span></code> contains an
+unrecognised name.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The per-activity statistics are simple sample statistics over
+the selected time steps. Durations are based on the actual
+sampling intervals (via _dt_minutes).</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">summarize_activities</span><span class="p">()</span>
+<span class="n">data</span><span class="o">.</span><span class="n">summarize_activities</span><span class="p">(</span><span class="n">stats</span><span class="o">=</span><span class="p">[</span><span class="s2">"mean"</span><span class="p">,</span> <span class="s2">"min"</span><span class="p">,</span> <span class="s2">"max"</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.summarize_exposure">
+<span class="sig-name descname"><span class="pre">summarize_exposure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'PNC'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exposure_hours</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">short_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">long_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">short_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'15min'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">twa_window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'8h'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peak_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activities</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.summarize_exposure" title="Link to this definition">¶</a></dt>
+<dd><p>Summarize exposure metrics for one 1D metric across activities.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>metric</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – <p>Exposure metric name based on the underlying
+1D time series. Default is “PNC”, corresponding to the
+total particle number concentration. Supported forms:</p>
+<blockquote>
+<div><ul>
+<li><p>”PNC”: total number concentration, mapped to
+<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.total_concentration" title="aerosoltools.aerosol1d.Aerosol1D.total_concentration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">total_concentration</span></code></a>.</p></li>
+<li><p>Any other string: interpreted as the name of a
+numeric column in <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a> or <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.extra_data" title="aerosoltools.aerosol1d.Aerosol1D.extra_data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">extra_data</span></code></a>
+(case-sensitive). For example, “MASS” or “TEMP”
+if such columns exist.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>background</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – <p>Background level used when
+computing the time-weighted average over <code class="docutils literal notranslate"><span class="pre">twa_window</span></code>.
+The same background level is used for all activities in
+the output. Possible entries are:</p>
+<blockquote>
+<div><ul>
+<li><p>None: assume zero background.</p></li>
+<li><p>float: constant background level in metric units.</p></li>
+<li><p>str: name of an activity; the TWA of <code class="docutils literal notranslate"><span class="pre">metric</span></code> over
+that activity is used as background.</p></li>
+</ul>
+</div></blockquote>
+</p></li>
+<li><p><strong>exposure_hours</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Assumed duration of exposure for
+each activity, in hours, when embedding it into the TWA
+window. If None, the measured activity duration is used for
+that activity. If a positive value is given, the same
+exposure duration is applied for all activities.</p></li>
+<li><p><strong>short_limit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Short-term concentration limit in metric
+units (for example a 15-min STEL). This value is reported
+in the output as <code class="docutils literal notranslate"><span class="pre">&quot;STEL</span> <span class="pre">[unit]&quot;</span></code>.</p></li>
+<li><p><strong>long_limit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Long-term concentration limit in metric
+units (for example an 8-h OEL). This value is reported in
+the output as <code class="docutils literal notranslate"><span class="pre">&quot;Exposure</span> <span class="pre">limit</span> <span class="pre">[unit]&quot;</span></code>.</p></li>
+<li><p><strong>short_window</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Rolling window used for short-term (STEL)
+evaluation, given as a pandas offset string (for example
+“15min”). This is reported as <code class="docutils literal notranslate"><span class="pre">&quot;STEL</span> <span class="pre">window</span> <span class="pre">[offset]&quot;</span></code> and
+used to construct a time-based rolling mean.</p></li>
+<li><p><strong>twa_window</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Total duration of the TWA window as a pandas
+offset string (for example “8h”). This is reported as
+<code class="docutils literal notranslate"><span class="pre">&quot;TWA</span> <span class="pre">window</span> <span class="pre">[offset]&quot;</span></code> and used to embed the segment
+exposure into a reference window (for example an 8-h shift).</p></li>
+<li><p><strong>peak_ratio</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – <p>Factor used in peak detection; peaks are
+flagged when the metric exceeds:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">baseline</span> <span class="o">+</span> <span class="n">peak_ratio</span> <span class="o">*</span> <span class="n">rolling_std</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">baseline</span></code> is a rolling median and <code class="docutils literal notranslate"><span class="pre">rolling_std</span></code> is
+a rolling standard deviation over a short window.</p>
+</p></li>
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Optional path to a CSV/Excel file to
+which the non-transposed result rows are appended. If the
+file exists, rows are appended; otherwise the file is
+created with a header. Supported extensions are “.csv”,
+“.xls”, “.xlsx”.</p></li>
+<li><p><strong>activities</strong> (<em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>] </em><em>| </em><em>None</em>) – Activities to summarize.
+If None (default), all defined activities in
+<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.activities" title="aerosoltools.aerosol1d.Aerosol1D.activities"><code class="xref py py-attr docutils literal notranslate"><span class="pre">activities</span></code></a> are summarized (for example “All data”,
+“Background”, “Task”). Activities with no marked time steps
+are skipped.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One row per activity segment with summary
+statistics for the chosen metric. Column names embed their units
+in square brackets where applicable (for example “Max [µg/m³]”).
+The set of columns matches that of
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">Aerosol2D.summarize_exposure()</span></code>, restricted to a single
+1D metric.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)">pandas.DataFrame</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">metric</span></code> cannot be found (except “PNC”).</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If a background activity name is given but does not
+exist or has no samples.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">short_window</span></code> or <code class="docutils literal notranslate"><span class="pre">twa_window</span></code> cannot be
+parsed as pandas-style durations.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">exposure_hours</span></code> is negative.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">background</span></code> is not None, float, or str.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl>
+<dt>Detailed description:</dt><dd><p>The method first obtains the requested metric time series
+from the 1D data:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>For “PNC”, the series is taken from
+<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.total_concentration" title="aerosoltools.aerosol1d.Aerosol1D.total_concentration"><code class="xref py py-attr docutils literal notranslate"><span class="pre">total_concentration</span></code></a>.</p></li>
+<li><p>For any other metric name, the series is taken from a
+numeric column in <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a> or <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.extra_data" title="aerosoltools.aerosol1d.Aerosol1D.extra_data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">extra_data</span></code></a>
+(if present).</p></li>
+</ul>
+</div></blockquote>
+<p>For each selected activity, the method:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Extracts the metric time series within the activity
+using the corresponding boolean mask.</p></li>
+<li><p>Computes per-step durations from the actual sampling
+times via <code class="xref py py-meth docutils literal notranslate"><span class="pre">_dt_minutes()</span></code>.</p></li>
+<li><p>Forms a time-weighted segment mean (using the per-step
+durations), which is used internally when embedding
+the activity into the TWA window.</p></li>
+<li><p>Computes instantaneous percentiles, peaks, STEL-style
+exceedances, and long-term time-above-limit measures.</p></li>
+<li><p>Combines the segment mean with the specified background
+level to obtain an overall TWA for the chosen window.</p></li>
+</ol>
+</div></blockquote>
+<p>The returned DataFrame contains the following columns
+(per activity):</p>
+<blockquote>
+<div><ul>
+<li><dl class="simple">
+<dt>“Segment”</dt><dd><p>Name of the activity segment.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“Metric”</dt><dd><p>Name of the metric that was summarized, e.g.
+“PNC”, “MASS”, or any other 1D column name.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“Duration [HH:MM]”</dt><dd><p>Duration of the activity derived from the actual
+sampling intervals, formatted as “HH:MM” (hours and
+minutes).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“Max [unit]”</dt><dd><p>Maximum of the instantaneous metric values during the
+activity. The unit is the metric unit (for example
+“cm⁻³” or “µg/m³”).</p>
+</dd>
+</dl>
+</li>
+<li><p>“95th percentile [unit]”</p></li>
+<li><p>“75th percentile [unit]”</p></li>
+<li><p>“50th percentile [unit]”</p></li>
+<li><p>“25th percentile [unit]”</p></li>
+<li><dl class="simple">
+<dt>“5th percentile [unit]”</dt><dd><p>Percentiles of the instantaneous metric values during
+the activity, all in the same unit as the metric.</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt>“Peaks [count]”</dt><dd><p>Number of distinct peak events detected in the
+activity, where a peak is a contiguous period in which
+the metric exceeds:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">baseline</span> <span class="o">+</span> <span class="n">peak_ratio</span> <span class="o">*</span> <span class="n">rolling_std</span>
+</pre></div>
+</div>
+<p>with <code class="docutils literal notranslate"><span class="pre">baseline</span></code> the rolling median and
+<code class="docutils literal notranslate"><span class="pre">rolling_std</span></code> the rolling standard deviation over a
+short sliding window, covering at least 3 datapoints
+and at most 15 datapoints, depending on how many
+samples are available in the segment.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“STEL [unit]”</dt><dd><p>Short-term exposure limit used in the STEL
+exceedance calculations (echoing <code class="docutils literal notranslate"><span class="pre">short_limit</span></code>),
+with the same concentration unit as the metric.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“STEL window [offset]”</dt><dd><p>Rolling window length used for STEL evaluation,
+echoing <code class="docutils literal notranslate"><span class="pre">short_window</span></code> (for example “15min”).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“STEL exceedance [min]”</dt><dd><p>Total time in minutes during the activity where the
+<strong>full-window</strong> rolling mean is greater than or equal
+to the STEL. Only complete windows are counted in this
+measure.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“STEL episodes [count]”</dt><dd><p>Number of distinct STEL exceedance episodes based on
+the full-window rolling mean. Each contiguous block of
+time where the full-window mean is at or above the
+STEL is counted as one episode.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“Exposure limit [unit]”</dt><dd><p>Long-term exposure limit value used in the long-term
+evaluation (echoing <code class="docutils literal notranslate"><span class="pre">long_limit</span></code>), with the same
+unit as the metric.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“Exposure limit exceedance [min]”</dt><dd><p>Total time in minutes during the activity where the
+instantaneous metric values are greater than or equal
+to the exposure limit.</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt>“TWA concentration [unit]”</dt><dd><p>Time-weighted average concentration of the metric over
+the full TWA window (<code class="docutils literal notranslate"><span class="pre">&quot;TWA</span> <span class="pre">window</span> <span class="pre">[offset]&quot;</span></code>),
+combining the internal segment mean (optionally
+stretched to <code class="docutils literal notranslate"><span class="pre">exposure_hours</span></code>) with the specified
+background level for the remainder of the window:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">TWA</span> <span class="o">=</span> <span class="p">(</span><span class="n">segment_mean</span> <span class="o">*</span> <span class="n">exposure_minutes</span>
+       <span class="o">+</span> <span class="n">background</span> <span class="o">*</span> <span class="p">(</span><span class="n">twa_minutes</span> <span class="o">-</span> <span class="n">exposure_minutes</span><span class="p">))</span>
+      <span class="o">/</span> <span class="n">twa_minutes</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">twa_minutes</span></code> is the duration of
+<code class="docutils literal notranslate"><span class="pre">twa_window</span></code> in minutes and <code class="docutils literal notranslate"><span class="pre">exposure_minutes</span></code> is
+either the measured activity duration or
+<code class="docutils literal notranslate"><span class="pre">exposure_hours</span> <span class="pre">*</span> <span class="pre">60</span></code>, whichever is used.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>“TWA window [offset]”</dt><dd><p>Duration of the TWA window over which
+“TWA concentration [unit]” is evaluated, echoing
+<code class="docutils literal notranslate"><span class="pre">twa_window</span></code> (for example “8h”).</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</dd>
+<dt>Theory:</dt><dd><p>Conceptually, the method mirrors typical occupational hygiene
+practice for a single 1D metric:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Exposure within an activity is represented by
+time-weighted averages and distributional descriptors
+(max and percentiles).</p></li>
+<li><p>Short-term limits (STEL) are evaluated using rolling
+means over a specified window, counting both total time
+above the limit and distinct exceedance episodes.</p></li>
+<li><p>Long-term limits are represented by cumulative
+time-above-limit measures.</p></li>
+<li><p>An overall TWA for an 8-h (or user-specified) reference
+period is constructed by mixing the task exposure with a
+background level for the rest of the window.</p></li>
+</ul>
+</div></blockquote>
+<p>This ensures a transparent link between raw 1D time-series
+behaviour and regulatory-style metrics such as STEL and
+8-hour OELs.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Summarize total particle number concentration (PNC) exposure
+for all activities in a CPC dataset, using the “Background”
+activity as background level and a 15-min STEL with an 8-h
+TWA window:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cpc</span><span class="o">.</span><span class="n">summarize_exposure</span><span class="p">(</span>
+        <span class="n">metric</span><span class="o">=</span><span class="s2">"PNC"</span><span class="p">,</span>
+        <span class="n">background</span><span class="o">=</span><span class="s2">"Background"</span><span class="p">,</span>
+        <span class="n">short_limit</span><span class="o">=</span><span class="mf">5e4</span><span class="p">,</span>
+        <span class="n">long_limit</span><span class="o">=</span><span class="mf">2e4</span><span class="p">,</span>
+        <span class="n">short_window</span><span class="o">=</span><span class="s2">"15min"</span><span class="p">,</span>
+        <span class="n">twa_window</span><span class="o">=</span><span class="s2">"8h"</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Other 1D metrics stored as columns (for example “MASS”) can
+be handled in the same way simply by changing the <code class="docutils literal notranslate"><span class="pre">metric</span></code>
+argument.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.plot_total_conc">
+<span class="sig-name descname"><span class="pre">plot_total_conc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mark_activities</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.plot_total_conc" title="Link to this definition">¶</a></dt>
+<dd><p>Plot a selected scalar channel versus time for a multi-channel
+object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.html#matplotlib.axes.Axes" title="(in Matplotlib v3.11.1)"><em>matplotlib.axes.Axes</em></a><em> | </em><em>None</em><em>, </em><em>optional</em>) – Existing Matplotlib axes to draw on. If <code class="docutils literal notranslate"><span class="pre">None</span></code>, a new figure
+and axes are created. Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>mark_activities</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a><em> | </em><em>Sequence</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em><em>, </em><em>optional</em>) – <p>Control highlighting of activity periods defined on the object:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">False</span></code> – no shading (default).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">True</span></code> – shade all activities except <code class="docutils literal notranslate"><span class="pre">&quot;All</span> <span class="pre">data&quot;</span></code>.</p></li>
+<li><p>sequence of str – shade only the named activities.</p></li>
+</ul>
+</p></li>
+<li><p><strong>parameter</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Index or column name of the signal to plot. If <code class="docutils literal notranslate"><span class="pre">int</span></code>, it is
+interpreted as a positional index into <code class="xref py py-attr docutils literal notranslate"><span class="pre">data.columns</span></code>. If
+<code class="docutils literal notranslate"><span class="pre">str</span></code>, it is treated as a column label. Defaults to <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The figure and axes containing the time-series plot.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a>[<a class="reference external" href="https://matplotlib.org/stable/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.11.1)">matplotlib.figure.Figure</a>, <a class="reference external" href="https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.html#matplotlib.axes.Axes" title="(in Matplotlib v3.11.1)">matplotlib.axes.Axes</a>]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#LookupError" title="(in Python v3.14)"><strong>LookupError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">parameter</span></code> does not correspond to a valid column index or
+column label.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<dl>
+<dt>Detailed description:</dt><dd><p>This method overrides <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.plot_total_conc" title="aerosoltools.aerosol1d.Aerosol1D.plot_total_conc"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Aerosol1D.plot_total_conc()</span></code></a> to allow
+plotting of <em>any</em> scalar column stored in <a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>, not only
+<code class="docutils literal notranslate"><span class="pre">&quot;Total_conc&quot;</span></code>. It is particularly useful when an instrument
+logs multiple scalar metrics alongside time.</p>
+<p>Internally, the method:</p>
+<ul>
+<li><p>Resolves <code class="docutils literal notranslate"><span class="pre">parameter</span></code>:</p>
+<ul class="simple">
+<li><p>if an integer, it is used as a positional index into
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">data.columns</span></code>,</p></li>
+<li><p>if a string, it must match a column label.</p></li>
+</ul>
+</li>
+<li><p>Creates or reuses a Matplotlib axes (depending on <code class="docutils literal notranslate"><span class="pre">ax</span></code>).</p></li>
+<li><p>Plots the selected column against the object’s time index.</p></li>
+<li><p>Configures the x-axis with a concise datetime formatter via
+<a class="reference external" href="https://matplotlib.org/stable/api/dates_api.html#module-matplotlib.dates" title="(in Matplotlib v3.11.1)"><code class="xref py py-mod docutils literal notranslate"><span class="pre">matplotlib.dates</span></code></a>.</p></li>
+<li><p>Determines the appropriate <code class="docutils literal notranslate"><span class="pre">dtype</span></code> and <code class="docutils literal notranslate"><span class="pre">unit</span></code>:</p>
+<ul class="simple">
+<li><p>if global (scalar), they are used as-is;</p></li>
+<li><p>if per-column mappings, the entry for the chosen
+<code class="docutils literal notranslate"><span class="pre">parameter</span></code> is used.</p></li>
+</ul>
+<p>The y-axis label is constructed from the base dtype
+(e.g. <code class="docutils literal notranslate"><span class="pre">&quot;dN&quot;</span></code> from <code class="docutils literal notranslate"><span class="pre">&quot;dN/dlogDp&quot;</span></code> when applicable)
+and the corresponding unit.</p>
+</li>
+<li><p>Optionally shades activity periods defined by
+<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.mark_activities" title="aerosoltools.aerosol1d.Aerosol1D.mark_activities"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Aerosol1D.mark_activities()</span></code></a> when <code class="docutils literal notranslate"><span class="pre">mark_activities</span></code> is
+<code class="docutils literal notranslate"><span class="pre">True</span></code> or a list of activity names. Each activity receives
+a distinct colour, and overlapping shaded regions are clipped
+to the data’s time extent.</p></li>
+<li><p>Calls <code class="docutils literal notranslate"><span class="pre">fig.tight_layout()</span></code> when it creates the figure to
+ensure margins and labels do not overlap.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>A typical use is to visualise one of several channels stored in
+a multi-channel object, optionally with activity periods
+highlighted:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">aerosoltools</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">at</span>
+
+<span class="c1"># Suppose 'alt' is a multi-channel object with columns: ["LDSA", "Flow", "Flag"]</span>
+<span class="n">alt</span> <span class="o">=</span> <span class="n">at</span><span class="o">.</span><span class="n">load_partector_file</span><span class="p">(</span><span class="s2">"data/Partector_log.txt"</span><span class="p">)</span>
+
+<span class="c1"># Plot LDSA with activity shading</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">alt</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span>
+    <span class="n">parameter</span><span class="o">=</span><span class="s2">"LDSA"</span><span class="p">,</span>
+    <span class="n">mark_activities</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Plot Flow on existing axes without activity shading</span>
+<span class="n">fig2</span><span class="p">,</span> <span class="n">ax2</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">alt</span><span class="o">.</span><span class="n">plot_total_conc</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax2</span><span class="p">,</span> <span class="n">parameter</span><span class="o">=</span><span class="s2">"Flow"</span><span class="p">,</span> <span class="n">mark_activities</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.aerosol1d.Aerosol1D.fit_decay">
+<span class="sig-name descname"><span class="pre">fit_decay</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">period</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'PNC'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'auto'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volume</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">air_exchange_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emission_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peak_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">background</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peak_concentration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decay_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">snap_to_samples</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">series</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#aerosoltools.aerosol1d.Aerosol1D.fit_decay" title="Link to this definition">¶</a></dt>
+<dd><p>Fit a single-zone emission + decay peak to one time window of a
+concentration metric, estimating the emission/source strength and
+the loss kinetics (zeroth, first, second order, or combined).</p>
+<blockquote>
+<div><p>The loss kinetics come from a robust fit of the <strong>decay</strong> (post-peak)
+part alone; the peak is anchored to the data and the emission rate is
+back-solved from it, so the fit does not undershoot the peak.</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>period</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><em>tuple</em></a>) – Either an activity name (a boolean column in
+<a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data" title="aerosoltools.aerosol1d.Aerosol1D.data"><code class="xref py py-attr docutils literal notranslate"><span class="pre">data</span></code></a>) or a <code class="docutils literal notranslate"><span class="pre">(start,</span> <span class="pre">end)</span></code> pair (anything
+<code class="xref py py-func docutils literal notranslate"><span class="pre">pandas.Timestamp()</span></code> accepts) selecting the window to fit.
+The window should span the background, the rise, the peak and
+the decay.</p></li>
+<li><p><strong>metric</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Metric to fit, as resolved by the class’s metric
+lookup (for example “PNC”, “MASS”, “PM2.5”). Default “PNC”.</p></li>
+<li><p><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Which loss model to fit: <code class="docutils literal notranslate"><span class="pre">&quot;zeroth_order&quot;</span></code> (constant
+removal), <code class="docutils literal notranslate"><span class="pre">&quot;first_order&quot;</span></code> (air exchange + deposition),
+<code class="docutils literal notranslate"><span class="pre">&quot;second_order&quot;</span></code> (coagulation), <code class="docutils literal notranslate"><span class="pre">&quot;combined&quot;</span></code> (first +
+second), or <code class="docutils literal notranslate"><span class="pre">&quot;auto&quot;</span></code> (fit all and pick the best, favouring the
+simpler). Aliases such as “0”/”constant”, “first”/”exp”,
+“second”/”coagulation”, “combined”/”both” are accepted.</p></li>
+<li><p><strong>volume</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Chamber/room volume in m³. When given, the
+fitted emission rate is reported as a source strength
+(<code class="docutils literal notranslate"><span class="pre">E</span> <span class="pre">*</span> <span class="pre">volume</span></code>) and a total emitted amount.</p></li>
+<li><p><strong>air_exchange_rate</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – An independently known air
+exchange rate in 1/hour. When given and the model has a
+first-order loss term, the wall-loss/deposition rate is
+estimated as <code class="docutils literal notranslate"><span class="pre">(first-order</span> <span class="pre">loss)</span> <span class="pre">-</span> <span class="pre">air_exchange_rate</span></code>.</p></li>
+<li><p><strong>emission_start</strong> – Optional explicit start of the source-on phase
+(anything <code class="xref py py-func docutils literal notranslate"><span class="pre">pandas.Timestamp()</span></code> accepts, within the window).
+When <code class="docutils literal notranslate"><span class="pre">None</span></code> it is detected from the rise. Only affects the
+emission duration <code class="docutils literal notranslate"><span class="pre">tp</span></code> and hence the emission rate/source
+strength, not the loss kinetics.</p></li>
+<li><p><strong>peak_time</strong> – Optional explicit peak time (source-off) splitting the
+emission from the decay. When <code class="docutils literal notranslate"><span class="pre">None</span></code> it is detected as the
+(smoothed) maximum.</p></li>
+<li><p><strong>background</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Override the background concentration
+<code class="docutils literal notranslate"><span class="pre">P0</span></code> instead of measuring it from the pre-emission baseline.
+Held fixed during the fit, exactly like the measured value.</p></li>
+<li><p><strong>peak_concentration</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Override the peak concentration
+(so the peak excess is <code class="docutils literal notranslate"><span class="pre">peak_concentration</span> <span class="pre">-</span> <span class="pre">background</span></code>)
+instead of measuring it at the source-off time. Held fixed.</p></li>
+<li><p><strong>decay_rate</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Seed for the loss kinetics, given as a
+first-order-equivalent rate in <strong>1/s</strong> (the <code class="docutils literal notranslate"><span class="pre">decay_rate</span></code> key a
+previous fit returns). With <code class="docutils literal notranslate"><span class="pre">optimize=True</span></code> it just seeds the
+optimiser; with <code class="docutils literal notranslate"><span class="pre">optimize=False</span></code> it <em>is</em> the loss rate, so the
+returned curve is a pure manual guess. When <code class="docutils literal notranslate"><span class="pre">None</span></code> the rate is
+estimated from the decay slope.</p></li>
+<li><p><strong>optimize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – When True (default) the loss kinetics are optimised
+against the post-peak data. When False the fit is skipped and the
+model is evaluated directly from the seed/override values, so the
+caller gets a previewable “initial guess” (used by the GUI to
+show a live preview before optimising). The returned dict has the
+same shape either way; <code class="docutils literal notranslate"><span class="pre">errors</span></code> are zero for a guess.</p></li>
+<li><p><strong>snap_to_samples</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – When True (default) an explicit
+<code class="docutils literal notranslate"><span class="pre">emission_start</span></code> / <code class="docutils literal notranslate"><span class="pre">peak_time</span></code> is quantised to the nearest
+sample time, so the reported timing lands exactly on a data
+point. When False the supplied timestamps are used as continuous
+times (an onset or source-off may fall <em>between</em> two samples), so
+the emission duration <code class="docutils literal notranslate"><span class="pre">tp</span></code> and the drawn markers vary smoothly
+rather than jumping from sample to sample. Only affects the two
+timing overrides; detection (when they are <code class="docutils literal notranslate"><span class="pre">None</span></code>) is unchanged.</p></li>
+<li><p><strong>series</strong> (<a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v3.0.5)"><em>pandas.Series</em></a><em> | </em><em>None</em>) – Optional precomputed, time-indexed
+concentration series to fit instead of the named <code class="docutils literal notranslate"><span class="pre">metric</span></code> —
+used to fit an arbitrary series such as a single size bin (for
+per-bin decay fitting) with the same window and overrides. When
+given, <code class="docutils literal notranslate"><span class="pre">metric</span></code> is used only for labelling.</p></li>
+<li><p><strong>unit</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Unit string for <code class="docutils literal notranslate"><span class="pre">series</span></code>; when <code class="docutils literal notranslate"><span class="pre">series</span></code> is
+given but <code class="docutils literal notranslate"><span class="pre">unit</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code> the named metric’s unit is used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A typed record (also a read-only mapping, so
+<code class="docutils literal notranslate"><span class="pre">result[&quot;r_squared&quot;]</span></code> still works) with fields including <code class="docutils literal notranslate"><span class="pre">model</span></code>,
+<code class="docutils literal notranslate"><span class="pre">unit</span></code>, <code class="docutils literal notranslate"><span class="pre">metric</span></code>, <code class="docutils literal notranslate"><span class="pre">r_squared</span></code> (whole window), <code class="docutils literal notranslate"><span class="pre">decay_r_squared</span></code>
+(post-peak fit), <code class="docutils literal notranslate"><span class="pre">n_points</span></code>, <code class="docutils literal notranslate"><span class="pre">params</span></code>, <code class="docutils literal notranslate"><span class="pre">errors</span></code>, <code class="docutils literal notranslate"><span class="pre">background</span></code>,
+<code class="docutils literal notranslate"><span class="pre">peak_concentration</span></code>, <code class="docutils literal notranslate"><span class="pre">peak_excess</span></code>, <code class="docutils literal notranslate"><span class="pre">emission_rate</span></code> /
+<code class="docutils literal notranslate"><span class="pre">emission_rate_unit</span></code>, <code class="docutils literal notranslate"><span class="pre">decay_rate</span></code> / <code class="docutils literal notranslate"><span class="pre">decay_rate_per_hour</span></code>
+(first-order-equivalent loss rate, for round-tripping into
+<code class="docutils literal notranslate"><span class="pre">decay_rate</span></code>), <code class="docutils literal notranslate"><span class="pre">loss_rate_per_hour</span></code> / <code class="docutils literal notranslate"><span class="pre">half_life_hours</span></code>
+(first-order term), <code class="docutils literal notranslate"><span class="pre">zeroth_order_rate</span></code>, <code class="docutils literal notranslate"><span class="pre">second_order_rate</span></code>
+(second/combined), <code class="docutils literal notranslate"><span class="pre">wall_loss_rate_per_hour</span></code> (with
+<code class="docutils literal notranslate"><span class="pre">air_exchange_rate</span></code>), <code class="docutils literal notranslate"><span class="pre">source_strength</span></code> / <code class="docutils literal notranslate"><span class="pre">total_emitted</span></code> (with
+<code class="docutils literal notranslate"><span class="pre">volume</span></code>), the timing (<code class="docutils literal notranslate"><span class="pre">emission_start_s</span></code>, <code class="docutils literal notranslate"><span class="pre">emission_duration_s</span></code>,
+<code class="docutils literal notranslate"><span class="pre">peak_time_s</span></code>, <code class="docutils literal notranslate"><span class="pre">peak_time</span></code>) and, for redrawing, <code class="docutils literal notranslate"><span class="pre">window_start</span></code>
+and <code class="docutils literal notranslate"><span class="pre">model_popt</span></code> (see <code class="xref py py-func docutils literal notranslate"><span class="pre">decay_curve()</span></code>). Optional model-/volume-
+specific fields are <code class="docutils literal notranslate"><span class="pre">None</span></code> (and omitted from the mapping view) when
+not applicable.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DecayResult</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">period</span></code> is neither a known activity nor a valid
+<code class="docutils literal notranslate"><span class="pre">(start,</span> <span class="pre">end)</span></code> pair, if the window has too few finite
+samples, if <code class="docutils literal notranslate"><span class="pre">model</span></code> is unrecognised, or if no model could be
+fitted.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Fit a chamber emission peak and read the source strength:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">res</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">fit_decay</span><span class="p">(</span><span class="s2">"Emission"</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">"PNC"</span><span class="p">,</span> <span class="n">volume</span><span class="o">=</span><span class="mf">20.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="s2">"source_strength"</span><span class="p">],</span> <span class="n">res</span><span class="p">[</span><span class="s2">"source_strength_unit"</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="../aerosol2d/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">aerosoltools.aerosol2d</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../acsm_simple/index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">aerosoltools.acsm_simple</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">aerosoltools.aerosol1d</a><ul>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.params"><code class="docutils literal notranslate"><span class="pre">params</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D"><code class="docutils literal notranslate"><span class="pre">Aerosol1D</span></code></a><ul>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.activities"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.activities</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.activity_periods"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.activity_periods</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.data"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.data</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.dtype"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.dtype</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.extra_data"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.extra_data</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.instrument"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.instrument</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.measurement"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.measurement</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.metadata"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.metadata</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.original_data"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.original_data</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.original_extra_data"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.original_extra_data</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.serial_number"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.serial_number</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.time"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.time</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.total_concentration"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.total_concentration</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.unit"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.unit</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.column_units"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.column_units</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.unit_of"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.unit_of()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.dtype_of"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.dtype_of()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.apply_calibration"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.apply_calibration()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.copy_self"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.copy_self()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.timecrop"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.timecrop()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.timerebin"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.timerebin()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.timeshift"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.timeshift()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.timesmooth"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.timesmooth()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.mark_activities"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.mark_activities()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.rename_activity"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.rename_activity()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.get_activity_data"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.get_activity_data()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.get_activity_extra_data"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.get_activity_extra_data()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.Peak_finder"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.Peak_finder()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.Mark_threshold"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.Mark_threshold()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.peak_finder"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.peak_finder</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.mark_threshold"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.mark_threshold</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.available_metrics"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.available_metrics()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.summarize"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.summarize()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.summarize_activities"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.summarize_activities()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.summarize_exposure"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.summarize_exposure()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.plot_total_conc"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.plot_total_conc()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.aerosol1d.Aerosol1D.fit_decay"><code class="docutils literal notranslate"><span class="pre">Aerosol1D.fit_decay()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

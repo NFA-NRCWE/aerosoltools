@@ -1,0 +1,349 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 6 — Dtypes, density and corrections\n",
+    "\n",
+    "**Theme:** changing what the numbers *mean* before analysing them.\n",
+    "\n",
+    "A size distribution can be expressed as number, surface, volume or mass; mass\n",
+    "depends on an assumed particle density; and a sampling line removes some of the\n",
+    "smallest particles before they are ever counted. This notebook covers those\n",
+    "conversions and corrections, plus the derived PM fractions built on top of\n",
+    "them."
+   ],
+   "id": "cell-00"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import aerosoltools as at\n",
+    "\n",
+    "elpi = at.load_elpi_file(\"../../tests/data/Sample_ELPI.txt\")\n",
+    "print(\"dtype  :\", elpi.dtype)\n",
+    "print(\"unit   :\", elpi.unit)\n",
+    "print(\"density:\", elpi.density, \"g/cm3\")"
+   ],
+   "id": "cell-01"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The warning on load is the point of this notebook: the file records a particle\n",
+    "density other than 1.0 g/cm³, and every mass-based quantity depends on it.\n",
+    "\n",
+    "## Distribution types\n",
+    "\n",
+    "`dtype` records what the numbers are. `dtype_converter` converts between them:\n",
+    "\n",
+    "| dtype | quantity |\n",
+    "|---|---|\n",
+    "| `dN` | number |\n",
+    "| `dS` | surface area |\n",
+    "| `dV` | volume |\n",
+    "| `dM` | mass |\n",
+    "\n",
+    "The conversion is geometric — number to volume uses the bin diameters, volume\n",
+    "to mass multiplies by density — so it only makes sense on size-resolved data."
+   ],
+   "id": "cell-02"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "mass = elpi.copy_self()\n",
+    "mass.dtype_converter(\"dM\")\n",
+    "print(\"dtype:\", mass.dtype)\n",
+    "print(\"unit :\", mass.unit)"
+   ],
+   "id": "cell-03"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "surface = elpi.copy_self()\n",
+    "surface.dtype_converter(\"dS\")\n",
+    "print(\"dtype:\", surface.dtype, \"| unit:\", surface.unit)"
+   ],
+   "id": "cell-04"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Density\n",
+    "\n",
+    "Mass is number × volume × density, so an assumed density propagates into every\n",
+    "mass result. `set_density` changes it."
+   ],
+   "id": "cell-05"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "denser = elpi.copy_self()\n",
+    "denser.set_density(2.0)\n",
+    "denser.dtype_converter(\"dM\")\n",
+    "\n",
+    "print(f\"density 1.5 -> mean mass {mass.total_concentration.mean():.1f} {mass.unit}\")\n",
+    "print(f\"density 2.0 -> mean mass {denser.total_concentration.mean():.1f} {denser.unit}\")"
+   ],
+   "id": "cell-06"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Density is an *assumption* unless you have measured it. Reporting the value you\n",
+    "used matters as much as the result.\n",
+    "\n",
+    "For the ELPI specifically, density also affects the size axis itself: the\n",
+    "aerodynamic diameters the instrument reports are recomputed when you call\n",
+    "`set_density`, because a denser particle of the same aerodynamic size is\n",
+    "physically smaller.\n",
+    "\n",
+    "## Per-column dtypes and units\n",
+    "\n",
+    "Multi-channel instruments carry a dtype and unit per column. `dtype_of` and\n",
+    "`unit_of` answer for one column."
+   ],
+   "id": "cell-07"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dust = at.load_dusttrak_file(\"../../tests/data/Sample_DustTrak.csv\")\n",
+    "\n",
+    "print(\"PM1  ->\", dust.dtype_of(\"PM1\"), dust.unit_of(\"PM1\"))\n",
+    "print(\"PM10 ->\", dust.dtype_of(\"PM10\"), dust.unit_of(\"PM10\"))\n",
+    "print()\n",
+    "print(\"all columns:\", dust.column_units)"
+   ],
+   "id": "cell-08"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## dlogDp normalisation\n",
+    "\n",
+    "Instruments use different bin widths, so raw per-bin concentrations are not\n",
+    "comparable between them. Dividing by the width of each bin in log space gives\n",
+    "`dN/dlogDp`, which is."
+   ],
+   "id": "cell-09"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "norm = elpi.copy_self()\n",
+    "norm.normalize_logdp()\n",
+    "print(\"normalised   :\", norm.dtype)\n",
+    "\n",
+    "norm.unnormalize_logdp()\n",
+    "print(\"back to base :\", norm.dtype)"
+   ],
+   "id": "cell-10"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Most plotting and fitting works on the normalised form — `plot_psd` normalises\n",
+    "by default — so you rarely call these directly. They matter when you are\n",
+    "exporting numbers for something else, or comparing against data that has\n",
+    "already been normalised.\n",
+    "\n",
+    "## Size bins\n",
+    "\n",
+    "The bin structure is available directly."
+   ],
+   "id": "cell-11"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print(\"number of bins:\", len(elpi.bin_mids))\n",
+    "print(\"first mids  [nm]:\", elpi.bin_mids[:5].round(1))\n",
+    "print(\"first edges [nm]:\", elpi.bin_edges[:6].round(1))"
+   ],
+   "id": "cell-12"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`rebin_bin_edges` maps the distribution onto a different set of edges — needed\n",
+    "when two instruments must share a size axis before they can be combined or\n",
+    "compared."
+   ],
+   "id": "cell-13"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "elpi.size_data.iloc[:3, :5]"
+   ],
+   "id": "cell-14"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Diffusion losses\n",
+    "\n",
+    "Small particles are lost to the walls of a sampling line by diffusion, so what\n",
+    "reaches the instrument understates what was in the air. The correction depends\n",
+    "on the tube geometry and the flow through it."
+   ],
+   "id": "cell-15"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "corrected = elpi.correct_diffusion_losses(\n",
+    "    D_tube=0.004,   # inner diameter [m]\n",
+    "    L=1.5,          # tube length [m]\n",
+    "    Q=1.0,          # flow [L/min]\n",
+    "    T=293,          # temperature [K]\n",
+    "    P=101300,       # pressure [Pa]\n",
+    "    inplace=False,\n",
+    ")\n",
+    "\n",
+    "ratio = corrected.total_concentration.mean() / elpi.total_concentration.mean()\n",
+    "print(f\"mean concentration increased by a factor {ratio:.3f}\")"
+   ],
+   "id": "cell-16"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The correction only ever increases concentrations, and most strongly at the\n",
+    "small end where diffusion is fastest. Compare the two distributions to see\n",
+    "where it acts:"
+   ],
+   "id": "cell-17"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "fig, ax = plt.subplots(figsize=(7, 4))\n",
+    "elpi.plot_psd(ax=ax, activities=[\"All data\"])\n",
+    "corrected.plot_psd(ax=ax, activities=[\"All data\"])\n",
+    "ax.legend([\"as measured\", \"diffusion-corrected\"])\n",
+    "ax.set_title(\"Diffusion losses affect the smallest particles most\")"
+   ],
+   "id": "cell-18"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## PM fractions\n",
+    "\n",
+    "`pm_calc` integrates the distribution below a cut diameter. Results are cached\n",
+    "in `.extra_data`, so asking twice costs nothing."
+   ],
+   "id": "cell-19"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "elpi.pm_calc(dtype=\"dM\", PM=2.5)\n",
+    "elpi.pm_calc(dtype=\"dM\", PM=4.2)\n",
+    "elpi.pm_calc(dtype=\"dM\", PM=10)\n",
+    "\n",
+    "[c for c in elpi.extra_data.columns if c.startswith(\"PM\")]"
+   ],
+   "id": "cell-20"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`lower_lim` gives a band instead of a cumulative fraction — the mass between\n",
+    "two diameters rather than everything below one."
+   ],
+   "id": "cell-21"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "elpi.pm_calc(dtype=\"dM\", PM=4.0, lower_lim=1.0)\n",
+    "\n",
+    "[c for c in elpi.extra_data.columns if c.startswith(\"PM\")]"
+   ],
+   "id": "cell-22"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The same integration is available for number, surface and volume by changing\n",
+    "`dtype` — `dN` gives `PN`, `dS` gives `PS`, `dV` gives `PV`. These are the\n",
+    "metric names accepted by `summarize_exposure`, see\n",
+    "[4 — Statistics and exposure](04-statistics-and-exposure.ipynb).\n",
+    "\n",
+    "---\n",
+    "\n",
+    "**Next:** [7 — Combining datasets](07-combining-datasets.ipynb)."
+   ],
+   "id": "cell-23"
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

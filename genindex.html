@@ -1,0 +1,2273 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#"><link rel="search" title="Search" href="search.html">
+
+    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 --><title>Index - aerosoltools</title>
+<link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="gui/index.html">Desktop GUI</a><input aria-label="Toggle navigation of Desktop GUI" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="gui/raw-data.html">Raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/metadata.html">Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/time-series.html">Time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/decay.html">Decay / Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/heatmap.html">2D heatmap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/pm-bands.html">PM bands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/psd.html">PSD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/aero-optical.html">Aero ↔ Optical</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/summary.html">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/overlay.html">Overlay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/correlation.html">Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui/psd-comparison.html">PSD comparison</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/01-loading-data.html">1 — Loading data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/02-time-adjustments.html">2 — Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/03-activities.html">3 — Activities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/04-statistics-and-exposure.html">4 — Statistics and exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/05-plotting.html">5 — Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/06-dtypes-density-corrections.html">6 — Dtypes, density and corrections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/07-combining-datasets.html">7 — Combining datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/08-psd-fitting.html">8 — PSD fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/09-decay-and-source.html">9 — Decay and source fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/10a-correlation-and-agreement.html">10a — Correlation and agreement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/10b-calibration.html">10b — Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/11-simple-instruments.html">11 — Simple instruments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/12-aethalometer.html">12 — Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/13-aps.html">13 — APS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/15-acsm.html">15 — ACSM</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/aerosoltools/index.html">aerosoltools documentation</a><input aria-label="Toggle navigation of aerosoltools documentation" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/acsm_simple/index.html">aerosoltools.acsm_simple</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/aerosol1d/index.html">aerosoltools.aerosol1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/aerosol2d/index.html">aerosoltools.aerosol2d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/aerosol3d/index.html">aerosoltools.aerosol3d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/aethalometer/index.html">aerosoltools.aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/discmini/index.html">aerosoltools.discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/dusttrak/index.html">aerosoltools.dusttrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/elpi/index.html">aerosoltools.elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/environmental/index.html">aerosoltools.environmental</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/gas1d/index.html">aerosoltools.gas1d</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/aerosoltools/intercomparison/index.html">aerosoltools.intercomparison</a><input aria-label="Toggle navigation of aerosoltools.intercomparison" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/intercomparison/calibration/index.html">aerosoltools.intercomparison.calibration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/intercomparison/combination/index.html">aerosoltools.intercomparison.combination</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/intercomparison/correlation/index.html">aerosoltools.intercomparison.correlation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="api/aerosoltools/loaders/index.html">aerosoltools.loaders</a><input aria-label="Toggle navigation of aerosoltools.loaders" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/acsm/index.html">aerosoltools.loaders.acsm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/aethalometer/index.html">aerosoltools.loaders.aethalometer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/aps/index.html">aerosoltools.loaders.aps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/cpc/index.html">aerosoltools.loaders.cpc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/dev_weather/index.html">aerosoltools.loaders.dev_weather</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/discmini/index.html">aerosoltools.loaders.discmini</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/dusttrak/index.html">aerosoltools.loaders.dusttrak</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/elpi/index.html">aerosoltools.loaders.elpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/fmps/index.html">aerosoltools.loaders.fmps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/fourtec/index.html">aerosoltools.loaders.fourtec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/grimm/index.html">aerosoltools.loaders.grimm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/ns/index.html">aerosoltools.loaders.ns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/opcn3/index.html">aerosoltools.loaders.opcn3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/ops/index.html">aerosoltools.loaders.ops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/partector/index.html">aerosoltools.loaders.partector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/ranger/index.html">aerosoltools.loaders.ranger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/registry/index.html">aerosoltools.loaders.registry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/smps/index.html">aerosoltools.loaders.smps</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="api/aerosoltools/loaders/support/index.html">aerosoltools.loaders.support</a><input aria-label="Toggle navigation of aerosoltools.loaders.support" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/aerosoltools/loaders/support/construct/index.html">aerosoltools.loaders.support.construct</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/aerosoltools/loaders/support/exceptions/index.html">aerosoltools.loaders.support.exceptions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/aerosoltools/loaders/support/parsing/index.html">aerosoltools.loaders.support.parsing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/aerosoltools/loaders/support/reading/index.html">aerosoltools.loaders.support.reading</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/aerosoltools/loaders/support/units/index.html">aerosoltools.loaders.support.units</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/aerosoltools/loaders/tiger/index.html">aerosoltools.loaders.tiger</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/aerosoltools/partector/index.html">aerosoltools.partector</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          
+<section class="genindex-section">
+  <h1 id="index">Index</h1>
+  <div class="genindex-jumpbox"><a href="#A"><strong>A</strong></a> | <a href="#B"><strong>B</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#D"><strong>D</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#F"><strong>F</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#L"><strong>L</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#N"><strong>N</strong></a> | <a href="#O"><strong>O</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#R"><strong>R</strong></a> | <a href="#S"><strong>S</strong></a> | <a href="#T"><strong>T</strong></a> | <a href="#U"><strong>U</strong></a> | <a href="#V"><strong>V</strong></a> | <a href="#W"><strong>W</strong></a></div>
+</section>
+<section id="A" class="genindex-section">
+  <h2>A</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.aae">aae (aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple">ACSM_simple (class in aerosoltools.acsm_simple)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.activities">activities (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.activities">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.activities">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.activities">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.activities">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.activities">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.activities">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.activities">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.activities">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.activities">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.activities">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.activity_periods">activity_periods (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.activity_periods">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.activity_periods">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.activity_periods">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.activity_periods">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.activity_periods">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.activity_periods">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.activity_periods">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.activity_periods">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.activity_periods">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.activity_periods">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.CorrelationCube.aero_edges">aero_edges (aerosoltools.aerosol3d.CorrelationCube attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.aerodynamic">aerodynamic (aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D">Aerosol1D (class in aerosoltools.aerosol1d)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D">Aerosol2D (class in aerosoltools.aerosol2d)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d">Aerosol3d (class in aerosoltools.aerosol3d)</a>
+</li>
+        <li>
+    aerosoltools
+
+        <ul>
+          <li><a href="api/aerosoltools/index.html#module-aerosoltools">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.acsm_simple
+
+        <ul>
+          <li><a href="api/aerosoltools/acsm_simple/index.html#module-aerosoltools.acsm_simple">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.aerosol1d
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#module-aerosoltools.aerosol1d">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.aerosol2d
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#module-aerosoltools.aerosol2d">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.aerosol3d
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#module-aerosoltools.aerosol3d">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.aethalometer
+
+        <ul>
+          <li><a href="api/aerosoltools/aethalometer/index.html#module-aerosoltools.aethalometer">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.discmini
+
+        <ul>
+          <li><a href="api/aerosoltools/discmini/index.html#module-aerosoltools.discmini">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.dusttrak
+
+        <ul>
+          <li><a href="api/aerosoltools/dusttrak/index.html#module-aerosoltools.dusttrak">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.elpi
+
+        <ul>
+          <li><a href="api/aerosoltools/elpi/index.html#module-aerosoltools.elpi">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.environmental
+
+        <ul>
+          <li><a href="api/aerosoltools/environmental/index.html#module-aerosoltools.environmental">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.gas1d
+
+        <ul>
+          <li><a href="api/aerosoltools/gas1d/index.html#module-aerosoltools.gas1d">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.intercomparison
+
+        <ul>
+          <li><a href="api/aerosoltools/intercomparison/index.html#module-aerosoltools.intercomparison">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.intercomparison.calibration
+
+        <ul>
+          <li><a href="api/aerosoltools/intercomparison/calibration/index.html#module-aerosoltools.intercomparison.calibration">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.intercomparison.combination
+
+        <ul>
+          <li><a href="api/aerosoltools/intercomparison/combination/index.html#module-aerosoltools.intercomparison.combination">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.intercomparison.correlation
+
+        <ul>
+          <li><a href="api/aerosoltools/intercomparison/correlation/index.html#module-aerosoltools.intercomparison.correlation">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/index.html#module-aerosoltools.loaders">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.acsm
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/acsm/index.html#module-aerosoltools.loaders.acsm">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.aethalometer
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/aethalometer/index.html#module-aerosoltools.loaders.aethalometer">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.aps
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/aps/index.html#module-aerosoltools.loaders.aps">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.cpc
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/cpc/index.html#module-aerosoltools.loaders.cpc">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.dev_weather
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/dev_weather/index.html#module-aerosoltools.loaders.dev_weather">module</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li>
+    aerosoltools.loaders.discmini
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/discmini/index.html#module-aerosoltools.loaders.discmini">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.dusttrak
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/dusttrak/index.html#module-aerosoltools.loaders.dusttrak">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.elpi
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/elpi/index.html#module-aerosoltools.loaders.elpi">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.fmps
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/fmps/index.html#module-aerosoltools.loaders.fmps">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.fourtec
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/fourtec/index.html#module-aerosoltools.loaders.fourtec">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.grimm
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/grimm/index.html#module-aerosoltools.loaders.grimm">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.ns
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/ns/index.html#module-aerosoltools.loaders.ns">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.opcn3
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/opcn3/index.html#module-aerosoltools.loaders.opcn3">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.ops
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/ops/index.html#module-aerosoltools.loaders.ops">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.partector
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/partector/index.html#module-aerosoltools.loaders.partector">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.ranger
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/ranger/index.html#module-aerosoltools.loaders.ranger">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.registry
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/registry/index.html#module-aerosoltools.loaders.registry">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.smps
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/smps/index.html#module-aerosoltools.loaders.smps">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.support
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/support/index.html#module-aerosoltools.loaders.support">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.support.construct
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/support/construct/index.html#module-aerosoltools.loaders.support.construct">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.support.exceptions
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#module-aerosoltools.loaders.support.exceptions">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.support.parsing
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/support/parsing/index.html#module-aerosoltools.loaders.support.parsing">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.support.reading
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/support/reading/index.html#module-aerosoltools.loaders.support.reading">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.support.units
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/support/units/index.html#module-aerosoltools.loaders.support.units">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.loaders.tiger
+
+        <ul>
+          <li><a href="api/aerosoltools/loaders/tiger/index.html#module-aerosoltools.loaders.tiger">module</a>
+</li>
+        </ul></li>
+        <li>
+    aerosoltools.partector
+
+        <ul>
+          <li><a href="api/aerosoltools/partector/index.html#module-aerosoltools.partector">module</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer">Aethalometer (class in aerosoltools.aethalometer)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.align">align (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.ammonia">ammonia (aerosoltools.acsm_simple.ACSM_simple property)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.applied">applied (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.apply_calibration">apply_calibration() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.apply_calibration">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.apply_calibration">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.apply_calibration">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.apply_calibration">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.apply_calibration">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.apply_calibration">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.apply_calibration">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.apply_calibration">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.apply_calibration">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.apply_calibration">(aerosoltools.partector.Partector method)</a>
+</li>
+          <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.apply_calibration">(in module aerosoltools.intercomparison.calibration)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.as_2d">as_2d() (aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.available_metrics">available_metrics() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.available_metrics">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.available_metrics">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.available_metrics">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.available_metrics">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.available_metrics">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.available_metrics">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.available_metrics">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.available_metrics">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.available_metrics">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.available_metrics">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.axis_view">axis_view() (aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="B" class="genindex-section">
+  <h2>B</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.basis">basis (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.BASIS_PER_BIN">BASIS_PER_BIN (in module aerosoltools.intercomparison.calibration)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.BASIS_TOTAL">BASIS_TOTAL (in module aerosoltools.intercomparison.calibration)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.bin_edges">bin_edges (aerosoltools.aerosol2d.Aerosol2D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.bin_edges">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.bin_edges">(aerosoltools.elpi.ELPI property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.bin_mids">bin_mids (aerosoltools.aerosol2d.Aerosol2D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.bin_mids">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.bin_mids">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.bin_mids">(aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.biomass_bcc">biomass_bcc (aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/correlation/index.html#aerosoltools.intercomparison.correlation.bland_altman_analysis">bland_altman_analysis() (in module aerosoltools.intercomparison.correlation)</a>
+</li>
+        <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.blue_bcc">blue_bcc (aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/construct/index.html#aerosoltools.loaders.support.construct.build_1d">build_1d() (in module aerosoltools.loaders.support.construct)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/construct/index.html#aerosoltools.loaders.support.construct.build_2d">build_2d() (in module aerosoltools.loaders.support.construct)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="C" class="genindex-section">
+  <h2>C</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.calibrate_against_reference">calibrate_against_reference() (in module aerosoltools.intercomparison.calibration)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationError">CalibrationError</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel">CalibrationModel (class in aerosoltools.intercomparison.calibration)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.chlorine">chlorine (aerosoltools.acsm_simple.ACSM_simple property)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.clip_negative">clip_negative (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.CO">CO (aerosoltools.environmental.Environmental1D property)</a>
+</li>
+        <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.CO2">CO2 (aerosoltools.environmental.Environmental1D property)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.column_units">column_units (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.column_units">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.column_units">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.column_units">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.column_units">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.column_units">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.column_units">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.column_units">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.column_units">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.column_units">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.column_units">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/intercomparison/combination/index.html#aerosoltools.intercomparison.combination.combine_measurements">combine_measurements() (in module aerosoltools.intercomparison.combination)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/intercomparison/combination/index.html#aerosoltools.intercomparison.combination.combine_size_ranges">combine_size_ranges() (in module aerosoltools.intercomparison.combination)</a>
+</li>
+        <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.concentration">concentration (aerosoltools.gas1d.Gas1D property)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.copy_self">copy_self() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.copy_self">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.copy_self">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.copy_self">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.copy_self">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.copy_self">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.copy_self">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.copy_self">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.copy_self">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.copy_self">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.copy_self">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.correct_diffusion_losses">correct_diffusion_losses() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.correct_diffusion_losses">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.correct_diffusion_losses">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.correlation">correlation (aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.correlation_cube">correlation_cube() (aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.CorrelationCube">CorrelationCube (class in aerosoltools.aerosol3d)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="D" class="genindex-section">
+  <h2>D</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.data">data (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.data">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.data">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.data">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.data">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.data">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.data">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.data">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.data">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.data">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.data">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.DEFAULT_MIN_R2">DEFAULT_MIN_R2 (in module aerosoltools.intercomparison.calibration)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#aerosoltools.loaders.support.exceptions.DelimiterDetectionError">DelimiterDetectionError</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.density">density (aerosoltools.aerosol2d.Aerosol2D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.density">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.density">(aerosoltools.elpi.ELPI property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.detect_instrument">detect_instrument (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini">DiSCmini (class in aerosoltools.discmini)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.dtype">dtype (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.dtype">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.dtype">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.dtype">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.dtype">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.dtype">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.dtype">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.dtype">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.dtype">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.dtype">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.dtype">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.dtype_converter">dtype_converter() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.dtype_converter">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.dtype_converter">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.dtype_of">dtype_of() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.dtype_of">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.dtype_of">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.dtype_of">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.dtype_of">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.dtype_of">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.dtype_of">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.dtype_of">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.dtype_of">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.dtype_of">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.dtype_of">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak">DustTrak (class in aerosoltools.dusttrak)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="E" class="genindex-section">
+  <h2>E</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI">ELPI (class in aerosoltools.elpi)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#aerosoltools.loaders.support.exceptions.EmptyFileError">EmptyFileError</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#aerosoltools.loaders.support.exceptions.EncodingError">EncodingError</a>
+</li>
+        <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D">Environmental1D (class in aerosoltools.environmental)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.extra_data">extra_data (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.extra_data">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.extra_data">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.extra_data">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.extra_data">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.extra_data">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.extra_data">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.extra_data">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.extra_data">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.extra_data">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.extra_data">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="F" class="genindex-section">
+  <h2>F</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/loaders/support/parsing/index.html#aerosoltools.loaders.support.parsing.file_list">file_list() (in module aerosoltools.loaders.support.parsing)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#aerosoltools.loaders.support.exceptions.FileAccessError">FileAccessError</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#aerosoltools.loaders.support.exceptions.FileFormatError">FileFormatError</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.fit_calibration">fit_calibration() (in module aerosoltools.intercomparison.calibration)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/correlation/index.html#aerosoltools.intercomparison.correlation.fit_data">fit_data() (in module aerosoltools.intercomparison.correlation)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.fit_decay">fit_decay() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.fit_decay">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.fit_decay">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.fit_decay">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.fit_decay">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.fit_decay">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.fit_decay">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.fit_decay">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.fit_decay">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.fit_decay">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.fit_decay">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.fit_psd">fit_psd() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.fit_psd">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.fit_psd">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.flow">flow (aerosoltools.partector.Partector property)</a>
+</li>
+        <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.fossil_bcc">fossil_bcc (aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.from_dict">from_dict() (aerosoltools.intercomparison.calibration.CalibrationModel class method)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="G" class="genindex-section">
+  <h2>G</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.gains">gains (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D">Gas1D (class in aerosoltools.gas1d)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.get_activity_data">get_activity_data() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.get_activity_data">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.get_activity_data">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.get_activity_data">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.get_activity_data">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.get_activity_data">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.get_activity_data">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.get_activity_data">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.get_activity_data">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.get_activity_data">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.get_activity_data">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.get_activity_extra_data">get_activity_extra_data() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.get_activity_extra_data">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.get_activity_extra_data">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.get_activity_extra_data">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.get_activity_extra_data">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.get_activity_extra_data">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.get_activity_extra_data">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.get_activity_extra_data">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.get_activity_extra_data">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.get_activity_extra_data">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.get_activity_extra_data">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.green_bcc">green_bcc (aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.guess_instrument">guess_instrument() (in module aerosoltools.loaders.registry)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="I" class="genindex-section">
+  <h2>I</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.identify_instrument">identify_instrument() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.include_offset">include_offset (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.instrument">instrument (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.instrument">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.instrument">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.instrument">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.instrument">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.instrument">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.instrument">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.instrument">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.instrument">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.instrument">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.instrument">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.INSTRUMENT_LOADERS">INSTRUMENT_LOADERS (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#aerosoltools.loaders.support.exceptions.InstrumentDetectionError">InstrumentDetectionError</a>
+</li>
+        <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.ir_bcc">ir_bcc (aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_ACSM_file">is_ACSM_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_Aethalometer_file">is_Aethalometer_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_APS_file">is_APS_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.is_correlated">is_correlated (aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_CPC_file">is_CPC_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_DiSCmini_file">is_DiSCmini_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_DiSCmini_raw_file">is_DiSCmini_raw_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_DustTrak_file">is_DustTrak_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_ELPI_file">is_ELPI_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_FMPS_file">is_FMPS_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_Fourtec_file">is_Fourtec_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_Grimm_file">is_Grimm_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_NS_file">is_NS_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_OPCN3_file">is_OPCN3_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_OPS_file">is_OPS_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_Partector_file">is_Partector_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_Ranger_file">is_Ranger_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_SMPS_file">is_SMPS_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.is_Tiger_file">is_Tiger_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="L" class="genindex-section">
+  <h2>L</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.ldsa">ldsa (aerosoltools.discmini.DiSCmini property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.ldsa">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/loaders/aethalometer/index.html#aerosoltools.loaders.aethalometer.load_aethalometer_file">load_aethalometer_file() (in module aerosoltools.loaders.aethalometer)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/aps/index.html#aerosoltools.loaders.aps.load_aps_file">load_aps_file() (in module aerosoltools.loaders.aps)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/cpc/index.html#aerosoltools.loaders.cpc.load_cpc_file">load_cpc_file() (in module aerosoltools.loaders.cpc)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/parsing/index.html#aerosoltools.loaders.support.parsing.load_data_from_folder">load_data_from_folder() (in module aerosoltools.loaders.support.parsing)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/dev_weather/index.html#aerosoltools.loaders.dev_weather.load_devlabs_file">load_devlabs_file() (in module aerosoltools.loaders.dev_weather)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/discmini/index.html#aerosoltools.loaders.discmini.load_discmini_file">load_discmini_file() (in module aerosoltools.loaders.discmini)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/discmini/index.html#aerosoltools.loaders.discmini.load_discmini_raw_file">load_discmini_raw_file() (in module aerosoltools.loaders.discmini)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/dusttrak/index.html#aerosoltools.loaders.dusttrak.load_dusttrak_file">load_dusttrak_file() (in module aerosoltools.loaders.dusttrak)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/elpi/index.html#aerosoltools.loaders.elpi.load_elpi_file">load_elpi_file() (in module aerosoltools.loaders.elpi)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/elpi/index.html#aerosoltools.loaders.elpi.load_elpi_file_dat">load_elpi_file_dat() (in module aerosoltools.loaders.elpi)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/elpi/index.html#aerosoltools.loaders.elpi.load_elpi_file_txt">load_elpi_file_txt() (in module aerosoltools.loaders.elpi)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.load_file">load_file() (in module aerosoltools.loaders.registry)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/loaders/fmps/index.html#aerosoltools.loaders.fmps.load_fmps_file">load_fmps_file() (in module aerosoltools.loaders.fmps)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/fourtec/index.html#aerosoltools.loaders.fourtec.load_fourtec_file">load_fourtec_file() (in module aerosoltools.loaders.fourtec)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/grimm/index.html#aerosoltools.loaders.grimm.load_grimm_file">load_grimm_file() (in module aerosoltools.loaders.grimm)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/ns/index.html#aerosoltools.loaders.ns.load_ns_file">load_ns_file() (in module aerosoltools.loaders.ns)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/opcn3/index.html#aerosoltools.loaders.opcn3.load_opcn3_file">load_opcn3_file() (in module aerosoltools.loaders.opcn3)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/ops/index.html#aerosoltools.loaders.ops.load_ops_file">load_ops_file() (in module aerosoltools.loaders.ops)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/dev_weather/index.html#aerosoltools.loaders.dev_weather.load_parameter">load_parameter() (in module aerosoltools.loaders.dev_weather)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/partector/index.html#aerosoltools.loaders.partector.load_partector_file">load_partector_file() (in module aerosoltools.loaders.partector)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/ranger/index.html#aerosoltools.loaders.ranger.load_ranger_file">load_ranger_file() (in module aerosoltools.loaders.ranger)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/acsm/index.html#aerosoltools.loaders.acsm.load_simple_acsm_file">load_simple_acsm_file() (in module aerosoltools.loaders.acsm)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/smps/index.html#aerosoltools.loaders.smps.load_smps_file">load_smps_file() (in module aerosoltools.loaders.smps)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/tiger/index.html#aerosoltools.loaders.tiger.load_tiger_file">load_tiger_file() (in module aerosoltools.loaders.tiger)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#aerosoltools.loaders.support.exceptions.LoaderError">LoaderError</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.LOADERS">LOADERS (in module aerosoltools.loaders.registry)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="M" class="genindex-section">
+  <h2>M</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.mark_activities">mark_activities() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.mark_activities">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.mark_activities">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.mark_activities">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.mark_activities">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.mark_activities">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.mark_activities">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.mark_activities">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.mark_activities">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.mark_activities">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.mark_activities">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.mark_threshold">mark_threshold (aerosoltools.acsm_simple.ACSM_simple attribute)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.mark_threshold">(aerosoltools.aerosol1d.Aerosol1D attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.mark_threshold">(aerosoltools.aerosol2d.Aerosol2D attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.mark_threshold">(aerosoltools.aerosol3d.Aerosol3d attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.mark_threshold">(aerosoltools.aethalometer.Aethalometer attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.mark_threshold">(aerosoltools.discmini.DiSCmini attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.mark_threshold">(aerosoltools.dusttrak.DustTrak attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.mark_threshold">(aerosoltools.elpi.ELPI attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.mark_threshold">(aerosoltools.environmental.Environmental1D attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.mark_threshold">(aerosoltools.gas1d.Gas1D attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.mark_threshold">(aerosoltools.partector.Partector attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.Mark_threshold">Mark_threshold() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.Mark_threshold">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.Mark_threshold">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.Mark_threshold">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.Mark_threshold">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.Mark_threshold">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.Mark_threshold">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.Mark_threshold">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.Mark_threshold">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.Mark_threshold">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.Mark_threshold">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.measurement">measurement (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.measurement">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.measurement">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.measurement">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.measurement">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.measurement">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.measurement">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.measurement">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.measurement">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.measurement">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.measurement">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.metadata">metadata (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.metadata">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.metadata">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.metadata">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.metadata">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.metadata">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.metadata">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.metadata">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.metadata">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.metadata">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.metadata">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#aerosoltools.loaders.support.exceptions.MetadataParseError">MetadataParseError</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.minimum_r_squared">minimum_r_squared (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li>
+    module
+
+        <ul>
+          <li><a href="api/aerosoltools/index.html#module-aerosoltools">aerosoltools</a>
+</li>
+          <li><a href="api/aerosoltools/acsm_simple/index.html#module-aerosoltools.acsm_simple">aerosoltools.acsm_simple</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#module-aerosoltools.aerosol1d">aerosoltools.aerosol1d</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#module-aerosoltools.aerosol2d">aerosoltools.aerosol2d</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#module-aerosoltools.aerosol3d">aerosoltools.aerosol3d</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#module-aerosoltools.aethalometer">aerosoltools.aethalometer</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#module-aerosoltools.discmini">aerosoltools.discmini</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#module-aerosoltools.dusttrak">aerosoltools.dusttrak</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#module-aerosoltools.elpi">aerosoltools.elpi</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#module-aerosoltools.environmental">aerosoltools.environmental</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#module-aerosoltools.gas1d">aerosoltools.gas1d</a>
+</li>
+          <li><a href="api/aerosoltools/intercomparison/index.html#module-aerosoltools.intercomparison">aerosoltools.intercomparison</a>
+</li>
+          <li><a href="api/aerosoltools/intercomparison/calibration/index.html#module-aerosoltools.intercomparison.calibration">aerosoltools.intercomparison.calibration</a>
+</li>
+          <li><a href="api/aerosoltools/intercomparison/combination/index.html#module-aerosoltools.intercomparison.combination">aerosoltools.intercomparison.combination</a>
+</li>
+          <li><a href="api/aerosoltools/intercomparison/correlation/index.html#module-aerosoltools.intercomparison.correlation">aerosoltools.intercomparison.correlation</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/index.html#module-aerosoltools.loaders">aerosoltools.loaders</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/acsm/index.html#module-aerosoltools.loaders.acsm">aerosoltools.loaders.acsm</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/aethalometer/index.html#module-aerosoltools.loaders.aethalometer">aerosoltools.loaders.aethalometer</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/aps/index.html#module-aerosoltools.loaders.aps">aerosoltools.loaders.aps</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/cpc/index.html#module-aerosoltools.loaders.cpc">aerosoltools.loaders.cpc</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/dev_weather/index.html#module-aerosoltools.loaders.dev_weather">aerosoltools.loaders.dev_weather</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/discmini/index.html#module-aerosoltools.loaders.discmini">aerosoltools.loaders.discmini</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/dusttrak/index.html#module-aerosoltools.loaders.dusttrak">aerosoltools.loaders.dusttrak</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/elpi/index.html#module-aerosoltools.loaders.elpi">aerosoltools.loaders.elpi</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/fmps/index.html#module-aerosoltools.loaders.fmps">aerosoltools.loaders.fmps</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/fourtec/index.html#module-aerosoltools.loaders.fourtec">aerosoltools.loaders.fourtec</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/grimm/index.html#module-aerosoltools.loaders.grimm">aerosoltools.loaders.grimm</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/ns/index.html#module-aerosoltools.loaders.ns">aerosoltools.loaders.ns</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/opcn3/index.html#module-aerosoltools.loaders.opcn3">aerosoltools.loaders.opcn3</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/ops/index.html#module-aerosoltools.loaders.ops">aerosoltools.loaders.ops</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/partector/index.html#module-aerosoltools.loaders.partector">aerosoltools.loaders.partector</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/ranger/index.html#module-aerosoltools.loaders.ranger">aerosoltools.loaders.ranger</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/registry/index.html#module-aerosoltools.loaders.registry">aerosoltools.loaders.registry</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/smps/index.html#module-aerosoltools.loaders.smps">aerosoltools.loaders.smps</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/support/index.html#module-aerosoltools.loaders.support">aerosoltools.loaders.support</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/support/construct/index.html#module-aerosoltools.loaders.support.construct">aerosoltools.loaders.support.construct</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#module-aerosoltools.loaders.support.exceptions">aerosoltools.loaders.support.exceptions</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/support/parsing/index.html#module-aerosoltools.loaders.support.parsing">aerosoltools.loaders.support.parsing</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/support/reading/index.html#module-aerosoltools.loaders.support.reading">aerosoltools.loaders.support.reading</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/support/units/index.html#module-aerosoltools.loaders.support.units">aerosoltools.loaders.support.units</a>
+</li>
+          <li><a href="api/aerosoltools/loaders/tiger/index.html#module-aerosoltools.loaders.tiger">aerosoltools.loaders.tiger</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#module-aerosoltools.partector">aerosoltools.partector</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="N" class="genindex-section">
+  <h2>N</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.n_applied">n_applied (aerosoltools.intercomparison.calibration.CalibrationModel property)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.n_obs">n_obs (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.nitrate">nitrate (aerosoltools.acsm_simple.ACSM_simple property)</a>
+</li>
+        <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.NO2">NO2 (aerosoltools.environmental.Environmental1D property)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.normalize_logdp">normalize_logdp() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.normalize_logdp">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.normalize_logdp">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.CorrelationCube.normalized">normalized (aerosoltools.aerosol3d.CorrelationCube attribute)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="O" class="genindex-section">
+  <h2>O</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.offsets">offsets (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.optical">optical (aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.CorrelationCube.optical_edges">optical_edges (aerosoltools.aerosol3d.CorrelationCube attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.org">org (aerosoltools.acsm_simple.ACSM_simple property)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.original_data">original_data (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.original_data">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.original_data">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.original_data">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.original_data">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.original_data">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.original_data">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.original_data">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.original_data">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.original_data">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.original_data">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.original_extra_data">original_extra_data (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.original_extra_data">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.original_extra_data">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.original_extra_data">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.original_extra_data">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.original_extra_data">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.original_extra_data">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.original_extra_data">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.original_extra_data">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.original_extra_data">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.original_extra_data">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="P" class="genindex-section">
+  <h2>P</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.params">params (in module aerosoltools.aerosol1d)</a>
+</li>
+        <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector">Partector (class in aerosoltools.partector)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.peak_finder">peak_finder (aerosoltools.acsm_simple.ACSM_simple attribute)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.peak_finder">(aerosoltools.aerosol1d.Aerosol1D attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.peak_finder">(aerosoltools.aerosol2d.Aerosol2D attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.peak_finder">(aerosoltools.aerosol3d.Aerosol3d attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.peak_finder">(aerosoltools.aethalometer.Aethalometer attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.peak_finder">(aerosoltools.discmini.DiSCmini attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.peak_finder">(aerosoltools.dusttrak.DustTrak attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.peak_finder">(aerosoltools.elpi.ELPI attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.peak_finder">(aerosoltools.environmental.Environmental1D attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.peak_finder">(aerosoltools.gas1d.Gas1D attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.peak_finder">(aerosoltools.partector.Partector attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.Peak_finder">Peak_finder() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.Peak_finder">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.Peak_finder">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.Peak_finder">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.Peak_finder">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.Peak_finder">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.Peak_finder">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.Peak_finder">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.Peak_finder">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.Peak_finder">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.Peak_finder">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.plot_aero_optical_3d">plot_aero_optical_3d() (aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.plot_aero_vs_optical">plot_aero_vs_optical() (aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/correlation/index.html#aerosoltools.intercomparison.correlation.plot_correlation">plot_correlation() (in module aerosoltools.intercomparison.correlation)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.plot_PM_timeseries">plot_PM_timeseries() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.plot_PM_timeseries">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.plot_PM_timeseries">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.plot_psd">plot_psd() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.plot_psd">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.plot_psd">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.plot_timeseries">plot_timeseries() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.plot_timeseries">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.plot_timeseries">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.plot_total_conc">plot_total_conc() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.plot_total_conc">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.plot_total_conc">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.plot_total_conc">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.plot_total_conc">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.plot_total_conc">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.plot_total_conc">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.plot_total_conc">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.plot_total_conc">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.plot_total_conc">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.plot_total_conc">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.pm1">pm1 (aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+        <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.pm10">pm10 (aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+        <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.pm2_5">pm2_5 (aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+        <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.pm4">pm4 (aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.pm_calc">pm_calc (aerosoltools.aerosol2d.Aerosol2D attribute)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.pm_calc">(aerosoltools.aerosol3d.Aerosol3d attribute)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.pm_calc">(aerosoltools.elpi.ELPI attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.PM_calc">PM_calc() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.PM_calc">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.PM_calc">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.pressure">pressure (aerosoltools.environmental.Environmental1D property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="R" class="genindex-section">
+  <h2>R</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.r_squared">r_squared (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/ranger/index.html#aerosoltools.loaders.ranger.RangerObject">RangerObject (in module aerosoltools.loaders.ranger)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/reading/index.html#aerosoltools.loaders.support.reading.read_cells">read_cells() (in module aerosoltools.loaders.support.reading)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/reading/index.html#aerosoltools.loaders.support.reading.read_table">read_table() (in module aerosoltools.loaders.support.reading)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.rebin_bin_edges">rebin_bin_edges() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.rebin_bin_edges">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.rebin_bin_edges">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/loaders/elpi/index.html#aerosoltools.loaders.elpi.recalculate_ELPI_density">recalculate_ELPI_density() (in module aerosoltools.loaders.elpi)</a>
+</li>
+        <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.red_bcc">red_bcc (aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.reference_instrument">reference_instrument (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.reference_name">reference_name (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.reference_unit">reference_unit (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.relative_humidity">relative_humidity (aerosoltools.environmental.Environmental1D property)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.rename_activity">rename_activity() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.rename_activity">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.rename_activity">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.rename_activity">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.rename_activity">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.rename_activity">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.rename_activity">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.rename_activity">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.rename_activity">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.rename_activity">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.rename_activity">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.require_identified_instrument">require_identified_instrument() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/support/units/index.html#aerosoltools.loaders.support.units.resolve_extra_columns">resolve_extra_columns() (in module aerosoltools.loaders.support.units)</a>
+</li>
+        <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.rh">rh (aerosoltools.environmental.Environmental1D attribute)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="S" class="genindex-section">
+  <h2>S</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.serial_number">serial_number (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.serial_number">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.serial_number">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.serial_number">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.serial_number">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.serial_number">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.serial_number">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.serial_number">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.serial_number">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.serial_number">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.serial_number">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.set_density">set_density() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.set_density">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.set_density">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.size">size (aerosoltools.discmini.DiSCmini property)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.size_data">size_data (aerosoltools.aerosol2d.Aerosol2D property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.size_data">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.size_data">(aerosoltools.elpi.ELPI property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/loaders/support/reading/index.html#aerosoltools.loaders.support.reading.sniff">sniff() (in module aerosoltools.loaders.support.reading)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.sniff_instrument">sniff_instrument() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.SNIFFERS">SNIFFERS (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.sulfate">sulfate (aerosoltools.acsm_simple.ACSM_simple property)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.summarize">summarize() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.summarize">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.summarize">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.summarize">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.summarize">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.summarize">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.summarize">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.summarize">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.summarize">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.summarize">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.summarize">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.summarize_activities">summarize_activities() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.summarize_activities">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.summarize_activities">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.summarize_activities">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.summarize_activities">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.summarize_activities">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.summarize_activities">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.summarize_activities">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.summarize_activities">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.summarize_activities">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.summarize_activities">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.summarize_exposure">summarize_exposure() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.summarize_exposure">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.summarize_exposure">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.summarize_exposure">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.summarize_exposure">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.summarize_exposure">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.summarize_exposure">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.summarize_exposure">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.summarize_exposure">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.summarize_exposure">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.summarize_exposure">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.supported_instrument_message">supported_instrument_message() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.supported_instrument_names">supported_instrument_names() (in module aerosoltools.loaders.registry)</a>
+</li>
+        <li><a href="api/aerosoltools/loaders/registry/index.html#aerosoltools.loaders.registry.supported_instruments">supported_instruments (in module aerosoltools.loaders.registry)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="T" class="genindex-section">
+  <h2>T</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.target_instrument">target_instrument (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.target_name">target_name (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.target_unit">target_unit (aerosoltools.intercomparison.calibration.CalibrationModel attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.tem_samples">tem_samples (aerosoltools.partector.Partector property)</a>
+</li>
+        <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.temperature">temperature (aerosoltools.environmental.Environmental1D property)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.time">time (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.time">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.time">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.time">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.time">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.time">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.time">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.time">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.time">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.time">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.time">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.timecrop">timecrop() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.timecrop">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.timecrop">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.timecrop">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.timecrop">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.timecrop">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.timecrop">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.timecrop">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.timecrop">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.timecrop">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.timecrop">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.timerebin">timerebin() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.timerebin">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.timerebin">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.timerebin">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.timerebin">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.timerebin">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.timerebin">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.timerebin">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.timerebin">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.timerebin">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.timerebin">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.CorrelationCube.times">times (aerosoltools.aerosol3d.CorrelationCube attribute)</a>
+</li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.timeshift">timeshift() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.timeshift">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.timeshift">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.timeshift">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.timeshift">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.timeshift">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.timeshift">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.timeshift">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.timeshift">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.timeshift">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.timeshift">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.timesmooth">timesmooth() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.timesmooth">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.timesmooth">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.timesmooth">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.timesmooth">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.timesmooth">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.timesmooth">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.timesmooth">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.timesmooth">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.timesmooth">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.timesmooth">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/loaders/support/exceptions/index.html#aerosoltools.loaders.support.exceptions.TimestampError">TimestampError</a>
+</li>
+        <li><a href="api/aerosoltools/intercomparison/calibration/index.html#aerosoltools.intercomparison.calibration.CalibrationModel.to_dict">to_dict() (aerosoltools.intercomparison.calibration.CalibrationModel method)</a>
+</li>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.CorrelationCube.total">total (aerosoltools.aerosol3d.CorrelationCube attribute)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.total">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.total_concentration">total_concentration (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.total_concentration">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.total_concentration">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.total_concentration">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.total_concentration">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.total_concentration">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.total_concentration">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.total_concentration">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.total_concentration">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.total_concentration">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.total_concentration">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="U" class="genindex-section">
+  <h2>U</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.unit">unit (aerosoltools.acsm_simple.ACSM_simple property)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.unit">(aerosoltools.aerosol1d.Aerosol1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.unit">(aerosoltools.aerosol2d.Aerosol2D property)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.unit">(aerosoltools.aerosol3d.Aerosol3d property)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.unit">(aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.unit">(aerosoltools.discmini.DiSCmini property)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.unit">(aerosoltools.dusttrak.DustTrak property)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.unit">(aerosoltools.elpi.ELPI property)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.unit">(aerosoltools.environmental.Environmental1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.unit">(aerosoltools.gas1d.Gas1D property)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.unit">(aerosoltools.partector.Partector property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/acsm_simple/index.html#aerosoltools.acsm_simple.ACSM_simple.unit_of">unit_of() (aerosoltools.acsm_simple.ACSM_simple method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D.unit_of">(aerosoltools.aerosol1d.Aerosol1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.unit_of">(aerosoltools.aerosol2d.Aerosol2D method)</a>
+</li>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.unit_of">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.unit_of">(aerosoltools.aethalometer.Aethalometer method)</a>
+</li>
+          <li><a href="api/aerosoltools/discmini/index.html#aerosoltools.discmini.DiSCmini.unit_of">(aerosoltools.discmini.DiSCmini method)</a>
+</li>
+          <li><a href="api/aerosoltools/dusttrak/index.html#aerosoltools.dusttrak.DustTrak.unit_of">(aerosoltools.dusttrak.DustTrak method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.unit_of">(aerosoltools.elpi.ELPI method)</a>
+</li>
+          <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.unit_of">(aerosoltools.environmental.Environmental1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/gas1d/index.html#aerosoltools.gas1d.Gas1D.unit_of">(aerosoltools.gas1d.Gas1D method)</a>
+</li>
+          <li><a href="api/aerosoltools/partector/index.html#aerosoltools.partector.Partector.unit_of">(aerosoltools.partector.Partector method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol2d/index.html#aerosoltools.aerosol2d.Aerosol2D.unnormalize_logdp">unnormalize_logdp() (aerosoltools.aerosol2d.Aerosol2D method)</a>
+
+        <ul>
+          <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.Aerosol3d.unnormalize_logdp">(aerosoltools.aerosol3d.Aerosol3d method)</a>
+</li>
+          <li><a href="api/aerosoltools/elpi/index.html#aerosoltools.elpi.ELPI.unnormalize_logdp">(aerosoltools.elpi.ELPI method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/aerosoltools/aethalometer/index.html#aerosoltools.aethalometer.Aethalometer.uv_bcc">uv_bcc (aerosoltools.aethalometer.Aethalometer property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="V" class="genindex-section">
+  <h2>V</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/aerosol3d/index.html#aerosoltools.aerosol3d.CorrelationCube.values">values (aerosoltools.aerosol3d.CorrelationCube attribute)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="W" class="genindex-section">
+  <h2>W</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.wind_direction">wind_direction (aerosoltools.environmental.Environmental1D property)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/aerosoltools/intercomparison/correlation/index.html#aerosoltools.intercomparison.correlation.wind_rose">wind_rose() (in module aerosoltools.intercomparison.correlation)</a>
+</li>
+        <li><a href="api/aerosoltools/environmental/index.html#aerosoltools.environmental.Environmental1D.wind_speed">wind_speed (aerosoltools.environmental.Environmental1D property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

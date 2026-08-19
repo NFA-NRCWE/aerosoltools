@@ -1,0 +1,50 @@
+aerosoltools.loaders.support.units
+==================================
+
+.. py:module:: aerosoltools.loaders.support.units
+
+.. autoapi-nested-parse::
+
+   Shared unit resolution for the loaders' *extra* (housekeeping) columns.
+
+   Instrument exports carry many non-core columns — temperatures, humidities,
+   flows, pressures, diagnostics — whose units, when present at all, are embedded
+   in the header in a jumble of conventions (``Sample temp (C)``, ``Pressure
+   [mBar]``, ``Temperature.C``). This helper gives every loader one place to turn
+   that raw frame into a clean ``extra_data`` frame plus a ``{column: unit}`` map:
+
+   * a recognised trailing unit is stripped from the header (so the column is named
+     ``"Sample temp"`` and its unit ``"°C"`` is recorded separately), and
+   * the unit is canonicalised via the shared registry (``(C)`` → ``°C``,
+     ``(ug/m3)`` → ``µg/m³``), so the same quantity from two instruments compares
+     equal.
+
+   Columns with no recognisable unit keep their header verbatim and simply get no
+   entry in the map — callers then show the header text alone rather than borrow
+   the primary series' unit. Only genuine units are ever attached (see
+   :func:`aerosoltools._core.metrics.parse_header_unit`), so an index ``[1] Conc``,
+   a coordinate format ``(ddmm.mmmmm)`` or a note ``(with RI)`` is never mistaken
+   for one.
+
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: resolve_extra_columns(df, curated = None)
+
+   Clean an ``extra_data`` frame's headers and resolve their units.
+
+   :param df: The non-core columns to keep as ``extra_data`` (index already set).
+   :param curated: Optional ``{header: unit}`` overrides for columns whose unit is
+                   known from the instrument spec but not written in the header (e.g. a
+                   DiSCmini diffusion current). Curated units are canonicalised too and
+                   win over header parsing; the column keeps its original name.
+
+   :returns: ``(clean_df, column_units)`` where ``clean_df`` is ``df`` with recognised
+             trailing units stripped from the column names, and ``column_units`` maps
+             each resolved column (by its final name) to a canonical unit string.
+
+

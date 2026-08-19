@@ -1,0 +1,126 @@
+aerosoltools.intercomparison.combination
+========================================
+
+.. py:module:: aerosoltools.intercomparison.combination
+
+.. autoapi-nested-parse::
+
+   Combine measurements from one or more instruments into one dataset.
+
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: combine_size_ranges(lower_data, upper_data, crossover = None, start = None, end = None, *, match = 'rebin', tolerance = '30s', rebin_freq = None, rebin_method = 'mean')
+
+   Stitch two size-resolved instruments that together **extend** the size
+   range (e.g. NanoScan + OPS, FMPS + OPS, NS/FMPS + APS) into one
+   time-aligned :class:`~aerosoltools.aerosol2d.Aerosol2D` number spectrum.
+
+       One instrument supplies the small-size end, the other the large-size
+       end, and a single ``crossover`` diameter marks where one takes over from
+       the other. The cut is a **hard cap at whole size bins**: every bin in the
+       result comes from exactly one instrument (no bin mixes counts from both
+       and no counts are scaled). The two instruments may be passed in either
+       order — the one reaching the larger sizes is used as the upper end.
+
+   :param lower_data: One of the two instruments (order does not matter).
+   :type lower_data: Aerosol2D
+   :param upper_data: The other instrument.
+   :type upper_data: Aerosol2D
+   :param crossover: Diameter (nm) where the upper instrument takes over from the lower
+                     one. Bins of the lower instrument with an upper edge at/below the
+                     crossover are kept; bins of the upper instrument with a lower edge
+                     at/above it are kept; the two boundary bins have their shared edge
+                     set to ``crossover`` (counts unchanged). If ``None``, the upper
+                     instrument's lowest bin edge is used (legacy behaviour).
+   :type crossover: float | None, optional
+   :param start: Time window to combine over. Defaults to the instruments' overlap.
+   :type start: pandas.Timestamp | str | None, optional
+   :param end: Time window to combine over. Defaults to the instruments' overlap.
+   :type end: pandas.Timestamp | str | None, optional
+   :param match: Time-alignment strategy: ``"rebin"`` (default), ``"exact"`` or
+                 ``"nearest"`` (see below).
+   :type match: str, optional
+   :param tolerance: Max timestamp separation for ``match="nearest"``. Default ``"30s"``.
+   :type tolerance: str | pandas.Timedelta, optional
+   :param rebin_freq: Target cadence for ``match="rebin"``; defaults to the coarser of the
+                      two inferred cadences.
+   :type rebin_freq: str | None, optional
+   :param rebin_method: Aggregation for ``match="rebin"``. Default ``"mean"``.
+   :type rebin_method: str | Callable, optional
+
+   :returns:     The merged number size distribution (dN, cm⁻³), with the lower
+                 instrument's activities/metadata propagated and ``instrument`` set
+                 to ``"<lower> + <upper>"``.
+   :rtype: Aerosol2D
+
+   :raises ValueError: If the two instruments do not form a size-range extension (one must
+       reach smaller and the other larger — combining two instruments that
+       cover the *same* range, e.g. ELPI + SMPS, is rejected); if the
+       crossover lies outside the shared range; or if the time alignment
+       yields no common timestamps.
+
+   .. rubric:: Notes
+
+   Number concentration per bin is expressed as plain dN (cm⁻³, no
+   ``/dlogDp``) before stitching. Because the cut snaps to whole bins, a
+   boundary bin may be marginally widened to meet the crossover, but its
+   counts are never split or scaled — so total number is conserved to the
+   bin the crossover falls in.
+
+   .. rubric:: Examples
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       ns = at.load_ns_file("nanoscan.csv")
+       ops = at.load_ops_file("ops.csv")
+       combined = at.combine_size_ranges(ns, ops, crossover=400)
+       fig, ax = combined.plot_timeseries()
+
+
+.. py:function:: combine_measurements(datasets, *, require_same_serial = True)
+
+   Concatenate several measurements from the *same* instrument into one
+   continuous time series — for example the same monitor run on three
+   separate days, with gaps in between. The inputs are joined along the
+   time axis, sorted, de-duplicated, and returned as a single new object
+   of the same class. Gaps between recordings are preserved (no
+   interpolation is performed).
+
+   :param datasets: Two or more aerosol objects of the *same* class (all
+                    :class:`~aerosoltools.aerosol1d.Aerosol1D`, all
+                    :class:`~aerosoltools.aerosol2d.Aerosol2D`, ...). For size-resolved
+                    data the size-bin structure (``bin_edges``) must be identical.
+   :type datasets: Sequence
+   :param require_same_serial: If ``True`` (default), raise when the datasets do not all share the
+                               same ``serial_number``. Set to ``False`` to combine regardless
+                               (e.g. when serial numbers are missing). Default is True.
+   :type require_same_serial: bool, optional
+
+   :returns: A new object of the same class as the inputs, spanning the union of all
+             input time ranges, with instrument metadata taken from the first input
+             and the union of all user-defined activity periods re-marked on the
+             combined time axis.
+
+   :raises ValueError: If no datasets are given, the classes differ, the size-bin
+       structure differs (for 2D data), or the serial numbers differ while
+       ``require_same_serial`` is True.
+
+   .. rubric:: Examples
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       d1 = at.load_ops_file("ops_day1.txt")
+       d2 = at.load_ops_file("ops_day2.txt")
+       d3 = at.load_ops_file("ops_day3.txt")
+       full = at.combine_measurements([d1, d2, d3])
+
+

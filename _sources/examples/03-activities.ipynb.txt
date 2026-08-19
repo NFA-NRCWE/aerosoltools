@@ -1,0 +1,247 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 3 — Activities\n",
+    "\n",
+    "**Theme:** labelling periods of a record so you can analyse them separately.\n",
+    "\n",
+    "An *activity* is a named set of time periods — a task, a process step, a\n",
+    "background period. Once marked, activities drive the statistics in\n",
+    "[4 — Statistics and exposure](04-statistics-and-exposure.ipynb) and the shading\n",
+    "in [5 — Plotting](05-plotting.ipynb).\n",
+    "\n",
+    "Activities are stored in absolute time, so the same definitions can be applied\n",
+    "to every instrument in a campaign."
+   ],
+   "id": "cell-00"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import aerosoltools as at\n",
+    "\n",
+    "smps = at.load_smps_file(\"../../tests/data/Sample_SMPS.txt\")\n",
+    "smps.activities"
+   ],
+   "id": "cell-01"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Every dataset starts with a single built-in activity, `\"All data\"`, covering the\n",
+    "whole record.\n",
+    "\n",
+    "## Marking known periods\n",
+    "\n",
+    "The usual case: you know when each task ran. Pass a dictionary of activity name\n",
+    "to a list of `(start, end)` pairs — an activity can have several occurrences."
+   ],
+   "id": "cell-02"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "activity_periods = {\n",
+    "    \"Emission\": [\n",
+    "        (\"2018-02-27 10:18:00\", \"2018-02-27 10:31:00\"),\n",
+    "        (\"2018-02-27 10:35:00\", \"2018-02-27 10:48:00\"),\n",
+    "        (\"2018-02-27 10:52:00\", \"2018-02-27 11:30:00\"),\n",
+    "        (\"2018-02-27 12:39:00\", \"2018-02-27 12:48:00\"),\n",
+    "    ],\n",
+    "    \"Constant phase 1\": [(\"2018-02-27 11:43:00\", \"2018-02-27 12:35:00\")],\n",
+    "    \"Constant phase 2\": [(\"2018-02-27 12:55:00\", \"2018-02-27 13:45:00\")],\n",
+    "    \"Background\": [(\"2018-02-27 13:48:00\", \"2018-02-27 14:39:00\")],\n",
+    "}\n",
+    "\n",
+    "smps.mark_activities(activity_periods)\n",
+    "smps.activities"
+   ],
+   "id": "cell-03"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`.activity_periods` gives the periods back, as absolute timestamps."
+   ],
+   "id": "cell-04"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "smps.activity_periods[\"Background\"]"
+   ],
+   "id": "cell-05"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Marking by threshold\n",
+    "\n",
+    "When you do not have a task log, `mark_threshold` labels every sample on one\n",
+    "side of a value."
+   ],
+   "id": "cell-06"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "cpc = at.load_cpc_file(\"../../tests/data/Sample_CPC_AIM.txt\")\n",
+    "cpc.mark_threshold(\"Elevated\", threshold=20000, threshold_direction=\"above\")\n",
+    "cpc.activities"
+   ],
+   "id": "cell-07"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Finding peaks\n",
+    "\n",
+    "`peak_finder` marks samples that rise above a rolling baseline — useful for\n",
+    "picking out short emission events without knowing when they happened. It flags\n",
+    "a sample when the signal exceeds `baseline + ratio * rolling_std`, where the\n",
+    "baseline is a rolling median over `window` samples."
+   ],
+   "id": "cell-08"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "cpc.peak_finder(window=15, ratio=2.5, method=\"median\")\n",
+    "cpc.activities"
+   ],
+   "id": "cell-09"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Renaming\n",
+    "\n",
+    "`rename_activity` keeps the periods and the mask, changing only the label."
+   ],
+   "id": "cell-10"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "cpc.rename_activity(\"Elevated\", \"Above 20k\")\n",
+    "cpc.activities"
+   ],
+   "id": "cell-11"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Getting the data back out\n",
+    "\n",
+    "`get_activity_data` returns only the rows inside an activity's periods — across\n",
+    "all of its occurrences."
+   ],
+   "id": "cell-12"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "emission = smps.get_activity_data(\"Emission\")\n",
+    "background = smps.get_activity_data(\"Background\")\n",
+    "\n",
+    "print(f\"Emission   : {len(emission)} samples\")\n",
+    "print(f\"Background : {len(background)} samples\")\n",
+    "print(f\"All data   : {len(smps.get_activity_data('All data'))} samples\")"
+   ],
+   "id": "cell-13"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`get_activity_extra_data` does the same for the auxiliary channels in\n",
+    "`.extra_data`."
+   ],
+   "id": "cell-14"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "cpc.get_activity_extra_data(\"Above 20k\").head()"
+   ],
+   "id": "cell-15"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Because the result is a plain DataFrame, ordinary pandas works from here."
+   ],
+   "id": "cell-16"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "emission[\"Total_conc\"].describe()"
+   ],
+   "id": "cell-17"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "That is the manual route. The next notebook does this across every activity at\n",
+    "once, with the statistics that matter for exposure assessment.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "**Next:** [4 — Statistics and exposure](04-statistics-and-exposure.ipynb)."
+   ],
+   "id": "cell-18"
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

@@ -1,0 +1,295 @@
+aerosoltools.intercomparison.calibration
+========================================
+
+.. py:module:: aerosoltools.intercomparison.calibration
+
+.. autoapi-nested-parse::
+
+   Calibrate one dataset (the *target*) so it agrees with a *reference*.
+
+   This is the calibration half of the intercomparison flow
+   ``align → assess → fit → apply``. Two identical instruments run side by side
+   rarely read exactly the same; picking one as the reference and fitting a gain
+   (optionally an offset) that maps the other onto it is a standard field
+   correction.
+
+   The scientific work is split cleanly:
+
+   * **fitting** (cross-dataset) lives here — :func:`fit_calibration` validates the
+     pair, time-aligns them via the shared :mod:`._alignment` machinery, fits the
+     relationship and returns a :class:`CalibrationModel`;
+   * **application** (single-dataset) lives on the data object as
+     ``data.apply_calibration(model)`` — this module's :func:`apply_calibration`
+     is a thin pass-through so the two never diverge.
+
+   :func:`calibrate_against_reference` is the one obvious high-level entry point
+   (re-exported as ``aerosoltools.calibrate_against_reference``); it runs the whole
+   workflow and returns ``(calibrated, model)``.
+
+   Two bases are supported:
+
+   * ``"total"`` — one gain (and optional offset) from the total-concentration
+     correlation. For a size-resolved target it corrects only the total series and
+     leaves the individual bins untouched, so a total-only calibration never
+     distorts the distribution.
+   * ``"per_bin"`` — a separate gain (optional offset) per size bin, applied
+     bin-by-bin. Only bins whose fit clears ``minimum_r_squared`` are corrected;
+     weaker bins are left unchanged. Requires both datasets to be size-resolved
+     with compatible bins.
+
+
+
+
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+.. py:data:: BASIS_TOTAL
+   :value: 'total'
+
+
+.. py:data:: BASIS_PER_BIN
+   :value: 'per_bin'
+
+
+.. py:data:: DEFAULT_MIN_R2
+   :value: 0.5
+
+
+.. py:exception:: CalibrationError
+
+   Bases: :py:obj:`ValueError`
+
+
+   Raised when two datasets cannot be calibrated against each other.
+
+   Carries an actionable, domain-specific message (incompatible instrument
+   class, bases, units, size bins, or insufficient overlapping data).
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+
+.. py:class:: CalibrationModel
+
+   A fitted calibration transformation plus its diagnostics.
+
+   A model maps a *target* dataset onto a *reference* by a per-quantity linear
+   relation ``y = gain·x (+ offset)``. For ``basis="total"`` the lists hold a
+   single element (the total-concentration fit); for ``basis="per_bin"`` they
+   hold one element per size bin, in bin order.
+
+   :ivar basis: ``"total"`` or ``"per_bin"``.
+   :ivar gains: Fitted gain(s) ``m``.
+   :ivar offsets: Fitted offset(s) ``b`` (zero unless ``include_offset``).
+   :ivar r_squared: Coefficient(s) of determination of the fit(s).
+   :ivar n_obs: Number of aligned observations used per fit.
+   :ivar applied: Per-entry flag — whether that gain/offset is actually applied.
+                  Always ``[True]`` for a total fit; for per-bin it is ``True`` only
+                  where the fit cleared ``minimum_r_squared``.
+   :ivar include_offset: Whether an intercept was fitted.
+   :ivar minimum_r_squared: The per-bin acceptance gate used (``basis="per_bin"``).
+   :ivar clip_negative: Clip calibrated concentrations at zero on application.
+   :ivar target_instrument / reference_instrument: Instrument names, for record.
+   :ivar target_name / reference_name: Human labels (e.g. GUI dataset labels).
+   :ivar target_unit / reference_unit: Measurement units, for record.
+   :ivar bin_mids: Size-bin midpoints (nm) the per-bin fit was computed on.
+   :ivar align: Time-alignment settings used (match/tolerance/rebin/activity).
+
+
+
+   .. py:attribute:: basis
+      :type:  str
+
+
+   .. py:attribute:: gains
+      :type:  list[float]
+
+
+   .. py:attribute:: offsets
+      :type:  list[float]
+
+
+   .. py:attribute:: r_squared
+      :type:  list[float]
+
+
+   .. py:attribute:: n_obs
+      :type:  list[int]
+
+
+   .. py:attribute:: applied
+      :type:  list[bool]
+
+
+   .. py:attribute:: include_offset
+      :type:  bool
+      :value: False
+
+
+
+   .. py:attribute:: minimum_r_squared
+      :type:  float
+      :value: 0.5
+
+
+
+   .. py:attribute:: clip_negative
+      :type:  bool
+      :value: True
+
+
+
+   .. py:attribute:: target_instrument
+      :type:  str
+      :value: ''
+
+
+
+   .. py:attribute:: reference_instrument
+      :type:  str
+      :value: ''
+
+
+
+   .. py:attribute:: target_name
+      :type:  str
+      :value: ''
+
+
+
+   .. py:attribute:: reference_name
+      :type:  str
+      :value: ''
+
+
+
+   .. py:attribute:: target_unit
+      :type:  str
+      :value: ''
+
+
+
+   .. py:attribute:: reference_unit
+      :type:  str
+      :value: ''
+
+
+
+   .. py:attribute:: bin_mids
+      :type:  list[float]
+      :value: []
+
+
+
+   .. py:attribute:: align
+      :type:  dict
+
+
+   .. py:property:: n_applied
+      :type: int
+
+
+      Number of entries (bins, or the single total) actually corrected.
+
+
+   .. py:method:: to_dict()
+
+      Return a JSON-safe dict (round-trips through :meth:`from_dict`).
+
+
+
+   .. py:method:: from_dict(d)
+      :classmethod:
+
+
+      Reconstruct a model from :meth:`to_dict` output.
+
+
+
+.. py:function:: fit_calibration(target, reference, *, basis = BASIS_TOTAL, include_offset = False, minimum_r_squared = DEFAULT_MIN_R2, match = 'exact', tolerance='30s', rebin_freq = None, rebin_method='mean', activity = None)
+
+   Fit a :class:`CalibrationModel` mapping ``target`` onto ``reference``.
+
+   Validates the pair, time-aligns the two datasets with the shared alignment
+   machinery, fits the relationship on the chosen ``basis``, and returns the
+   model **without** modifying either dataset. Use :func:`apply_calibration`
+   (or ``target.apply_calibration(model)``) to apply it, or the one-shot
+   :func:`calibrate_against_reference` to do both.
+
+   :param target: Dataset to be corrected.
+   :param reference: Dataset kept unchanged, whose readings ``target`` is mapped to.
+   :param basis: ``"total"`` (default) or ``"per_bin"``.
+   :param include_offset: Fit an intercept ``b`` as well as a gain ``m``. Off by
+                          default — identical instruments should agree through the origin.
+   :param minimum_r_squared: Per-bin acceptance gate (``basis="per_bin"`` only).
+   :param match: Time-alignment strategy (``"exact"``/``"nearest"``/``"rebin"``).
+   :param tolerance: Max timestamp separation for ``match="nearest"``.
+   :param rebin_freq: Target cadence for ``match="rebin"``.
+   :param rebin_method: Aggregation for ``match="rebin"``.
+   :param activity: Restrict the fit to one activity's marked periods.
+
+   :returns: The fitted model with per-entry diagnostics.
+   :rtype: CalibrationModel
+
+   :raises CalibrationError: If the datasets are incompatible (class, units, bins)
+       or have too little overlapping data to fit.
+
+
+.. py:function:: apply_calibration(data, model, *, inplace = False)
+
+   Apply a fitted :class:`CalibrationModel` to a single dataset.
+
+   Thin pass-through to ``data.apply_calibration(model)`` so the intercomparison
+   workflow and direct scripting share one application implementation.
+
+   :param data: The dataset to correct (typically the calibration *target*).
+   :param model: A model from :func:`fit_calibration`.
+   :param inplace: Modify ``data`` (``True``) or a deep copy (``False``, default).
+
+   :returns: The calibrated dataset (``data`` when ``inplace``).
+
+
+.. py:function:: calibrate_against_reference(target, reference, *, basis = BASIS_TOTAL, include_offset = False, minimum_r_squared = DEFAULT_MIN_R2, inplace = False, match = 'exact', tolerance='30s', rebin_freq = None, rebin_method='mean', activity = None)
+
+   Fit and apply a calibration of ``target`` against ``reference`` in one call.
+
+   The obvious high-level entry point (re-exported as
+   ``aerosoltools.calibrate_against_reference``). Equivalent to::
+
+       model = fit_calibration(target, reference, ...)
+       calibrated = apply_calibration(target, model, inplace=inplace)
+       return calibrated, model
+
+   :param target: Dataset to be corrected.
+   :param reference: Dataset kept unchanged.
+   :param basis: ``"total"`` (default) or ``"per_bin"``.
+   :param include_offset: Fit an intercept as well as a gain.
+   :param minimum_r_squared: Per-bin acceptance gate (``basis="per_bin"``).
+   :param inplace: Correct ``target`` in place (``True``) or return a new,
+                   calibrated copy and leave ``target`` untouched (``False``, default).
+   :param match: Time-alignment
+                 settings (see :func:`fit_calibration`).
+   :param tolerance: Time-alignment
+                     settings (see :func:`fit_calibration`).
+   :param rebin_freq: Time-alignment
+                      settings (see :func:`fit_calibration`).
+   :param rebin_method: Time-alignment
+                        settings (see :func:`fit_calibration`).
+   :param activity: Time-alignment
+                    settings (see :func:`fit_calibration`).
+
+   :returns:
+
+             The calibrated dataset and the model
+                 used. The dataset keeps ``target``'s own class.
+   :rtype: tuple[Aerosol1D, CalibrationModel]
+
+   :raises CalibrationError: If the datasets are incompatible or lack overlap.
+
+

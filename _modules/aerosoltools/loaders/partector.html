@@ -1,0 +1,618 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
+
+    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+        <title>aerosoltools.loaders.partector - aerosoltools</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../gui/index.html">Desktop GUI</a><input aria-label="Toggle navigation of Desktop GUI" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/raw-data.html">Raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/metadata.html">Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/time-series.html">Time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/decay.html">Decay / Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/heatmap.html">2D heatmap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/pm-bands.html">PM bands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/psd.html">PSD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/aero-optical.html">Aero ↔ Optical</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/summary.html">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/overlay.html">Overlay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/correlation.html">Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/psd-comparison.html">PSD comparison</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/01-loading-data.html">1 — Loading data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/02-time-adjustments.html">2 — Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/03-activities.html">3 — Activities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/04-statistics-and-exposure.html">4 — Statistics and exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/05-plotting.html">5 — Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/06-dtypes-density-corrections.html">6 — Dtypes, density and corrections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/07-combining-datasets.html">7 — Combining datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/08-psd-fitting.html">8 — PSD fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/09-decay-and-source.html">9 — Decay and source fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10a-correlation-and-agreement.html">10a — Correlation and agreement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10b-calibration.html">10b — Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/11-simple-instruments.html">11 — Simple instruments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/12-aethalometer.html">12 — Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/13-aps.html">13 — APS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/15-acsm.html">15 — ACSM</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/aerosoltools/index.html">aerosoltools documentation</a><input aria-label="Toggle navigation of aerosoltools documentation" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/acsm_simple/index.html">aerosoltools.acsm_simple</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol1d/index.html">aerosoltools.aerosol1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol2d/index.html">aerosoltools.aerosol2d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol3d/index.html">aerosoltools.aerosol3d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aethalometer/index.html">aerosoltools.aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/discmini/index.html">aerosoltools.discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/dusttrak/index.html">aerosoltools.dusttrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/elpi/index.html">aerosoltools.elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/environmental/index.html">aerosoltools.environmental</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/gas1d/index.html">aerosoltools.gas1d</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/index.html">aerosoltools.intercomparison</a><input aria-label="Toggle navigation of aerosoltools.intercomparison" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/calibration/index.html">aerosoltools.intercomparison.calibration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/combination/index.html">aerosoltools.intercomparison.combination</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/correlation/index.html">aerosoltools.intercomparison.correlation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/aerosoltools/loaders/index.html">aerosoltools.loaders</a><input aria-label="Toggle navigation of aerosoltools.loaders" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/acsm/index.html">aerosoltools.loaders.acsm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/aethalometer/index.html">aerosoltools.loaders.aethalometer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/aps/index.html">aerosoltools.loaders.aps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/cpc/index.html">aerosoltools.loaders.cpc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/dev_weather/index.html">aerosoltools.loaders.dev_weather</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/discmini/index.html">aerosoltools.loaders.discmini</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/dusttrak/index.html">aerosoltools.loaders.dusttrak</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/elpi/index.html">aerosoltools.loaders.elpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/fmps/index.html">aerosoltools.loaders.fmps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/fourtec/index.html">aerosoltools.loaders.fourtec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/grimm/index.html">aerosoltools.loaders.grimm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ns/index.html">aerosoltools.loaders.ns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/opcn3/index.html">aerosoltools.loaders.opcn3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ops/index.html">aerosoltools.loaders.ops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/partector/index.html">aerosoltools.loaders.partector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ranger/index.html">aerosoltools.loaders.ranger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/registry/index.html">aerosoltools.loaders.registry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/smps/index.html">aerosoltools.loaders.smps</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/index.html">aerosoltools.loaders.support</a><input aria-label="Toggle navigation of aerosoltools.loaders.support" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/construct/index.html">aerosoltools.loaders.support.construct</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/exceptions/index.html">aerosoltools.loaders.support.exceptions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/parsing/index.html">aerosoltools.loaders.support.parsing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/reading/index.html">aerosoltools.loaders.support.reading</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/units/index.html">aerosoltools.loaders.support.units</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/tiger/index.html">aerosoltools.loaders.tiger</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/partector/index.html">aerosoltools.partector</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for aerosoltools.loaders.partector</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.dates</span><span class="w"> </span><span class="kn">import</span> <span class="n">date2num</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..partector</span><span class="w"> </span><span class="kn">import</span> <span class="n">Partector</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.construct</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_1d</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimestampError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.reading</span><span class="w"> </span><span class="kn">import</span> <span class="n">sniff</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_extra_columns</span>
+
+<span class="c1">###############################################################################</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_tem_sampling_periods</span><span class="p">(</span><span class="n">tem_flag</span><span class="p">,</span> <span class="n">datetimes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return a ``(start, end)`` timestamp pair for each TEM-sampling run.</span>
+
+<span class="sd">    The Partector's ``TEM`` channel is 1 while the sampler is actively</span>
+<span class="sd">    collecting particles onto its TEM grid. This finds every *contiguous* run of</span>
+<span class="sd">    ``TEM == 1`` (a distinct grid-sampling period), so multiple samples in one</span>
+<span class="sd">    recording are separated rather than merged into a single span.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tem_flag: The ``TEM`` column (0/1, possibly with NaN).</span>
+<span class="sd">        datetimes: The matching ``Datetime`` column (same positional order).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A list of ``(start, end)`` :class:`pandas.Timestamp` pairs, one per run</span>
+<span class="sd">        (empty when the sampler never ran).</span>
+<span class="sd">    """</span>
+    <span class="n">flag</span> <span class="o">=</span> <span class="p">(</span><span class="n">tem_flag</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">flag</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="c1"># Rising/falling edges of the padded 0/1 signal bound each run (inclusive).</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="mi">0</span><span class="p">],</span> <span class="n">flag</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span> <span class="p">[</span><span class="mi">0</span><span class="p">]]))</span>
+    <span class="n">starts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">edges</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">ends</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">edges</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">datetimes</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[(</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">dt</span><span class="p">[</span><span class="n">s</span><span class="p">]),</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">dt</span><span class="p">[</span><span class="n">e</span><span class="p">]))</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">starts</span><span class="p">,</span> <span class="n">ends</span><span class="p">)]</span>
+
+
+<div class="viewcode-block" id="load_partector_file">
+<a class="viewcode-back" href="../../../api/aerosoltools/loaders/partector/index.html#aerosoltools.loaders.partector.load_partector_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_partector_file</span><span class="p">(</span>
+    <span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">extra_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">tem_activities</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Partector</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Load a Partector LDSA text export and return it as a</span>
+<span class="sd">    :class:`Partector` time series with TEM sampling metadata.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file (str):</span>
+<span class="sd">            Path to the Partector ``.txt`` export file.</span>
+<span class="sd">        extra_data (bool, optional):</span>
+<span class="sd">            If ``True``, additional columns (beyond ``LDSA``, ``TEM`` and</span>
+<span class="sd">            ``Flow``) are stored in ``extra_data`` indexed by ``Datetime`` (the</span>
+<span class="sd">            ambient T/RH channels get canonical units). Defaults to ``True`` —</span>
+<span class="sd">            everything in the file is kept.</span>
+<span class="sd">        tem_activities (bool, optional):</span>
+<span class="sd">            If ``True``, each contiguous ``TEM == 1`` grid-sampling run is</span>
+<span class="sd">            registered as an activity ("TEM grid sampling 1", 2, …). Defaults to</span>
+<span class="sd">            ``True``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Partector:</span>
+<span class="sd">            Partector LDSA time series with a datetime index, LDSA, TEM flag,</span>
+<span class="sd">            flow, and associated metadata (including a TEM sampling summary).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        FileNotFoundError:</span>
+<span class="sd">            If ``file`` does not exist or cannot be opened.</span>
+<span class="sd">        UnicodeDecodeError:</span>
+<span class="sd">            If the file cannot be decoded using the encodings tried by</span>
+<span class="sd">            ``sniff``.</span>
+<span class="sd">        ValueError:</span>
+<span class="sd">            If the start datetime cannot be parsed from the header, or if</span>
+<span class="sd">            there are too few TEM sampling points to estimate a sampling</span>
+<span class="sd">            volume.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        Detailed description:</span>
+<span class="sd">            This loader is tailored to Partector text exports that provide</span>
+<span class="sd">            lung-deposited surface area (LDSA), a TEM sampling flag, and flow</span>
+<span class="sd">            information as a function of time.</span>
+
+<span class="sd">            Internally, the function:</span>
+
+<span class="sd">            - Attempts to infer encoding and delimiter via</span>
+<span class="sd">              ``sniff``. If delimiter detection fails, it</span>
+<span class="sd">              falls back to tab (``"\\t"``).</span>
+<span class="sd">            - Reads the main data block with :func:`pandas.read_csv`, starting</span>
+<span class="sd">              at the Partector data header (``header=10``).</span>
+<span class="sd">            - Renames core columns:</span>
+
+<span class="sd">              - ``"time"`` → ``"Datetime"`` (elapsed seconds),</span>
+<span class="sd">              - ``"flow"`` → ``"Flow"``.</span>
+
+<span class="sd">            - Reads the header region (first 10 lines) via</span>
+<span class="sd">              :func:`numpy.genfromtxt` and extracts the measurement start</span>
+<span class="sd">              datetime from the line containing ``"Start: "`` using the format</span>
+<span class="sd">              ``"%d.%m.%Y %H:%M:%S"``.</span>
+<span class="sd">            - Converts the ``"Datetime"`` column from elapsed seconds to</span>
+<span class="sd">              absolute timestamps by adding the parsed start time.</span>
+<span class="sd">            - Uses the ``"TEM"`` column (1 during TEM sampling, 0 otherwise) to</span>
+<span class="sd">              identify the TEM sampling interval:</span>
+
+<span class="sd">              - selects all rows where ``TEM == 1``,</span>
+<span class="sd">              - takes the first and last such timestamps as sampling start/end,</span>
+<span class="sd">              - raises a ``ValueError`` if fewer than two TEM points are found.</span>
+
+<span class="sd">            - Computes the average flow during the TEM sampling period as</span>
+<span class="sd">              ``Flow`` (L/min) × 1000 → mL/min.</span>
+<span class="sd">            - Estimates the sampling duration in minutes from the difference</span>
+<span class="sd">              between the start and end timestamps (using</span>
+<span class="sd">              :func:`matplotlib.dates.date2num`), and calculates an approximate</span>
+<span class="sd">              TEM sampling volume in mL as:</span>
+
+<span class="sd">              .. code-block:: python</span>
+
+<span class="sd">                  duration_min = (tem_end - tem_start) in minutes</span>
+<span class="sd">                  sample_volume_ml = avg_flow_ml_min * duration_min</span>
+
+<span class="sd">            - Packages this information into a small ``TEM_samples`` table with</span>
+<span class="sd">              columns ``"Start"``, ``"End"`` and ``"Sample_vol [ml]"`` and</span>
+<span class="sd">              stores it in ``metadata["TEM_samples"]``.</span>
+<span class="sd">            - Constructs a :class:`Partector` object using the core columns:</span>
+
+<span class="sd">              - ``Datetime``,</span>
+<span class="sd">              - ``LDSA``,</span>
+<span class="sd">              - ``TEM``,</span>
+<span class="sd">              - ``Flow``.</span>
+
+<span class="sd">            - Populates metadata:</span>
+
+<span class="sd">              - ``instrument`` set to ``"Partector"``,</span>
+<span class="sd">              - ``serial_number`` from the first header line (last 3</span>
+<span class="sd">                characters),</span>
+<span class="sd">              - ``TEM_samples`` as described above.</span>
+<span class="sd">              - ``unit`` mapping:</span>
+
+<span class="sd">                - ``"LDSA"`` → ``"nm$^{2}$/cm$^{3}$"``,</span>
+<span class="sd">                - ``"TEM"`` → ``"bool"``,</span>
+<span class="sd">                - ``"Flow"`` → ``"l/min"``,</span>
+
+<span class="sd">            - If ``extra_data=True``, all remaining columns (not ``LDSA``,</span>
+<span class="sd">              ``TEM``, ``Flow``) are stored in ``extra_data`` with</span>
+<span class="sd">              ``Datetime`` as index.</span>
+
+<span class="sd">        Theory:</span>
+<span class="sd">            The Partector logs LDSA and a binary TEM sampling flag as a</span>
+<span class="sd">            function of time. To estimate the TEM sampling volume, the loader</span>
+<span class="sd">            assumes:</span>
+
+<span class="sd">            - the TEM filter is sampling whenever ``TEM == 1``,</span>
+<span class="sd">            - the effective sampling interval is from the first to the last</span>
+<span class="sd">              timestamp where ``TEM == 1``,</span>
+<span class="sd">            - the flow is reasonably constant over that interval so that the</span>
+<span class="sd">              mean flow during ``TEM == 1`` can be used.</span>
+
+<span class="sd">            The estimated TEM sampling volume :math:`V_\\mathrm{TEM}` in mL is</span>
+<span class="sd">            then given by:</span>
+
+<span class="sd">            .. math::</span>
+
+<span class="sd">                V_\\mathrm{TEM} \\approx \\bar{Q} \\cdot \\Delta t,</span>
+
+<span class="sd">            where :math:`\\bar{Q}` is the mean flow (mL/min) during</span>
+<span class="sd">            :math:`TEM = 1` and :math:`\\Delta t` is the sampling duration in</span>
+<span class="sd">            minutes between the first and last TEM-flagged timestamps.</span>
+
+<span class="sd">      Examples:</span>
+<span class="sd">          Typical usage is to load a Partector file and inspect LDSA and TEM</span>
+<span class="sd">          sampling information:</span>
+
+<span class="sd">          .. code-block:: python</span>
+
+<span class="sd">              import aerosoltools as at</span>
+
+<span class="sd">              # Load Partector LDSA and TEM information</span>
+<span class="sd">              par = at.load_partector_file("data/Partector_export.txt",</span>
+<span class="sd">                                            extra_data=True)</span>
+
+<span class="sd">              # Inspect the main time series</span>
+<span class="sd">              print(par.data.head())</span>
+
+<span class="sd">              # Inspect the estimated TEM sampling volume(s)</span>
+<span class="sd">              print(par.metadata["TEM_samples"])</span>
+
+<span class="sd">              # Plot LDSA over time</span>
+<span class="sd">              fig, ax = par.plot_total_conc(parameter="LDSA")</span>
+<span class="sd">    """</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">encoding</span><span class="p">,</span> <span class="n">delimiter</span> <span class="o">=</span> <span class="n">sniff</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">sample_lines</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">delimiter</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span>
+
+    <span class="c1"># Read main data</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"time"</span><span class="p">:</span> <span class="s2">"Datetime"</span><span class="p">,</span> <span class="s2">"flow"</span><span class="p">:</span> <span class="s2">"Flow"</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Read header metadata</span>
+    <span class="n">meta_lines</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">max_rows</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"str"</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">start_str</span> <span class="o">=</span> <span class="n">meta_lines</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"Start: "</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">start_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">start_str</span><span class="p">,</span> <span class="s2">"</span><span class="si">%d</span><span class="s2">.%m.%Y %H:%M:%S"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">TimestampError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unable to parse start datetime from metadata: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="c1"># Convert time column to absolute datetime</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">"Datetime"</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">"Datetime"</span><span class="p">],</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"s"</span><span class="p">)</span> <span class="o">+</span> <span class="n">start_time</span>
+
+    <span class="c1"># Sample duration estimate from TEM flag</span>
+    <span class="n">is_templog</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">"TEM"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">is_templog</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Not enough TEM sampling points to estimate volume."</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">is_templog</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">is_templog</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">is_templog</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">"TEM"</span><span class="p">]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"⚠️ Warning: More than one TEM sampling period detected in </span><span class="si">{</span><span class="n">file</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+    <span class="n">tem_times</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">is_templog</span><span class="p">,</span> <span class="s2">"Datetime"</span><span class="p">]</span>
+    <span class="n">tem_start</span><span class="p">,</span> <span class="n">tem_end</span> <span class="o">=</span> <span class="n">tem_times</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tem_times</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">avg_flow_ml_min</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">is_templog</span><span class="p">,</span> <span class="s2">"Flow"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span>  <span class="c1"># l/min → ml/min</span>
+
+    <span class="n">duration_min</span> <span class="o">=</span> <span class="p">(</span><span class="n">date2num</span><span class="p">(</span><span class="n">tem_end</span><span class="p">)</span> <span class="o">-</span> <span class="n">date2num</span><span class="p">(</span><span class="n">tem_start</span><span class="p">))</span> <span class="o">*</span> <span class="mi">24</span> <span class="o">*</span> <span class="mi">60</span>
+    <span class="n">sample_volume_ml</span> <span class="o">=</span> <span class="n">avg_flow_ml_min</span> <span class="o">*</span> <span class="n">duration_min</span>
+
+    <span class="c1"># Package sample info</span>
+    <span class="n">sample_meta</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"Start"</span><span class="p">:</span> <span class="p">[</span><span class="n">tem_start</span><span class="p">],</span>
+        <span class="s2">"End"</span><span class="p">:</span> <span class="p">[</span><span class="n">tem_end</span><span class="p">],</span>
+        <span class="s2">"Sample_vol [ml]"</span><span class="p">:</span> <span class="p">[</span><span class="n">sample_volume_ml</span><span class="p">],</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Create Partector object</span>
+    <span class="n">Par</span> <span class="o">=</span> <span class="n">build_1d</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">[[</span><span class="s2">"Datetime"</span><span class="p">,</span> <span class="s2">"LDSA"</span><span class="p">,</span> <span class="s2">"TEM"</span><span class="p">,</span> <span class="s2">"Flow"</span><span class="p">]],</span>
+        <span class="bp">cls</span><span class="o">=</span><span class="n">Partector</span><span class="p">,</span>
+        <span class="n">instrument</span><span class="o">=</span><span class="s2">"Partector"</span><span class="p">,</span>
+        <span class="n">serial_number</span><span class="o">=</span><span class="n">meta_lines</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="o">-</span><span class="mi">3</span><span class="p">:],</span>
+        <span class="n">unit</span><span class="o">=</span><span class="p">{</span><span class="s2">"LDSA"</span><span class="p">:</span> <span class="s2">"nm$^</span><span class="si">{2}</span><span class="s2">$/cm$^</span><span class="si">{3}</span><span class="s2">$"</span><span class="p">,</span> <span class="s2">"TEM"</span><span class="p">:</span> <span class="s2">"bool"</span><span class="p">,</span> <span class="s2">"Flow"</span><span class="p">:</span> <span class="s2">"l/min"</span><span class="p">},</span>
+        <span class="n">extra_meta</span><span class="o">=</span><span class="p">{</span><span class="s2">"TEM_samples"</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">sample_meta</span><span class="p">)},</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Attach extra data. The Partector writes bare headers with no in-header</span>
+    <span class="c1"># units; curate the ambient T/RH channels (whose units are fixed by the</span>
+    <span class="c1"># instrument) so they resolve too. The diagnostic currents/voltages are kept</span>
+    <span class="c1"># but left unitless rather than guess a unit.</span>
+    <span class="k">if</span> <span class="n">extra_data</span><span class="p">:</span>
+        <span class="n">extra_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"LDSA"</span><span class="p">,</span> <span class="s2">"TEM"</span><span class="p">,</span> <span class="s2">"Flow"</span><span class="p">])</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"Datetime"</span><span class="p">)</span>
+        <span class="n">extra_df</span><span class="p">,</span> <span class="n">column_units</span> <span class="o">=</span> <span class="n">resolve_extra_columns</span><span class="p">(</span>
+            <span class="n">extra_df</span><span class="p">,</span> <span class="n">curated</span><span class="o">=</span><span class="p">{</span><span class="s2">"T"</span><span class="p">:</span> <span class="s2">"°C"</span><span class="p">,</span> <span class="s2">"RH"</span><span class="p">:</span> <span class="s2">"%"</span><span class="p">}</span>
+        <span class="p">)</span>
+        <span class="n">Par</span><span class="o">.</span><span class="n">_extra_data</span> <span class="o">=</span> <span class="n">extra_df</span>
+        <span class="n">Par</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"column_units"</span><span class="p">]</span> <span class="o">=</span> <span class="n">column_units</span>
+
+    <span class="c1"># Register each TEM grid-sampling run as its own activity so users get the</span>
+    <span class="c1"># sampling periods directly, without re-extracting them by hand.</span>
+    <span class="k">if</span> <span class="n">tem_activities</span><span class="p">:</span>
+        <span class="n">periods</span> <span class="o">=</span> <span class="n">_tem_sampling_periods</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">"TEM"</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="s2">"Datetime"</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">periods</span><span class="p">:</span>
+            <span class="n">Par</span><span class="o">.</span><span class="n">mark_activities</span><span class="p">(</span>
+                <span class="p">{</span><span class="sa">f</span><span class="s2">"TEM grid sampling </span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">:</span> <span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">periods</span><span class="p">)},</span>
+                <span class="n">mode</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">,</span>
+            <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Par</span></div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

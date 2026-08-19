@@ -1,0 +1,118 @@
+aerosoltools.loaders.support.exceptions
+=======================================
+
+.. py:module:: aerosoltools.loaders.support.exceptions
+
+.. autoapi-nested-parse::
+
+   Exception hierarchy for the aerosoltools loader layer.
+
+   Every error raised while loading an instrument file derives from
+   :class:`LoaderError`, so a caller can catch the whole family with one
+   ``except LoaderError``. The subclasses name the failing stage precisely
+   (access, encoding, delimiter, empty, format, metadata, timestamp, detection) so
+   messages are actionable — a batch loader can report *why* a file was skipped,
+   and a script can branch on the specific failure.
+
+
+
+
+
+Module Contents
+---------------
+
+.. py:exception:: LoaderError
+
+   Bases: :py:obj:`Exception`
+
+
+   Base class for every error raised while loading an instrument file.
+
+   Catch this to handle any loader failure regardless of stage.
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+
+.. py:exception:: FileAccessError
+
+   Bases: :py:obj:`LoaderError`, :py:obj:`OSError`
+
+
+   The file could not be found, opened, or read.
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+
+.. py:exception:: EmptyFileError
+
+   Bases: :py:obj:`LoaderError`, :py:obj:`ValueError`
+
+
+   The file has no usable (non-empty, non-comment) data lines.
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+
+.. py:exception:: EncodingError
+
+   Bases: :py:obj:`LoaderError`, :py:obj:`ValueError`
+
+
+   The file could not be decoded with any candidate text encoding.
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+
+.. py:exception:: DelimiterDetectionError
+
+   Bases: :py:obj:`LoaderError`, :py:obj:`ValueError`
+
+
+   No consistent field delimiter could be inferred from the file.
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+
+.. py:exception:: FileFormatError
+
+   Bases: :py:obj:`LoaderError`, :py:obj:`ValueError`
+
+
+   The file does not match the format the loader expects.
+
+   Raised when required header markers, columns, or structure are missing —
+   i.e. the file is readable text but not the instrument export it should be.
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+
+.. py:exception:: MetadataParseError
+
+   Bases: :py:obj:`LoaderError`, :py:obj:`ValueError`
+
+
+   A required metadata field could not be parsed from the file header.
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+
+.. py:exception:: TimestampError
+
+   Bases: :py:obj:`LoaderError`, :py:obj:`ValueError`
+
+
+   Timestamps could not be parsed, or are missing/inconsistent.
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+
+.. py:exception:: InstrumentDetectionError
+
+   Bases: :py:obj:`LoaderError`, :py:obj:`ValueError`
+
+
+   The instrument type could not be identified from content or filename.
+
+   Initialize self.  See help(type(self)) for accurate signature.
+
+

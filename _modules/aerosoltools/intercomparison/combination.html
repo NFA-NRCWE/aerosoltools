@@ -1,0 +1,747 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
+
+    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+        <title>aerosoltools.intercomparison.combination - aerosoltools</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../gui/index.html">Desktop GUI</a><input aria-label="Toggle navigation of Desktop GUI" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/raw-data.html">Raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/metadata.html">Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/time-series.html">Time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/decay.html">Decay / Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/heatmap.html">2D heatmap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/pm-bands.html">PM bands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/psd.html">PSD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/aero-optical.html">Aero ↔ Optical</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/summary.html">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/overlay.html">Overlay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/correlation.html">Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/psd-comparison.html">PSD comparison</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/01-loading-data.html">1 — Loading data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/02-time-adjustments.html">2 — Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/03-activities.html">3 — Activities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/04-statistics-and-exposure.html">4 — Statistics and exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/05-plotting.html">5 — Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/06-dtypes-density-corrections.html">6 — Dtypes, density and corrections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/07-combining-datasets.html">7 — Combining datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/08-psd-fitting.html">8 — PSD fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/09-decay-and-source.html">9 — Decay and source fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10a-correlation-and-agreement.html">10a — Correlation and agreement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10b-calibration.html">10b — Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/11-simple-instruments.html">11 — Simple instruments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/12-aethalometer.html">12 — Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/13-aps.html">13 — APS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/15-acsm.html">15 — ACSM</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/aerosoltools/index.html">aerosoltools documentation</a><input aria-label="Toggle navigation of aerosoltools documentation" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/acsm_simple/index.html">aerosoltools.acsm_simple</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol1d/index.html">aerosoltools.aerosol1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol2d/index.html">aerosoltools.aerosol2d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol3d/index.html">aerosoltools.aerosol3d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aethalometer/index.html">aerosoltools.aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/discmini/index.html">aerosoltools.discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/dusttrak/index.html">aerosoltools.dusttrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/elpi/index.html">aerosoltools.elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/environmental/index.html">aerosoltools.environmental</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/gas1d/index.html">aerosoltools.gas1d</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/index.html">aerosoltools.intercomparison</a><input aria-label="Toggle navigation of aerosoltools.intercomparison" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/calibration/index.html">aerosoltools.intercomparison.calibration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/combination/index.html">aerosoltools.intercomparison.combination</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/correlation/index.html">aerosoltools.intercomparison.correlation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/aerosoltools/loaders/index.html">aerosoltools.loaders</a><input aria-label="Toggle navigation of aerosoltools.loaders" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/acsm/index.html">aerosoltools.loaders.acsm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/aethalometer/index.html">aerosoltools.loaders.aethalometer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/aps/index.html">aerosoltools.loaders.aps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/cpc/index.html">aerosoltools.loaders.cpc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/dev_weather/index.html">aerosoltools.loaders.dev_weather</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/discmini/index.html">aerosoltools.loaders.discmini</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/dusttrak/index.html">aerosoltools.loaders.dusttrak</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/elpi/index.html">aerosoltools.loaders.elpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/fmps/index.html">aerosoltools.loaders.fmps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/fourtec/index.html">aerosoltools.loaders.fourtec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/grimm/index.html">aerosoltools.loaders.grimm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ns/index.html">aerosoltools.loaders.ns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/opcn3/index.html">aerosoltools.loaders.opcn3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ops/index.html">aerosoltools.loaders.ops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/partector/index.html">aerosoltools.loaders.partector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ranger/index.html">aerosoltools.loaders.ranger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/registry/index.html">aerosoltools.loaders.registry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/smps/index.html">aerosoltools.loaders.smps</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/index.html">aerosoltools.loaders.support</a><input aria-label="Toggle navigation of aerosoltools.loaders.support" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/construct/index.html">aerosoltools.loaders.support.construct</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/exceptions/index.html">aerosoltools.loaders.support.exceptions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/parsing/index.html">aerosoltools.loaders.support.parsing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/reading/index.html">aerosoltools.loaders.support.reading</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/units/index.html">aerosoltools.loaders.support.units</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/tiger/index.html">aerosoltools.loaders.tiger</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/partector/index.html">aerosoltools.partector</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for aerosoltools.intercomparison.combination</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Combine measurements from one or more instruments into one dataset."""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..aerosol2d</span><span class="w"> </span><span class="kn">import</span> <span class="n">Aerosol2D</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._alignment</span><span class="w"> </span><span class="kn">import</span> <span class="n">_coarser</span><span class="p">,</span> <span class="n">_infer_freq</span><span class="p">,</span> <span class="n">_ts</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_align_two_in_time</span><span class="p">(</span>
+    <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">match</span><span class="p">,</span> <span class="n">tolerance</span><span class="p">,</span> <span class="n">rebin_freq</span><span class="p">,</span> <span class="n">rebin_method</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Time-align two Aerosol2D objects; return the aligned (lower, upper) copies.</span>
+
+<span class="sd">    Shared by :func:`combine_size_ranges`. The inputs must already be plain,</span>
+<span class="sd">    unnormalized number (dN). Alignment honours the ``match`` strategy</span>
+<span class="sd">    ("exact" | "nearest" | "rebin") over the chosen (or overlapping) window.</span>
+<span class="sd">    """</span>
+    <span class="n">lo_idx</span> <span class="o">=</span> <span class="n">lower</span><span class="o">.</span><span class="n">time</span>
+    <span class="n">up_idx</span> <span class="o">=</span> <span class="n">upper</span><span class="o">.</span><span class="n">time</span>
+    <span class="n">st</span> <span class="o">=</span> <span class="n">_ts</span><span class="p">(</span><span class="n">start</span><span class="p">)</span> <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">max</span><span class="p">(</span><span class="n">lo_idx</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">up_idx</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+    <span class="n">et</span> <span class="o">=</span> <span class="n">_ts</span><span class="p">(</span><span class="n">end</span><span class="p">)</span> <span class="k">if</span> <span class="n">end</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">min</span><span class="p">(</span><span class="n">lo_idx</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">up_idx</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">st</span> <span class="o">&gt;</span> <span class="n">et</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"No overlapping time range between the two instruments for the "</span>
+            <span class="s2">"requested start/end times."</span>
+        <span class="p">)</span>
+
+    <span class="n">match</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">match</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"exact"</span><span class="p">,</span> <span class="s2">"nearest"</span><span class="p">,</span> <span class="s2">"rebin"</span><span class="p">}:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"match must be one of 'exact', 'nearest', or 'rebin'."</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">match</span> <span class="o">==</span> <span class="s2">"exact"</span><span class="p">:</span>
+        <span class="n">lo_tm</span> <span class="o">=</span> <span class="n">lower</span><span class="o">.</span><span class="n">timecrop</span><span class="p">(</span><span class="n">st</span><span class="p">,</span> <span class="n">et</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">up_tm</span> <span class="o">=</span> <span class="n">upper</span><span class="o">.</span><span class="n">timecrop</span><span class="p">(</span><span class="n">st</span><span class="p">,</span> <span class="n">et</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">common</span> <span class="o">=</span> <span class="n">lo_tm</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">up_tm</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">common</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"No common timestamps between the instruments with "</span>
+                <span class="s2">"match='exact'. Consider match='nearest' or match='rebin'."</span>
+            <span class="p">)</span>
+        <span class="n">lo_tm</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">lo_tm</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">common</span><span class="p">]</span>
+        <span class="n">up_tm</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">up_tm</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">common</span><span class="p">]</span>
+
+    <span class="k">elif</span> <span class="n">match</span> <span class="o">==</span> <span class="s2">"nearest"</span><span class="p">:</span>
+        <span class="n">lo_tm</span> <span class="o">=</span> <span class="n">lower</span><span class="o">.</span><span class="n">timecrop</span><span class="p">(</span><span class="n">st</span><span class="p">,</span> <span class="n">et</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">up_tm</span> <span class="o">=</span> <span class="n">upper</span><span class="o">.</span><span class="n">timecrop</span><span class="p">(</span><span class="n">st</span><span class="p">,</span> <span class="n">et</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">tol</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span><span class="n">tolerance</span><span class="p">)</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">lo_tm</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">up_tm</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">sort_values</span><span class="p">()</span>
+        <span class="n">lo_tm</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">lo_tm</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">tol</span><span class="p">)</span>
+        <span class="n">up_tm</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">up_tm</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="n">tol</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># rebin</span>
+        <span class="k">if</span> <span class="n">rebin_freq</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">freq</span> <span class="o">=</span> <span class="n">_coarser</span><span class="p">(</span><span class="n">_infer_freq</span><span class="p">(</span><span class="n">lo_idx</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"S"</span><span class="p">,</span> <span class="n">_infer_freq</span><span class="p">(</span><span class="n">up_idx</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"S"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">freq</span> <span class="o">=</span> <span class="n">rebin_freq</span>
+        <span class="n">lo_tm</span> <span class="o">=</span> <span class="n">lower</span><span class="o">.</span><span class="n">timerebin</span><span class="p">(</span>
+            <span class="n">freq</span><span class="o">=</span><span class="n">freq</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">st</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">et</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">rebin_method</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+        <span class="n">up_tm</span> <span class="o">=</span> <span class="n">upper</span><span class="o">.</span><span class="n">timerebin</span><span class="p">(</span>
+            <span class="n">freq</span><span class="o">=</span><span class="n">freq</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">st</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">et</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">rebin_method</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+        <span class="n">common</span> <span class="o">=</span> <span class="n">lo_tm</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">up_tm</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">common</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"No overlapping timestamps after rebinning. Check 'rebin_freq' "</span>
+                <span class="s2">"or the requested time window."</span>
+            <span class="p">)</span>
+        <span class="n">lo_tm</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">lo_tm</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">common</span><span class="p">]</span>
+        <span class="n">up_tm</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">up_tm</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">common</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">lo_tm</span><span class="p">,</span> <span class="n">up_tm</span>
+
+
+<div class="viewcode-block" id="combine_size_ranges">
+<a class="viewcode-back" href="../../../api/aerosoltools/intercomparison/combination/index.html#aerosoltools.intercomparison.combination.combine_size_ranges">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">combine_size_ranges</span><span class="p">(</span>
+    <span class="n">lower_data</span><span class="p">:</span> <span class="n">Aerosol2D</span><span class="p">,</span>
+    <span class="n">upper_data</span><span class="p">:</span> <span class="n">Aerosol2D</span><span class="p">,</span>
+    <span class="n">crossover</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">start</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">end</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">match</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"rebin"</span><span class="p">,</span>  <span class="c1"># "exact" | "nearest" | "rebin"</span>
+    <span class="n">tolerance</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span> <span class="o">=</span> <span class="s2">"30s"</span><span class="p">,</span>
+    <span class="n">rebin_freq</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">rebin_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Callable</span> <span class="o">=</span> <span class="s2">"mean"</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Aerosol2D</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Stitch two size-resolved instruments that together **extend** the size</span>
+<span class="sd">    range (e.g. NanoScan + OPS, FMPS + OPS, NS/FMPS + APS) into one</span>
+<span class="sd">    time-aligned :class:`~aerosoltools.aerosol2d.Aerosol2D` number spectrum.</span>
+
+<span class="sd">        One instrument supplies the small-size end, the other the large-size</span>
+<span class="sd">        end, and a single ``crossover`` diameter marks where one takes over from</span>
+<span class="sd">        the other. The cut is a **hard cap at whole size bins**: every bin in the</span>
+<span class="sd">        result comes from exactly one instrument (no bin mixes counts from both</span>
+<span class="sd">        and no counts are scaled). The two instruments may be passed in either</span>
+<span class="sd">        order — the one reaching the larger sizes is used as the upper end.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        lower_data (Aerosol2D):</span>
+<span class="sd">            One of the two instruments (order does not matter).</span>
+<span class="sd">        upper_data (Aerosol2D):</span>
+<span class="sd">            The other instrument.</span>
+<span class="sd">        crossover (float | None, optional):</span>
+<span class="sd">            Diameter (nm) where the upper instrument takes over from the lower</span>
+<span class="sd">            one. Bins of the lower instrument with an upper edge at/below the</span>
+<span class="sd">            crossover are kept; bins of the upper instrument with a lower edge</span>
+<span class="sd">            at/above it are kept; the two boundary bins have their shared edge</span>
+<span class="sd">            set to ``crossover`` (counts unchanged). If ``None``, the upper</span>
+<span class="sd">            instrument's lowest bin edge is used (legacy behaviour).</span>
+<span class="sd">        start, end (pandas.Timestamp | str | None, optional):</span>
+<span class="sd">            Time window to combine over. Defaults to the instruments' overlap.</span>
+<span class="sd">        match (str, optional):</span>
+<span class="sd">            Time-alignment strategy: ``"rebin"`` (default), ``"exact"`` or</span>
+<span class="sd">            ``"nearest"`` (see below).</span>
+<span class="sd">        tolerance (str | pandas.Timedelta, optional):</span>
+<span class="sd">            Max timestamp separation for ``match="nearest"``. Default ``"30s"``.</span>
+<span class="sd">        rebin_freq (str | None, optional):</span>
+<span class="sd">            Target cadence for ``match="rebin"``; defaults to the coarser of the</span>
+<span class="sd">            two inferred cadences.</span>
+<span class="sd">        rebin_method (str | Callable, optional):</span>
+<span class="sd">            Aggregation for ``match="rebin"``. Default ``"mean"``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Aerosol2D:</span>
+<span class="sd">            The merged number size distribution (dN, cm⁻³), with the lower</span>
+<span class="sd">            instrument's activities/metadata propagated and ``instrument`` set</span>
+<span class="sd">            to ``"&lt;lower&gt; + &lt;upper&gt;"``.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError:</span>
+<span class="sd">            If the two instruments do not form a size-range extension (one must</span>
+<span class="sd">            reach smaller and the other larger — combining two instruments that</span>
+<span class="sd">            cover the *same* range, e.g. ELPI + SMPS, is rejected); if the</span>
+<span class="sd">            crossover lies outside the shared range; or if the time alignment</span>
+<span class="sd">            yields no common timestamps.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        Number concentration per bin is expressed as plain dN (cm⁻³, no</span>
+<span class="sd">        ``/dlogDp``) before stitching. Because the cut snaps to whole bins, a</span>
+<span class="sd">        boundary bin may be marginally widened to meet the crossover, but its</span>
+<span class="sd">        counts are never split or scaled — so total number is conserved to the</span>
+<span class="sd">        bin the crossover falls in.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import aerosoltools as at</span>
+
+<span class="sd">            ns = at.load_ns_file("nanoscan.csv")</span>
+<span class="sd">            ops = at.load_ops_file("ops.csv")</span>
+<span class="sd">            combined = at.combine_size_ranges(ns, ops, crossover=400)</span>
+<span class="sd">            fig, ax = combined.plot_timeseries()</span>
+<span class="sd">    """</span>
+    <span class="c1"># --- copy + force dN, unnormalized ---------------------------------------</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">lower_data</span><span class="o">.</span><span class="n">copy_self</span><span class="p">()</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">upper_data</span><span class="o">.</span><span class="n">copy_self</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">_convert_to_number_concentration</span><span class="p">()</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">unnormalize_logdp</span><span class="p">()</span>
+
+    <span class="c1"># Order by size range: the instrument reaching larger sizes is the upper one.</span>
+    <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">bin_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">bin_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span>
+
+    <span class="n">lo_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lower</span><span class="o">.</span><span class="n">bin_edges</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">up_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">upper</span><span class="o">.</span><span class="n">bin_edges</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="c1"># --- range-extension guard ----------------------------------------------</span>
+    <span class="c1"># A meaningful stitch needs the upper instrument to reach above the lower</span>
+    <span class="c1"># one, and a shared overlap wide enough to place a crossover. The lower</span>
+    <span class="c1"># instrument supplies the fine (small-diameter) end below the crossover and</span>
+    <span class="c1"># the upper supplies the coarse end above it. It is fine for one</span>
+    <span class="c1"># instrument's range to *contain* the other's (e.g. an ELPI spanning</span>
+    <span class="c1"># 6-9890 nm combined with a NanoScan spanning 10-420 nm): the portion of the</span>
+    <span class="c1"># wider instrument below the crossover is simply discarded in favour of the</span>
+    <span class="c1"># finer instrument. Only two instruments reaching the *same* top size (no</span>
+    <span class="c1"># coarse extension at all) are rejected — there is no sensible crossover.</span>
+    <span class="n">extends</span> <span class="o">=</span> <span class="n">up_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">lo_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">overlaps</span> <span class="o">=</span> <span class="n">lo_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">up_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">extends</span> <span class="ow">and</span> <span class="n">overlaps</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"These two instruments do not form a size-range extension with a "</span>
+            <span class="sa">f</span><span class="s2">"shared overlap (lower </span><span class="si">{</span><span class="n">lo_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">lo_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> nm, "</span>
+            <span class="sa">f</span><span class="s2">"upper </span><span class="si">{</span><span class="n">up_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">up_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> nm). One instrument "</span>
+            <span class="s2">"must reach larger sizes than the other, with an overlap to cross "</span>
+            <span class="s2">"over in."</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">crossover</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">crossover</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">up_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">Dc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">crossover</span><span class="p">)</span>
+    <span class="n">lo_min</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">lo_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">up_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">hi_max</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">lo_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">up_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">lo_min</span> <span class="o">&lt;=</span> <span class="n">Dc</span> <span class="o">&lt;=</span> <span class="n">hi_max</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"crossover </span><span class="si">{</span><span class="n">Dc</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> nm is outside the instruments' shared overlap "</span>
+            <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">lo_min</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">hi_max</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> nm)."</span>
+        <span class="p">)</span>
+
+    <span class="c1"># --- time alignment ------------------------------------------------------</span>
+    <span class="n">lo_tm</span><span class="p">,</span> <span class="n">up_tm</span> <span class="o">=</span> <span class="n">_align_two_in_time</span><span class="p">(</span>
+        <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">match</span><span class="p">,</span> <span class="n">tolerance</span><span class="p">,</span> <span class="n">rebin_freq</span><span class="p">,</span> <span class="n">rebin_method</span>
+    <span class="p">)</span>
+
+    <span class="c1"># --- size-domain stitch (hard cap at whole bins, no scaling) -------------</span>
+    <span class="c1"># Lower keeps bins whose upper edge &lt;= Dc; upper keeps bins whose lower edge</span>
+    <span class="c1"># &gt;= Dc; the shared boundary edge is set to Dc (counts unchanged).</span>
+    <span class="n">n_lo</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">lo_edges</span><span class="p">,</span> <span class="n">Dc</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"right"</span><span class="p">))</span>  <span class="c1"># lower bins kept</span>
+    <span class="n">first_up</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">up_edges</span><span class="p">,</span> <span class="n">Dc</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s2">"left"</span><span class="p">))</span>  <span class="c1"># first upper edge &gt;= Dc</span>
+    <span class="n">n_up</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">up_edges</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">first_up</span>  <span class="c1"># upper bins kept</span>
+    <span class="k">if</span> <span class="n">n_lo</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">n_up</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"The chosen crossover leaves one instrument with no bins; pick a "</span>
+            <span class="s2">"crossover further inside the shared overlap."</span>
+        <span class="p">)</span>
+
+    <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">lo_edges</span><span class="p">[:</span><span class="n">n_lo</span><span class="p">],</span> <span class="p">[</span><span class="n">Dc</span><span class="p">],</span> <span class="n">up_edges</span><span class="p">[</span><span class="n">first_up</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:]])</span>
+    <span class="n">mids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:]),</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># Keep original midpoints for the untouched interior bins; only the two</span>
+    <span class="c1"># boundary bins (last lower, first upper) get a recomputed geometric mid.</span>
+    <span class="n">lo_mids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lower</span><span class="o">.</span><span class="n">bin_mids</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">up_mids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">upper</span><span class="o">.</span><span class="n">bin_mids</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_lo</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">mids</span><span class="p">[:</span> <span class="n">n_lo</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">lo_mids</span><span class="p">[:</span> <span class="n">n_lo</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">n_up</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">mids</span><span class="p">[</span><span class="n">n_lo</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">up_mids</span><span class="p">[</span><span class="n">first_up</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:]</span>
+
+    <span class="n">lo_headers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">lower</span><span class="o">.</span><span class="n">_sizebin_headers</span><span class="p">)</span>
+    <span class="n">up_headers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">upper</span><span class="o">.</span><span class="n">_sizebin_headers</span><span class="p">)</span>
+    <span class="n">lo_keep</span> <span class="o">=</span> <span class="n">lo_headers</span><span class="p">[:</span><span class="n">n_lo</span><span class="p">]</span>
+    <span class="n">up_keep</span> <span class="o">=</span> <span class="n">up_headers</span><span class="p">[</span><span class="n">first_up</span><span class="p">:]</span>
+
+    <span class="n">lower_df</span> <span class="o">=</span> <span class="n">lo_tm</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">lo_keep</span><span class="p">]</span>
+    <span class="n">upper_df</span> <span class="o">=</span> <span class="n">up_tm</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">up_keep</span><span class="p">]</span>
+    <span class="n">combined</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">lower_df</span><span class="p">,</span> <span class="n">upper_df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">new_mids</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">mids</span><span class="p">]</span>
+    <span class="n">combined</span> <span class="o">=</span> <span class="n">combined</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">lo_keep</span> <span class="o">+</span> <span class="n">up_keep</span><span class="p">,</span> <span class="n">new_mids</span><span class="p">)))</span>
+    <span class="c1"># Calculate total concentration and place it first</span>
+    <span class="n">combined</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">"Total_conc"</span><span class="p">,</span> <span class="n">combined</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="n">Aerosol2D</span><span class="p">(</span><span class="n">combined</span><span class="p">)</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">mark_activities</span><span class="p">(</span><span class="n">lower</span><span class="o">.</span><span class="n">activity_periods</span><span class="p">)</span>
+    <span class="c1"># res._activities = lower.activities</span>
+    <span class="c1"># res._activity_periods = lower.activity_periods</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"bin_edges"</span><span class="p">]</span> <span class="o">=</span> <span class="n">edges</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"bin_mids"</span><span class="p">]</span> <span class="o">=</span> <span class="n">mids</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"density"</span><span class="p">]</span> <span class="o">=</span> <span class="n">lower</span><span class="o">.</span><span class="n">_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"density"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"instrument"</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">lower</span><span class="o">.</span><span class="n">instrument</span><span class="si">}</span><span class="s2"> + </span><span class="si">{</span><span class="n">upper</span><span class="o">.</span><span class="n">instrument</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"serial_number"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">lower</span><span class="o">.</span><span class="n">instrument</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">lower</span><span class="o">.</span><span class="n">serial_number</span><span class="si">}</span><span class="s2">, "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">upper</span><span class="o">.</span><span class="n">instrument</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">upper</span><span class="o">.</span><span class="n">serial_number</span><span class="si">}</span><span class="s2">"</span>
+    <span class="p">)</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"unit"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"cm⁻³"</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"dtype"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"dN"</span>
+    <span class="n">res</span><span class="o">.</span><span class="n">_raw_extra_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">lower</span><span class="o">.</span><span class="n">_raw_extra_data</span><span class="p">,</span> <span class="n">upper</span><span class="o">.</span><span class="n">_raw_extra_data</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span></div>
+
+
+
+<div class="viewcode-block" id="combine_measurements">
+<a class="viewcode-back" href="../../../api/aerosoltools/intercomparison/combination/index.html#aerosoltools.intercomparison.combination.combine_measurements">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">combine_measurements</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">require_same_serial</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Concatenate several measurements from the *same* instrument into one</span>
+<span class="sd">    continuous time series — for example the same monitor run on three</span>
+<span class="sd">    separate days, with gaps in between. The inputs are joined along the</span>
+<span class="sd">    time axis, sorted, de-duplicated, and returned as a single new object</span>
+<span class="sd">    of the same class. Gaps between recordings are preserved (no</span>
+<span class="sd">    interpolation is performed).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        datasets (Sequence):</span>
+<span class="sd">            Two or more aerosol objects of the *same* class (all</span>
+<span class="sd">            :class:`~aerosoltools.aerosol1d.Aerosol1D`, all</span>
+<span class="sd">            :class:`~aerosoltools.aerosol2d.Aerosol2D`, ...). For size-resolved</span>
+<span class="sd">            data the size-bin structure (``bin_edges``) must be identical.</span>
+<span class="sd">        require_same_serial (bool, optional):</span>
+<span class="sd">            If ``True`` (default), raise when the datasets do not all share the</span>
+<span class="sd">            same ``serial_number``. Set to ``False`` to combine regardless</span>
+<span class="sd">            (e.g. when serial numbers are missing). Default is True.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A new object of the same class as the inputs, spanning the union of all</span>
+<span class="sd">        input time ranges, with instrument metadata taken from the first input</span>
+<span class="sd">        and the union of all user-defined activity periods re-marked on the</span>
+<span class="sd">        combined time axis.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError:</span>
+<span class="sd">            If no datasets are given, the classes differ, the size-bin</span>
+<span class="sd">            structure differs (for 2D data), or the serial numbers differ while</span>
+<span class="sd">            ``require_same_serial`` is True.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import aerosoltools as at</span>
+
+<span class="sd">            d1 = at.load_ops_file("ops_day1.txt")</span>
+<span class="sd">            d2 = at.load_ops_file("ops_day2.txt")</span>
+<span class="sd">            d3 = at.load_ops_file("ops_day3.txt")</span>
+<span class="sd">            full = at.combine_measurements([d1, d2, d3])</span>
+<span class="sd">    """</span>
+    <span class="n">datasets</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">datasets</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Provide at least one dataset to combine."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">datasets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy_self</span><span class="p">()</span>
+
+    <span class="n">base</span> <span class="o">=</span> <span class="n">datasets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="bp">cls</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">base</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">cls</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"All datasets must be the same aerosol type to combine "</span>
+                <span class="sa">f</span><span class="s2">"(got </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">)."</span>
+            <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">require_same_serial</span><span class="p">:</span>
+        <span class="n">serials</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">serial_number</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">}</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">serials</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"Datasets have different serial numbers "</span>
+                <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">serials</span><span class="p">))</span><span class="si">}</span><span class="s2">); refusing to combine. "</span>
+                <span class="s2">"Pass require_same_serial=False to override."</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Size-resolved data must share an identical bin structure.</span>
+    <span class="k">if</span> <span class="s2">"bin_edges"</span> <span class="ow">in</span> <span class="n">base</span><span class="o">.</span><span class="n">_meta</span><span class="p">:</span>
+        <span class="n">base_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"bin_edges"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"bin_edges"</span><span class="p">,</span> <span class="p">[]),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">edges</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">base_edges</span><span class="o">.</span><span class="n">shape</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">base_edges</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">"Size-bin structure differs between datasets; cannot "</span>
+                    <span class="s2">"concatenate. (Use combine_size_ranges for different instruments.)"</span>
+                <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_concat_sorted</span><span class="p">(</span><span class="n">frames</span><span class="p">):</span>
+        <span class="n">frames</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">frames</span> <span class="k">if</span> <span class="n">f</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">f</span><span class="o">.</span><span class="n">empty</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">frames</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># Keep the first occurrence of any duplicated timestamp, then sort.</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="o">~</span><span class="n">out</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="s2">"first"</span><span class="p">)]</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="c1"># Concatenate the numeric main data (boolean activity masks are dropped and</span>
+    <span class="c1"># re-derived below) and the extra data.</span>
+    <span class="n">combined</span> <span class="o">=</span> <span class="n">_concat_sorted</span><span class="p">([</span><span class="n">d</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="s2">"bool"</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">])</span>
+    <span class="n">combined_extra</span> <span class="o">=</span> <span class="n">_concat_sorted</span><span class="p">([</span><span class="n">d</span><span class="o">.</span><span class="n">_extra_data</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">])</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">combined</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+    <span class="c1"># Restore instrument metadata (instrument, serial, unit, dtype, bins, ...).</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">_meta</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">_meta</span><span class="p">)</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">_raw_data</span> <span class="o">=</span> <span class="n">combined</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">_extra_data</span> <span class="o">=</span> <span class="n">combined_extra</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">_raw_extra_data</span> <span class="o">=</span> <span class="n">combined_extra</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Correlated APS (Aerosol3d): the concat above covers the aerodynamic axis,</span>
+    <span class="c1"># but the optical companion and the optical×aerodynamic correlation matrix</span>
+    <span class="c1"># must be concatenated too — otherwise the combined object silently drops to</span>
+    <span class="c1"># an aerodynamic-only record and loses its Aero↔Optical capabilities.</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">..aerosol3d</span><span class="w"> </span><span class="kn">import</span> <span class="n">Aerosol3d</span>  <span class="c1"># local import avoids a circular import</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">Aerosol3d</span><span class="p">):</span>
+        <span class="n">opticals</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">"_optical"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">o</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">opticals</span><span class="p">):</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">_optical</span> <span class="o">=</span> <span class="n">combine_measurements</span><span class="p">(</span><span class="n">opticals</span><span class="p">,</span> <span class="n">require_same_serial</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">corrs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">"_correlation"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">c</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">corrs</span><span class="p">):</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">_correlation</span> <span class="o">=</span> <span class="n">_concat_sorted</span><span class="p">(</span><span class="n">corrs</span><span class="p">)</span>
+
+    <span class="c1"># Union the user-defined activity periods across all inputs and re-mark them</span>
+    <span class="c1"># on the combined time axis.</span>
+    <span class="n">merged</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">periods</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">"_activity_periods"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"All data"</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">merged</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="n">merged</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">periods</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">periods</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">mark_activities</span><span class="p">({</span><span class="n">name</span><span class="p">:</span> <span class="n">periods</span><span class="p">},</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

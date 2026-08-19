@@ -1,0 +1,282 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 8 — PSD fitting\n",
+    "\n",
+    "**Theme:** describing a measured size distribution as a small number of\n",
+    "lognormal modes.\n",
+    "\n",
+    "A distribution with 30-odd bins is hard to compare or report. Fitting it as one\n",
+    "or more lognormal modes reduces it to a few numbers with physical meaning: a\n",
+    "geometric mean diameter, a width, and a magnitude per mode."
+   ],
+   "id": "cell-00"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "\n",
+    "import aerosoltools as at\n",
+    "\n",
+    "smps = at.load_smps_file(\"../../tests/data/Sample_SMPS.txt\")\n",
+    "fig, ax = smps.plot_psd()"
+   ],
+   "id": "cell-01"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Fitting a single mode\n",
+    "\n",
+    "`fit_psd` takes an initial guess per mode: `mu` (geometric mean diameter, nm),\n",
+    "`sigma` (geometric standard deviation, dimensionless, > 1) and `factor` (the\n",
+    "magnitude). Lists of length *n* fit *n* modes."
+   ],
+   "id": "cell-02"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fit = smps.fit_psd(mu=[80], sigma=[1.8], factor=[1e4])\n",
+    "fit.modes"
+   ],
+   "id": "cell-03"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The result carries the fitted parameters and their uncertainties."
+   ],
+   "id": "cell-04"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for i in range(len(fit.modes[\"mu\"])):\n",
+    "    print(f\"mode {i + 1}\")\n",
+    "    print(f\"  mu     = {fit.modes['mu'][i]:8.2f} +/- {fit.errors['mu'][i]:.2f} nm\")\n",
+    "    print(f\"  sigma  = {fit.modes['sigma'][i]:8.3f} +/- {fit.errors['sigma'][i]:.3f}\")\n",
+    "    print(f\"  factor = {fit.modes['factor'][i]:8.1f} +/- {fit.errors['factor'][i]:.1f}\")"
+   ],
+   "id": "cell-05"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`PSDFitResult` is a `NamedTuple`, so it also unpacks as a plain tuple if you\n",
+    "prefer."
+   ],
+   "id": "cell-06"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "modes, errors = fit\n",
+    "list(modes)"
+   ],
+   "id": "cell-07"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Drawing the fit\n",
+    "\n",
+    "`evaluate` returns the fitted curve at any diameters — the total first, then\n",
+    "each mode separately."
+   ],
+   "id": "cell-08"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "dp = np.logspace(np.log10(smps.bin_mids.min()), np.log10(smps.bin_mids.max()), 200)\n",
+    "total, per_mode = fit.evaluate(dp)\n",
+    "\n",
+    "fig, ax = plt.subplots(figsize=(7, 4.5))\n",
+    "smps.plot_psd(ax=ax, activities=[\"All data\"])\n",
+    "ax.plot(dp, total, \"k--\", lw=2, label=\"fit\")\n",
+    "ax.set_xscale(\"log\")\n",
+    "ax.legend()\n",
+    "ax.set_title(\"Single lognormal mode fitted to the measured distribution\")"
+   ],
+   "id": "cell-09"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Fitting several modes\n",
+    "\n",
+    "Real aerosols are often bimodal — a fresh nucleation mode plus an aged\n",
+    "accumulation mode. Give one starting guess per mode."
+   ],
+   "id": "cell-10"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "two = smps.fit_psd(mu=[30, 120], sigma=[1.6, 1.9], factor=[5e3, 1e4])\n",
+    "\n",
+    "for i in range(len(two.modes[\"mu\"])):\n",
+    "    print(f\"mode {i + 1}: mu = {two.modes['mu'][i]:7.2f} nm, \"\n",
+    "          f\"sigma = {two.modes['sigma'][i]:.3f}, \"\n",
+    "          f\"factor = {two.modes['factor'][i]:9.1f}\")"
+   ],
+   "id": "cell-11"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "total2, per_mode2 = two.evaluate(dp)\n",
+    "\n",
+    "fig, ax = plt.subplots(figsize=(7, 4.5))\n",
+    "smps.plot_psd(ax=ax, activities=[\"All data\"])\n",
+    "ax.plot(dp, total2, \"k--\", lw=2, label=\"fit (2 modes)\")\n",
+    "for i, mode in enumerate(per_mode2):\n",
+    "    ax.plot(dp, mode, \":\", lw=1.5, label=f\"mode {i + 1}\")\n",
+    "ax.set_xscale(\"log\")\n",
+    "ax.legend()"
+   ],
+   "id": "cell-12"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The starting guess matters. A fit is a local optimisation, so guesses far from\n",
+    "the truth can converge somewhere unhelpful — start from where you can see modes\n",
+    "in the plot.\n",
+    "\n",
+    "## Fitting one activity\n",
+    "\n",
+    "`period` restricts the fit to a marked activity, which is how you compare the\n",
+    "distribution during a process against the background."
+   ],
+   "id": "cell-13"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "smps.mark_activities({\n",
+    "    \"Emission\":   [(\"2018-02-27 10:18:00\", \"2018-02-27 11:30:00\")],\n",
+    "    \"Background\": [(\"2018-02-27 13:48:00\", \"2018-02-27 14:39:00\")],\n",
+    "})\n",
+    "\n",
+    "for activity in [\"Emission\", \"Background\"]:\n",
+    "    result = smps.fit_psd(period=activity, mu=[80], sigma=[1.8], factor=[1e4])\n",
+    "    print(f\"{activity:11s} mu = {result.modes['mu'][0]:7.2f} nm, \"\n",
+    "          f\"sigma = {result.modes['sigma'][0]:.3f}\")"
+   ],
+   "id": "cell-14"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Evaluating a distribution without fitting\n",
+    "\n",
+    "`lognormal_modes` is the underlying model, exposed directly. It takes\n",
+    "`(mu, sigma, factor)` triples — one per mode — and returns the total and the\n",
+    "individual modes, the same shape `evaluate` gives. Use it to draw a\n",
+    "distribution from parameters you already have: from a fit, from the literature,\n",
+    "or to sanity-check a starting guess before fitting."
+   ],
+   "id": "cell-15"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "guess, _ = at.lognormal_modes(dp, [(60, 1.7, 2e4)])\n",
+    "\n",
+    "fig, ax = plt.subplots(figsize=(6, 3.5))\n",
+    "ax.plot(dp, guess)\n",
+    "ax.set_xscale(\"log\")\n",
+    "ax.set_xlabel(\"Dp [nm]\")\n",
+    "ax.set_ylabel(\"dN/dlogDp\")\n",
+    "ax.set_title(\"A lognormal mode drawn from parameters alone\")"
+   ],
+   "id": "cell-16"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Rebuilding the fitted curve from the modes a fit returned is the same call:"
+   ],
+   "id": "cell-17"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "triples = list(zip(two.modes[\"mu\"], two.modes[\"sigma\"], two.modes[\"factor\"]))\n",
+    "rebuilt, _ = at.lognormal_modes(dp, triples)\n",
+    "\n",
+    "print(\"matches evaluate():\", bool((abs(rebuilt - total2) < 1e-9).all()))"
+   ],
+   "id": "cell-18"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "\n",
+    "**Next:** [9 — Decay and source fitting](09-decay-and-source.ipynb)."
+   ],
+   "id": "cell-19"
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

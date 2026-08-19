@@ -1,0 +1,192 @@
+aerosoltools.loaders.support.parsing
+====================================
+
+.. py:module:: aerosoltools.loaders.support.parsing
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: file_list(path, search_word = None, max_subfolder = 0, nested_list = False)
+
+   List files in a folder tree with optional depth and name filtering.
+
+   :param path: Root directory to search for files.
+   :type path: str
+   :param search_word: Substring that must be present in the **basename** of a file for it
+                       to be included in the result. If ``None`` (default), all files are
+                       considered.
+   :type search_word: str | None, optional
+   :param max_subfolder: Maximum depth of subfolders to traverse relative to ``path``:
+
+                         - ``0`` (default): only the root folder.
+                         - ``1``: root + its immediate subfolders.
+                         - ``2``: root + two levels down, etc.
+   :type max_subfolder: int, optional
+   :param nested_list: If ``False`` (default), return a flat list of file paths.
+                       If ``True``, return a list of lists, where each inner list contains
+                       the files found in one directory level.
+   :type nested_list: bool, optional
+
+   :returns:     If ``nested_list=False``, a flat list of matching file paths.
+                 If ``nested_list=True``, a nested list of file paths grouped by
+                 directory.
+   :rtype: list[str] | list[list[str]]
+
+   :raises FileNotFoundError: If ``path`` does not exist. Check that the directory path is
+       correct and accessible.
+
+   .. rubric:: Notes
+
+   Detailed description:
+       ``file_list`` wraps :func:`os.walk` to provide a simple way to
+       collect file paths from a directory tree. It:
+
+       - Computes the depth of each directory relative to the root and
+         skips directories deeper than ``max_subfolder``.
+       - Builds full paths to each file using :func:`os.path.join`.
+       - Filters files by ``search_word`` applied to the basename
+         (filename only, without directory).
+       - Returns either a flat list of paths or a nested list grouped
+         by directory, depending on ``nested_list``.
+
+       This is mainly a convenience helper used by higher-level loading
+       utilities.
+
+   .. rubric:: Examples
+
+   Typical usage is to quickly collect data files to be processed
+   further, e.g. before batch loading:
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       # Flat list of all CSV files in the root folder only
+       csv_files = file_list(
+           path="C:/data/measurements",
+           search_word=".csv",
+           max_subfolder=0,
+       )
+
+       # Nested list of all files up to one subfolder deep
+       all_files_nested = file_list(
+           path="C:/data/measurements",
+           max_subfolder=1,
+           nested_list=True,
+       )
+
+
+.. py:function:: load_data_from_folder(folder_path, load_function, search_word = '', max_subfolder = 0, meta_checklist = None, time_rebin = None, **kwargs)
+
+   Batch-load aerosol data from multiple files in a folder, check
+   metadata consistency, and combine compatible datasets into a single
+   aerosol object, while skipping files that do not match.
+
+   :param folder_path: Path to the folder containing the data files to be loaded.
+   :type folder_path: str
+   :param load_function: Function that loads a single file and returns an aerosol object,
+                         typically an instance of :class:`Aerosol1D`,
+                         :class:`Aerosol2D`, or an instrument subclass.
+   :type load_function: Callable[..., Aerosol1D]
+   :param search_word: Substring that must appear in the filename for a file to be
+                       considered. If an empty string (default), all files in the
+                       directory tree (subject to ``max_subfolder``) are considered.
+   :type search_word: str, optional
+   :param max_subfolder: Maximum depth of subfolders to traverse relative to ``folder_path``:
+
+                         - ``0`` (default): only the base folder.
+                         - ``1``: base + its immediate subfolders.
+                         - ``2``: base + two levels down, etc.
+   :type max_subfolder: int, optional
+   :param meta_checklist: Iterable of metadata keys that must match across all loaded files
+                          (e.g. ``("serial_number",)``). Files with values that differ from
+                          the first successfully loaded file for any of these keys are
+                          skipped. If ``None`` (default), this is treated as
+                          ``("serial_number",)``.
+   :type meta_checklist: Sequence[str] | None, optional
+   :param time_rebin: Optional resampling rule (e.g. ``"30s"``, ``"1min"``, ``"2H"``,
+                      ``"1D"``). If provided, each loaded object is time-rebinned via
+                      :meth:`Aerosol1D.timerebin` before concatenation. This can reduce
+                      memory load when combining many files. If ``None`` (default),
+                      the native time resolution of each file is preserved.
+   :type time_rebin: str | None, optional
+   :param \*\*kwargs: Additional keyword arguments forwarded directly to
+                      ``load_function`` for each file (for example
+                      ``extra_data=True`` or loader-specific options).
+
+   :returns:     A combined aerosol object of the same concrete class as the first
+                 successfully loaded file. The returned object has:
+   :rtype: Aerosol1D | Aerosol2D
+
+   :raises FileNotFoundError: If no files matching the given criteria are found in
+       ``folder_path``, or if all candidate files fail to load.
+       Check the folder path, search pattern, and file permissions.
+   :raises TypeError: If ``load_function`` returns an object that is not an instance of
+       :class:`Aerosol1D`, :class:`Aerosol2D`, or an instrument subclass.
+   :raises RuntimeError: If an internal inconsistency occurs during concatenation (e.g.
+       ``Combined_raw_data`` unexpectedly remains ``None``). This should
+       not happen under normal use; if it does, please report the issue
+       with a minimal reproducible example.
+
+   .. rubric:: Notes
+
+   Detailed description:
+       ``load_data_from_folder`` automates the otherwise repetitive task
+       of loading many similarly formatted files, checking that they
+       belong together, and combining them into one continuous time
+       series. Internally, it:
+
+       - Uses :func:`file_list` to collect candidate files from
+         ``folder_path`` respecting ``search_word`` and ``max_subfolder``.
+       - Iterates over the candidate files with a progress bar,
+         calling ``load_function(file_path, **kwargs)`` for each file.
+       - Optionally calls ``timerebin(time_rebin)`` on each loaded object
+         to reduce the native time resolution before combining.
+       - For the first successfully loaded file, initializes containers
+         for combined ``original_data``, ``extra_data``, and
+         ``_raw_extra_data``, and stores its metadata as a baseline.
+       - For subsequent files, checks all keys in ``meta_checklist`` for
+         consistency with the baseline metadata; files that do not match
+         are skipped and logged.
+       - Concatenates all compatible datasets along the time axis for
+         ``original_data``, ``extra_data``, and ``_raw_extra_data``.
+       - Removes duplicate timestamps separately from each combined
+         DataFrame using an internal helper, keeping the first occurrence
+         for each timestamp.
+       - Determines the concrete output class based on the type of the
+         first loaded object (its concrete class) and
+         instantiates the combined object accordingly.
+       - Merges metadata entries such as ``"TEM_samples"`` if present in
+         multiple files (relevant for the PartectorTEM).
+       - Logs the status of each file (loaded or skipped) in a summary
+         list and prints a compact table at the end.
+
+       Files that raise common IO or parsing errors during loading are
+       not fatal: they are simply skipped and reported in the final
+       summary table, which includes filename, load status, and reason.
+
+   .. rubric:: Examples
+
+   A typical workflow is to load a full day, week, or campaign of
+   measurements that are stored as multiple files (e.g. one per
+   day or per instrument run):
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       # Combine all SMPS files for a given campaign folder
+       smps_combined = at.load_data_from_folder(
+           folder_path="C:/data/SMPS_campaign",
+           load_function=load_smps_file,
+           search_word=".txt",
+           max_subfolder=1,
+           meta_checklist=("serial_number", "instrument"),
+           time_rebin="5min",   # reduce resolution for long campaigns
+           extra_data=True,     # forward to load_smps_file
+       )
+
+

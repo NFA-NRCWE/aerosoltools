@@ -1,0 +1,744 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../../../genindex.html"><link rel="search" title="Search" href="../../../../search.html"><link rel="next" title="aerosoltools.intercomparison.combination" href="../combination/index.html"><link rel="prev" title="aerosoltools.intercomparison" href="../index.html">
+
+    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+        <title>aerosoltools.intercomparison.calibration - aerosoltools</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../../index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../../index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../gui/index.html">Desktop GUI</a><input aria-label="Toggle navigation of Desktop GUI" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/raw-data.html">Raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/metadata.html">Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/time-series.html">Time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/decay.html">Decay / Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/heatmap.html">2D heatmap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/pm-bands.html">PM bands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/psd.html">PSD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/aero-optical.html">Aero ↔ Optical</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/summary.html">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/overlay.html">Overlay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/correlation.html">Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../gui/psd-comparison.html">PSD comparison</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/01-loading-data.html">1 — Loading data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/02-time-adjustments.html">2 — Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/03-activities.html">3 — Activities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/04-statistics-and-exposure.html">4 — Statistics and exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/05-plotting.html">5 — Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/06-dtypes-density-corrections.html">6 — Dtypes, density and corrections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/07-combining-datasets.html">7 — Combining datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/08-psd-fitting.html">8 — PSD fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/09-decay-and-source.html">9 — Decay and source fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/10a-correlation-and-agreement.html">10a — Correlation and agreement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/10b-calibration.html">10b — Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/11-simple-instruments.html">11 — Simple instruments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/12-aethalometer.html">12 — Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/13-aps.html">13 — APS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../examples/15-acsm.html">15 — ACSM</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../../index.html">aerosoltools documentation</a><input aria-label="Toggle navigation of aerosoltools documentation" checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../acsm_simple/index.html">aerosoltools.acsm_simple</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../aerosol1d/index.html">aerosoltools.aerosol1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../aerosol2d/index.html">aerosoltools.aerosol2d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../aerosol3d/index.html">aerosoltools.aerosol3d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../aethalometer/index.html">aerosoltools.aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../discmini/index.html">aerosoltools.discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../dusttrak/index.html">aerosoltools.dusttrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../elpi/index.html">aerosoltools.elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../environmental/index.html">aerosoltools.environmental</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../gas1d/index.html">aerosoltools.gas1d</a></li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="../index.html">aerosoltools.intercomparison</a><input aria-label="Toggle navigation of aerosoltools.intercomparison" checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">aerosoltools.intercomparison.calibration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combination/index.html">aerosoltools.intercomparison.combination</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../correlation/index.html">aerosoltools.intercomparison.correlation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../loaders/index.html">aerosoltools.loaders</a><input aria-label="Toggle navigation of aerosoltools.loaders" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/acsm/index.html">aerosoltools.loaders.acsm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/aethalometer/index.html">aerosoltools.loaders.aethalometer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/aps/index.html">aerosoltools.loaders.aps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/cpc/index.html">aerosoltools.loaders.cpc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/dev_weather/index.html">aerosoltools.loaders.dev_weather</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/discmini/index.html">aerosoltools.loaders.discmini</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/dusttrak/index.html">aerosoltools.loaders.dusttrak</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/elpi/index.html">aerosoltools.loaders.elpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/fmps/index.html">aerosoltools.loaders.fmps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/fourtec/index.html">aerosoltools.loaders.fourtec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/grimm/index.html">aerosoltools.loaders.grimm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/ns/index.html">aerosoltools.loaders.ns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/opcn3/index.html">aerosoltools.loaders.opcn3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/ops/index.html">aerosoltools.loaders.ops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/partector/index.html">aerosoltools.loaders.partector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/ranger/index.html">aerosoltools.loaders.ranger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/registry/index.html">aerosoltools.loaders.registry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/smps/index.html">aerosoltools.loaders.smps</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../loaders/support/index.html">aerosoltools.loaders.support</a><input aria-label="Toggle navigation of aerosoltools.loaders.support" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../loaders/support/construct/index.html">aerosoltools.loaders.support.construct</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../loaders/support/exceptions/index.html">aerosoltools.loaders.support.exceptions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../loaders/support/parsing/index.html">aerosoltools.loaders.support.parsing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../loaders/support/reading/index.html">aerosoltools.loaders.support.reading</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../loaders/support/units/index.html">aerosoltools.loaders.support.units</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../loaders/tiger/index.html">aerosoltools.loaders.tiger</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../partector/index.html">aerosoltools.partector</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../../../../_sources/api/aerosoltools/intercomparison/calibration/index.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="module-aerosoltools.intercomparison.calibration">
+<span id="aerosoltools-intercomparison-calibration"></span><h1>aerosoltools.intercomparison.calibration<a class="headerlink" href="#module-aerosoltools.intercomparison.calibration" title="Link to this heading">¶</a></h1>
+<p>Calibrate one dataset (the <em>target</em>) so it agrees with a <em>reference</em>.</p>
+<p>This is the calibration half of the intercomparison flow
+<code class="docutils literal notranslate"><span class="pre">align</span> <span class="pre">→</span> <span class="pre">assess</span> <span class="pre">→</span> <span class="pre">fit</span> <span class="pre">→</span> <span class="pre">apply</span></code>. Two identical instruments run side by side
+rarely read exactly the same; picking one as the reference and fitting a gain
+(optionally an offset) that maps the other onto it is a standard field
+correction.</p>
+<p>The scientific work is split cleanly:</p>
+<ul class="simple">
+<li><p><strong>fitting</strong> (cross-dataset) lives here — <a class="reference internal" href="#aerosoltools.intercomparison.calibration.fit_calibration" title="aerosoltools.intercomparison.calibration.fit_calibration"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_calibration()</span></code></a> validates the
+pair, time-aligns them via the shared <code class="xref py py-mod docutils literal notranslate"><span class="pre">_alignment</span></code> machinery, fits the
+relationship and returns a <a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel" title="aerosoltools.intercomparison.calibration.CalibrationModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">CalibrationModel</span></code></a>;</p></li>
+<li><p><strong>application</strong> (single-dataset) lives on the data object as
+<code class="docutils literal notranslate"><span class="pre">data.apply_calibration(model)</span></code> — this module’s <a class="reference internal" href="#aerosoltools.intercomparison.calibration.apply_calibration" title="aerosoltools.intercomparison.calibration.apply_calibration"><code class="xref py py-func docutils literal notranslate"><span class="pre">apply_calibration()</span></code></a>
+is a thin pass-through so the two never diverge.</p></li>
+</ul>
+<p><a class="reference internal" href="#aerosoltools.intercomparison.calibration.calibrate_against_reference" title="aerosoltools.intercomparison.calibration.calibrate_against_reference"><code class="xref py py-func docutils literal notranslate"><span class="pre">calibrate_against_reference()</span></code></a> is the one obvious high-level entry point
+(re-exported as <code class="docutils literal notranslate"><span class="pre">aerosoltools.calibrate_against_reference</span></code>); it runs the whole
+workflow and returns <code class="docutils literal notranslate"><span class="pre">(calibrated,</span> <span class="pre">model)</span></code>.</p>
+<p>Two bases are supported:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;total&quot;</span></code> — one gain (and optional offset) from the total-concentration
+correlation. For a size-resolved target it corrects only the total series and
+leaves the individual bins untouched, so a total-only calibration never
+distorts the distribution.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;per_bin&quot;</span></code> — a separate gain (optional offset) per size bin, applied
+bin-by-bin. Only bins whose fit clears <code class="docutils literal notranslate"><span class="pre">minimum_r_squared</span></code> are corrected;
+weaker bins are left unchanged. Requires both datasets to be size-resolved
+with compatible bins.</p></li>
+</ul>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.BASIS_TOTAL">
+<span class="sig-prename descclassname"><span class="pre">aerosoltools.intercomparison.calibration.</span></span><span class="sig-name descname"><span class="pre">BASIS_TOTAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'total'</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.BASIS_TOTAL" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.BASIS_PER_BIN">
+<span class="sig-prename descclassname"><span class="pre">aerosoltools.intercomparison.calibration.</span></span><span class="sig-name descname"><span class="pre">BASIS_PER_BIN</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'per_bin'</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.BASIS_PER_BIN" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.DEFAULT_MIN_R2">
+<span class="sig-prename descclassname"><span class="pre">aerosoltools.intercomparison.calibration.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_MIN_R2</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.5</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.DEFAULT_MIN_R2" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aerosoltools.intercomparison.calibration.</span></span><span class="sig-name descname"><span class="pre">CalibrationError</span></span><a class="reference internal" href="../../../../_modules/aerosoltools/intercomparison/calibration.html#CalibrationError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
+<p>Raised when two datasets cannot be calibrated against each other.</p>
+<p>Carries an actionable, domain-specific message (incompatible instrument
+class, bases, units, size bins, or insufficient overlapping data).</p>
+<p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aerosoltools.intercomparison.calibration.</span></span><span class="sig-name descname"><span class="pre">CalibrationModel</span></span><a class="reference internal" href="../../../../_modules/aerosoltools/intercomparison/calibration.html#CalibrationModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel" title="Link to this definition">¶</a></dt>
+<dd><p>A fitted calibration transformation plus its diagnostics.</p>
+<p>A model maps a <em>target</em> dataset onto a <em>reference</em> by a per-quantity linear
+relation <code class="docutils literal notranslate"><span class="pre">y</span> <span class="pre">=</span> <span class="pre">gain·x</span> <span class="pre">(+</span> <span class="pre">offset)</span></code>. For <code class="docutils literal notranslate"><span class="pre">basis=&quot;total&quot;</span></code> the lists hold a
+single element (the total-concentration fit); for <code class="docutils literal notranslate"><span class="pre">basis=&quot;per_bin&quot;</span></code> they
+hold one element per size bin, in bin order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>basis</strong> – <code class="docutils literal notranslate"><span class="pre">&quot;total&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;per_bin&quot;</span></code>.</p></li>
+<li><p><strong>gains</strong> – Fitted gain(s) <code class="docutils literal notranslate"><span class="pre">m</span></code>.</p></li>
+<li><p><strong>offsets</strong> – Fitted offset(s) <code class="docutils literal notranslate"><span class="pre">b</span></code> (zero unless <code class="docutils literal notranslate"><span class="pre">include_offset</span></code>).</p></li>
+<li><p><strong>r_squared</strong> – Coefficient(s) of determination of the fit(s).</p></li>
+<li><p><strong>n_obs</strong> – Number of aligned observations used per fit.</p></li>
+<li><p><strong>applied</strong> – Per-entry flag — whether that gain/offset is actually applied.
+Always <code class="docutils literal notranslate"><span class="pre">[True]</span></code> for a total fit; for per-bin it is <code class="docutils literal notranslate"><span class="pre">True</span></code> only
+where the fit cleared <code class="docutils literal notranslate"><span class="pre">minimum_r_squared</span></code>.</p></li>
+<li><p><strong>include_offset</strong> – Whether an intercept was fitted.</p></li>
+<li><p><strong>minimum_r_squared</strong> – The per-bin acceptance gate used (<code class="docutils literal notranslate"><span class="pre">basis=&quot;per_bin&quot;</span></code>).</p></li>
+<li><p><strong>clip_negative</strong> – Clip calibrated concentrations at zero on application.</p></li>
+<li><p><strong>reference_instrument</strong> (<em>target_instrument /</em>) – Instrument names, for record.</p></li>
+<li><p><strong>reference_name</strong> (<em>target_name /</em>) – Human labels (e.g. GUI dataset labels).</p></li>
+<li><p><strong>reference_unit</strong> (<em>target_unit /</em>) – Measurement units, for record.</p></li>
+<li><p><strong>bin_mids</strong> – Size-bin midpoints (nm) the per-bin fit was computed on.</p></li>
+<li><p><strong>align</strong> – Time-alignment settings used (match/tolerance/rebin/activity).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.basis">
+<span class="sig-name descname"><span class="pre">basis</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.basis" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.gains">
+<span class="sig-name descname"><span class="pre">gains</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.gains" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.offsets">
+<span class="sig-name descname"><span class="pre">offsets</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.offsets" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.r_squared">
+<span class="sig-name descname"><span class="pre">r_squared</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.r_squared" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.n_obs">
+<span class="sig-name descname"><span class="pre">n_obs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.n_obs" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.applied">
+<span class="sig-name descname"><span class="pre">applied</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.applied" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.include_offset">
+<span class="sig-name descname"><span class="pre">include_offset</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.include_offset" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.minimum_r_squared">
+<span class="sig-name descname"><span class="pre">minimum_r_squared</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.5</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.minimum_r_squared" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.clip_negative">
+<span class="sig-name descname"><span class="pre">clip_negative</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.clip_negative" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.target_instrument">
+<span class="sig-name descname"><span class="pre">target_instrument</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.target_instrument" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.reference_instrument">
+<span class="sig-name descname"><span class="pre">reference_instrument</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.reference_instrument" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.target_name">
+<span class="sig-name descname"><span class="pre">target_name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.target_name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.reference_name">
+<span class="sig-name descname"><span class="pre">reference_name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.reference_name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.target_unit">
+<span class="sig-name descname"><span class="pre">target_unit</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.target_unit" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.reference_unit">
+<span class="sig-name descname"><span class="pre">reference_unit</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.reference_unit" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.bin_mids">
+<span class="sig-name descname"><span class="pre">bin_mids</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.bin_mids" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.align">
+<span class="sig-name descname"><span class="pre">align</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.align" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.n_applied">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">n_applied</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.n_applied" title="Link to this definition">¶</a></dt>
+<dd><p>Number of entries (bins, or the single total) actually corrected.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/aerosoltools/intercomparison/calibration.html#CalibrationModel.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.to_dict" title="Link to this definition">¶</a></dt>
+<dd><p>Return a JSON-safe dict (round-trips through <a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.from_dict" title="aerosoltools.intercomparison.calibration.CalibrationModel.from_dict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">from_dict()</span></code></a>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.CalibrationModel.from_dict">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/aerosoltools/intercomparison/calibration.html#CalibrationModel.from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.intercomparison.calibration.CalibrationModel.from_dict" title="Link to this definition">¶</a></dt>
+<dd><p>Reconstruct a model from <a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.to_dict" title="aerosoltools.intercomparison.calibration.CalibrationModel.to_dict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">to_dict()</span></code></a> output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>d</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel" title="aerosoltools.intercomparison.calibration.CalibrationModel">CalibrationModel</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.fit_calibration">
+<span class="sig-prename descclassname"><span class="pre">aerosoltools.intercomparison.calibration.</span></span><span class="sig-name descname"><span class="pre">fit_calibration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">BASIS_TOTAL</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minimum_r_squared</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DEFAULT_MIN_R2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'exact'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'30s'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rebin_freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rebin_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/aerosoltools/intercomparison/calibration.html#fit_calibration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.intercomparison.calibration.fit_calibration" title="Link to this definition">¶</a></dt>
+<dd><p>Fit a <a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel" title="aerosoltools.intercomparison.calibration.CalibrationModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">CalibrationModel</span></code></a> mapping <code class="docutils literal notranslate"><span class="pre">target</span></code> onto <code class="docutils literal notranslate"><span class="pre">reference</span></code>.</p>
+<p>Validates the pair, time-aligns the two datasets with the shared alignment
+machinery, fits the relationship on the chosen <code class="docutils literal notranslate"><span class="pre">basis</span></code>, and returns the
+model <strong>without</strong> modifying either dataset. Use <a class="reference internal" href="#aerosoltools.intercomparison.calibration.apply_calibration" title="aerosoltools.intercomparison.calibration.apply_calibration"><code class="xref py py-func docutils literal notranslate"><span class="pre">apply_calibration()</span></code></a>
+(or <code class="docutils literal notranslate"><span class="pre">target.apply_calibration(model)</span></code>) to apply it, or the one-shot
+<a class="reference internal" href="#aerosoltools.intercomparison.calibration.calibrate_against_reference" title="aerosoltools.intercomparison.calibration.calibrate_against_reference"><code class="xref py py-func docutils literal notranslate"><span class="pre">calibrate_against_reference()</span></code></a> to do both.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target</strong> – Dataset to be corrected.</p></li>
+<li><p><strong>reference</strong> – Dataset kept unchanged, whose readings <code class="docutils literal notranslate"><span class="pre">target</span></code> is mapped to.</p></li>
+<li><p><strong>basis</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;total&quot;</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">&quot;per_bin&quot;</span></code>.</p></li>
+<li><p><strong>include_offset</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Fit an intercept <code class="docutils literal notranslate"><span class="pre">b</span></code> as well as a gain <code class="docutils literal notranslate"><span class="pre">m</span></code>. Off by
+default — identical instruments should agree through the origin.</p></li>
+<li><p><strong>minimum_r_squared</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Per-bin acceptance gate (<code class="docutils literal notranslate"><span class="pre">basis=&quot;per_bin&quot;</span></code> only).</p></li>
+<li><p><strong>match</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Time-alignment strategy (<code class="docutils literal notranslate"><span class="pre">&quot;exact&quot;</span></code>/<code class="docutils literal notranslate"><span class="pre">&quot;nearest&quot;</span></code>/<code class="docutils literal notranslate"><span class="pre">&quot;rebin&quot;</span></code>).</p></li>
+<li><p><strong>tolerance</strong> – Max timestamp separation for <code class="docutils literal notranslate"><span class="pre">match=&quot;nearest&quot;</span></code>.</p></li>
+<li><p><strong>rebin_freq</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Target cadence for <code class="docutils literal notranslate"><span class="pre">match=&quot;rebin&quot;</span></code>.</p></li>
+<li><p><strong>rebin_method</strong> – Aggregation for <code class="docutils literal notranslate"><span class="pre">match=&quot;rebin&quot;</span></code>.</p></li>
+<li><p><strong>activity</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Restrict the fit to one activity’s marked periods.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The fitted model with per-entry diagnostics.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel" title="aerosoltools.intercomparison.calibration.CalibrationModel">CalibrationModel</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationError" title="aerosoltools.intercomparison.calibration.CalibrationError"><strong>CalibrationError</strong></a> – If the datasets are incompatible (class, units, bins)
+or have too little overlapping data to fit.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.apply_calibration">
+<span class="sig-prename descclassname"><span class="pre">aerosoltools.intercomparison.calibration.</span></span><span class="sig-name descname"><span class="pre">apply_calibration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/aerosoltools/intercomparison/calibration.html#apply_calibration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.intercomparison.calibration.apply_calibration" title="Link to this definition">¶</a></dt>
+<dd><p>Apply a fitted <a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel" title="aerosoltools.intercomparison.calibration.CalibrationModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">CalibrationModel</span></code></a> to a single dataset.</p>
+<p>Thin pass-through to <code class="docutils literal notranslate"><span class="pre">data.apply_calibration(model)</span></code> so the intercomparison
+workflow and direct scripting share one application implementation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> – The dataset to correct (typically the calibration <em>target</em>).</p></li>
+<li><p><strong>model</strong> (<a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel" title="aerosoltools.intercomparison.calibration.CalibrationModel"><em>CalibrationModel</em></a>) – A model from <a class="reference internal" href="#aerosoltools.intercomparison.calibration.fit_calibration" title="aerosoltools.intercomparison.calibration.fit_calibration"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_calibration()</span></code></a>.</p></li>
+<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Modify <code class="docutils literal notranslate"><span class="pre">data</span></code> (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or a deep copy (<code class="docutils literal notranslate"><span class="pre">False</span></code>, default).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The calibrated dataset (<code class="docutils literal notranslate"><span class="pre">data</span></code> when <code class="docutils literal notranslate"><span class="pre">inplace</span></code>).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="aerosoltools.intercomparison.calibration.calibrate_against_reference">
+<span class="sig-prename descclassname"><span class="pre">aerosoltools.intercomparison.calibration.</span></span><span class="sig-name descname"><span class="pre">calibrate_against_reference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">BASIS_TOTAL</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minimum_r_squared</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DEFAULT_MIN_R2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">match</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'exact'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'30s'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rebin_freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rebin_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mean'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/aerosoltools/intercomparison/calibration.html#calibrate_against_reference"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aerosoltools.intercomparison.calibration.calibrate_against_reference" title="Link to this definition">¶</a></dt>
+<dd><p>Fit and apply a calibration of <code class="docutils literal notranslate"><span class="pre">target</span></code> against <code class="docutils literal notranslate"><span class="pre">reference</span></code> in one call.</p>
+<p>The obvious high-level entry point (re-exported as
+<code class="docutils literal notranslate"><span class="pre">aerosoltools.calibrate_against_reference</span></code>). Equivalent to:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">fit_calibration</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">reference</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="n">calibrated</span> <span class="o">=</span> <span class="n">apply_calibration</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="n">inplace</span><span class="p">)</span>
+<span class="k">return</span> <span class="n">calibrated</span><span class="p">,</span> <span class="n">model</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target</strong> – Dataset to be corrected.</p></li>
+<li><p><strong>reference</strong> – Dataset kept unchanged.</p></li>
+<li><p><strong>basis</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;total&quot;</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">&quot;per_bin&quot;</span></code>.</p></li>
+<li><p><strong>include_offset</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Fit an intercept as well as a gain.</p></li>
+<li><p><strong>minimum_r_squared</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Per-bin acceptance gate (<code class="docutils literal notranslate"><span class="pre">basis=&quot;per_bin&quot;</span></code>).</p></li>
+<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Correct <code class="docutils literal notranslate"><span class="pre">target</span></code> in place (<code class="docutils literal notranslate"><span class="pre">True</span></code>) or return a new,
+calibrated copy and leave <code class="docutils literal notranslate"><span class="pre">target</span></code> untouched (<code class="docutils literal notranslate"><span class="pre">False</span></code>, default).</p></li>
+<li><p><strong>match</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Time-alignment
+settings (see <a class="reference internal" href="#aerosoltools.intercomparison.calibration.fit_calibration" title="aerosoltools.intercomparison.calibration.fit_calibration"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_calibration()</span></code></a>).</p></li>
+<li><p><strong>tolerance</strong> – Time-alignment
+settings (see <a class="reference internal" href="#aerosoltools.intercomparison.calibration.fit_calibration" title="aerosoltools.intercomparison.calibration.fit_calibration"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_calibration()</span></code></a>).</p></li>
+<li><p><strong>rebin_freq</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Time-alignment
+settings (see <a class="reference internal" href="#aerosoltools.intercomparison.calibration.fit_calibration" title="aerosoltools.intercomparison.calibration.fit_calibration"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_calibration()</span></code></a>).</p></li>
+<li><p><strong>rebin_method</strong> – Time-alignment
+settings (see <a class="reference internal" href="#aerosoltools.intercomparison.calibration.fit_calibration" title="aerosoltools.intercomparison.calibration.fit_calibration"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_calibration()</span></code></a>).</p></li>
+<li><p><strong>activity</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – Time-alignment
+settings (see <a class="reference internal" href="#aerosoltools.intercomparison.calibration.fit_calibration" title="aerosoltools.intercomparison.calibration.fit_calibration"><code class="xref py py-func docutils literal notranslate"><span class="pre">fit_calibration()</span></code></a>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>The calibrated dataset and the model</dt><dd><p>used. The dataset keeps <code class="docutils literal notranslate"><span class="pre">target</span></code>’s own class.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a>[<a class="reference internal" href="../../aerosol1d/index.html#aerosoltools.aerosol1d.Aerosol1D" title="aerosoltools.aerosol1d.Aerosol1D">Aerosol1D</a>, <a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel" title="aerosoltools.intercomparison.calibration.CalibrationModel">CalibrationModel</a>]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationError" title="aerosoltools.intercomparison.calibration.CalibrationError"><strong>CalibrationError</strong></a> – If the datasets are incompatible or lack overlap.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="../combination/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">aerosoltools.intercomparison.combination</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">aerosoltools.intercomparison</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">aerosoltools.intercomparison.calibration</a><ul>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.BASIS_TOTAL"><code class="docutils literal notranslate"><span class="pre">BASIS_TOTAL</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.BASIS_PER_BIN"><code class="docutils literal notranslate"><span class="pre">BASIS_PER_BIN</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.DEFAULT_MIN_R2"><code class="docutils literal notranslate"><span class="pre">DEFAULT_MIN_R2</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationError"><code class="docutils literal notranslate"><span class="pre">CalibrationError</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel"><code class="docutils literal notranslate"><span class="pre">CalibrationModel</span></code></a><ul>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.basis"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.basis</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.gains"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.gains</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.offsets"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.offsets</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.r_squared"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.r_squared</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.n_obs"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.n_obs</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.applied"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.applied</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.include_offset"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.include_offset</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.minimum_r_squared"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.minimum_r_squared</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.clip_negative"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.clip_negative</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.target_instrument"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.target_instrument</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.reference_instrument"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.reference_instrument</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.target_name"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.target_name</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.reference_name"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.reference_name</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.target_unit"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.target_unit</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.reference_unit"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.reference_unit</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.bin_mids"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.bin_mids</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.align"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.align</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.n_applied"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.n_applied</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.to_dict"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.to_dict()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.CalibrationModel.from_dict"><code class="docutils literal notranslate"><span class="pre">CalibrationModel.from_dict()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.fit_calibration"><code class="docutils literal notranslate"><span class="pre">fit_calibration()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.apply_calibration"><code class="docutils literal notranslate"><span class="pre">apply_calibration()</span></code></a></li>
+<li><a class="reference internal" href="#aerosoltools.intercomparison.calibration.calibrate_against_reference"><code class="docutils literal notranslate"><span class="pre">calibrate_against_reference()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

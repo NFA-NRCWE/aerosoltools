@@ -1,0 +1,145 @@
+aerosoltools.loaders.opcn3
+==========================
+
+.. py:module:: aerosoltools.loaders.opcn3
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: load_opcn3_file(file, extra_data = True, PM_focus = False)
+
+   Load an OPC-N3 export and return either a size-resolved distribution
+   (:class:`Aerosol2D`) or PM-focused time series (:class:`Aerosol1D`)
+   with metadata.
+
+   :param file: Path to the OPC-N3 data file.
+   :type file: str
+   :param extra_data: If ``True``, auxiliary channels (e.g. temperature, RH, flow, PM
+                      channels) are stored in ``extra_data`` when supported by the
+                      underlying loader. Defaults to ``True`` — everything in the file is
+                      kept.
+   :type extra_data: bool, optional
+   :param PM_focus: If ``True``, return a compact PM-focused :class:`Aerosol1D` with
+                    total number concentration and PM1/PM2.5/PM10 mass as reported
+                    by the instrument. If ``False`` (default), return a fully
+                    size-resolved :class:`Aerosol2D` with binned number concentrations.
+   :type PM_focus: bool, optional
+
+   :returns:     Parsed OPC-N3 dataset as either a size-resolved number-size
+                 distribution or a PM-only time series, depending on ``PM_focus``
+                 and the detected file format.
+   :rtype: Aerosol2D | Aerosol1D
+
+   :raises FileNotFoundError: If ``file`` does not exist or cannot be opened.
+   :raises UnicodeDecodeError: If the file cannot be decoded using the encodings tried by
+       ``sniff``.
+   :raises ValueError: If the delimiter detection or CSV parsing fails in a way that
+       prevents reading the header or main data table.
+   :raises FileFormatError: If the file format cannot be recognised from the first line and
+       thus cannot be dispatched to a supported OPC-N3 loader.
+
+   .. rubric:: Notes
+
+   Detailed description:
+       This loader is designed for loading data from an alphasense OPC-N3
+       low-cost particle counter. It reads CSV formats produced by
+       different firmware/software revisions. The formats differ mainly in
+       how timestamps, bin labels, and PM channels are laid out.
+
+       Internally, the function:
+
+       - Uses ``sniff`` to infer file encoding and field
+         delimiter.
+       - Reads the first line to classify the file:
+
+         - Legacy/old format (few columns, typically no trailing
+           ``"OPC"`` marker):
+
+           - Detected when ``len(first_line) <= 34``.
+           - If ``PM_focus=False`` (default), the file is passed to
+             :func:`_load_opcn3_file_old`, which:
+
+             - parses ISO datetime strings into a ``Datetime`` column,
+             - interprets legacy bin labels (``Bin1``, ``Bin2``, …),
+             - converts raw counts to number concentration in ``cm⁻³``
+               using the reported sampling period and flow,
+             - infers bin edges/mids and returns an :class:`Aerosol2D`
+               with ``Datetime``, ``Total_conc``, and one column per size
+               bin.
+
+           - If ``PM_focus=True``, the file is passed to
+             :func:`_load_opcn3_file_pm_old`, which:
+
+             - computes ``Total_conc`` from the size bins,
+             - extracts PM1, PM2.5 and PM10 mass concentrations,
+             - returns an :class:`Aerosol1D` with ``Datetime``,
+               ``Total_conc``, ``PM1``, ``PM2.5`` and ``PM10``.
+
+         - Newer format (AIM-like structure, trailing ``"OPC"`` in
+           the first line):
+
+           - Detected when ``first_line[-1] == "OPC"``.
+           - If ``PM_focus=False``, the file is passed to
+             :func:`_load_opcn3_file_new`, which:
+
+             - parses ISO datetime strings from a ``Date`` column,
+             - uses a fixed set of bin edges from the OPC-N3 specification,
+             - converts raw counts to number concentration in ``cm⁻³``
+               using sampling period and flow,
+             - returns an :class:`Aerosol2D` with ``Datetime``,
+               ``Total_conc`` and size-bin columns.
+
+           - If ``PM_focus=True``, the file is passed to
+             :func:`_load_opcn3_file_pm_new`, which:
+
+             - computes ``Total_conc`` from the size bins,
+             - returns an :class:`Aerosol1D` with ``Datetime``,
+               ``Total_conc``, ``PM1``, ``PM2.5`` and ``PM10``.
+
+       - If neither legacy nor newer patterns match, an ``Exception`` is
+         raised indicating that the OPC-N3 format is not supported.
+
+       Across all loaders:
+
+       - ``extra_data=True`` causes selected auxiliary variables
+         (temperature, RH, period, flow, PM channels) to be stored in
+         ``extra_data`` and ``_raw_extra_data`` indexed by ``Datetime``.
+       - Size-resolved loaders return number concentration per bin in
+         ``cm⁻³`` with metadata for bin edges, bin mids, density,
+         instrument name, and dtype.
+       - PM-focused loaders return compact time series of total number
+         concentration and PM metrics with corresponding units and dtypes.
+
+   .. rubric:: Examples
+
+   Typical usage is to load OPC-N3 data either as a full size
+   distribution or as a compact PM time series:
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       # 1) Load full size-resolved distribution (Aerosol2D)
+       opcn_dist = at.load_opcn3_file("data/OPCN3_legacy.csv")
+
+       print(opcn_dist.data.head())
+       print(opcn_dist.bin_edges)
+       print(opcn_dist.metadata)
+
+       # 2) Load only total and PM metrics (multi-channel Aerosol1D)
+       opcn_pm = at.load_opcn3_file(
+           "data/OPCN3_legacy.csv",
+           extra_data=True,
+           PM_focus=True,
+       )
+
+       print(opcn_pm.data.head())
+       print(opcn_pm.metadata)
+
+       # 3) Plot the time-integrated size distribution
+       fig, ax = opcn_dist.plot_psd()
+
+

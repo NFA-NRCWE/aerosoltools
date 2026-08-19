@@ -1,0 +1,242 @@
+aerosoltools.loaders.registry
+=============================
+
+.. py:module:: aerosoltools.loaders.registry
+
+.. autoapi-nested-parse::
+
+   Public instrument registry and automatic file-format detection.
+
+   Maps canonical instrument names to their loader functions, and identifies an
+   unknown file from its content (falling back to its filename). This is the API a
+   script uses to load a file without knowing its instrument up front::
+
+       import aerosoltools as at
+       data = at.load_file("mystery_export.csv")      # auto-detects the instrument
+       which = at.detect_instrument("mystery_export.csv")   # -> "OPS" or None
+
+   Automatic identification order:
+
+   1. Recognize the instrument from file **content** (the ``_SNIFFERS``).
+   2. Fall back to the **filename** naming convention (``_FILENAME_HINTS``).
+   3. If both fail, :func:`load_file` raises :class:`InstrumentDetectionError`
+      (detection never silently guesses, so an unknown file is never sent to the
+      wrong loader, e.g. CPC).
+
+   The GUI builds its file-open flow on top of this registry rather than owning a
+   parallel copy of the detection logic.
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+.. py:data:: INSTRUMENT_LOADERS
+   :type:  dict[str, Callable]
+
+.. py:data:: LOADERS
+
+.. py:function:: guess_instrument(filename)
+
+   Guess the instrument display name from a file name.
+
+   :param filename: Path or base name of the data file.
+
+   :returns: The matching key in :data:`LOADERS`, or ``None`` if no hint matches.
+
+
+.. py:function:: supported_instrument_names()
+
+   Return supported instrument names for user-facing error messages.
+
+
+.. py:function:: supported_instrument_message(path)
+
+   Return a helpful error message for unknown instrument files.
+
+
+.. py:function:: is_ELPI_file(path)
+
+   Detect ELPI/ELPI+ raw .dat files and Dekati software exports.
+
+
+.. py:function:: is_Aethalometer_file(path)
+
+   Detect Aethalometer / microAeth exports.
+
+
+.. py:function:: is_SMPS_file(path)
+
+   Detect TSI SMPS software exports.
+
+
+.. py:function:: is_NS_file(path)
+
+   Detect TSI NanoScan SMPS exports.
+
+
+.. py:function:: is_OPS_file(path)
+
+   Detect TSI OPS exports.
+
+   The first cell is "Sample File" or "Instrument Name" (the two branches
+   :func:`load_ops_file` expects). TSI **CPC** exports *also* start with
+   "Sample File", so an OPS-specific marker (the "Optical Particle Sizer" name
+   or an instrument-model line) is additionally required to avoid grabbing CPC
+   files (which are model 3007, with no such marker).
+
+
+.. py:function:: is_Grimm_file(path)
+
+   Detect Grimm software or direct instrument exports.
+
+
+.. py:function:: is_DustTrak_file(path)
+
+   Detect DustTrak DRX exports.
+
+
+.. py:function:: is_Partector_file(path)
+
+   Detect Partector LDSA exports.
+
+
+.. py:function:: is_DiSCmini_file(path)
+
+   Detect DiSCmini converted (vendor-processed) exports.
+
+
+.. py:function:: is_DiSCmini_raw_file(path)
+
+   Detect **raw** DiSCmini instrument files (pre vendor conversion).
+
+   Raw files carry the calibration/offset header block and a data table of
+   electrometer currents (``Diffusion``/``Filter``) rather than the processed
+   ``Number``/``Size``/``LDSA`` columns, so the processed-export sniffer
+   (:func:`is_DiSCmini_file`) does not match them.
+
+
+.. py:function:: is_FMPS_file(path)
+
+   Detect FMPS exports.
+
+   FMPS files are less self-describing than ELPI/SMPS, so this sniffer is
+   intentionally conservative.
+
+
+.. py:function:: is_Fourtec_file(path)
+
+   Detect Fourtec text/CSV exports.
+
+   XLS/XLSX files are not sniffed by content here. They can still be detected
+   by filename fallback, e.g. a filename containing "fourtec".
+
+
+.. py:function:: is_OPCN3_file(path)
+
+   Detect Alphasense OPC-N3 exports.
+
+
+.. py:function:: is_Tiger_file(path)
+
+   Detect Tiger handheld VOC monitor exports.
+
+   The export opens with a semicolon-separated metadata block whose first key
+   is the instrument reference number, followed by the measured gas and its
+   unit. ``"instrument irn"`` is unique to this instrument among the formats
+   handled here, so it alone is decisive.
+
+
+.. py:function:: is_ACSM_file(path)
+
+   Detect simple ACSM (aerosol chemical speciation monitor) exports.
+
+   The export is a plain CSV whose first column is the time base ``t_base``
+   and whose remaining columns are the chemical species, each suffixed with
+   the vaporizer setting (e.g. ``"SO4_11000"``). Matching the species by
+   prefix keeps the sniffer working when that suffix changes.
+
+
+.. py:function:: is_APS_file(path)
+
+   Detect TSI APS AIM exports (aerodynamic-only or correlated).
+
+   Distinctive: the AIM header carries "Lower Channel Bound" / "Upper Channel
+   Bound" lines, and the data header row names an "Aerodynamic Diameter" or
+   "Correlated" column.
+
+
+.. py:function:: is_Ranger_file(path)
+
+   Detect Ranger gas / PM sensor CSV exports.
+
+   The Ranger uses interchangeable heads (Cl₂, NO₂, PM, …), so a chlorine
+   column is not always present. Two markers are distinctive and appear near
+   the top of every export regardless of head: the opening
+   "Ranger Serial Number" line, and the sensor status legend
+   ("z:zerocal") carried by every header row.
+
+
+.. py:function:: is_CPC_file(path)
+
+   Conservative CPC detector.
+
+   CPC is not as uniquely marked as ELPI/SMPS/etc., so this sniffer is checked
+   late and only returns True when recognizable CPC markers are present.
+
+
+.. py:data:: SNIFFERS
+   :type:  dict[str, Callable[[str | pathlib.Path], bool]]
+
+.. py:function:: sniff_instrument(path)
+
+   Guess instrument from file content only.
+
+   :returns: Matching key in LOADERS, or None if content is not recognized.
+
+
+.. py:function:: identify_instrument(path)
+
+   Guess instrument using the desired automatic order.
+
+   Order:
+       1. File-content sniffer
+       2. Filename naming convention
+       3. None
+
+   The GUI should show an error when this returns None. It should not silently
+   fall back to the combo-box selection.
+
+
+.. py:function:: require_identified_instrument(path)
+
+   Return identified instrument or raise a user-facing error.
+
+
+.. py:data:: detect_instrument
+
+.. py:data:: supported_instruments
+
+.. py:function:: load_file(path, instrument = None, **kwargs)
+
+   Load an instrument file, auto-detecting the instrument when not given.
+
+   The single public entry point for "load this file" without wiring up the
+   right loader by hand — the same detection the GUI's file-open uses.
+
+   :param path: Path to the instrument export file.
+   :param instrument: Canonical instrument name (a key of
+                      :data:`INSTRUMENT_LOADERS`). When ``None`` (default), the instrument
+                      is detected from the file content, then its filename.
+   :param \*\*kwargs: Forwarded to the selected loader (e.g. ``extra_data=True``).
+
+   :returns: The loaded aerosol object (or a list of them for multi-head files).
+
+   :raises InstrumentDetectionError: If ``instrument`` is ``None`` and detection
+       fails, or if a given ``instrument`` name is not supported.
+
+

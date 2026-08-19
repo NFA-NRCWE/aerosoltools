@@ -1,0 +1,212 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 2 — Time adjustments\n",
+    "\n",
+    "**Theme:** getting a record onto the time base you need.\n",
+    "\n",
+    "Instruments log on their own clocks and at their own intervals. These four\n",
+    "operations — crop, shift, smooth and rebin — are what you use to line them up\n",
+    "before comparing or combining anything.\n",
+    "\n",
+    "Plots here are only used to show the effect of each step; the plotting API\n",
+    "itself is covered in [5 — Plotting](05-plotting.ipynb)."
+   ],
+   "id": "cell-00"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import aerosoltools as at\n",
+    "\n",
+    "ops = at.load_data_from_folder(\n",
+    "    \"../../tests/data/OPS_data\", at.load_ops_file, search_word=\"OPS\"\n",
+    ")\n",
+    "print(f\"{len(ops.data)} rows, {ops.time[0]} -> {ops.time[-1]}\")"
+   ],
+   "id": "cell-01"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The record spans several days. Each operation below modifies the object **in\n",
+    "place** by default; pass `inplace=False` to get a modified copy instead and\n",
+    "leave the original alone.\n",
+    "\n",
+    "## Cropping\n",
+    "\n",
+    "`timecrop` restricts the record to an interval. With `focus=False` it does the\n",
+    "opposite and removes the interval."
+   ],
+   "id": "cell-02"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ops.timecrop(start=\"2023-10-25 08:00:00\", end=\"2023-10-26 22:00:00\")\n",
+    "print(f\"{len(ops.data)} rows, {ops.time[0]} -> {ops.time[-1]}\")"
+   ],
+   "id": "cell-03"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Shifting\n",
+    "\n",
+    "`timeshift` moves every timestamp by a fixed offset — the usual fix when an\n",
+    "instrument's clock was set wrong, or was in another time zone."
+   ],
+   "id": "cell-04"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "first_before = ops.time[0]\n",
+    "ops.timeshift(minutes=120)\n",
+    "print(f\"{first_before}  ->  {ops.time[0]}\")"
+   ],
+   "id": "cell-05"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Smoothing\n",
+    "\n",
+    "`timesmooth` applies a rolling window. It changes the values but **not** the\n",
+    "number of samples or the timestamps."
+   ],
+   "id": "cell-06"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "smoothed = ops.timesmooth(60, method=\"mean\", inplace=False)\n",
+    "print(f\"rows unchanged: {len(ops.data)} -> {len(smoothed.data)}\")"
+   ],
+   "id": "cell-07"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Rebinning\n",
+    "\n",
+    "`timerebin` is the one that changes the time base: it resamples onto a regular\n",
+    "grid, so the number of samples changes."
+   ],
+   "id": "cell-08"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "rebinned = ops.timerebin(\"2.5h\", inplace=False)\n",
+    "print(f\"{len(ops.data)} rows -> {len(rebinned.data)} rows at 2.5 h\")"
+   ],
+   "id": "cell-09"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Rebinning to a **common** frequency is how two instruments logging at different\n",
+    "intervals are made comparable. Several functions do this for you when asked —\n",
+    "`plot_correlation` and the calibration helpers take `match=\"rebin\"` — but doing\n",
+    "it explicitly is useful when you want the same grid everywhere.\n",
+    "\n",
+    "## The effect of each step"
+   ],
+   "id": "cell-10"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "source = at.load_data_from_folder(\n",
+    "    \"../../tests/data/OPS_data\", at.load_ops_file, search_word=\"OPS\"\n",
+    ")\n",
+    "\n",
+    "fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(11, 6))\n",
+    "\n",
+    "source.plot_total_conc(axs[0, 0])\n",
+    "axs[0, 0].set_title(\"As loaded\")\n",
+    "\n",
+    "step = source.copy_self()\n",
+    "step.timecrop(start=\"2023-10-25 08:00:00\", end=\"2023-10-26 22:00:00\")\n",
+    "step.plot_total_conc(axs[0, 1])\n",
+    "axs[0, 1].set_title(\"Cropped\")\n",
+    "\n",
+    "step.timesmooth(60, method=\"mean\")\n",
+    "step.plot_total_conc(axs[1, 0])\n",
+    "axs[1, 0].set_title(\"Smoothed (60-sample window)\")\n",
+    "\n",
+    "step.timerebin(\"2.5h\")\n",
+    "step.plot_total_conc(axs[1, 1])\n",
+    "axs[1, 1].set_title(\"Rebinned to 2.5 h\")\n",
+    "\n",
+    "plt.tight_layout()"
+   ],
+   "id": "cell-11"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Smoothing flattens the peaks while keeping every sample; rebinning replaces the\n",
+    "samples with far fewer, wider ones. Both reduce noise, but only rebinning\n",
+    "changes what a \"sample\" means — which matters for any statistic computed\n",
+    "afterwards.\n",
+    "\n",
+    "## Irregular sampling\n",
+    "\n",
+    "Real records have gaps and jitter. Integrated quantities (time-weighted\n",
+    "averages, exposure metrics) account for the actual spacing between samples\n",
+    "rather than assuming a fixed interval, so an instrument that paused for ten\n",
+    "minutes does not silently distort the result.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "**Next:** [3 — Activities](03-activities.ipynb) marks *what was happening* during\n",
+    "a record."
+   ],
+   "id": "cell-12"
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

@@ -1,0 +1,1062 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html"><link rel="search" title="Search" href="../../../search.html">
+
+    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+        <title>aerosoltools.loaders.elpi - aerosoltools</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../index.html"><div class="brand">aerosoltools</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
+  
+  <span class="sidebar-brand-text">aerosoltools</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../gui/index.html">Desktop GUI</a><input aria-label="Toggle navigation of Desktop GUI" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/raw-data.html">Raw data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/metadata.html">Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/time-series.html">Time series</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/decay.html">Decay / Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/heatmap.html">2D heatmap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/pm-bands.html">PM bands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/psd.html">PSD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/aero-optical.html">Aero ↔ Optical</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/summary.html">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/overlay.html">Overlay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/correlation.html">Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../gui/psd-comparison.html">PSD comparison</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><input aria-label="Toggle navigation of Examples" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/01-loading-data.html">1 — Loading data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/02-time-adjustments.html">2 — Time adjustments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/03-activities.html">3 — Activities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/04-statistics-and-exposure.html">4 — Statistics and exposure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/05-plotting.html">5 — Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/06-dtypes-density-corrections.html">6 — Dtypes, density and corrections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/07-combining-datasets.html">7 — Combining datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/08-psd-fitting.html">8 — PSD fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/09-decay-and-source.html">9 — Decay and source fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10a-correlation-and-agreement.html">10a — Correlation and agreement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/10b-calibration.html">10b — Calibration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/11-simple-instruments.html">11 — Simple instruments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/12-aethalometer.html">12 — Aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/13-aps.html">13 — APS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/15-acsm.html">15 — ACSM</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/aerosoltools/index.html">aerosoltools documentation</a><input aria-label="Toggle navigation of aerosoltools documentation" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/acsm_simple/index.html">aerosoltools.acsm_simple</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol1d/index.html">aerosoltools.aerosol1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol2d/index.html">aerosoltools.aerosol2d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aerosol3d/index.html">aerosoltools.aerosol3d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/aethalometer/index.html">aerosoltools.aethalometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/discmini/index.html">aerosoltools.discmini</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/dusttrak/index.html">aerosoltools.dusttrak</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/elpi/index.html">aerosoltools.elpi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/environmental/index.html">aerosoltools.environmental</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/gas1d/index.html">aerosoltools.gas1d</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/index.html">aerosoltools.intercomparison</a><input aria-label="Toggle navigation of aerosoltools.intercomparison" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/calibration/index.html">aerosoltools.intercomparison.calibration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/combination/index.html">aerosoltools.intercomparison.combination</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/intercomparison/correlation/index.html">aerosoltools.intercomparison.correlation</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../api/aerosoltools/loaders/index.html">aerosoltools.loaders</a><input aria-label="Toggle navigation of aerosoltools.loaders" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/acsm/index.html">aerosoltools.loaders.acsm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/aethalometer/index.html">aerosoltools.loaders.aethalometer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/aps/index.html">aerosoltools.loaders.aps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/cpc/index.html">aerosoltools.loaders.cpc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/dev_weather/index.html">aerosoltools.loaders.dev_weather</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/discmini/index.html">aerosoltools.loaders.discmini</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/dusttrak/index.html">aerosoltools.loaders.dusttrak</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/elpi/index.html">aerosoltools.loaders.elpi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/fmps/index.html">aerosoltools.loaders.fmps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/fourtec/index.html">aerosoltools.loaders.fourtec</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/grimm/index.html">aerosoltools.loaders.grimm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ns/index.html">aerosoltools.loaders.ns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/opcn3/index.html">aerosoltools.loaders.opcn3</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ops/index.html">aerosoltools.loaders.ops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/partector/index.html">aerosoltools.loaders.partector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/ranger/index.html">aerosoltools.loaders.ranger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/registry/index.html">aerosoltools.loaders.registry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/smps/index.html">aerosoltools.loaders.smps</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/index.html">aerosoltools.loaders.support</a><input aria-label="Toggle navigation of aerosoltools.loaders.support" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/construct/index.html">aerosoltools.loaders.support.construct</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/exceptions/index.html">aerosoltools.loaders.support.exceptions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/parsing/index.html">aerosoltools.loaders.support.parsing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/reading/index.html">aerosoltools.loaders.support.reading</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/aerosoltools/loaders/support/units/index.html">aerosoltools.loaders.support.units</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../api/aerosoltools/loaders/tiger/index.html">aerosoltools.loaders.tiger</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../../api/aerosoltools/partector/index.html">aerosoltools.partector</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for aerosoltools.loaders.elpi</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..elpi</span><span class="w"> </span><span class="kn">import</span> <span class="n">ELPI</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileFormatError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.reading</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_table</span><span class="p">,</span> <span class="n">sniff</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.support.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_extra_columns</span>
+
+<span class="c1">###############################################################################</span>
+
+<span class="n">_ELPI_STAGE_SLICE</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="mi">34</span><span class="p">,</span> <span class="mi">48</span><span class="p">)</span>
+<span class="n">_ELPI_STAGE_NAMES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"Stage1"</span><span class="p">,</span>
+    <span class="s2">"Stage2"</span><span class="p">,</span>
+    <span class="s2">"Stage3"</span><span class="p">,</span>
+    <span class="s2">"Stage4"</span><span class="p">,</span>
+    <span class="s2">"Stage5"</span><span class="p">,</span>
+    <span class="s2">"Stage6"</span><span class="p">,</span>
+    <span class="s2">"Stage7"</span><span class="p">,</span>
+    <span class="s2">"Stage8"</span><span class="p">,</span>
+    <span class="s2">"Stage9"</span><span class="p">,</span>
+    <span class="s2">"Stage10"</span><span class="p">,</span>
+    <span class="s2">"Stage11"</span><span class="p">,</span>
+    <span class="s2">"Stage 12"</span><span class="p">,</span>
+    <span class="s2">"Stage13"</span><span class="p">,</span>
+    <span class="s2">"Stage14"</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_ELPI_metadata</span><span class="p">(</span>
+    <span class="n">file_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span>
+    <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"utf-8"</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Parse ELPI header metadata into a structured dictionary."""</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">row</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">row</span> <span class="o">&gt;=</span> <span class="mi">80</span><span class="p">:</span>  <span class="c1"># .dat and exported files usually finish metadata &lt; 40 lines</span>
+                <span class="k">break</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">if</span> <span class="s2">"="</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"="</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">delimiter</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                <span class="n">items</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delimiter</span><span class="p">)</span> <span class="k">if</span> <span class="n">v</span> <span class="o">!=</span> <span class="s2">""</span><span class="p">]</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="n">items</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+
+            <span class="n">metadata</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">return</span> <span class="n">metadata</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Shared parsing helpers</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_as_float_array</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return a metadata scalar/list/string as a float numpy array."""</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[\t,; ]+"</span><span class="p">,</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span> <span class="k">if</span> <span class="n">p</span> <span class="o">!=</span> <span class="s2">""</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_find_ELPI_data_section</span><span class="p">(</span><span class="n">lines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Return ([Data] line index, data-column header)."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">data_idx</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"[Data]"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">FileFormatError</span><span class="p">(</span><span class="s2">"Couldn't find the [Data] marker in the ELPI file."</span><span class="p">)</span>
+
+    <span class="n">j</span> <span class="o">=</span> <span class="n">data_idx</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="n">j</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">lines</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="n">lines</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"["</span><span class="p">)):</span>
+        <span class="n">j</span> <span class="o">-=</span> <span class="mi">1</span>
+
+    <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">delimiter</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data_idx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">data_idx</span> <span class="o">-</span> <span class="mi">25</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">delimiter</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">lines</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"["</span><span class="p">):</span>
+                <span class="n">j</span> <span class="o">=</span> <span class="n">k</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">FileFormatError</span><span class="p">(</span><span class="s2">"Couldn't find the data header line before [Data]."</span><span class="p">)</span>
+
+    <span class="n">header</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">h</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">"</span><span class="se">\ufeff</span><span class="s2">"</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"</span><span class="se">\r\n</span><span class="s2">"</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delimiter</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">data_idx</span><span class="p">,</span> <span class="n">header</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_ELPI_table</span><span class="p">(</span>
+    <span class="n">file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Read the tabular part of an ELPI file and attach the header before [Data]."""</span>
+    <span class="c1"># Only the header region (up to the "[Data]" marker) is needed to locate the</span>
+    <span class="c1"># data section, so stop reading there instead of pulling the whole file into</span>
+    <span class="c1"># memory just to find the marker (the data itself is read by read_csv below).</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"[Data]"</span><span class="p">:</span>
+                <span class="k">break</span>
+
+    <span class="n">data_idx</span><span class="p">,</span> <span class="n">header</span> <span class="o">=</span> <span class="n">_find_ELPI_data_section</span><span class="p">(</span><span class="n">lines</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">read_table</span><span class="p">(</span>
+        <span class="n">file</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span>
+        <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">skiprows</span><span class="o">=</span><span class="n">data_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span>
+        <span class="n">engine</span><span class="o">=</span><span class="s2">"python"</span><span class="p">,</span>
+        <span class="n">on_bad_lines</span><span class="o">=</span><span class="s2">"skip"</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">header</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"Unnamed_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="p">),</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">header</span><span class="p">[:</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+
+    <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">header</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+    <span class="n">cols</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"Datetime"</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">cols</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">"Datetime"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_parse_ELPI_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">"Datetime"</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">df</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_ELPI_datetime</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Parse ELPI datetime strings robustly."""</span>
+    <span class="n">formats</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">"%Y/%m/</span><span class="si">%d</span><span class="s2"> %H:%M:%S.</span><span class="si">%f</span><span class="s2">"</span><span class="p">,</span>
+        <span class="s2">"%Y/%m/</span><span class="si">%d</span><span class="s2"> %H:%M:%S"</span><span class="p">,</span>
+        <span class="s2">"%Y/%m/</span><span class="si">%d</span><span class="s2"> %H:%M"</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="n">parsed</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">fmt</span> <span class="ow">in</span> <span class="n">formats</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mf">0.98</span><span class="p">:</span>
+            <span class="n">parsed</span> <span class="o">=</span> <span class="n">s</span>
+            <span class="k">break</span>
+
+    <span class="k">if</span> <span class="n">parsed</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mf">0.2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"Datetime parsing failed for many rows; check the first column."</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">parsed</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_ELPI_serial_number</span><span class="p">(</span>
+    <span class="n">file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Extract the serial/instrument identifier from the first ELPI header line."""</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">first_line</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="c1"># Common form: [ELPI-DATA FILE],[HR-E+26255]</span>
+    <span class="k">if</span> <span class="s2">","</span> <span class="ow">in</span> <span class="n">first_line</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">first_line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"[]"</span><span class="p">)</span>
+
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">first_line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delimiter</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"[]"</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="s2">""</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_ELPI_bin_edges_and_mids_nm</span><span class="p">(</span><span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return ELPI D50 cutpoints and calculated diameters in nm."""</span>
+    <span class="n">bin_edges</span> <span class="o">=</span> <span class="n">_as_float_array</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">"D50values(um)"</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1000.0</span>
+    <span class="n">bin_mids</span> <span class="o">=</span> <span class="n">_as_float_array</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">"CalculatedDi(um)"</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1000.0</span>
+    <span class="k">return</span> <span class="n">bin_edges</span><span class="p">,</span> <span class="n">bin_mids</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_extract_ELPI_stage_block</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the main Stage1-Stage14 block immediately after the CAL marker."""</span>
+    <span class="c1"># The ELPI files also contain a later CHARMEAS Stage1-Stage14 block. The</span>
+    <span class="c1"># distribution/current block is the fixed Stage slice immediately after CAL.</span>
+    <span class="n">stage_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="n">_ELPI_STAGE_SLICE</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">stage_df</span> <span class="o">=</span> <span class="n">stage_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">stage_df</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_ELPI_extra_data</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return non-distribution columns for optional extra_data storage."""</span>
+    <span class="c1"># Drop CAL + Stage1-Stage14 + CON marker, keep concentration/PM/diagnostics.</span>
+    <span class="n">drop_cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">33</span><span class="p">:</span><span class="mi">49</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">drop_cols</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Raw-current conversion helpers</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_ELPI_charger_efficiency</span><span class="p">(</span><span class="n">dp_um</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the ELPI charger conversion vector X (a three-part power law).</span>
+
+<span class="sd">    The ELPI+ header stores the charger efficiency as::</span>
+
+<span class="sd">        Efficiency(Dp/mult/exp)=Dp1  mult1  exp1  Dp2  mult2  exp2  mult3  exp3</span>
+
+<span class="sd">    which defines a three-branch power law in the channel diameter ``Di`` (µm)::</span>
+
+<span class="sd">        Di &lt; Dp1         : X = mult1 * Di**exp1</span>
+<span class="sd">        Dp1 &lt;= Di &lt; Dp2  : X = mult2 * Di**exp2</span>
+<span class="sd">        Di &gt;= Dp2        : X = mult3 * Di**exp3</span>
+
+<span class="sd">    Following the calculation appendix of the *ELPI+ User Manual*, ``X`` is the</span>
+<span class="sd">    conversion vector from stage current to number concentration: the number</span>
+<span class="sd">    per bin is ``dN = I / X`` (the caller scales ``X`` by ``FlowRate/10`` to go</span>
+<span class="sd">    from the 10 lpm calibration flow to the actual sample flow). The header</span>
+<span class="sd">    multipliers already fold in the elementary charge and the calibration flow,</span>
+<span class="sd">    so ``X`` has units of fA·cm³ and is used *directly* — no ``10**mult`` and no</span>
+<span class="sd">    hard-coded high-size constant. This reproduces Dekati's own number export to</span>
+<span class="sd">    below 0.1 % at unit density across all 14 stages.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dp_um: Channel diameter(s) in micrometres (the geometric-mean/Stokes</span>
+<span class="sd">            diameter the charger sees).</span>
+<span class="sd">        params: The eight ``Efficiency(Dp/mult/exp)`` values from the header.</span>
+<span class="sd">            Defaults to the calibration of the reference ELPI+ file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        numpy.ndarray: The conversion vector ``X`` (fA·cm³) for each diameter.</span>
+<span class="sd">    """</span>
+    <span class="n">dp_um</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dp_um</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dp1</span><span class="p">,</span> <span class="n">mult1</span><span class="p">,</span> <span class="n">exp1</span><span class="p">,</span> <span class="n">dp2</span><span class="p">,</span> <span class="n">mult2</span><span class="p">,</span> <span class="n">exp2</span><span class="p">,</span> <span class="n">mult3</span><span class="p">,</span> <span class="n">exp3</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="mf">1.035</span><span class="p">,</span>
+            <span class="mf">1.8300</span><span class="p">,</span>
+            <span class="mf">1.2250</span><span class="p">,</span>
+            <span class="mf">4.2820</span><span class="p">,</span>
+            <span class="mf">1.8114</span><span class="p">,</span>
+            <span class="mf">1.5150</span><span class="p">,</span>
+            <span class="mf">3.3868</span><span class="p">,</span>
+            <span class="mf">1.0850</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">_as_float_array</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"Expected 8 values in ELPI Efficiency(Dp/mult/exp) metadata."</span>
+            <span class="p">)</span>
+        <span class="n">dp1</span><span class="p">,</span> <span class="n">mult1</span><span class="p">,</span> <span class="n">exp1</span><span class="p">,</span> <span class="n">dp2</span><span class="p">,</span> <span class="n">mult2</span><span class="p">,</span> <span class="n">exp2</span><span class="p">,</span> <span class="n">mult3</span><span class="p">,</span> <span class="n">exp3</span> <span class="o">=</span> <span class="n">p</span>
+
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+        <span class="n">dp_um</span> <span class="o">&lt;</span> <span class="n">dp1</span><span class="p">,</span>
+        <span class="n">mult1</span> <span class="o">*</span> <span class="n">dp_um</span><span class="o">**</span><span class="n">exp1</span><span class="p">,</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">dp_um</span> <span class="o">&lt;</span> <span class="n">dp2</span><span class="p">,</span>
+            <span class="n">mult2</span> <span class="o">*</span> <span class="n">dp_um</span><span class="o">**</span><span class="n">exp2</span><span class="p">,</span>
+            <span class="n">mult3</span> <span class="o">*</span> <span class="n">dp_um</span><span class="o">**</span><span class="n">exp3</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_convert_ELPI_current_to_number</span><span class="p">(</span>
+    <span class="n">current_fa</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">clip_negative</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Convert ELPI stage current to number concentration per bin (dN, 1/cm3).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    current_fa:</span>
+<span class="sd">        DataFrame containing the main ELPI Stage1-Stage14 block. For raw .dat</span>
+<span class="sd">        files this block is usually ``Current (fA)`` with ``CalculatedType``</span>
+<span class="sd">        ``dW/dlogDp``.</span>
+<span class="sd">    meta:</span>
+<span class="sd">        Parsed ELPI metadata.</span>
+<span class="sd">    clip_negative:</span>
+<span class="sd">        If True, negative concentrations are set to zero. Dekati's exported</span>
+<span class="sd">        number files appear to clip negative stage results to zero.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pandas.DataFrame</span>
+<span class="sd">        Stage concentrations as dN, in 1/cm3.</span>
+<span class="sd">    """</span>
+    <span class="n">d50_um</span> <span class="o">=</span> <span class="n">_as_float_array</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">"D50values(um)"</span><span class="p">])</span>
+    <span class="n">di_um</span> <span class="o">=</span> <span class="n">_as_float_array</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">"CalculatedDi(um)"</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">d50_um</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">di_um</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"ELPI metadata must contain N+1 D50 cutpoints and N CalculatedDi values."</span>
+        <span class="p">)</span>
+
+    <span class="n">current</span> <span class="o">=</span> <span class="n">current_fa</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="c1"># Raw .dat stage currents are stored normalized as dW/dlogDp; multiply by the</span>
+    <span class="c1"># (aerodynamic) dlogDp to recover the plain per-stage current I in fA.</span>
+    <span class="n">calculated_type</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"CalculatedType"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+    <span class="k">if</span> <span class="s2">"dlog"</span> <span class="ow">in</span> <span class="n">calculated_type</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+        <span class="n">dlogdp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">d50_um</span><span class="p">))</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="n">current</span> <span class="o">*</span> <span class="n">dlogdp</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="c1"># Number per bin: dN = I / X, with X the charger conversion vector (fA·cm³)</span>
+    <span class="c1"># scaled from the 10 lpm calibration flow to the instrument's actual flow.</span>
+    <span class="n">charger_eff</span> <span class="o">=</span> <span class="n">_ELPI_charger_efficiency</span><span class="p">(</span>
+        <span class="n">di_um</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Efficiency(Dp/mult/exp)"</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">flow_lpm</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"FlowRate"</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">)</span> <span class="ow">or</span> <span class="mf">10.0</span><span class="p">)</span>
+    <span class="n">conversion</span> <span class="o">=</span> <span class="n">charger_eff</span> <span class="o">*</span> <span class="p">(</span><span class="n">flow_lpm</span> <span class="o">/</span> <span class="mf">10.0</span><span class="p">)</span>
+
+    <span class="n">number</span> <span class="o">=</span> <span class="n">current</span> <span class="o">/</span> <span class="n">conversion</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="n">dilution</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Dilution"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="ow">or</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">number</span> <span class="o">=</span> <span class="n">number</span> <span class="o">*</span> <span class="n">dilution</span>
+
+    <span class="k">if</span> <span class="n">clip_negative</span><span class="p">:</span>
+        <span class="n">number</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">number</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">number</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">number</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">current_fa</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">current_fa</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Density recalculation</span>
+
+<span class="c1"># Cunningham slip-correction constants for the ELPI's aerodynamic↔Stokes</span>
+<span class="c1"># diameter conversion. These reproduce Dekati's own published slip-correction</span>
+<span class="c1"># vector (ELPI+ User Manual, App. A.2 — the ``Cca`` table for the calibrated</span>
+<span class="c1"># cutpoints) to &lt; 0.1 %. They are specific to this conversion and intentionally</span>
+<span class="c1"># differ from the generic Allen–Raabe values in</span>
+<span class="c1"># :mod:`aerosoltools._core.corrections`.</span>
+<span class="n">_ELPI_MEAN_FREE_PATH_UM</span> <span class="o">=</span> <span class="mf">0.07305</span>
+<span class="n">_ELPI_SLIP_A</span> <span class="o">=</span> <span class="mf">1.1384</span>
+<span class="n">_ELPI_SLIP_B</span> <span class="o">=</span> <span class="mf">0.3621</span>
+<span class="n">_ELPI_SLIP_C</span> <span class="o">=</span> <span class="mf">1.2157</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cunningham</span><span class="p">(</span><span class="n">dp_um</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Cunningham slip correction (Dekati ELPI constants) for diameters in µm."""</span>
+    <span class="n">dp_um</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dp_um</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">kn</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">_ELPI_MEAN_FREE_PATH_UM</span> <span class="o">/</span> <span class="n">dp_um</span>
+    <span class="k">return</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">kn</span> <span class="o">*</span> <span class="p">(</span><span class="n">_ELPI_SLIP_A</span> <span class="o">+</span> <span class="n">_ELPI_SLIP_B</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">_ELPI_SLIP_C</span> <span class="o">/</span> <span class="n">kn</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stokes_from_aerodynamic</span><span class="p">(</span><span class="n">dpa_um</span><span class="p">,</span> <span class="n">density</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Convert aerodynamic diameters (µm) to Stokes diameters at a density.</span>
+
+<span class="sd">    The ELPI classifies by aerodynamic behaviour, so each stage's aerodynamic</span>
+<span class="sd">    diameter is fixed; the geometric (volume-equivalent / Stokes) diameter that</span>
+<span class="sd">    the size axis reports obeys ``Dpa² · Cc(Dpa) = Dps² · Cc(Dps) · ρ``</span>
+<span class="sd">    (ELPI+ User Manual, App. A.2). Solved iteratively because the slip</span>
+<span class="sd">    correction depends on the unknown diameter. In the slip-free limit it</span>
+<span class="sd">    reduces to the familiar ``D ∝ ρ^(-1/2)``.</span>
+<span class="sd">    """</span>
+    <span class="n">dpa_um</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">dpa_um</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">dpa_um</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">_cunningham</span><span class="p">(</span><span class="n">dpa_um</span><span class="p">)</span> <span class="o">/</span> <span class="n">density</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">dpa_um</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">density</span><span class="p">)</span>  <span class="c1"># slip-free first guess</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">60</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">target</span> <span class="o">/</span> <span class="n">_cunningham</span><span class="p">(</span><span class="n">d</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">d</span>
+
+
+<div class="viewcode-block" id="recalculate_ELPI_density">
+<a class="viewcode-back" href="../../../api/aerosoltools/loaders/elpi/index.html#aerosoltools.loaders.elpi.recalculate_ELPI_density">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">recalculate_ELPI_density</span><span class="p">(</span><span class="n">elpi</span><span class="p">,</span> <span class="n">new_density</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Recompute an ELPI dataset's diameters and number for a new density.</span>
+
+<span class="sd">    The ELPI reports a *geometric* particle diameter that depends on the assumed</span>
+<span class="sd">    particle density (it actually classifies by aerodynamic behaviour). Changing</span>
+<span class="sd">    the density therefore must (1) move the size axis to the diameters the</span>
+<span class="sd">    particles would have at the new density — otherwise the reported diameters</span>
+<span class="sd">    are fictitious — and (2) re-attribute the per-bin number concentration,</span>
+<span class="sd">    because the charger efficiency (which turned current into number) is a</span>
+<span class="sd">    function of that diameter.</span>
+
+<span class="sd">    The diameters are rebuilt the way the Dekati software does it, from the</span>
+<span class="sd">    *fixed aerodynamic cutpoints* (``D50values``, which never change with</span>
+<span class="sd">    density) rather than by nudging the current midpoints: each aerodynamic</span>
+<span class="sd">    cutpoint is converted to its Stokes diameter at the new density</span>
+<span class="sd">    (:func:`_stokes_from_aerodynamic`), the lowest cutpoint is pinned at the</span>
+<span class="sd">    fixed 6 nm filter cutpoint (``FilterLow``, which the ELPI does not rescale),</span>
+<span class="sd">    and the stage midpoints are the geometric means of the resulting cutpoints.</span>
+<span class="sd">    Because everything is derived from the density-independent cutpoints, the</span>
+<span class="sd">    size axis is path-independent — changing 0.16 → 1.0 lands exactly on the</span>
+<span class="sd">    diameters a fresh unit-density load would give. Number is re-attributed</span>
+<span class="sd">    through the charger efficiency (:func:`_ELPI_charger_efficiency`), which</span>
+<span class="sd">    depends on that diameter.</span>
+
+<span class="sd">    This reproduces the Dekati software's density-dependent size axis to &lt; 0.5 %</span>
+<span class="sd">    on every stage bar the filter-boundary bin (stage 1 at very low density,</span>
+<span class="sd">    ~5 %). All inputs are already on the object's metadata (``D50values``,</span>
+<span class="sd">    ``FilterLow``, ``bin_mids``, charger ``Efficiency`` coefficients and the</span>
+<span class="sd">    current ``density``), so no separate copy of the header is needed.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        elpi: An :class:`~aerosoltools.Aerosol2D` produced by an ELPI loader.</span>
+<span class="sd">        new_density: The new assumed particle density in g/cm³.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: ``True`` if a recalculation was performed (the object is a</span>
+<span class="sd">        recognised ELPI), otherwise ``False`` so the caller can fall back to the</span>
+<span class="sd">        generic density behaviour.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        Operates in place; number is re-attributed only while the data are plain</span>
+<span class="sd">        (unnormalized) number (``dN``) — the state right after loading. Set the</span>
+<span class="sd">        density before converting the dtype (e.g. to ``dM``) for the most</span>
+<span class="sd">        consistent result.</span>
+<span class="sd">    """</span>
+    <span class="n">meta</span> <span class="o">=</span> <span class="n">elpi</span><span class="o">.</span><span class="n">_meta</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"instrument"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">"ELPI"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="s2">"bin_mids"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">meta</span> <span class="ow">or</span> <span class="s2">"D50values(um)"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">meta</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="n">rho_old</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"density"</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">))</span>
+    <span class="n">rho_new</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">new_density</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">rho_new</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">rho_old</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">rho_new</span><span class="p">,</span> <span class="n">rho_old</span><span class="p">):</span>
+        <span class="n">meta</span><span class="p">[</span><span class="s2">"density"</span><span class="p">]</span> <span class="o">=</span> <span class="n">rho_new</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="n">bin_mids_old</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">"bin_mids"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="c1"># Rebuild the size axis from the fixed AERODYNAMIC cutpoints (density-</span>
+    <span class="c1"># independent) rather than from the current midpoints. Convert each cutpoint</span>
+    <span class="c1"># to its Stokes diameter at the new density, pin the lowest cutpoint at the</span>
+    <span class="c1"># fixed 6 nm filter cutpoint (the ELPI never rescales it), and take the</span>
+    <span class="c1"># geometric-mean midpoints. This matches Dekati's own calculation and is</span>
+    <span class="c1"># path-independent (e.g. 0.16 → 1.0 reproduces a fresh unit-density load).</span>
+    <span class="n">aero_cut_um</span> <span class="o">=</span> <span class="n">_as_float_array</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">"D50values(um)"</span><span class="p">])</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">filter_low_um</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">_as_float_array</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">"FilterLow(um)"</span><span class="p">])</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
+        <span class="n">filter_low_um</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">aero_cut_um</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="n">cut_um</span> <span class="o">=</span> <span class="n">_stokes_from_aerodynamic</span><span class="p">(</span><span class="n">aero_cut_um</span><span class="p">,</span> <span class="n">rho_new</span><span class="p">)</span>
+    <span class="n">cut_um</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">filter_low_um</span>
+    <span class="n">mids_um</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">cut_um</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">*</span> <span class="n">cut_um</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">bin_mids_new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">mids_um</span> <span class="o">*</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">bin_edges_new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">cut_um</span> <span class="o">*</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">old_headers</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">bin_mids_old</span><span class="p">]</span>
+    <span class="n">new_headers</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">bin_mids_new</span><span class="p">]</span>
+    <span class="n">present</span> <span class="o">=</span> <span class="p">[</span><span class="n">h</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">old_headers</span> <span class="k">if</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">elpi</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+
+    <span class="c1"># Re-attribute the per-bin number: the charger efficiency depends on the</span>
+    <span class="c1"># (now density-corrected) diameter, so the same current implies a different</span>
+    <span class="c1"># number. Applied to both raw-current and converted-export data while the</span>
+    <span class="c1"># data are plain (unnormalized) number.</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">elpi</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">is_plain_number</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"dN"</span> <span class="ow">in</span> <span class="n">dtype</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="s2">"dlogDp"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dtype</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">is_plain_number</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">present</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">old_headers</span><span class="p">):</span>
+        <span class="n">eff_params</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Efficiency(Dp/mult/exp)"</span><span class="p">)</span>
+        <span class="n">eff_old</span> <span class="o">=</span> <span class="n">_ELPI_charger_efficiency</span><span class="p">(</span><span class="n">bin_mids_old</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">eff_params</span><span class="p">)</span>
+        <span class="n">eff_new</span> <span class="o">=</span> <span class="n">_ELPI_charger_efficiency</span><span class="p">(</span><span class="n">bin_mids_new</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">eff_params</span><span class="p">)</span>
+        <span class="n">factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">eff_new</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">eff_old</span> <span class="o">/</span> <span class="n">eff_new</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="n">elpi</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="n">old_headers</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="n">factor</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">elpi</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="n">old_headers</span><span class="p">]</span> <span class="o">=</span> <span class="n">vals</span>
+        <span class="k">if</span> <span class="s2">"Total_conc"</span> <span class="ow">in</span> <span class="n">elpi</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">elpi</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"Total_conc"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">vals</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Relabel the size-bin columns with the new diameters; update the metadata.</span>
+    <span class="n">rename</span> <span class="o">=</span> <span class="p">{</span><span class="n">o</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">o</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">old_headers</span><span class="p">,</span> <span class="n">new_headers</span><span class="p">)</span> <span class="k">if</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">elpi</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">columns</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">rename</span><span class="p">:</span>
+        <span class="n">elpi</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">rename</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"bin_mids"</span><span class="p">]</span> <span class="o">=</span> <span class="n">bin_mids_new</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"bin_edges"</span><span class="p">]</span> <span class="o">=</span> <span class="n">bin_edges_new</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"density"</span><span class="p">]</span> <span class="o">=</span> <span class="n">rho_new</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1"># Public loaders</span>
+
+
+<div class="viewcode-block" id="load_elpi_file">
+<a class="viewcode-back" href="../../../api/aerosoltools/loaders/elpi/index.html#aerosoltools.loaders.elpi.load_elpi_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_elpi_file</span><span class="p">(</span><span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">extra_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ELPI</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Load an ELPI file and return an Aerosol2D object.</span>
+
+<span class="sd">    This is the routing function. Already-converted Dekati exports are handled</span>
+<span class="sd">    by :func:`load_elpi_file_txt`. Raw-current .dat files with</span>
+<span class="sd">    ``CalculatedMoment=Current (fA)`` are converted by</span>
+<span class="sd">    :func:`load_elpi_file_dat` before constructing the Aerosol2D object.</span>
+<span class="sd">    """</span>
+    <span class="c1"># Detect + read the header once here to route the file; the chosen sub-loader</span>
+    <span class="c1"># reuses them (see the encoding/delimiter/meta pass-through) instead of</span>
+    <span class="c1"># re-sniffing and re-reading the header.</span>
+    <span class="n">encoding</span><span class="p">,</span> <span class="n">delimiter</span> <span class="o">=</span> <span class="n">sniff</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+    <span class="n">meta</span> <span class="o">=</span> <span class="n">_load_ELPI_metadata</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">,</span> <span class="n">encoding</span><span class="p">)</span>
+    <span class="n">calculated_moment</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"CalculatedMoment"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">calculated_moment</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"current"</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">load_elpi_file_dat</span><span class="p">(</span>
+            <span class="n">file</span><span class="p">,</span> <span class="n">extra_data</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">meta</span><span class="o">=</span><span class="n">meta</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">load_elpi_file_txt</span><span class="p">(</span>
+        <span class="n">file</span><span class="p">,</span> <span class="n">extra_data</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">meta</span><span class="o">=</span><span class="n">meta</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="load_elpi_file_txt">
+<a class="viewcode-back" href="../../../api/aerosoltools/loaders/elpi/index.html#aerosoltools.loaders.elpi.load_elpi_file_txt">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_elpi_file_txt</span><span class="p">(</span>
+    <span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">extra_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ELPI</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Load an already-converted ELPI size-distribution export.</span>
+
+<span class="sd">    ``encoding``/``delimiter``/``meta`` are reused when supplied (the router</span>
+<span class="sd">    :func:`load_elpi_file` passes what it already computed); each is derived from</span>
+<span class="sd">    the file only when not given, so the file's header is not re-read.</span>
+<span class="sd">    """</span>
+    <span class="n">encoding</span><span class="p">,</span> <span class="n">delimiter</span> <span class="o">=</span> <span class="n">sniff</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">encoding</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">meta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="n">_load_ELPI_metadata</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">,</span> <span class="n">encoding</span><span class="p">)</span>
+    <span class="n">bin_edges</span><span class="p">,</span> <span class="n">bin_mids</span> <span class="o">=</span> <span class="n">_get_ELPI_bin_edges_and_mids_nm</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
+
+    <span class="c1"># Recalculate bin edges for non-unit density, preserving existing behavior.</span>
+    <span class="k">if</span> <span class="n">meta</span><span class="p">[</span><span class="s2">"Density(g/cm^3)"</span><span class="p">]</span> <span class="o">!=</span> <span class="mf">1.0</span><span class="p">:</span>
+        <span class="n">bin_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">bin_mids</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">*</span> <span class="n">bin_mids</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">bin_edges</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">bin_edges</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">bin_edges</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">bin_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">bin_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">bin_edges</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">"ELPI density is not 1.0 g/cm3; bin edges were estimated from "</span>
+            <span class="s2">"geometric means of CalculatedDi values."</span><span class="p">,</span>
+            <span class="ne">RuntimeWarning</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">_read_ELPI_table</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">,</span> <span class="n">encoding</span><span class="p">)</span>
+    <span class="n">dist_data</span> <span class="o">=</span> <span class="n">_extract_ELPI_stage_block</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">extra_df</span> <span class="o">=</span> <span class="n">_make_ELPI_extra_data</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+    <span class="n">unit_map</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"Nu"</span><span class="p">:</span> <span class="s2">"cm⁻³"</span><span class="p">,</span> <span class="s2">"Su"</span><span class="p">:</span> <span class="s2">"nm²/cm³"</span><span class="p">,</span> <span class="s2">"Vo"</span><span class="p">:</span> <span class="s2">"nm³/cm³"</span><span class="p">,</span> <span class="s2">"Ma"</span><span class="p">:</span> <span class="s2">"µg/m³"</span><span class="p">}</span>
+    <span class="n">dtype_map</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"Nu"</span><span class="p">:</span> <span class="s2">"dN"</span><span class="p">,</span> <span class="s2">"Su"</span><span class="p">:</span> <span class="s2">"dS"</span><span class="p">,</span> <span class="s2">"Vo"</span><span class="p">:</span> <span class="s2">"dV"</span><span class="p">,</span> <span class="s2">"Ma"</span><span class="p">:</span> <span class="s2">"dM"</span><span class="p">}</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">"CalculatedMoment"</span><span class="p">][:</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">unit</span> <span class="o">=</span> <span class="n">unit_map</span><span class="p">[</span><span class="n">prefix</span><span class="p">]</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype_map</span><span class="p">[</span><span class="n">prefix</span><span class="p">]</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="s2">"CalculatedType"</span><span class="p">])[</span><span class="mi">2</span><span class="p">:]</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">FileFormatError</span><span class="p">(</span>
+            <span class="s2">"Unit and/or data type does not match the expected values. "</span>
+            <span class="s2">"If this is raw current (fA), load it through load_elpi_file so "</span>
+            <span class="s2">"the raw-current conversion route can be used."</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+    <span class="k">return</span> <span class="n">_build_ELPI_aerosol2d</span><span class="p">(</span>
+        <span class="n">file</span><span class="o">=</span><span class="n">file</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span>
+        <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span>
+        <span class="n">meta</span><span class="o">=</span><span class="n">meta</span><span class="p">,</span>
+        <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+        <span class="n">dist_data</span><span class="o">=</span><span class="n">dist_data</span><span class="p">,</span>
+        <span class="n">extra_df</span><span class="o">=</span><span class="n">extra_df</span><span class="p">,</span>
+        <span class="n">bin_edges</span><span class="o">=</span><span class="n">bin_edges</span><span class="p">,</span>
+        <span class="n">bin_mids</span><span class="o">=</span><span class="n">bin_mids</span><span class="p">,</span>
+        <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+        <span class="n">extra_data</span><span class="o">=</span><span class="n">extra_data</span><span class="p">,</span>
+        <span class="n">source_quantity</span><span class="o">=</span><span class="s2">"converted_export"</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="load_elpi_file_dat">
+<a class="viewcode-back" href="../../../api/aerosoltools/loaders/elpi/index.html#aerosoltools.loaders.elpi.load_elpi_file_dat">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_elpi_file_dat</span><span class="p">(</span>
+    <span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">extra_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ELPI</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Load a raw ELPI .dat current file and convert it to number dN.</span>
+
+<span class="sd">    The raw .dat file contains the measured channels and a main CAL Stage1-14</span>
+<span class="sd">    block in current units. This function uses the CAL stage-current block,</span>
+<span class="sd">    converts fA/dlogDp to fA per bin, applies ELPI charger efficiency, and</span>
+<span class="sd">    returns number concentration per bin in cm-3.</span>
+
+<span class="sd">    ``encoding``/``delimiter``/``meta`` are reused when supplied (the router</span>
+<span class="sd">    :func:`load_elpi_file` passes what it already computed); each is derived from</span>
+<span class="sd">    the file only when not given, so the file's header is not re-read.</span>
+<span class="sd">    """</span>
+    <span class="n">encoding</span><span class="p">,</span> <span class="n">delimiter</span> <span class="o">=</span> <span class="n">sniff</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">encoding</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">meta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">meta</span> <span class="o">=</span> <span class="n">_load_ELPI_metadata</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">,</span> <span class="n">encoding</span><span class="p">)</span>
+    <span class="n">bin_edges</span><span class="p">,</span> <span class="n">bin_mids</span> <span class="o">=</span> <span class="n">_get_ELPI_bin_edges_and_mids_nm</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">_read_ELPI_table</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">,</span> <span class="n">encoding</span><span class="p">)</span>
+    <span class="n">current_data</span> <span class="o">=</span> <span class="n">_extract_ELPI_stage_block</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">extra_df</span> <span class="o">=</span> <span class="n">_make_ELPI_extra_data</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+    <span class="n">dist_data</span> <span class="o">=</span> <span class="n">_convert_ELPI_current_to_number</span><span class="p">(</span><span class="n">current_data</span><span class="p">,</span> <span class="n">meta</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_build_ELPI_aerosol2d</span><span class="p">(</span>
+        <span class="n">file</span><span class="o">=</span><span class="n">file</span><span class="p">,</span>
+        <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span>
+        <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span>
+        <span class="n">meta</span><span class="o">=</span><span class="n">meta</span><span class="p">,</span>
+        <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+        <span class="n">dist_data</span><span class="o">=</span><span class="n">dist_data</span><span class="p">,</span>
+        <span class="n">extra_df</span><span class="o">=</span><span class="n">extra_df</span><span class="p">,</span>
+        <span class="n">bin_edges</span><span class="o">=</span><span class="n">bin_edges</span><span class="p">,</span>
+        <span class="n">bin_mids</span><span class="o">=</span><span class="n">bin_mids</span><span class="p">,</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">"cm⁻³"</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="s2">"dN"</span><span class="p">,</span>
+        <span class="n">extra_data</span><span class="o">=</span><span class="n">extra_data</span><span class="p">,</span>
+        <span class="n">source_quantity</span><span class="o">=</span><span class="s2">"raw_current_fA"</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_ELPI_aerosol2d</span><span class="p">(</span>
+    <span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">dist_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">extra_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">bin_edges</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">bin_mids</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">unit</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">dtype</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">extra_data</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">source_quantity</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ELPI</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Construct an Aerosol2D object from parsed ELPI distribution data."""</span>
+    <span class="n">dist_data</span> <span class="o">=</span> <span class="n">dist_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">total_conc</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">nansum</span><span class="p">(</span><span class="n">dist_data</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"Total_conc"</span><span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="n">bin_mids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bin_mids</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">bin_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bin_edges</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">dist_data</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span> <span class="k">for</span> <span class="n">mid</span> <span class="ow">in</span> <span class="n">bin_mids</span><span class="p">]</span>
+
+    <span class="n">final_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">[</span><span class="s2">"Datetime"</span><span class="p">],</span> <span class="n">total_conc</span><span class="p">,</span> <span class="n">dist_data</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">elpi</span> <span class="o">=</span> <span class="n">ELPI</span><span class="p">(</span><span class="n">final_df</span><span class="p">)</span>
+
+    <span class="n">meta</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">meta</span><span class="p">)</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"density"</span><span class="p">]</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"Density(g/cm^3)"</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"bin_edges"</span><span class="p">]</span> <span class="o">=</span> <span class="n">bin_edges</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"bin_mids"</span><span class="p">]</span> <span class="o">=</span> <span class="n">bin_mids</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"instrument"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"ELPI"</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"serial_number"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_get_ELPI_serial_number</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">,</span> <span class="n">encoding</span><span class="p">)</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"dtype"</span><span class="p">]</span> <span class="o">=</span> <span class="n">dtype</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"unit"</span><span class="p">]</span> <span class="o">=</span> <span class="n">unit</span>
+    <span class="n">meta</span><span class="p">[</span><span class="s2">"source_quantity"</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_quantity</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"CalculatedDi(um)"</span><span class="p">,</span> <span class="s2">"CalculatedType"</span><span class="p">,</span> <span class="s2">"CalculatedMoment"</span><span class="p">]:</span>
+        <span class="n">meta</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">elpi</span><span class="o">.</span><span class="n">_meta</span> <span class="o">=</span> <span class="n">meta</span>
+
+    <span class="c1"># Exported ELPI files can contain number, surface, volume, or mass moments;</span>
+    <span class="c1"># raw-current files are already converted above to number dN.</span>
+    <span class="k">if</span> <span class="n">source_quantity</span> <span class="o">!=</span> <span class="s2">"raw_current_fA"</span><span class="p">:</span>
+        <span class="n">elpi</span><span class="o">.</span><span class="n">_convert_to_number_concentration</span><span class="p">()</span>
+        <span class="n">elpi</span><span class="o">.</span><span class="n">unnormalize_logdp</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">extra_data</span><span class="p">:</span>
+        <span class="n">extra_df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"Datetime"</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># ELPI diagnostic headers carry no in-header units, and its several</span>
+        <span class="c1"># Temperature*/Pressure channels are internal sensors (deliberately not</span>
+        <span class="c1"># curated as ambient); keep them all, resolving any that do embed a unit.</span>
+        <span class="n">extra_df</span><span class="p">,</span> <span class="n">column_units</span> <span class="o">=</span> <span class="n">resolve_extra_columns</span><span class="p">(</span><span class="n">extra_df</span><span class="p">)</span>
+        <span class="n">elpi</span><span class="o">.</span><span class="n">_extra_data</span> <span class="o">=</span> <span class="n">extra_df</span>
+        <span class="n">elpi</span><span class="o">.</span><span class="n">_meta</span><span class="p">[</span><span class="s2">"column_units"</span><span class="p">]</span> <span class="o">=</span> <span class="n">column_units</span>
+
+    <span class="k">return</span> <span class="n">elpi</span>
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, NFA / NRCWE
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>

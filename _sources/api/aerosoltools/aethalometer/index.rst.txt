@@ -1,0 +1,1422 @@
+aerosoltools.aethalometer
+=========================
+
+.. py:module:: aerosoltools.aethalometer
+
+.. autoapi-nested-parse::
+
+   Public class for aethalometers / MicroAeth black-carbon monitors.
+
+   Wavelength-resolved black-carbon mass concentration (BCc, ng/m³). The primary
+   BC channels — IR/UV/Blue/Green/Red and, for wide exports, Biomass/Fossil-fuel
+   BCc plus the Ångström exponent (AAE) — are kept first-class in :attr:`data` and
+   exposed as direct properties (``.ir_bcc``, ``.uv_bcc``, …). The many raw vendor
+   columns live in :attr:`extra_data`.
+
+
+
+
+
+Module Contents
+---------------
+
+.. py:class:: Aethalometer(dataframe)
+
+   Bases: :py:obj:`aerosoltools._core.nonparticle._NonParticleMixin`, :py:obj:`aerosoltools.aerosol1d.Aerosol1D`
+
+
+   Wavelength-resolved black-carbon mass concentration.
+
+   Reuses the :class:`Aerosol1D` machinery but does **not** expose
+   ``total_concentration`` (black carbon is not a particle number
+   concentration). The conventional primary channel is IR-equivalent BC
+   (:attr:`ir_bcc`).
+
+   :param dataframe: Input data with a time column/index and
+                     the BC channels (``"IR BCc"``, ``"UV BCc"``, …).
+   :type dataframe: pandas.DataFrame
+
+   :ivar ir_bcc, uv_bcc, blue_bcc, green_bcc, red_bcc:
+                                                       Per-wavelength black-carbon mass concentration (ng/m³).
+   :vartype ir_bcc, uv_bcc, blue_bcc, green_bcc, red_bcc: pandas.Series
+   :ivar biomass_bcc, fossil_bcc: Source-apportioned BC, present
+                                  only for wide (``>= 70``-column) exports.
+   :vartype biomass_bcc, fossil_bcc: pandas.Series
+   :ivar aae: Ångström absorption exponent (dimensionless),
+              present only for wide exports.
+
+   :vartype aae: pandas.Series
+
+
+   .. py:property:: ir_bcc
+      :type: pandas.Series
+
+
+      IR-equivalent black-carbon mass concentration (ng/m³).
+
+
+   .. py:property:: uv_bcc
+      :type: pandas.Series
+
+
+      UV black-carbon mass concentration (ng/m³).
+
+
+   .. py:property:: blue_bcc
+      :type: pandas.Series
+
+
+      Blue-wavelength black-carbon mass concentration (ng/m³).
+
+
+   .. py:property:: green_bcc
+      :type: pandas.Series
+
+
+      Green-wavelength black-carbon mass concentration (ng/m³).
+
+
+   .. py:property:: red_bcc
+      :type: pandas.Series
+
+
+      Red-wavelength black-carbon mass concentration (ng/m³).
+
+
+   .. py:property:: biomass_bcc
+      :type: pandas.Series
+
+
+      Biomass-apportioned black carbon (ng/m³); wide exports only.
+
+
+   .. py:property:: fossil_bcc
+      :type: pandas.Series
+
+
+      Fossil-fuel-apportioned black carbon (ng/m³); wide exports only.
+
+
+   .. py:property:: aae
+      :type: pandas.Series
+
+
+      Ångström absorption exponent (dimensionless); wide exports only.
+
+
+   .. py:property:: total_concentration
+      :type: pandas.Series
+
+
+      this instrument does not measure particle number.
+
+      :raises AttributeError: Always. Use the class's dedicated accessor (e.g.
+          ``.concentration`` / ``.ldsa`` / ``.ir_bcc``) or a named channel
+          in :attr:`data` instead.
+
+      :type: Not available
+
+
+   .. py:property:: activities
+      :type: List[str]
+
+
+      Names of all defined activity labels.
+
+      :returns: Activity names for which a boolean mask column exists
+                in :attr:`data` (for example ``"All data"``, ``"Peak"``, or
+                user-defined labels created via :meth:`mark_activities`).
+      :rtype: list[str]
+
+
+   .. py:property:: activity_periods
+      :type: Dict
+
+
+      Time periods associated with each activity label.
+
+      :returns: Mapping from activity name (str) to a list of
+                ``(start, end)`` timestamp tuples, where each tuple defines a
+                contiguous period during which the activity is active.
+      :rtype: dict
+
+
+   .. py:property:: data
+      :type: pandas.DataFrame
+
+
+      Main data frame with time index and measurement columns.
+
+      :returns: The full data table, including the time index,
+                the primary measurement columns (for example total concentration),
+                and any boolean activity mask columns.
+      :rtype: pandas.DataFrame
+
+
+   .. py:property:: dtype
+      :type: str
+
+
+      Data type descriptor for the primary measurements.
+
+      :returns: A short description of the data type, for example
+                ``"dN"`` (number concentration), ``"dM"`` (mass concentration),
+                or ``"dN/dlogDp"`` when normalized. Falls back to
+                ``"Unknown dtype"`` if not set in the metadata.
+      :rtype: str
+
+
+   .. py:property:: extra_data
+      :type: pandas.DataFrame
+
+
+      Additional non-core data columns.
+
+      :returns: Data frame containing extra columns that were
+                extracted from the raw data file but are not considered part of the
+                core aerosol time series (for example environmental or metadata
+                channels). The index is aligned with :attr:`data`.
+      :rtype: pandas.DataFrame
+
+
+   .. py:property:: instrument
+      :type: str
+
+
+      Instrument used to acquire the measurements.
+
+      :returns: Instrument name or description (for example model/type).
+                Falls back to ``"Unknown instrument"`` if not set in the metadata.
+      :rtype: str
+
+
+   .. py:property:: measurement
+
+      Human-readable name of the measured quantity, if known.
+
+      :returns: The label describing *what* the primary series represents — for
+                example ``"Cl₂"`` or ``"NO₂"`` for a gas monitor — as set by the
+                loader in ``metadata["measurement"]``. Returns ``None`` when no
+                explicit label was stored (in which case callers fall back to a
+                generic name such as ``"Total concentration"`` or the channel name).
+                This is distinct from :attr:`dtype` (``dN``/``dM``/…) and
+                :attr:`unit`; it names the quantity rather than its basis or units.
+
+
+   .. py:property:: metadata
+      :type: Dict
+
+
+      Metadata associated with the dataset.
+
+      :returns: Dictionary containing metadata such as unit, data type,
+                instrument type, and serial number. Internally stored in
+                ``self._meta``.
+      :rtype: dict
+
+
+   .. py:property:: original_data
+      :type: pandas.DataFrame
+
+
+      Unmodified original main data frame.
+
+      :returns: A copy of the raw data as it was immediately after
+                loading and initial normalization of the time index and column
+                names, before any further processing steps (such as cropping,
+                smoothing, or rebinning).
+      :rtype: pandas.DataFrame
+
+
+   .. py:property:: original_extra_data
+      :type: pandas.DataFrame
+
+
+      Unmodified original extra-data frame.
+
+      :returns: A copy of the raw extra-data table (if any) before
+                any processing steps. This will typically be empty if no extra data
+                were extracted at load time.
+      :rtype: pandas.DataFrame
+
+
+   .. py:property:: serial_number
+      :type: str
+
+
+      Instrument serial number.
+
+      :returns: Serial number of the instrument, if available in the metadata.
+                Falls back to ``"Unknown serial number"`` if not set.
+      :rtype: str
+
+
+   .. py:property:: time
+      :type: pandas.DatetimeIndex
+
+
+      Time index of the measurements.
+
+      :returns: The time stamps corresponding to each row in
+                :attr:`data`. This is the index of the main data frame.
+      :rtype: pandas.DatetimeIndex
+
+
+   .. py:property:: unit
+      :type: str
+
+
+      Measurement unit for the primary data.
+
+      :returns: Unit string, for example ``"#/cm³"`` for number concentration
+                or ``"µg/m³"`` for mass concentration. Falls back to
+                ``"Unknown unit"`` if not set in the metadata. May be a per-column
+                ``dict`` for multi-channel instruments — prefer :meth:`unit_of` for
+                a resolved per-column string.
+      :rtype: str
+
+
+   .. py:property:: column_units
+      :type: dict
+
+
+      Canonical unit per column name (core *and* extra columns).
+
+      Populated by the loaders from the shared unit registry (see
+      :func:`aerosoltools._core.metrics.parse_header_unit`), so every column a
+      loader could resolve carries one canonical unit string. A column that is
+      **absent** from this map has no known unit — callers that need an honest
+      "unknown" (e.g. an axis label) should show the header text alone rather
+      than borrow the primary series' unit. Empty ``dict`` for objects built
+      without unit resolution.
+
+      :returns: ``{column_name: canonical_unit}`` (possibly empty).
+      :rtype: dict
+
+
+   .. py:method:: unit_of(column = None)
+
+      Return the unit for ``column`` as a string (per-column aware).
+
+      Prefers the canonical per-column unit from :attr:`column_units` when the
+      loader resolved one for ``column``; otherwise handles both scalar and
+      per-column-``dict`` ``unit`` metadata. With ``column=None`` (or an
+      unknown column with no ``unit`` dict entry) returns the scalar unit, or
+      the first per-column unit for a multi-channel instrument.
+
+      :param column: Column/channel name to look up; ``None`` for the default.
+
+      :returns: The resolved unit string.
+      :rtype: str
+
+
+
+   .. py:method:: dtype_of(column = None)
+
+      Return the dtype descriptor for ``column`` as a string.
+
+      The per-column-aware counterpart of :attr:`dtype` (see :meth:`unit_of`).
+
+      :param column: Column/channel name to look up; ``None`` for the default.
+
+      :returns: The resolved dtype string (e.g. ``"dN"``, ``"dM"``).
+      :rtype: str
+
+
+
+   .. py:method:: apply_calibration(model, *, inplace = False)
+
+      Apply a fitted calibration model to this dataset.
+
+      This is the single-dataset *application* half of the calibration
+      workflow: the cross-dataset fitting lives in
+      :func:`aerosoltools.intercomparison.fit_calibration`, which produces the
+      :class:`~aerosoltools.intercomparison.calibration.CalibrationModel`
+      applied here. Fit once, apply to as many datasets as you like.
+
+      :param model: A model from ``fit_calibration``
+                    (or its :meth:`~...CalibrationModel.to_dict` form). A
+                    ``"total"`` model scales the total/primary series by ``gain``
+                    (plus ``offset`` when the model includes one); a ``"per_bin"``
+                    model scales each size bin by its own gain and re-sums the total,
+                    applying only the bins the fit accepted.
+      :type model: CalibrationModel | dict
+      :param inplace: Modify this object (``True``) or a deep copy
+                      (``False``, the default — calibration returns a new object).
+      :type inplace: bool
+
+      :returns: The calibrated object (``self`` when ``inplace``).
+      :rtype: Aerosol1D
+
+      :raises ValueError: If a per-bin model is applied to non-size-resolved data,
+          or the model's bin count does not match the dataset.
+
+
+
+   .. py:method:: copy_self()
+
+      Create and return a deep copy of the aerosol time-series object.
+
+      :returns:
+
+                A new object with independent copies of all data,
+                    extra_data, metadata, and activity definitions.
+      :rtype: Aerosol1D
+
+      .. rubric:: Notes
+
+      Detailed description:
+          The returned object is completely detached from the original:
+          changing masks, cropping, rebinning, or smoothing on the copy
+          does not affect the source instance, and vice versa. Both
+          the original and the copy retain their own raw_data and
+          raw_extra_data snapshots.
+
+      .. rubric:: Examples
+
+      Use this when you want to experiment with processing steps
+      without changing your original dataset:
+
+      .. code-block:: python
+
+          cpc_raw = cpc_data
+          cpc_proc = cpc_data.copy_self()
+          cpc_proc.timerebin("1min").timesmooth(window=11)
+
+
+
+   .. py:method:: timecrop(start = None, end = None, inplace = True, focus = True, crop_extra = True)
+
+      Crop the time axis to include or exclude a time interval.
+
+      :param start: Start of the interval.
+                    If None, cropping starts at the first timestamp.
+      :type start: str | pandas.Timestamp | None
+      :param end: End of the interval.
+                  If None, cropping ends at the last timestamp.
+      :type end: str | pandas.Timestamp | None
+      :param inplace: If True, modify the current object and return
+                      it. If False, return a cropped deep copy.
+      :type inplace: bool
+      :param focus: If True, keep only the interval [start, end].
+                    If False, remove that interval and keep data before start
+                    and after end.
+      :type focus: bool
+      :param crop_extra: If True, also crop extra_data to the same
+                         time mask (when inplace=True or on the copy).
+      :type crop_extra: bool
+
+      :returns:
+
+                The cropped object (self when inplace=True, or a
+                    new instance when inplace=False).
+      :rtype: Aerosol1D
+
+      :raises ValueError: May be raised by pandas.to_datetime if start or
+          end strings cannot be parsed. Check the date format
+          (for example "YYYY-MM-DD HH:MM:SS").
+
+      .. rubric:: Notes
+
+      Detailed description:
+          A boolean mask is built over the current time index based
+          on start and end. Depending on focus, this mask either
+          selects or removes the specified interval. All columns in
+          self.data are subset accordingly. When crop_extra is True,
+          extra_data is cropped using the same mask, keeping time
+          alignment between main and extra channels.
+
+      .. rubric:: Examples
+
+      Drop a calibration period at the start of a measurement:
+
+      .. code-block:: python
+
+          data.timecrop(end="2025-01-24 09:00", focus=False)
+          data.plot_total_conc()
+
+
+
+   .. py:method:: timerebin(freq = 's', start = None, end = None, method = 'mean', inplace = True)
+
+      Resample the time series to a new regular frequency.
+
+      :param freq: Target sampling interval as a pandas offset alias
+                   (for example "30s", "1min", "5min", "1H"). Defaults to "s".
+      :type freq: str
+      :param start: Optional start time
+                    for the resampling window. If None, the first timestamp is
+                    used.
+      :type start: datetime | pandas.Timestamp | None
+      :param end: Optional end time for
+                  the resampling window. If None, the last timestamp is used.
+      :type end: datetime | pandas.Timestamp | None
+      :param method: Aggregation function for numeric
+                     columns. Any aggregation accepted by pandas.DataFrame.resample
+                     (for example "mean", "sum", "median") or a custom callable.
+      :type method: str | Callable
+      :param inplace: If True, update this object and return it. If
+                      False, leave this instance unchanged and return a rebinned
+                      deep copy.
+      :type inplace: bool
+
+      :returns:
+
+                The rebinned object (self when inplace=True, or a
+                    new instance otherwise) with a regular DatetimeIndex and
+                    resampled main and extra data.
+      :rtype: Aerosol1D
+
+      :raises ValueError: May be raised by pandas if freq is not a valid
+          offset alias or if start/end cannot be interpreted as
+          timestamps.
+
+      .. rubric:: Notes
+
+      Detailed description:
+          Numeric columns in self.data are resampled using the chosen
+          method, while boolean columns are aggregated with a logical
+          maximum so that any True within a bin keeps the bin True.
+          The resulting DataFrame is reindexed to a fully regular
+          time grid between the floored start and end times. Extra
+          data, if present, are resampled in the same way and aligned
+          to the new index. Activity masks such as "All data" are
+          maintained and missing boolean values are filled with False.
+
+      .. rubric:: Examples
+
+      Convert a high‑frequency logger to 1‑minute averages:
+
+      .. code-block:: python
+
+          data.timerebin(freq="1min", method="mean")
+          data.plot_total_conc()
+
+
+
+   .. py:method:: timeshift(seconds = 0, minutes = 0, hours = 0, inplace = True, shift_extra = True)
+
+      Shift the time index by a constant offset.
+
+      :param seconds: Offset in seconds; positive shifts the series
+                      forward in time, negative backward. Defaults to 0.
+      :type seconds: float
+      :param minutes: Offset in minutes, converted internally to
+                      seconds and added to seconds. Defaults to 0.
+      :type minutes: float
+      :param hours: Offset in hours, converted internally to
+                    seconds and added to seconds. Defaults to 0.
+      :type hours: float
+      :param inplace: If True, shift this object in place and return
+                      it. If False, return a shifted deep copy. Default is True.
+      :type inplace: bool
+      :param shift_extra: If True, also shift the index of
+                          extra_data so that main and extra channels remain aligned.
+                          Default is True.
+      :type shift_extra: bool
+
+      :returns:
+
+                Object with shifted time index (self when
+                    inplace=True, otherwise a new instance).
+      :rtype: Aerosol1D
+
+      :raises None: Unless invalid types are passed for the offset arguments.
+
+      .. rubric:: Notes
+
+      Detailed description:
+          A pandas.Timedelta is constructed from the combined offset:
+          total_shift = seconds + 60*minutes + 3600*hours.
+          This timedelta is added to the index of self.data, and
+          optionally to self.extra_data. Activity masks and other
+          columns are left unchanged; only timestamps move.
+
+      .. rubric:: Examples
+
+      Align measurements from two instruments with a known clock
+      offset:
+
+      .. code-block:: python
+
+          cpc.timeshift(minutes=+2)
+          elpi.timeshift(minutes=-1)
+          cpc.plot_total_conc()
+          elpi.plot_total_conc()
+
+
+
+   .. py:method:: timesmooth(window = 5, method = 'mean', inplace = True)
+
+      Apply a centered rolling smoother to numeric columns.
+
+      :param window: Rolling window size in number of samples.
+                     Defaults to 5.
+      :type window: int
+      :param method: Aggregation used for smoothing, one of
+                     "mean", "median", "sum", "min", "max". Defaults to "mean".
+      :type method: str
+      :param inplace: If True, replace the numeric columns of this
+                      object with their smoothed versions. If False, return a
+                      smoothed deep copy.
+      :type inplace: bool
+
+      :returns:
+
+                Object with smoothed numeric columns and unchanged
+                    boolean/activity columns (self when inplace=True, otherwise
+                    a new instance).
+      :rtype: Aerosol1D
+
+      :raises ValueError: If method is not among the supported names.
+          Choose one of "mean", "median", "sum", "min", "max".
+
+      .. rubric:: Notes
+
+      Detailed description:
+          The method separates numeric and boolean columns in
+          self.data. A centered rolling window with at least one
+          valid sample (min_periods=1) is applied to numeric columns
+          using the requested aggregation, producing a smoothed
+          version of each numeric time series. Boolean columns
+          untouched.
+
+      Theory:
+          The smoothing is a simple moving-window operation. It
+          can help reduce noise in total concentration or other
+          instrument channels prior to further analysis.
+
+      .. rubric:: Examples
+
+      Smooth a noisy CPC time series while preserving activities:
+
+      .. code-block:: python
+
+          smooth = data.timesmooth(window=11, method="median", inplace=False)
+          smooth.plot_total_conc(mark_activities=True)
+
+
+
+   .. py:method:: mark_activities(activity_periods, mode = 'union')
+
+      Define or update boolean activity masks on the time axis.
+
+      :param activity_periods: Mapping from activity name (str) to
+                               one of:
+
+                                   - a (start, end) tuple,
+                                   - a list of (start, end) tuples, or
+                                   - None (no active periods).
+
+                               Each start/end can be a pandas.Timestamp, datetime, or any
+                               string understood by pandas.to_datetime.
+      :type activity_periods: dict
+      :param mode: How to combine new periods with existing masks of
+                   the same name. One of:
+
+                       - "union": existing OR new periods (default),
+                       - "replace": overwrite any existing mask,
+                       - "intersection": keep only overlapping periods.
+      :type mode: str
+
+      :returns:
+
+                The object is modified in place by adding/updating
+                    boolean columns in self.data and entries in
+                    self.activity_periods.
+      :rtype: None
+
+      :raises ValueError: If mode is not "union", "replace", or "intersection".
+          Check the spelling of mode and choose among the supported
+          options.
+
+      .. rubric:: Notes
+
+      Detailed description:
+          For each activity key, a boolean Series is built over the
+          current time index. All timestamps falling between any of
+          the supplied (start, end) pairs (inclusive) are set to True,
+          and others to False. Depending on mode, this new mask is
+          merged with any existing column of the same name. The
+          normalized list of (start, end) periods is stored in
+          self.activity_periods[activity].
+
+      Theory:
+          The method implements generic time segmentation. Activities
+          can represent tasks, locations, process states, or anything
+          else defined by the user.
+
+      .. rubric:: Examples
+
+      Mark a measurement into “Task” and “Background” segments:
+
+      .. code-block:: python
+
+          periods = {
+              "Task": [("2025-01-24 09:00", "2025-01-24 11:00"),
+                          ("2025-01-24 12:30", "2025-01-24 14:00")
+                          ],
+              "Background": [("2025-01-24 08:30", "2025-01-24 09:00")]
+          }
+          data.mark_activities(periods, mode="replace")
+          data.plot_total_conc(mark_activities=True)
+
+
+
+   .. py:method:: rename_activity(old_name, new_name)
+
+      Rename an existing activity, keeping its periods and mask intact.
+
+      :param old_name: Current activity name.
+      :type old_name: str
+      :param new_name: New name for the activity.
+      :type new_name: str
+
+      :returns:
+
+                The object is modified in place: the boolean mask column
+                    in self.data and the entries in self.activities and
+                    self.activity_periods are renamed.
+      :rtype: None
+
+      :raises ValueError: If old_name is not a known activity, or new_name is
+          already used by a different activity.
+
+
+
+   .. py:method:: get_activity_data(activity_name)
+
+      Return main data restricted to one or more activity periods.
+
+      :param activity_name: Name of the activity/boolean mask
+                            column to use, or multiple names. If multiple are provided, rows
+                            are returned only where *all* selected activities are True.
+      :type activity_name: str | Sequence[str]
+
+      :returns:
+
+                Copy of the main data for time steps where the
+                    selected activity (or combined activities) is True, with all
+                    activity mask columns removed.
+      :rtype: pandas.DataFrame
+
+      :raises ValueError: If any activity name is not present in self.activities.
+      :raises TypeError: If activity_name is neither a string nor an iterable of strings.
+
+
+
+   .. py:method:: get_activity_extra_data(activity_name)
+
+      Return extra_data restricted to a given activity period.
+
+      :param activity_name: Name of the activity/boolean mask column
+                            in self.data to use as a selector.
+      :type activity_name: str
+
+      :returns:
+
+                Subset of extra_data aligned to the time
+                    periods where the chosen activity is True. If extra_data is
+                    empty, an empty DataFrame is returned.
+      :rtype: pandas.DataFrame
+
+      :raises ValueError: If activity_name is not present in self.activities.
+
+      .. rubric:: Notes
+
+      Detailed description:
+          The method uses the activity mask stored in self.data but
+          returns rows from self.extra_data. This is useful to inspect
+          auxiliary channels (for example temperature, pressure, or
+          instrument status signals) corresponding to specific tasks
+          or events, without mixing them with the primary aerosol
+          time series.
+
+      .. rubric:: Examples
+
+      Correlate environmental parameters with a task:
+
+      .. code-block:: python
+
+          env_task = data.get_activity_extra_data("Task")
+          env_task[["Temperature", "RelativeHumidity"]].plot()
+
+
+
+   .. py:method:: Peak_finder(window = 15, ratio = 2.5, method = 'median', specific_data = '')
+
+      Detect peaks and mark them as an activity labeled 'Peak'.
+
+      :param window: Rolling window size in number of samples used to
+                     compute the local baseline and spread. Defaults to 15.
+      :type window: int
+      :param ratio: Threshold factor on the rolling standard
+                    deviation. A time step is flagged as peak when
+                    value - baseline > ratio * rolling_std. Defaults to 2.5.
+      :type ratio: float
+      :param method: Aggregation used as the rolling baseline, one of
+                     "mean", "median", "sum", "min", "max". Defaults to "median".
+      :type method: str
+      :param specific_data: Optional column name to use for peak
+                            detection. If empty, the dataset's primary channel is used
+                            (total concentration for particle instruments). Otherwise, the
+                            name is looked up first in self.data (numeric columns) and then
+                            in extra_data.
+      :type specific_data: str
+
+      :returns:
+
+                The method adds/updates a boolean "Peak" column in
+                    self.data and updates self.activity_periods["Peak"].
+      :rtype: None
+
+      :raises ValueError: If method is not one of the supported names. Choose
+          one of "mean", "median", "sum", "min", "max".
+      :raises ValueError: If specific_data is not found as a numeric column
+          in either self.data or extra_data. Check column names via
+          data.columns or extra_data.columns.
+
+      .. rubric:: Notes
+
+      Detailed description:
+          The method computes a rolling baseline and rolling standard
+          deviation over the chosen data series. Points where the
+          deviation from the baseline exceeds ratio times the rolling
+          standard deviation are marked as peaks. Contiguous True
+          segments in this mask are converted to (start, end) time
+          intervals and stored as the "Peak" activity.
+
+      Theory:
+          This is a simple statistical peak detector based on local
+          outlier detection relative to a moving baseline and spread.
+          It highlights periods where the signal is unusually high
+          compared to its recent history.
+
+      .. rubric:: Examples
+
+      Automatically tag high-exposure episodes:
+
+      .. code-block:: python
+
+          data.Peak_finder(window=31, ratio=3.0)
+          data.plot_total_conc(mark_activities=["Peak"])
+          peak_df = data.get_activity_data("Peak")
+
+
+
+   .. py:method:: Mark_threshold(activity, threshold, metric = None, threshold_direction = 'above')
+
+      Mark every time step whose value lies on the requested side of a
+      fixed threshold as an activity, and store the contiguous runs as
+      its periods.
+
+          This is a threshold-based segmenter: unlike :meth:`Peak_finder`
+          (which compares each point to a moving baseline), it tags samples
+          purely by whether they exceed — or fall below — a single, constant
+          limit. It is the natural way to flag exposures above an
+          occupational exposure limit (OEL) or any other fixed concentration
+          cut-off.
+
+      :param activity: Name to give the marked activity (e.g. ``"OEL"``).
+      :type activity: str
+      :param threshold: The fixed limit each sample is compared to.
+      :type threshold: int, float
+      :param metric: Column to compare against the threshold. If
+                     ``None`` (default), the first column of ``self.data`` (the total
+                     concentration) is used. Otherwise the name is looked up first
+                     among the numeric columns of ``self.data`` and then of
+                     ``extra_data``.
+      :type metric: str, optional
+      :param threshold_direction: Which side of the threshold counts as the
+                                  activity. ``"above"`` or ``">"`` flags samples strictly greater
+                                  than ``threshold``; ``"below"`` or ``"<"`` flags samples strictly
+                                  less than it. Defaults to ``"above"``.
+      :type threshold_direction: str
+
+      :returns:
+
+                The method adds/updates a boolean column named ``activity`` in
+                    ``self.data`` and stores its contiguous runs in
+                    ``self.activity_periods[activity]``.
+      :rtype: None
+
+      :raises ValueError: If ``metric`` is not found as a numeric column in either
+          ``self.data`` or ``extra_data``. Check column names via
+          ``data.columns`` or ``extra_data.columns``.
+      :raises ValueError: If ``threshold_direction`` is not one of the supported
+          names. Choose one of ``"above"``, ``"below"``, ``">"`` or ``"<"``.
+
+      .. rubric:: Notes
+
+      Detailed description:
+          The chosen metric is compared element-wise to ``threshold`` to
+          build a boolean mask (NaN samples compare False and are never
+          flagged). The mask is stored as the ``activity`` column, and its
+          contiguous True segments are converted to ``(start, end)`` time
+          intervals and stored as the activity's periods.
+
+      .. rubric:: Examples
+
+      Flag the periods where the total concentration exceeds an OEL and
+      shade them on the time series:
+
+      .. code-block:: python
+
+          data.Mark_threshold("OEL", threshold=1e4)
+          data.plot_total_conc(mark_activities=["OEL"])
+          oel_df = data.get_activity_data("OEL")
+
+
+
+   .. py:attribute:: peak_finder
+
+
+   .. py:attribute:: mark_threshold
+
+
+   .. py:method:: available_metrics()
+
+      List the quantities this dataset can be summarised on.
+
+      Each entry is a :class:`~aerosoltools._core.metrics.MetricSpec` whose
+      ``key`` is accepted by :meth:`summarize_activities` /
+      :meth:`summarize_exposure`. The ``default=True`` entries are the
+      instrument's primary metrics (used when no ``metrics=`` is given, and
+      pre-selected in the GUI picker). Size-resolved classes override this to
+      add derived PNC/MASS/Pₓ metrics.
+
+      :returns: The dataset's compatible metrics.
+      :rtype: list[MetricSpec]
+
+
+
+   .. py:method:: summarize(filename = None, *, parameter=0)
+
+      Summarise basic statistics of one channel by activity.
+
+      Reports ``Min / Max / Mean / Std / N`` per activity (including
+      ``"All data"``) for the selected channel. Works for any dataset — for a
+      single-quantity instrument ``parameter=0`` is the primary series; for a
+      multi-channel instrument pick the channel by index or name.
+
+      :param filename: Optional ``.xlsx`` path to write the table to.
+      :type filename: str | None
+      :param parameter: Channel to summarise — positional index into
+                        :attr:`data` columns (``int``) or a column label (``str``).
+      :type parameter: int | str
+
+      :returns: Columns
+                ``["Segment", "Min", "Max", "Mean", "Std", "N datapoints"]``.
+      :rtype: pandas.DataFrame
+
+      :raises LookupError: If ``parameter`` is not a valid index or column label.
+
+
+
+   .. py:method:: summarize_activities(filename = None, sheet_name = None, metrics = None, stats = None)
+
+      Summarize 1D aerosol metrics per activity.
+
+      :param filename: Optional path to a CSV or Excel file.
+                       If provided, the summary table is appended to the file
+                       (creating it if it does not exist). If None, nothing is
+                       written to disk.
+      :type filename: str | None
+      :param metrics: List of metric names to summarize.
+                      If None, the dataset's natural set is used (see
+                      :meth:`_default_metrics`): ``["PNC"]`` for particle data, every
+                      numeric channel for a multi-channel instrument, or the named
+                      primary channel otherwise.
+
+                      * "PNC" refers to the primary channel (total_concentration for
+                        particle instruments).
+                      * Any other name is looked up in data or extra_data
+                        (numeric columns only).
+      :type metrics: list[str] | None
+      :param stats: Which per-activity statistics to
+                    report for each metric. If None, defaults to
+                    ``["mean", "std"]`` (the historical behaviour). Each entry
+                    must be one of "mean", "std", "min", "max", "median".
+      :type stats: Sequence[str] | None
+
+      :returns: Summary table with one row per activity and
+                columns:
+
+                    * "Segment"
+                    * "Duration (HH:MM)"
+                    * For each metric M and requested stat S: "M [unit] S".
+      :rtype: pandas.DataFrame
+
+      :raises ValueError: If a requested metric (other than "PNC") cannot
+          be found in data or extra_data, or if ``stats`` contains an
+          unrecognised name.
+
+      .. rubric:: Notes
+
+      The per-activity statistics are simple sample statistics over
+      the selected time steps. Durations are based on the actual
+      sampling intervals (via _dt_minutes).
+
+      .. rubric:: Examples
+
+      .. code-block:: python
+
+          data.summarize_activities()
+          data.summarize_activities(stats=["mean", "min", "max"])
+
+
+
+   .. py:method:: summarize_exposure(metric = 'PNC', background = None, exposure_hours = None, short_limit = 1.0, long_limit = 1.0, short_window = '15min', twa_window = '8h', peak_ratio = 2.5, filename = None, activities = None)
+
+      Summarize exposure metrics for one 1D metric across activities.
+
+      :param metric: Exposure metric name based on the underlying
+                     1D time series. Default is "PNC", corresponding to the
+                     total particle number concentration. Supported forms:
+
+                         * "PNC": total number concentration, mapped to
+                           :attr:`total_concentration`.
+                         * Any other string: interpreted as the name of a
+                           numeric column in :attr:`data` or :attr:`extra_data`
+                           (case-sensitive). For example, "MASS" or "TEMP"
+                           if such columns exist.
+      :type metric: str
+      :param background: Background level used when
+                         computing the time-weighted average over ``twa_window``.
+                         The same background level is used for all activities in
+                         the output. Possible entries are:
+
+                             * None: assume zero background.
+                             * float: constant background level in metric units.
+                             * str: name of an activity; the TWA of ``metric`` over
+                               that activity is used as background.
+      :type background: float | str | None
+      :param exposure_hours: Assumed duration of exposure for
+                             each activity, in hours, when embedding it into the TWA
+                             window. If None, the measured activity duration is used for
+                             that activity. If a positive value is given, the same
+                             exposure duration is applied for all activities.
+      :type exposure_hours: float | None
+      :param short_limit: Short-term concentration limit in metric
+                          units (for example a 15-min STEL). This value is reported
+                          in the output as ``"STEL [unit]"``.
+      :type short_limit: float
+      :param long_limit: Long-term concentration limit in metric
+                         units (for example an 8-h OEL). This value is reported in
+                         the output as ``"Exposure limit [unit]"``.
+      :type long_limit: float
+      :param short_window: Rolling window used for short-term (STEL)
+                           evaluation, given as a pandas offset string (for example
+                           "15min"). This is reported as ``"STEL window [offset]"`` and
+                           used to construct a time-based rolling mean.
+      :type short_window: str
+      :param twa_window: Total duration of the TWA window as a pandas
+                         offset string (for example "8h"). This is reported as
+                         ``"TWA window [offset]"`` and used to embed the segment
+                         exposure into a reference window (for example an 8-h shift).
+      :type twa_window: str
+      :param peak_ratio: Factor used in peak detection; peaks are
+                         flagged when the metric exceeds::
+
+                             baseline + peak_ratio * rolling_std
+
+                         where ``baseline`` is a rolling median and ``rolling_std`` is
+                         a rolling standard deviation over a short window.
+      :type peak_ratio: float
+      :param filename: Optional path to a CSV/Excel file to
+                       which the non-transposed result rows are appended. If the
+                       file exists, rows are appended; otherwise the file is
+                       created with a header. Supported extensions are ".csv",
+                       ".xls", ".xlsx".
+      :type filename: str | None
+      :param activities: Activities to summarize.
+                         If None (default), all defined activities in
+                         :attr:`activities` are summarized (for example "All data",
+                         "Background", "Task"). Activities with no marked time steps
+                         are skipped.
+      :type activities: Sequence[str] | None
+
+      :returns: One row per activity segment with summary
+                statistics for the chosen metric. Column names embed their units
+                in square brackets where applicable (for example "Max [µg/m³]").
+                The set of columns matches that of
+                :meth:`Aerosol2D.summarize_exposure`, restricted to a single
+                1D metric.
+      :rtype: pandas.DataFrame
+
+      :raises ValueError: If ``metric`` cannot be found (except "PNC").
+      :raises ValueError: If a background activity name is given but does not
+          exist or has no samples.
+      :raises ValueError: If ``short_window`` or ``twa_window`` cannot be
+          parsed as pandas-style durations.
+      :raises ValueError: If ``exposure_hours`` is negative.
+      :raises TypeError: If ``background`` is not None, float, or str.
+
+      .. rubric:: Notes
+
+      Detailed description:
+          The method first obtains the requested metric time series
+          from the 1D data:
+
+              - For "PNC", the series is taken from
+                :attr:`total_concentration`.
+              - For any other metric name, the series is taken from a
+                numeric column in :attr:`data` or :attr:`extra_data`
+                (if present).
+
+          For each selected activity, the method:
+
+              1. Extracts the metric time series within the activity
+                 using the corresponding boolean mask.
+              2. Computes per-step durations from the actual sampling
+                 times via :meth:`_dt_minutes`.
+              3. Forms a time-weighted segment mean (using the per-step
+                 durations), which is used internally when embedding
+                 the activity into the TWA window.
+              4. Computes instantaneous percentiles, peaks, STEL-style
+                 exceedances, and long-term time-above-limit measures.
+              5. Combines the segment mean with the specified background
+                 level to obtain an overall TWA for the chosen window.
+
+          The returned DataFrame contains the following columns
+          (per activity):
+
+              - "Segment"
+                  Name of the activity segment.
+
+              - "Metric"
+                  Name of the metric that was summarized, e.g.
+                  "PNC", "MASS", or any other 1D column name.
+
+              - "Duration [HH:MM]"
+                  Duration of the activity derived from the actual
+                  sampling intervals, formatted as "HH:MM" (hours and
+                  minutes).
+
+              - "Max [unit]"
+                  Maximum of the instantaneous metric values during the
+                  activity. The unit is the metric unit (for example
+                  "cm⁻³" or "µg/m³").
+
+              - "95th percentile [unit]"
+              - "75th percentile [unit]"
+              - "50th percentile [unit]"
+              - "25th percentile [unit]"
+              - "5th percentile [unit]"
+                  Percentiles of the instantaneous metric values during
+                  the activity, all in the same unit as the metric.
+
+              - "Peaks [count]"
+                  Number of distinct peak events detected in the
+                  activity, where a peak is a contiguous period in which
+                  the metric exceeds::
+
+                      baseline + peak_ratio * rolling_std
+
+                  with ``baseline`` the rolling median and
+                  ``rolling_std`` the rolling standard deviation over a
+                  short sliding window, covering at least 3 datapoints
+                  and at most 15 datapoints, depending on how many
+                  samples are available in the segment.
+
+              - "STEL [unit]"
+                  Short-term exposure limit used in the STEL
+                  exceedance calculations (echoing ``short_limit``),
+                  with the same concentration unit as the metric.
+
+              - "STEL window [offset]"
+                  Rolling window length used for STEL evaluation,
+                  echoing ``short_window`` (for example "15min").
+
+              - "STEL exceedance [min]"
+                  Total time in minutes during the activity where the
+                  **full-window** rolling mean is greater than or equal
+                  to the STEL. Only complete windows are counted in this
+                  measure.
+
+              - "STEL episodes [count]"
+                  Number of distinct STEL exceedance episodes based on
+                  the full-window rolling mean. Each contiguous block of
+                  time where the full-window mean is at or above the
+                  STEL is counted as one episode.
+
+              - "Exposure limit [unit]"
+                  Long-term exposure limit value used in the long-term
+                  evaluation (echoing ``long_limit``), with the same
+                  unit as the metric.
+
+              - "Exposure limit exceedance [min]"
+                  Total time in minutes during the activity where the
+                  instantaneous metric values are greater than or equal
+                  to the exposure limit.
+
+              - "TWA concentration [unit]"
+                  Time-weighted average concentration of the metric over
+                  the full TWA window (``"TWA window [offset]"``),
+                  combining the internal segment mean (optionally
+                  stretched to ``exposure_hours``) with the specified
+                  background level for the remainder of the window::
+
+                      TWA = (segment_mean * exposure_minutes
+                             + background * (twa_minutes - exposure_minutes))
+                            / twa_minutes
+
+                  where ``twa_minutes`` is the duration of
+                  ``twa_window`` in minutes and ``exposure_minutes`` is
+                  either the measured activity duration or
+                  ``exposure_hours * 60``, whichever is used.
+
+              - "TWA window [offset]"
+                  Duration of the TWA window over which
+                  "TWA concentration [unit]" is evaluated, echoing
+                  ``twa_window`` (for example "8h").
+
+      Theory:
+          Conceptually, the method mirrors typical occupational hygiene
+          practice for a single 1D metric:
+
+              - Exposure within an activity is represented by
+                time-weighted averages and distributional descriptors
+                (max and percentiles).
+              - Short-term limits (STEL) are evaluated using rolling
+                means over a specified window, counting both total time
+                above the limit and distinct exceedance episodes.
+              - Long-term limits are represented by cumulative
+                time-above-limit measures.
+              - An overall TWA for an 8-h (or user-specified) reference
+                period is constructed by mixing the task exposure with a
+                background level for the rest of the window.
+
+          This ensures a transparent link between raw 1D time-series
+          behaviour and regulatory-style metrics such as STEL and
+          8-hour OELs.
+
+      .. rubric:: Examples
+
+      Summarize total particle number concentration (PNC) exposure
+      for all activities in a CPC dataset, using the "Background"
+      activity as background level and a 15-min STEL with an 8-h
+      TWA window:
+
+      .. code-block:: python
+
+          cpc.summarize_exposure(
+                  metric="PNC",
+                  background="Background",
+                  short_limit=5e4,
+                  long_limit=2e4,
+                  short_window="15min",
+                  twa_window="8h",
+          )
+
+      Other 1D metrics stored as columns (for example "MASS") can
+      be handled in the same way simply by changing the ``metric``
+      argument.
+
+
+
+   .. py:method:: plot_total_conc(ax = None, mark_activities = False, parameter = 0)
+
+      Plot a selected scalar channel versus time for a multi-channel
+      object.
+
+      :param ax: Existing Matplotlib axes to draw on. If ``None``, a new figure
+                 and axes are created. Defaults to ``None``.
+      :type ax: matplotlib.axes.Axes | None, optional
+      :param mark_activities: Control highlighting of activity periods defined on the object:
+
+                              * ``False`` – no shading (default).
+                              * ``True`` – shade all activities except ``"All data"``.
+                              * sequence of str – shade only the named activities.
+      :type mark_activities: bool | Sequence[str], optional
+      :param parameter: Index or column name of the signal to plot. If ``int``, it is
+                        interpreted as a positional index into :attr:`data.columns`. If
+                        ``str``, it is treated as a column label. Defaults to ``0``.
+      :type parameter: int | str, optional
+
+      :returns:     The figure and axes containing the time-series plot.
+      :rtype: tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]
+
+      :raises LookupError: If ``parameter`` does not correspond to a valid column index or
+          column label.
+
+      .. rubric:: Notes
+
+      Detailed description:
+          This method overrides :meth:`Aerosol1D.plot_total_conc` to allow
+          plotting of *any* scalar column stored in :attr:`data`, not only
+          ``"Total_conc"``. It is particularly useful when an instrument
+          logs multiple scalar metrics alongside time.
+
+          Internally, the method:
+
+          * Resolves ``parameter``:
+
+            - if an integer, it is used as a positional index into
+              :attr:`data.columns`,
+            - if a string, it must match a column label.
+
+          * Creates or reuses a Matplotlib axes (depending on ``ax``).
+          * Plots the selected column against the object’s time index.
+          * Configures the x-axis with a concise datetime formatter via
+            :mod:`matplotlib.dates`.
+          * Determines the appropriate ``dtype`` and ``unit``:
+
+            - if global (scalar), they are used as-is;
+            - if per-column mappings, the entry for the chosen
+              ``parameter`` is used.
+
+            The y-axis label is constructed from the base dtype
+            (e.g. ``"dN"`` from ``"dN/dlogDp"`` when applicable)
+            and the corresponding unit.
+
+          * Optionally shades activity periods defined by
+            :meth:`Aerosol1D.mark_activities` when ``mark_activities`` is
+            ``True`` or a list of activity names. Each activity receives
+            a distinct colour, and overlapping shaded regions are clipped
+            to the data’s time extent.
+
+          * Calls ``fig.tight_layout()`` when it creates the figure to
+            ensure margins and labels do not overlap.
+
+      .. rubric:: Examples
+
+      A typical use is to visualise one of several channels stored in
+      a multi-channel object, optionally with activity periods
+      highlighted:
+
+      .. code-block:: python
+
+          import aerosoltools as at
+
+          # Suppose 'alt' is a multi-channel object with columns: ["LDSA", "Flow", "Flag"]
+          alt = at.load_partector_file("data/Partector_log.txt")
+
+          # Plot LDSA with activity shading
+          fig, ax = alt.plot_total_conc(
+              parameter="LDSA",
+              mark_activities=True,
+          )
+
+          # Plot Flow on existing axes without activity shading
+          fig2, ax2 = plt.subplots()
+          alt.plot_total_conc(ax=ax2, parameter="Flow", mark_activities=False)
+
+
+
+   .. py:method:: fit_decay(period, metric = 'PNC', model = 'auto', volume = None, air_exchange_rate = None, emission_start=None, peak_time=None, background = None, peak_concentration = None, decay_rate = None, optimize = True, snap_to_samples = True, series = None, unit = None)
+
+      Fit a single-zone emission + decay peak to one time window of a
+      concentration metric, estimating the emission/source strength and
+      the loss kinetics (zeroth, first, second order, or combined).
+
+          The loss kinetics come from a robust fit of the **decay** (post-peak)
+          part alone; the peak is anchored to the data and the emission rate is
+          back-solved from it, so the fit does not undershoot the peak.
+
+      :param period: Either an activity name (a boolean column in
+                     :attr:`data`) or a ``(start, end)`` pair (anything
+                     :func:`pandas.Timestamp` accepts) selecting the window to fit.
+                     The window should span the background, the rise, the peak and
+                     the decay.
+      :type period: str | tuple
+      :param metric: Metric to fit, as resolved by the class's metric
+                     lookup (for example "PNC", "MASS", "PM2.5"). Default "PNC".
+      :type metric: str
+      :param model: Which loss model to fit: ``"zeroth_order"`` (constant
+                    removal), ``"first_order"`` (air exchange + deposition),
+                    ``"second_order"`` (coagulation), ``"combined"`` (first +
+                    second), or ``"auto"`` (fit all and pick the best, favouring the
+                    simpler). Aliases such as "0"/"constant", "first"/"exp",
+                    "second"/"coagulation", "combined"/"both" are accepted.
+      :type model: str
+      :param volume: Chamber/room volume in m³. When given, the
+                     fitted emission rate is reported as a source strength
+                     (``E * volume``) and a total emitted amount.
+      :type volume: float | None
+      :param air_exchange_rate: An independently known air
+                                exchange rate in 1/hour. When given and the model has a
+                                first-order loss term, the wall-loss/deposition rate is
+                                estimated as ``(first-order loss) - air_exchange_rate``.
+      :type air_exchange_rate: float | None
+      :param emission_start: Optional explicit start of the source-on phase
+                             (anything :func:`pandas.Timestamp` accepts, within the window).
+                             When ``None`` it is detected from the rise. Only affects the
+                             emission duration ``tp`` and hence the emission rate/source
+                             strength, not the loss kinetics.
+      :param peak_time: Optional explicit peak time (source-off) splitting the
+                        emission from the decay. When ``None`` it is detected as the
+                        (smoothed) maximum.
+      :param background: Override the background concentration
+                         ``P0`` instead of measuring it from the pre-emission baseline.
+                         Held fixed during the fit, exactly like the measured value.
+      :type background: float | None
+      :param peak_concentration: Override the peak concentration
+                                 (so the peak excess is ``peak_concentration - background``)
+                                 instead of measuring it at the source-off time. Held fixed.
+      :type peak_concentration: float | None
+      :param decay_rate: Seed for the loss kinetics, given as a
+                         first-order-equivalent rate in **1/s** (the ``decay_rate`` key a
+                         previous fit returns). With ``optimize=True`` it just seeds the
+                         optimiser; with ``optimize=False`` it *is* the loss rate, so the
+                         returned curve is a pure manual guess. When ``None`` the rate is
+                         estimated from the decay slope.
+      :type decay_rate: float | None
+      :param optimize: When True (default) the loss kinetics are optimised
+                       against the post-peak data. When False the fit is skipped and the
+                       model is evaluated directly from the seed/override values, so the
+                       caller gets a previewable "initial guess" (used by the GUI to
+                       show a live preview before optimising). The returned dict has the
+                       same shape either way; ``errors`` are zero for a guess.
+      :type optimize: bool
+      :param snap_to_samples: When True (default) an explicit
+                              ``emission_start`` / ``peak_time`` is quantised to the nearest
+                              sample time, so the reported timing lands exactly on a data
+                              point. When False the supplied timestamps are used as continuous
+                              times (an onset or source-off may fall *between* two samples), so
+                              the emission duration ``tp`` and the drawn markers vary smoothly
+                              rather than jumping from sample to sample. Only affects the two
+                              timing overrides; detection (when they are ``None``) is unchanged.
+      :type snap_to_samples: bool
+      :param series: Optional precomputed, time-indexed
+                     concentration series to fit instead of the named ``metric`` —
+                     used to fit an arbitrary series such as a single size bin (for
+                     per-bin decay fitting) with the same window and overrides. When
+                     given, ``metric`` is used only for labelling.
+      :type series: pandas.Series | None
+      :param unit: Unit string for ``series``; when ``series`` is
+                   given but ``unit`` is ``None`` the named metric's unit is used.
+      :type unit: str | None
+
+      :returns: A typed record (also a read-only mapping, so
+                ``result["r_squared"]`` still works) with fields including ``model``,
+                ``unit``, ``metric``, ``r_squared`` (whole window), ``decay_r_squared``
+                (post-peak fit), ``n_points``, ``params``, ``errors``, ``background``,
+                ``peak_concentration``, ``peak_excess``, ``emission_rate`` /
+                ``emission_rate_unit``, ``decay_rate`` / ``decay_rate_per_hour``
+                (first-order-equivalent loss rate, for round-tripping into
+                ``decay_rate``), ``loss_rate_per_hour`` / ``half_life_hours``
+                (first-order term), ``zeroth_order_rate``, ``second_order_rate``
+                (second/combined), ``wall_loss_rate_per_hour`` (with
+                ``air_exchange_rate``), ``source_strength`` / ``total_emitted`` (with
+                ``volume``), the timing (``emission_start_s``, ``emission_duration_s``,
+                ``peak_time_s``, ``peak_time``) and, for redrawing, ``window_start``
+                and ``model_popt`` (see :func:`decay_curve`). Optional model-/volume-
+                specific fields are ``None`` (and omitted from the mapping view) when
+                not applicable.
+      :rtype: DecayResult
+
+      :raises ValueError: If ``period`` is neither a known activity nor a valid
+          ``(start, end)`` pair, if the window has too few finite
+          samples, if ``model`` is unrecognised, or if no model could be
+          fitted.
+
+      .. rubric:: Examples
+
+      Fit a chamber emission peak and read the source strength::
+
+          res = data.fit_decay("Emission", metric="PNC", volume=20.0)
+          print(res["source_strength"], res["source_strength_unit"])
+
+
+

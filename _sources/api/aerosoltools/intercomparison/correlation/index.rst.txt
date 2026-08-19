@@ -1,0 +1,411 @@
+aerosoltools.intercomparison.correlation
+========================================
+
+.. py:module:: aerosoltools.intercomparison.correlation
+
+.. autoapi-nested-parse::
+
+   Correlation, regression and Bland-Altman agreement analysis between two
+   aerosol time series.
+
+   The two datasets are time-aligned by the shared helpers in
+   :mod:`~aerosoltools.intercomparison._alignment`; this module only fits the
+   relationship and draws the comparison.
+
+
+
+
+
+Module Contents
+---------------
+
+.. py:function:: fit_data(target_data, ref_data, parameter = 0, fit_function=None, variable_guess = {'m': 1}, start_time = None, end_time = None)
+
+   Fit a function relating one dataset's signal to another's.
+
+   Aligns the chosen signal from ``target_data`` and ``ref_data`` on their
+   common time base (dropping samples that are NaN in either), fits
+   ``fit_function`` to the pair with :func:`scipy.optimize.curve_fit`, and
+   reports the fitted coefficients, their 1σ standard errors, and the R² of the
+   fit. Nothing is modified — this only computes the relationship (e.g. to build
+   a calibration from it later).
+
+   :param target_data: The dataset whose signal is the fit's ``x`` (e.g. the field
+                       instrument being characterised).
+   :param ref_data: The dataset whose signal is the fit's ``y`` (e.g. the
+                    reference instrument).
+   :param parameter: Which signal to extract from each dataset. An
+                     ``int`` is a positional index into ``data.columns``; a ``str`` is a
+                     column label. Defaults to ``0``.
+   :type parameter: int | str
+   :param fit_function: Model ``f(x, *coeffs)`` to fit. Defaults
+                        to a linear model ``y = m*x + b`` (:func:`_linear`) when ``None``.
+   :type fit_function: callable | None
+   :param variable_guess: Initial guesses for the fit coefficients, keyed by
+                          name (e.g. ``{"m": 1}`` or ``{"A": 1, "B": 0}``); the keys also name
+                          the returned coefficients. Defaults to ``{"m": 1}``.
+   :type variable_guess: dict
+   :param start_time: Optional start of the analysis window (string or
+                      :class:`pandas.Timestamp`).
+   :param end_time: Optional end of the analysis window (string or
+                    :class:`pandas.Timestamp`).
+
+   :returns: ``(coeffs, errors, r_squared)`` where
+             ``coeffs`` maps each ``variable_guess`` key to its fitted value,
+             ``errors`` maps each key to its 1σ standard error, and ``r_squared`` is
+             the coefficient of determination of the fit.
+   :rtype: tuple[dict, dict, float]
+
+
+.. py:function:: plot_correlation(X, Y, ax_in = None, *, start_time = None, end_time = None, parameter = None, match = 'exact', tolerance = '30s', rebin_freq = None, rebin_method = 'mean', intercept = True, uniform_scaling = True, outlier_influence = True, activity = None)
+
+   Create a correlation plot between the same variable from two aerosol
+   datasets, including regression line, 1:1 line, and R².
+
+   :param X: First aerosol dataset. Typically an :class:`Aerosol1D` or
+             :class:`Aerosol2D` instance exposing ``data`` (and optionally
+             ``extra_data`` and ``timerebin``).
+   :param Y: Second aerosol dataset with the same interface requirements as
+             ``X``.
+   :param ax_in: Existing Matplotlib axes to draw on. If ``None``, a new figure
+                 and axes are created. Default is None.
+   :type ax_in: matplotlib.axes.Axes | None, optional
+   :param start_time: Inclusive start of the analysis window. If provided together with
+                      ``end_time`` and the objects implement ``timecrop``, the data are
+                      cropped to this period before correlation is computed. Strings are
+                      parsed with :func:`pandas.to_datetime`. Default is None, meaning
+                      start from first common timestamp.
+   :type start_time: pandas.Timestamp | str | None, optional
+   :param end_time: Inclusive end of the analysis window. Same parsing rules as
+                    ``start_time``.
+   :type end_time: pandas.Timestamp | str | None, optional
+   :param parameter: Name of the variable to correlate. The function first looks for
+                     this parameter in ``obj.data`` and then in ``obj.extra_data``.
+                     If tuple the parameters are read as (parameter_X, parameter_Y).
+                     If None the first data column is chosen for each dataset.
+                     The default is ``"Total_conc"``
+   :type parameter: str | tuple, optional
+   :param match: Strategy for aligning the two time series in time. One of:
+
+                 - ``"exact"`` (default): Keep only timestamps that are present
+                   in both series.
+                 - ``"nearest"``: Match values from ``Y`` to the timeline of
+                   ``X`` using nearest timestamps within ``tolerance``.
+                 - ``"rebin"``: Rebin both datasets to a common time step using
+                   ``timerebin`` and then join on timestamps.
+   :type match: str, optional
+   :param tolerance: Maximum allowed separation between timestamps when
+                     ``match="nearest"`` is used. Can be a pandas offset string
+                     (e.g. ``"30s"``) or a :class:`pandas.Timedelta`. Ignored for
+                     other ``match`` modes.
+   :type tolerance: str | pandas.Timedelta, optional
+   :param rebin_freq: Target resampling rule for ``match="rebin"`` (e.g. ``"1min"``).
+                      If ``None``, the coarser cadence inferred from the two series is
+                      chosen automatically. Default is None.
+   :type rebin_freq: str | None, optional
+   :param rebin_method: Aggregation method passed to ``timerebin`` when ``match="rebin"``
+                        is used (e.g. ``"mean"``, ``"median"``, or a custom function).
+                        Default is ``"mean"``.
+   :type rebin_method: str | Callable, optional
+   :param intercept: If ``True`` (default), fit a full linear model
+                     ``y = A·x + B``. If ``False``, constrain the fit to pass through
+                     the origin (``y = A·x``).
+   :type intercept: bool, optional
+   :param uniform_scaling: If ``True`` (default), both axes are scaled by a common factor so
+                           that the same numerical range is shown on x and y. If ``False``,
+                           each axis is scaled independently.
+   :type uniform_scaling: bool, optional
+   :param outlier_influence: If ``True`` (default), use standard least-squares regression
+                             (:func:`scipy.optimize.curve_fit`) and draw a 1σ confidence band
+                             around the fitted line. If ``False``, use the robust
+                             Theil–Sen estimator (:func:`scipy.stats.theilslopes`) without a
+                             confidence band.
+   :type outlier_influence: bool, optional
+   :param activity: If given, restrict the correlation to the timestamps inside this
+                    activity's marked periods (absolute-time, so multiple occurrences are
+                    supported). Useful for correlating only a window where the two
+                    instruments measured side by side. ``None`` (default) or
+                    ``"All data"`` uses the full overlapping record.
+   :type activity: str | None, optional
+
+   :returns:     The figure and axes containing the correlation scatter plot, the
+                 1:1 line, and the regression line with its equation and R² in
+                 the legend.
+   :rtype: tuple[Figure, Axes]
+
+   :raises ValueError: If one or both objects contain no data for the requested
+       ``parameter`` and time window, if the chosen alignment strategy
+       yields no matching timestamps, or if all overlapping points are
+       non-finite (NaN/inf) after cleaning.
+   :raises KeyError: If ``parameter`` is not found in either ``data`` or ``extra_data`` of
+       one or both objects.
+   :raises RuntimeError: If the regression fit fails to converge (e.g. due to degenerate
+       or extremely ill-conditioned data) and :func:`curve_fit` or the
+       Theil–Sen estimator raises a fitting-related error.
+
+   .. rubric:: Notes
+
+   Detailed description:
+       ``plot_correlation`` is a convenience function for quickly
+       comparing two aerosol datasets measuring the same physical
+       quantity, such as total particle number concentration from two
+       instruments. The function:
+
+       * Extracts the requested ``parameter`` from each object.
+       * Aligns the series in time using the selected ``match`` mode
+         (exact timestamps, nearest neighbors, or common rebinned
+         cadence).
+       * Removes rows where either series is NaN or infinite.
+       * Fits a linear model relating ``Y`` to ``X``, optionally
+         including an intercept and using either standard or robust
+         regression.
+       * Computes and reports the coefficient of determination (R²).
+       * Plots the scatter of aligned data points, the 1:1 line, the
+         fitted regression line, and (optionally) a confidence band
+         around the fit.
+
+       Axis labels are automatically derived from ``X.instrument`` and
+       ``Y.instrument`` (if available), giving a quick visual summary of
+       how well two instruments agree.
+
+   Theory:
+       The regression models used are simple linear relationships:
+
+       * With intercept: ``y = A·x + B``
+       * Without intercept: ``y = A·x``
+
+       When ``outlier_influence=True``, the parameters ``A`` and ``B``
+       are obtained by minimizing the least-squares error using
+       :func:`scipy.optimize.curve_fit`. Standard errors of the fit
+       parameters are derived from the covariance matrix and propagated
+       to form an approximate 1σ confidence band.
+
+       When ``outlier_influence=False``, the Theil–Sen estimator is used
+       (:func:`scipy.stats.theilslopes`). This approach is more robust to
+       outliers, but no confidence band is drawn.
+
+   .. rubric:: Examples
+
+   A typical use case is to compare the agreement between two
+   instruments over the same time period:
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       # Load two datasets measuring total number concentration
+       smps = at.load_smps_file("smps_data.txt")
+       ops = at.load_ops_file("ops_data.txt")
+
+       # Plot correlation of total concentration over a work shift
+       fig, ax = at.plot_correlation(
+           smps,
+           ops,
+           start_time="2023-10-01 08:00",
+           end_time="2023-10-01 16:00",
+           parameter="Total_conc",
+           match="nearest",
+           tolerance="60s",
+           intercept=True,
+           uniform_scaling=True,
+           outlier_influence=False,
+       )
+
+
+.. py:function:: bland_altman_analysis(X, Y, ax_in = None, method = 'BA', C = 0.95, *, start_time = None, end_time = None, parameter = None, match = 'exact', tolerance = '30s', rebin_freq = None, rebin_method = 'mean', activity = None)
+
+   Plot Bland-Altman (difference plot) to highlight difference between two groups
+   of data.
+
+   :param X: First aerosol dataset. Typically an :class:`Aerosol1D` or
+             :class:`Aerosol2D` instance exposing ``data`` (and optionally
+             ``extra_data`` and ``timerebin``).
+   :param Y: Second aerosol dataset with the same interface requirements as
+             ``X``.
+   :param ax_in: Existing Matplotlib axes to draw on. If ``None``, a new figure
+                 and axes are created. Default is None.
+   :type ax_in: matplotlib.axes.Axes | None, optional
+   :param method: Choose which analysis method is desired between 'BA', 'Gi', 'Eu';
+                  'BA' - Bland-Altman : straight-forward comparison between two samples
+                  'Gi' - Giavarina : percentage difference in relation to mean
+                  'Eu' - Euser : logarithmic of means an difference
+                  Deault is 'BA' resulting in the standard Bland-Altman analysis.
+   :type method: str | optional
+   :param C: Confidence interval. Default is 0.95
+   :type C: float | optional
+   :param start_time: Inclusive start of the analysis window. If provided together with
+                      ``end_time`` and the objects implement ``timecrop``, the data are
+                      cropped to this period before correlation is computed. Strings are
+                      parsed with :func:`pandas.to_datetime`. Default is None, meaning
+                      start from first common timestamp.
+   :type start_time: pandas.Timestamp | str | None, optional
+   :param end_time: Inclusive end of the analysis window. Same parsing rules as
+                    ``start_time``.
+   :type end_time: pandas.Timestamp | str | None, optional
+   :param parameter: Name of the variable to correlate. The function first looks for
+                     this column in ``obj.data`` and then in ``obj.extra_data``.
+                     If tuple the parameters are read as (parameter_X, parameter_Y).
+                     If None the first data column is chosen for each dataset.
+                     The default is ``"Total_conc"``
+   :type parameter: str | tuple, optional
+   :param match: Strategy for aligning the two time series in time. One of:
+
+                 - ``"exact"`` (default): Keep only timestamps that are present
+                   in both series.
+                 - ``"nearest"``: Match values from ``Y`` to the timeline of
+                   ``X`` using nearest timestamps within ``tolerance``.
+                 - ``"rebin"``: Rebin both datasets to a common time step using
+                   ``timerebin`` and then join on timestamps.
+   :type match: str, optional
+   :param tolerance: Maximum allowed separation between timestamps when
+                     ``match="nearest"`` is used. Can be a pandas offset string
+                     (e.g. ``"30s"``) or a :class:`pandas.Timedelta`. Ignored for
+                     other ``match`` modes.
+   :type tolerance: str | pandas.Timedelta, optional
+   :param rebin_freq: Target resampling rule for ``match="rebin"`` (e.g. ``"1min"``).
+                      If ``None``, the coarser cadence inferred from the two series is
+                      chosen automatically. Default is None.
+   :type rebin_freq: str | None, optional
+   :param rebin_method: Aggregation method passed to ``timerebin`` when ``match="rebin"``
+                        is used (e.g. ``"mean"``, ``"median"``, or a custom function).
+                        Default is ``"mean"``.
+   :type rebin_method: str | Callable, optional
+   :param activity: If given, restrict the comparison to the timestamps inside this
+                    activity's marked periods (absolute-time, multiple occurrences
+                    supported). ``None`` (default) or ``"All data"`` uses the full
+                    overlapping record.
+   :type activity: str | None, optional
+
+   :returns:     The figure and axes containing the correlation scatter plot, the
+                 1:1 line, and the regression line with its equation and R² in
+                 the legend.
+   :rtype: tuple[Figure, Axes]
+
+   .. rubric:: Notes
+
+   Detailed description:
+       ``bland_altman_analysis`` is a function for quickly
+       comparing two aerosol datasets measuring the same physical
+       quantity, such as total particle number concentration from two
+       instruments. The function:
+
+       * Extracts the requested ``parameter`` from each object.
+       * Aligns the series in time using the selected ``match`` mode
+         (exact timestamps, nearest neighbors, or common rebinned
+         cadence).
+       * Removes rows where either series is NaN or infinite.
+       * Fits a linear model relating ``Y`` to ``X``, optionally
+         including an intercept and using either standard or robust
+         regression.
+       * Computes and reports the coefficient of determination (R²).
+       * Plots the scatter of aligned data points, the 1:1 line, the
+         fitted regression line, and (optionally) a confidence band
+         around the fit.
+
+       Axis labels are automatically derived from ``X.instrument`` and
+       ``Y.instrument`` (if available), giving a quick visual summary of
+       how well two instruments agree.
+
+   Theory:
+       The regression models used are simple linear relationships:
+
+       * With intercept: ``y = A·x + B``
+       * Without intercept: ``y = A·x``
+
+       When ``outlier_influence=True``, the parameters ``A`` and ``B``
+       are obtained by minimizing the least-squares error using
+       :func:`scipy.optimize.curve_fit`. Standard errors of the fit
+       parameters are derived from the covariance matrix and propagated
+       to form an approximate 1σ confidence band.
+
+       When ``outlier_influence=False``, the Theil–Sen estimator is used
+       (:func:`scipy.stats.theilslopes`). This approach is more robust to
+       outliers, but no confidence band is drawn.
+
+
+.. py:function:: wind_rose(X, Y, parameter = 'Total_conc', speed_log=False, wind_resolution = (8, 15), ax_in=None, start_time = None, end_time = None, rebin_freq = '1min', rebin_method = 'mean', activity = None, min_observations = 3)
+
+   Plot a polar heat map of one parameter against wind speed and direction.
+
+   A wind rose answers "where does the signal come from?": each cell of the
+   polar grid is the **mean** of ``parameter`` for the times when the wind blew
+   from that direction at that speed. Unlike a classic wind rose, where the
+   colour shows how often a wind occurs, here it shows how large the measured
+   quantity was under that wind condition -- so a hot wedge points back toward
+   a source.
+
+   :param X: Dataset supplying the wind. Must expose ``W_direction`` (degrees,
+             meteorological convention) and ``W_speed`` columns -- typically an
+             :class:`~aerosoltools.Environmental1D` from a weather station.
+             ``ValueError`` is raised if either column is absent.
+   :param Y: Dataset supplying the quantity to colour by. Any aerosol-like
+             object; pass ``X`` again to plot one of the weather channels
+             against its own wind.
+   :param parameter: Name of the variable to average. Looked up first in ``Y.data``,
+                     then in ``Y.extra_data``. Default is ``"Total_conc"``.
+   :type parameter: str, optional
+   :param speed_log: If True, space the radial (wind-speed) bin edges geometrically
+                     rather than linearly, which spreads out low wind speeds. Zero and
+                     negative speeds are excluded in this mode. Default is False.
+   :type speed_log: bool, optional
+   :param wind_resolution: ``(n_direction_bins, n_speed_bins)``. The default ``(8, 15)`` gives
+                           the eight compass sectors (N, NE, E, ...) and 15 speed rings.
+                           Direction bins are centred on the compass points, so due north
+                           falls in the middle of a wedge rather than on its edge.
+   :type wind_resolution: tuple, optional
+   :param ax_in: Existing axes to draw on. A non-polar axes is replaced in place by
+                 a polar one occupying the same subplot slot. If ``None``, a new
+                 figure and polar axes are created. Default is None.
+   :type ax_in: matplotlib.axes.Axes | None, optional
+   :param start_time: Inclusive start of the analysis window, passed to ``timerebin``.
+                      Strings are parsed with :func:`pandas.to_datetime`. Default is
+                      None, meaning start from the first common timestamp.
+   :type start_time: pandas.Timestamp | str | None, optional
+   :param end_time: Inclusive end of the analysis window. Same parsing rules as
+                    ``start_time``.
+   :type end_time: pandas.Timestamp | str | None, optional
+   :param rebin_freq: Common time step both datasets are rebinned onto before pairing,
+                      as a pandas offset string. Default is ``"1min"``.
+   :type rebin_freq: str | None, optional
+   :param rebin_method: Aggregation used by ``timerebin`` (e.g. ``"mean"``, ``"median"``,
+                        or a callable). Default is ``"mean"``.
+   :type rebin_method: str | Callable, optional
+   :param activity: Restrict to the timestamps inside this activity's marked periods.
+                    The activity must be marked on **X**; its periods are projected
+                    onto ``Y``. ``None`` (default) or ``"All data"`` uses the full
+                    overlapping record.
+   :type activity: str | None, optional
+   :param min_observations: Minimum number of paired observations a cell needs before its mean
+                            is drawn. Cells below the threshold are left blank rather than
+                            shown as a mean of one or two points. Raise it when ``rebin_freq``
+                            is short and the grid is fine. Default is 3.
+   :type min_observations: int, optional
+
+   :returns:     The figure and the polar axes holding the heat map, with a colour
+                 bar to the right and the parameter and instrument named top left.
+   :rtype: tuple[Figure, Axes]
+
+   :raises ValueError: If ``X`` lacks a wind-direction or wind-speed column, if
+       ``parameter`` is in neither ``Y.data`` nor ``Y.extra_data``, or if
+       no valid observations remain after alignment.
+
+   .. rubric:: Notes
+
+   How the grid is built:
+
+       * Both datasets are rebinned to ``rebin_freq`` and, when
+         ``activity`` is given, restricted to that activity's periods.
+       * Rows where wind direction, wind speed or the parameter is NaN or
+         infinite are dropped.
+       * Directions are wrapped to 0-360 degrees and shifted by half a bin
+         so each wedge is centred on its compass point; speeds are binned
+         linearly, or geometrically when ``speed_log`` is set.
+       * Each cell is the arithmetic mean of ``parameter`` over the
+         observations falling in it, and cells with fewer than
+         ``min_observations`` values are masked out.
+
+   Interpretation: the colour is an average concentration, not a
+   frequency. A sector can be hot on very few hours of wind, which is what
+   ``min_observations`` guards against.
+
+

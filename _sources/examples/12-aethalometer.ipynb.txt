@@ -1,0 +1,262 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 12 — Aethalometer\n",
+    "\n",
+    "**Theme:** wavelength-resolved black carbon, and what the extra wavelengths buy\n",
+    "you.\n",
+    "\n",
+    "An aethalometer draws air through a filter and measures how much light the\n",
+    "collected particles absorb. Absorption is converted to a **black-carbon\n",
+    "equivalent mass concentration** — the mass of pure soot that would have absorbed\n",
+    "that much."
+   ],
+   "id": "cell-00"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import aerosoltools as at\n",
+    "\n",
+    "aeth = at.load_aethalometer_file(\"../../tests/data/Sample_Aethalometer.csv\")\n",
+    "\n",
+    "print(\"instrument:\", aeth.instrument)\n",
+    "print(\"columns   :\", list(aeth.data))"
+   ],
+   "id": "cell-01"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Why there is a BC value per wavelength\n",
+    "\n",
+    "There is no single \"BC\" channel. The instrument measures attenuation\n",
+    "independently at each of its five wavelengths, and converts **each** to its own\n",
+    "BC-equivalent mass using a mass absorption cross-section for that wavelength.\n",
+    "The raw export makes the chain visible: per colour it carries `ATN1`/`ATN2`\n",
+    "(attenuation on two filter spots), `BC1`/`BC2` (the mass from each spot) and\n",
+    "`BCc` — the loading-corrected value combining them, which is what is loaded\n",
+    "here.\n",
+    "\n",
+    "So all five are BC estimates of the same air, and if only soot were present\n",
+    "they would agree. They do not, and that disagreement is the useful part: soot\n",
+    "absorbs across the whole spectrum roughly evenly, while brown carbon from wood\n",
+    "smoke and organics absorbs far more strongly in the ultraviolet. UV therefore\n",
+    "reads high whenever something other than pure soot is present.\n",
+    "\n",
+    "By convention **IR is reported as \"the\" black carbon**, because it is the\n",
+    "channel least contaminated by those other absorbers."
+   ],
+   "id": "cell-02"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for name in [\"uv_bcc\", \"blue_bcc\", \"green_bcc\", \"red_bcc\", \"ir_bcc\"]:\n",
+    "    channel = getattr(aeth, name)\n",
+    "    print(f\"{name:10s} mean {channel.mean():9.1f}  max {channel.max():9.1f}\")\n",
+    "\n",
+    "print()\n",
+    "print(f\"UV / IR ratio: {aeth.uv_bcc.mean() / aeth.ir_bcc.mean():.3f}\")"
+   ],
+   "id": "cell-03"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "A ratio above 1 means the UV channel sees absorption the IR channel does not —\n",
+    "the signature of non-soot absorbers."
+   ],
+   "id": "cell-04"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = plt.subplots(figsize=(10, 4.5))\n",
+    "for name, colour in [(\"uv_bcc\", \"violet\"), (\"blue_bcc\", \"tab:blue\"),\n",
+    "                     (\"green_bcc\", \"tab:green\"), (\"red_bcc\", \"tab:red\"),\n",
+    "                     (\"ir_bcc\", \"black\")]:\n",
+    "    ax.plot(aeth.time, getattr(aeth, name),\n",
+    "            label=name.replace(\"_bcc\", \"\").upper(), color=colour, lw=1)\n",
+    "\n",
+    "ax.set_ylabel(\"BC equivalent [ng/m3]\")\n",
+    "ax.set_title(\"The same air, measured at five wavelengths\")\n",
+    "ax.legend(ncol=5, loc=\"lower center\", bbox_to_anchor=(0.5, 1.06), frameon=False)\n",
+    "plt.tight_layout()"
+   ],
+   "id": "cell-05"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Per-channel units\n",
+    "\n",
+    "The channels are not all the same quantity, so each carries its own unit and\n",
+    "dtype — the mass concentrations in ng/m³, the Ångström exponent dimensionless."
+   ],
+   "id": "cell-06"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "aeth.column_units"
+   ],
+   "id": "cell-07"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## The Angstrom absorption exponent\n",
+    "\n",
+    "The AAE condenses the spectral shape into one number: how steeply absorption\n",
+    "falls off with wavelength. Values near 1 indicate fresh fossil-fuel soot; higher\n",
+    "values indicate wood smoke or other organic-rich aerosol."
+   ],
+   "id": "cell-08"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print(f\"AAE mean   : {aeth.aae.mean():.3f}\")\n",
+    "print(f\"AAE median : {aeth.aae.median():.3f}\")\n",
+    "print(f\"AAE range  : {aeth.aae.min():.3f} to {aeth.aae.max():.3f}\")"
+   ],
+   "id": "cell-09"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = plt.subplots(figsize=(10, 3.5))\n",
+    "ax.plot(aeth.time, aeth.aae, color=\"tab:purple\", lw=1)\n",
+    "ax.axhline(1.0, ls=\"--\", color=\"gray\", label=\"~1: fossil-fuel soot\")\n",
+    "ax.axhline(2.0, ls=\":\", color=\"saddlebrown\", label=\"~2: biomass burning\")\n",
+    "ax.set_ylabel(\"AAE [-]\")\n",
+    "ax.legend(loc=\"upper right\")\n",
+    "ax.set_title(\"Angstrom absorption exponent over time\")\n",
+    "plt.tight_layout()"
+   ],
+   "id": "cell-10"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Source apportionment\n",
+    "\n",
+    "Because soot and wood smoke have different spectral slopes, the measured AAE\n",
+    "can be used to split the signal into a fossil-fuel and a biomass-burning\n",
+    "contribution. The instrument reports both directly."
+   ],
+   "id": "cell-11"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print(f\"fossil fuel : {aeth.fossil_bcc.mean():9.1f} ng/m3\")\n",
+    "print(f\"biomass     : {aeth.biomass_bcc.mean():9.1f} ng/m3\")\n",
+    "print(f\"IR total    : {aeth.ir_bcc.mean():9.1f} ng/m3\")"
+   ],
+   "id": "cell-12"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, ax = plt.subplots(figsize=(10, 4))\n",
+    "ax.plot(aeth.time, aeth.fossil_bcc, label=\"fossil fuel\", color=\"dimgray\", lw=1)\n",
+    "ax.plot(aeth.time, aeth.biomass_bcc, label=\"biomass burning\", color=\"darkorange\", lw=1)\n",
+    "ax.set_ylabel(\"BC equivalent [ng/m3]\")\n",
+    "ax.legend(loc=\"upper right\")\n",
+    "ax.set_title(\"Apportioned black carbon\")\n",
+    "plt.tight_layout()"
+   ],
+   "id": "cell-13"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The apportionment inherits the assumptions behind it — fixed Ångström exponents\n",
+    "for the two source types — so treat it as an indication of the mix rather than a\n",
+    "measured quantity.\n",
+    "\n",
+    "## Everything else still applies\n",
+    "\n",
+    "An `Aethalometer` is an ordinary time series, so activities, cropping and\n",
+    "summaries work as usual. Because the channels are separate columns rather than a\n",
+    "size distribution, summaries are per channel."
+   ],
+   "id": "cell-14"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "midpoint = len(aeth.time) // 2\n",
+    "aeth.mark_activities({\n",
+    "    \"First half\":  [(str(aeth.time[0]), str(aeth.time[midpoint]))],\n",
+    "    \"Second half\": [(str(aeth.time[midpoint + 1]), str(aeth.time[-1]))],\n",
+    "})\n",
+    "aeth.summarize_activities()"
+   ],
+   "id": "cell-15"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "\n",
+    "**Next:** [13 — APS](13-aps.ipynb)."
+   ],
+   "id": "cell-16"
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

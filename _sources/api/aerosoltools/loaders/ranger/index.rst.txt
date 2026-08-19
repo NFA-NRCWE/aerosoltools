@@ -1,0 +1,92 @@
+aerosoltools.loaders.ranger
+===========================
+
+.. py:module:: aerosoltools.loaders.ranger
+
+.. autoapi-nested-parse::
+
+   Loader for Ranger gas / PM sensor exports (Cl₂, NO₂, PM, …).
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+.. py:data:: RangerObject
+
+.. py:function:: load_ranger_file(file, extra_data = False)
+
+   Load a Ranger sensor CSV export. The Ranger uses interchangeable
+   measurement heads (e.g. Cl₂, NO₂ or PM), and a single export may
+   contain several of them: each head writes its own ``"UTC time, …"``
+   header row followed by its readings. This loader splits the file on
+   those headers, groups the segments by measured component, and returns
+   one aerosol object per component.
+
+   :param file: Path to the Ranger ``.csv`` export.
+   :type file: str
+   :param extra_data: If ``True``, the non-core columns (UTC time, location id and the
+                      instrument status flag) are kept in each returned object's
+                      :attr:`~aerosoltools.aerosol1d.Aerosol1D.extra_data`. Defaults to
+                      ``False``.
+   :type extra_data: bool, optional
+
+   :returns:
+
+                 - A **gas** head (a single ``"<GAS> (PPM)"`` column such as
+                   ``CL2`` or ``NO2``) becomes an :class:`Aerosol1D` with a
+                   ``"Total_conc"`` column, ``unit`` (``"ppm"``/``"ppb"``) and
+                   ``dtype`` set to the subscripted gas name (e.g. ``"Cl₂"``).
+                 - A **PM** head (several ``"PMx (ug/m3)"`` columns) becomes an
+                   :class:`Aerosol1D` with one column per fraction, per-channel
+                   ``unit`` (``"µg/m³"``) and ``dtype`` (``"dM"``).
+                 - If the file holds **more than one** component, a list of such
+                   objects is returned (in first-appearance order). A file with a
+                   single component returns that object directly.
+
+                 Every object also carries ``instrument`` (``"Ranger"``),
+                 ``serial_number`` and ``measurement`` (the component label) in its
+                 metadata.
+   :rtype: Gas1D | Aerosol1D | list
+
+   :raises FileNotFoundError: If ``file`` does not exist or cannot be opened.
+   :raises ValueError: If the file contains no recognizable header row.
+
+   .. rubric:: Notes
+
+   Detailed description:
+       The Ranger exports a small self-describing CSV: a serial-number
+       line, then one or more header/data blocks. A header looks like::
+
+           UTC time, Local time, LocationID, CL2 (PPM), Status(...)
+
+       The loader uses the **local time** column as the time base (so the
+       series aligns on wall-clock time with co-located instruments) and
+       treats every column that is not UTC time / Local time / LocationID /
+       Status as a measurement. Repeated blocks of the same component
+       (e.g. a Cl₂ head that was paused and resumed) are concatenated into
+       one continuous, de-duplicated, time-sorted series.
+
+       Because the results are plain :class:`Gas1D` / :class:`Aerosol1D`
+       objects, all the usual time-series operations — cropping,
+       resampling, smoothing, activity marking and exposure summaries —
+       work unchanged.
+
+   .. rubric:: Examples
+
+   .. code-block:: python
+
+       import aerosoltools as at
+
+       result = at.load_ranger_file("Ranger_2605-1000088-A.csv")
+
+       # Single component -> one object; multiple -> list of objects.
+       objs = result if isinstance(result, list) else [result]
+       for obj in objs:
+           print(obj.metadata["measurement"], obj.data.shape)
+
+

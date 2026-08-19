@@ -1,0 +1,37 @@
+aerosoltools.intercomparison
+============================
+
+.. py:module:: aerosoltools.intercomparison
+
+.. autoapi-nested-parse::
+
+   Public multi-dataset (intercomparison) workflows.
+
+   Everything here operates on **two or more** independent datasets or instruments,
+   following the conceptual flow ``align → assess agreement → fit → apply``:
+
+   * :mod:`~aerosoltools.intercomparison.combination` — stitch/concatenate
+     instruments into one dataset (:func:`combine_measurements`,
+     :func:`combine_size_ranges`).
+   * :mod:`~aerosoltools.intercomparison.correlation` — correlation, regression
+     and Bland-Altman agreement (:func:`plot_correlation`,
+     :func:`bland_altman_analysis`, :func:`fit_data`).
+   * :mod:`~aerosoltools.intercomparison._alignment` — private temporal-alignment
+     machinery shared by the above (and by calibration).
+
+   Single-dataset behaviour is **not** here — it lives on the data objects
+   themselves (``data.timecrop(...)``, ``data.summarize(...)``, …).
+
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /api/aerosoltools/intercomparison/calibration/index
+   /api/aerosoltools/intercomparison/combination/index
+   /api/aerosoltools/intercomparison/correlation/index
+
+
