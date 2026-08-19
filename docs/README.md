@@ -31,6 +31,18 @@ python -m http.server -d docs/_build/html 8000
 `docs/_build/` and the generated `docs/api/` tree are both gitignored — they are
 build artifacts and are recreated from scratch every time.
 
+**Delete `docs/_build/` after changing any `toctree`.** Sphinx rebuilds only the
+pages it thinks are outdated, and adding a top-level entry does not mark the
+*other* branches' pages as stale — so they keep the sidebar they were written
+with. Adding the GUI section made "Desktop GUI" vanish from the navigation on
+every Examples page, purely as a local incremental-build artifact: a clean build
+of the same sources is correct, and CI always builds from scratch. If the
+navigation looks wrong locally, rebuild clean before believing it:
+
+```bash
+rm -rf docs/_build docs/api
+```
+
 A full build takes roughly a minute and a half, because **the example notebooks
 are executed** (see below).
 
