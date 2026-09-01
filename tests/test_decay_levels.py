@@ -172,3 +172,41 @@ def test_legacy_popt_without_the_initial_excess_still_evaluates(model, loss):
     assert np.allclose(legacy, explicit)
     # xi = 0 means the curve opens at the background, as it always did.
     assert legacy[0] == pytest.approx(100.0)
+
+
+# -- half-life is defined for every loss model -------------------------------
+
+
+@pytest.mark.parametrize(
+    "model,loss",
+    [
+        ("zeroth_order", [0.5]),
+        ("first_order", [1 / 400.0]),
+        ("second_order", [2e-5]),
+        ("combined", [1 / 600.0, 1e-5]),
+    ],
+)
+def test_half_life_matches_when_the_modelled_excess_actually_halves(model, loss):
+    """Solved per model, checked against the model's own decay kernel."""
+    xmax = 500.0
+    reported = _decay.DecayFitMixin._half_life_hours(model, loss, xmax)
+    assert np.isfinite(reported) and reported > 0
+
+    kernel = _decay._DECAY_EXCESS[model]
+    td = np.linspace(0.0, reported * 3600 * 3, 300001)
+    measured = td[int(np.argmin(np.abs(kernel(td, *loss, xmax) - xmax / 2)))] / 3600
+    assert reported == pytest.approx(measured, rel=1e-3)
+
+
+def test_half_life_and_wall_loss_survive_a_non_exponential_model():
+    """They used to be None unless the fit picked a model with a linear term."""
+    obj, _ = _first_order_peak(150.0)
+    res = obj.fit_decay(
+        (obj.time[0], obj.time[-1]), model="second_order", air_exchange_rate=2.0
+    )
+    assert res.model == "second_order"
+    assert res.loss_rate_per_hour is None  # genuinely has no first-order term
+    assert np.isfinite(res.half_life_hours) and res.half_life_hours > 0
+    assert res.wall_loss_rate_per_hour == pytest.approx(
+        res.decay_rate_per_hour - 2.0, rel=1e-9
+    )

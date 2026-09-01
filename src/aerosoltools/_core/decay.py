@@ -130,6 +130,8 @@ class DecayResult(Mapping):
         peak_excess: Peak excess over background (``Xmax``).
         emission_rate: Volumetric emission rate ``E`` (concentration/s).
         decay_rate / decay_rate_per_hour: First-order-equivalent loss rate.
+        half_life_hours: Hours for the peak excess to halve. Defined for every
+            loss model, not just the exponential one.
         emission_start_s / emission_duration_s / peak_time_s: Timing in seconds
             from the window start.
         peak_time / window_start: Absolute timestamps.
@@ -677,7 +679,8 @@ class DecayFitMixin:
             (first-order-equivalent loss rate, for round-tripping into
             ``decay_rate``), ``loss_rate_per_hour`` / ``half_life_hours``
             (first-order term), ``zeroth_order_rate``, ``second_order_rate``
-            (second/combined), ``wall_loss_rate_per_hour`` (with
+            (second/combined), ``half_life_hours`` (time for the peak excess to
+            halve, for any model), ``wall_loss_rate_per_hour`` (with
             ``air_exchange_rate``), ``source_strength`` / ``total_emitted`` (with
             ``volume``), the timing (``emission_start_s``, ``emission_duration_s``,
             ``peak_time_s``, ``peak_time``) and, for redrawing, ``window_start``
@@ -1173,6 +1176,42 @@ class DecayFitMixin:
         return float(loss[0])  # first_order: k; combined: K
 
     @staticmethod
+    def _half_life_hours(name, loss, xmax) -> float:
+        """Hours for the peak excess to fall to half, solved per model.
+
+        Every loss model has a well-defined time to halve; only the
+        first-order one has it independent of concentration. Reporting it for
+        all four keeps the field usable whichever model is selected, instead of
+        being ``None`` the moment the fit picks a non-exponential decay.
+
+        * zeroth order  ``X = Xmax - a t``          -> ``t = Xmax / (2a)``
+        * first order   ``X = Xmax e^{-kt}``        -> ``t = ln2 / k``
+        * second order  ``X = Xmax/(1 + C Xmax t)`` -> ``t = 1 / (C Xmax)``
+        * combined      solves ``K X + C X**2`` for the same half-point:
+          ``t = ln((2K + C Xmax) / (K + C Xmax)) / K``
+        """
+        xmax = max(float(xmax), 0.0)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            if name == "zeroth_order":
+                a = float(loss[0])
+                seconds = xmax / (2.0 * a) if a > 0 else float("nan")
+            elif name == "first_order":
+                k = float(loss[0])
+                seconds = np.log(2.0) / k if k > 0 else float("nan")
+            elif name == "second_order":
+                c_x = float(loss[0]) * xmax
+                seconds = 1.0 / c_x if c_x > 0 else float("nan")
+            else:  # combined
+                K, C = float(loss[0]), float(loss[1])
+                if K > 0:
+                    seconds = np.log((2.0 * K + C * xmax) / (K + C * xmax)) / K
+                elif C * xmax > 0:
+                    seconds = 1.0 / (C * xmax)
+                else:
+                    seconds = float("nan")
+        return float(seconds) / 3600.0 if np.isfinite(seconds) else float("nan")
+
+    @staticmethod
     def _decay_loss_seed(name, rate, xmax):
         """Initial loss-parameter guess(es) for the stage-1 decay fit."""
         if name == "zeroth_order":
@@ -1238,15 +1277,20 @@ class DecayFitMixin:
         if model == "zeroth_order":
             result["zeroth_order_rate"] = params["a"]
             result["zeroth_order_rate_unit"] = f"{unit}/s"
+        # The explicit first-order term, present only for the models that have
+        # one. The half-life is reported for all four (see _half_life_hours).
         linear_rate = params.get("k", params.get("K"))
         if linear_rate is not None:
-            loss_per_hour = linear_rate * 3600.0
-            result["loss_rate_per_hour"] = loss_per_hour
-            result["half_life_hours"] = (
-                np.log(2) / loss_per_hour if loss_per_hour > 0 else float("nan")
-            )
-            if ach is not None:
-                result["wall_loss_rate_per_hour"] = loss_per_hour - ach
+            result["loss_rate_per_hour"] = linear_rate * 3600.0
+        result["half_life_hours"] = self._half_life_hours(
+            model, fit["loss"], fit["xmax"]
+        )
+        if ach is not None:
+            # Split the loss into ventilation and everything else. For the
+            # models without a linear term this uses the first-order-equivalent
+            # rate, so it is an approximate decomposition -- but a usable one,
+            # and better than reporting nothing.
+            result["wall_loss_rate_per_hour"] = result["decay_rate_per_hour"] - ach
         if "C" in params:
             result["second_order_rate"] = params["C"]
 
