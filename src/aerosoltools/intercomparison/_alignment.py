@@ -46,38 +46,54 @@ def _infer_freq(idx: pd.DatetimeIndex) -> Optional[str]:
 
     The function first tries :func:`pandas.infer_freq`. If that fails, it falls
     back to estimating the cadence from the median inter-sample spacing and
-    returns a rule like ``"1S"``, ``"5T"`` or ``"1H"``.
+    returns a rule like ``"1s"``, ``"5min"`` or ``"1h"``.
 
     Args:
         idx: Datetime index from which to infer a sampling frequency.
 
     Returns:
         str | None: A pandas offset alias representing the inferred cadence
-        (e.g. ``"1S"``, ``"30T"``, ``"1H"``), or ``None`` if it cannot be
+        (e.g. ``"1s"``, ``"30min"``, ``"1h"``), or ``None`` if it cannot be
         determined.
+
+    Notes:
+        The spacing is measured with ``.diff().dt.total_seconds()`` rather than
+        by dividing the raw integer view by 1e9. Since pandas 2.0 a
+        ``DatetimeIndex`` may carry second, millisecond or microsecond
+        resolution — several loaders in this package produce ``datetime64[us]``
+        — and assuming nanoseconds made the inferred cadence 1000x too small,
+        silently rebinning onto a far too fine grid.
+
+        The returned aliases are the lowercase spellings (``"s"``/``"min"``/
+        ``"h"``); the uppercase ``"S"``/``"T"``/``"H"`` were deprecated in
+        pandas 2.2 and removed in pandas 3.
     """
     if len(idx) < 3:
         return None
     f = pd.infer_freq(idx)
     if f:
         return f
-    d = np.diff(idx.view("i8"))  # ns
+    # Resolution-agnostic: total_seconds() honours the index's own unit.
+    d = pd.Series(pd.DatetimeIndex(idx)).diff().dt.total_seconds().to_numpy()
+    d = d[np.isfinite(d)]
     if d.size == 0:
         return None
-    sec = int(round(np.median(d) / 1e9))
+    sec = int(round(float(np.median(d))))
     if sec < 60:
-        return f"{max(1, sec)}S"
+        return f"{max(1, sec)}s"
     if sec < 3600:
-        return f"{max(1, sec // 60)}T"
-    return f"{max(1, sec // 3600)}H"
+        return f"{max(1, sec // 60)}min"
+    return f"{max(1, sec // 3600)}h"
 
 
 def _coarser(rule_a: str, rule_b: str) -> str:
     """Return the coarser (slower) cadence between two resampling rules.
 
     The rules are interpreted as simple second-, minute-, hour- or day-based
-    frequencies (e.g. ``"S"``, ``"10S"``, ``"5T"``, ``"1H"``, ``"1D"``), and
-    compared by their corresponding period length in seconds.
+    frequencies (e.g. ``"s"``, ``"10s"``, ``"5min"``, ``"1h"``, ``"1D"``), and
+    compared by their corresponding period length in seconds. The legacy
+    uppercase spellings (``"S"``/``"T"``/``"H"``) are still accepted, since
+    ``to_s`` uppercases before lookup.
 
     Args:
         rule_a: First pandas-style frequency string.
@@ -317,8 +333,8 @@ def _align_series(
     elif match == "rebin":
         # target cadence: explicit or coarser of the two inferred
         if rebin_freq is None:
-            fx = _infer_freq(sx.index) or "S"  # type: ignore
-            fy = _infer_freq(sy.index) or "S"  # type: ignore
+            fx = _infer_freq(sx.index) or "s"  # type: ignore
+            fy = _infer_freq(sy.index) or "s"  # type: ignore
             target = _coarser(fx, fy)
         else:
             target = rebin_freq

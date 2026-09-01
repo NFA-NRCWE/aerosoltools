@@ -56,7 +56,7 @@ def _align_two_in_time(
 
     else:  # rebin
         if rebin_freq is None:
-            freq = _coarser(_infer_freq(lo_idx) or "S", _infer_freq(up_idx) or "S")
+            freq = _coarser(_infer_freq(lo_idx) or "s", _infer_freq(up_idx) or "s")
         else:
             freq = rebin_freq
         lo_tm = lower.timerebin(
