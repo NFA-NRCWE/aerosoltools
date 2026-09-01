@@ -531,7 +531,8 @@ def load_data_from_folder(
                 # concatenated into a single series here; load them individually.
                 raise ValueError(
                     "Loader returned multiple datasets for this file; load it "
-                    "individually rather than via load_data_from_folder."
+                    "individually with aerosoltools.load_all() rather than via "
+                    "load_data_from_folder."
                 )
 
             if time_rebin:

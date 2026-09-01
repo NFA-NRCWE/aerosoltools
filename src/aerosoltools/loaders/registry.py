@@ -577,11 +577,27 @@ def load_file(path: str | Path, instrument: str | None = None, **kwargs):
         **kwargs: Forwarded to the selected loader (e.g. ``extra_data=True``).
 
     Returns:
-        The loaded aerosol object (or a list of them for multi-head files).
+        The loaded aerosol object -- **or a list of them**. Most instruments
+        yield exactly one object, but a few exports hold several measured
+        components in one file (a Ranger with interchangeable heads writes a
+        block per head), and those yield one object per component. The
+        instrument name does not distinguish the two cases:
+        :func:`detect_instrument` returns ``"Ranger"`` either way, so a generic
+        caller cannot tell in advance which it will get.
+
+        **Prefer** :func:`load_all` when writing code that must work for any
+        file -- it returns a list of length 1 for the ordinary single-component
+        case, so there is only one shape to handle::
+
+            for obj in at.load_all(path):
+                print(obj.metadata["measurement"], obj.data.shape)
 
     Raises:
         InstrumentDetectionError: If ``instrument`` is ``None`` and detection
             fails, or if a given ``instrument`` name is not supported.
+
+    See Also:
+        load_all: Same detection and dispatch, but always returns a list.
     """
     if instrument is None:
         instrument = detect_instrument(path)
@@ -594,4 +610,49 @@ def load_file(path: str | Path, instrument: str | None = None, **kwargs):
             f"Unknown instrument {instrument!r}. Supported instruments: "
             f"{', '.join(supported_instruments())}."
         ) from None
-    return loader(path, **kwargs)
+    # Detection accepts a Path, so dispatch must too: not every loader does its
+    # own coercion (load_fourtec_file calls path.lower()), which made
+    # `load_file(Path(...))` fail for one instrument out of eighteen.
+    return loader(str(path), **kwargs)
+
+
+def load_all(path: str | Path, instrument: str | None = None, **kwargs) -> list:
+    """Load an instrument file and **always** return a list of objects.
+
+    The same auto-detection and dispatch as :func:`load_file`, with a single
+    predictable return type. Use it whenever the file is not known in advance --
+    a batch loader walking a campaign folder, a GUI file-open, any generic
+    script -- so a multi-component export (e.g. a Ranger file holding several
+    measurement heads) does not have to be special-cased.
+
+    Args:
+        path: Path to the instrument export file.
+        instrument: Canonical instrument name (a key of
+            :data:`INSTRUMENT_LOADERS`). When ``None`` (default), the instrument
+            is detected from the file content, then its filename.
+        **kwargs: Forwarded to the selected loader (e.g. ``extra_data=True``).
+
+    Returns:
+        list: The loaded aerosol objects, in the loader's own order. A
+        single-component file gives a list of length 1.
+
+    Raises:
+        InstrumentDetectionError: If ``instrument`` is ``None`` and detection
+            fails, or if a given ``instrument`` name is not supported.
+
+    Examples:
+        Walk a mixed campaign folder without knowing which files are
+        multi-component::
+
+            import aerosoltools as at
+            from pathlib import Path
+
+            for f in Path("campaign").iterdir():
+                for obj in at.load_all(f):
+                    print(f.name, obj.metadata.get("measurement"), obj.data.shape)
+
+    See Also:
+        load_file: Returns a bare object for single-component files.
+    """
+    result = load_file(path, instrument=instrument, **kwargs)
+    return list(result) if isinstance(result, list) else [result]

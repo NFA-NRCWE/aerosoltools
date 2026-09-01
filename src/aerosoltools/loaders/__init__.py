@@ -48,6 +48,7 @@ from .ranger import load_ranger_file
 from .registry import (
     INSTRUMENT_LOADERS,
     detect_instrument,
+    load_all,
     load_file,
     supported_instruments,
 )
@@ -89,6 +90,7 @@ __all__ = [
     "load_devlabs_file",
     # Registry / auto-detection
     "load_file",
+    "load_all",
     "detect_instrument",
     "supported_instruments",
     "INSTRUMENT_LOADERS",

@@ -84,6 +84,10 @@ load_tiger_file
 load_data_from_folder
     Dispatch the appropriate loader over all files in a folder and
     return the combined dataset(s).
+load_all
+    Like :func:`load_file`, but always returns a list -- use it when the
+    file may hold several measured components (e.g. a multi-head Ranger
+    export) and the calling code must not care which.
 
 Intercomparison (multi-dataset) workflows
 -----------------------------------------
@@ -153,6 +157,7 @@ from .loaders import (
     LoaderError,
     detect_instrument,
     load_aethalometer_file,
+    load_all,
     load_aps_file,
     load_cpc_file,
     load_data_from_folder,
@@ -207,6 +212,7 @@ __all__ = [
     "decay_curve",
     # Loading: auto-detect entry point + registry + error base
     "load_file",
+    "load_all",
     "detect_instrument",
     "INSTRUMENT_LOADERS",
     "LoaderError",
