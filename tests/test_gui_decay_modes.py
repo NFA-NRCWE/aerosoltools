@@ -227,3 +227,48 @@ def test_every_edit_path_recomputes_the_table(tab):
         seen.append(rows[0]["r2"])
         assert tab._results[0] is tab._selected_spec()["_result"]
     assert len(set(seen)) > 1, "the table never changed across three edits"
+
+
+# -- the two levels are independent in the GUI too ---------------------------
+
+
+def test_start_can_be_dragged_below_the_background(tab):
+    """A later activity can raise the baseline, so the start may sit under it.
+
+    The background must stay where the decay puts it. It used to follow the
+    start down, because its seed was capped at the start level.
+    """
+    background = tab._results[0]["background"]
+    line = tab._start_line
+    xs = line.get_xdata()
+    tab._grab_handle(
+        _Event(x=tab._x_pixels(xs[0]) + 5, y=tab._line_y_pixels(line), inaxes=tab.ax)
+    )
+
+    target = background * 0.4
+    move = _Event(inaxes=tab.ax, ydata=target)
+    tab._on_motion(move)
+    tab._on_release(move)
+
+    res = tab._results[0]
+    assert res["start_concentration"] == pytest.approx(target, abs=1e-6)
+    assert res["background"] == pytest.approx(background, rel=1e-6)
+    assert res["initial_excess"] < 0
+
+
+def test_a_start_typed_below_the_background_does_not_move_it(tab):
+    background = tab._results[0]["background"]
+    _set_field(tab, tab.start_edit, f"{background * 0.4:.0f}")
+
+    res = tab._results[0]
+    assert res["start_concentration"] < res["background"]
+    assert res["background"] == pytest.approx(background, rel=1e-6)
+
+
+def test_the_table_reports_a_negative_initial_excess(tab):
+    background = tab._results[0]["background"]
+    _set_field(tab, tab.start_edit, f"{background * 0.4:.0f}")
+
+    rows, unit = tab._table_rows()
+    assert ("Initial excess [%s]" % (unit or "conc"), "xi") in tab._table_columns(unit)
+    assert rows[0]["xi"].lstrip().startswith("-")

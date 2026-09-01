@@ -24,7 +24,12 @@ T0, TP, N = 300.0, 300.0, 1200
 
 
 def _first_order_peak(initial_excess, noise_frac=0.01, seed=1):
-    """A first-order emission+decay peak starting ``initial_excess`` above bg."""
+    """A first-order peak whose start sits ``initial_excess`` from the background.
+
+    Positive means the window opens above the background (an earlier event still
+    decaying); negative means it opens below, so the concentration never returns
+    to where it started -- a later activity raised the baseline.
+    """
     t = np.arange(N, dtype=float)
     s = t - T0
     xss = TRUE_E / TRUE_K
@@ -56,7 +61,7 @@ def test_background_recovered_however_elevated_the_start(initial_excess):
     assert res.background == pytest.approx(TRUE_BG, rel=0.10)
     # The start level tracks the data, and sits above the background.
     assert res.start_concentration == pytest.approx(float(y[0]), rel=0.15)
-    assert res.start_concentration >= res.background
+    assert res.start_concentration >= res.background - 0.1 * TRUE_BG
     assert res.initial_excess == pytest.approx(initial_excess, abs=0.15 * TRUE_BG + 15)
 
 
@@ -245,3 +250,84 @@ def test_half_life_and_wall_loss_survive_a_non_exponential_model():
     assert res.wall_loss_rate_per_hour == pytest.approx(
         res.decay_rate_per_hour - 2.0, rel=1e-9
     )
+
+
+# -- the two levels are independent, in both directions ----------------------
+
+
+# Kept above -TRUE_BG so the synthetic concentration stays positive.
+@pytest.mark.parametrize("initial_excess", [-30.0, -60.0, -80.0])
+def test_a_raised_baseline_is_recovered(initial_excess):
+    """The concentration ends ABOVE where it started (GitHub #30 follow-up).
+
+    Some emissions are followed by a new activity or process that lifts the
+    baseline, so the decay settles above the pre-emission level. Forcing the
+    start to be at or above the background could not represent that at all.
+    """
+    obj, y = _first_order_peak(initial_excess)
+    assert y[-1] > y[0], "the synthetic case must actually end above its start"
+
+    res = _fit(obj)
+
+    assert res.background == pytest.approx(TRUE_BG, rel=0.10)
+    assert res.params["k"] == pytest.approx(TRUE_K, rel=0.10)
+    # The start is genuinely below the background, and tracks the data.
+    assert res.initial_excess < 0
+    assert res.start_concentration < res.background
+    # Tolerance is absolute: the onset detector lands a little after the true
+    # emission start, so the modelled pre-emission level sits slightly above the
+    # first sample. That offset does not scale with the (small) start level.
+    assert res.start_concentration == pytest.approx(float(y[0]), abs=0.2 * TRUE_BG)
+
+
+def test_the_two_levels_move_independently():
+    """Sweeping the start across the background must not drag the background."""
+    backgrounds = []
+    for initial_excess in (-80.0, -40.0, 0.0, 60.0, 120.0):
+        obj, _ = _first_order_peak(initial_excess)
+        res = _fit(obj)
+        backgrounds.append(res.background)
+        assert res.background == pytest.approx(TRUE_BG, rel=0.10)
+    assert max(backgrounds) - min(backgrounds) < 0.15 * TRUE_BG
+
+
+@pytest.mark.parametrize(
+    "model", ["zeroth_order", "first_order", "second_order", "combined"]
+)
+def test_every_model_evaluates_with_a_start_below_the_background(model):
+    """The kernels must stay finite and positive on the low side too."""
+    loss = {
+        "zeroth_order": [0.5],
+        "first_order": [1 / 300.0],
+        "second_order": [2e-5],
+        "combined": [1 / 400.0, 1e-5],
+    }[model]
+    t = np.linspace(0.0, 900.0, 901)
+    curve = _decay.decay_curve(model, t, [*loss, 200.0, 3.0, 300.0, 300.0, -60.0])
+
+    assert np.all(np.isfinite(curve))
+    assert np.all(curve >= 0.0)
+    assert curve[0] == pytest.approx(140.0, rel=1e-6)  # P0 + xi
+    assert curve.max() > 200.0
+
+
+def test_a_negative_initial_excess_keeps_its_sign_in_params():
+    """``params`` takes the magnitude of every parameter except this one."""
+    obj, _ = _first_order_peak(-60.0)
+    res = _fit(obj)
+    assert res.params["xi"] < 0
+    assert res.params["xi"] == pytest.approx(res.initial_excess, rel=1e-9)
+
+
+def test_a_start_below_the_background_can_be_set_by_hand():
+    obj, _ = _first_order_peak(0.0)
+    res = obj.fit_decay(
+        (obj.time[0], obj.time[-1]),
+        model="first_order",
+        background=TRUE_BG,
+        start_concentration=TRUE_BG * 0.4,
+        optimize=False,
+    )
+    assert res.background == pytest.approx(TRUE_BG, rel=1e-6)
+    assert res.start_concentration == pytest.approx(TRUE_BG * 0.4, rel=1e-6)
+    assert res.initial_excess < 0

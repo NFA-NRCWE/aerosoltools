@@ -5,14 +5,22 @@ source is switched on, the concentration rises, the source is switched off, and
 the concentration decays back towards the background. The models describe the
 *excess* over background, ``X = P - P0``.
 
-**The start and the background are two different levels.** A measurement window
-often opens while an earlier event is still decaying, so the level the source
-switches on at sits *above* the background the decay eventually relaxes to.
-Taking the start for the background — as this module originally did — forces the
-modelled decay to flatten out too early, which biases the loss rate, the peak
-excess and every quantity derived from them. The curve therefore starts at
-``P0 + xi``, where the initial excess ``xi >= 0`` is fitted alongside the
-background ``P0``; ``xi = 0`` recovers the classic "starts at background" peak.
+**The start and the background are two independent levels.** Taking the level a
+window opens at for the background — as this module originally did — forces the
+modelled decay to flatten out wherever the measurement happened to begin, which
+biases the loss rate, the peak excess and every quantity derived from them. The
+curve therefore starts at ``P0 + xi``, where the *signed* initial excess ``xi``
+is fitted alongside the background ``P0``:
+
+* ``xi > 0`` — the window opened **above** the background, e.g. while an earlier
+  event was still decaying.
+* ``xi = 0`` — the classic peak that starts and ends at the same level.
+* ``xi < 0`` — the window opened **below** the level the decay settles at, e.g.
+  because another activity or process raised the baseline during or after the
+  emission, so the concentration never returns to where it started.
+
+Neither level constrains the other; only the concentration itself has a floor,
+which keeps ``P0 + xi >= 0``.
 
 Four loss models are offered, differing in how the excess is removed:
 
@@ -122,10 +130,13 @@ class DecayResult(Mapping):
         background: The fitted **asymptote** ``P0`` -- the true background the
             decay relaxes to. Not necessarily the level the window started at.
         start_concentration: Level the series sat at when the source came on.
-            Equals ``background + initial_excess``; it sits **above**
-            ``background`` when an earlier event was still decaying.
-        initial_excess: Excess over ``background`` already present at the
-            emission start (``xi``). Zero for a peak that starts at background.
+            Equals ``background + initial_excess``. Independent of
+            ``background``: above it when an earlier event was still decaying,
+            below it when a later activity raised the baseline.
+        initial_excess: Signed difference between the start level and
+            ``background`` (``xi``). Positive when the window opened above the
+            background, negative when the concentration never came back down to
+            where it started, zero for a peak that starts at background.
         peak_concentration: Modelled peak concentration (``background`` + excess).
         peak_excess: Peak excess over background (``Xmax``).
         emission_rate: Volumetric emission rate ``E`` (concentration/s).
@@ -246,6 +257,19 @@ def _pos(x) -> float:
     return abs(float(x))
 
 
+def _signed(x) -> float:
+    """Pass a scalar parameter through with its sign intact.
+
+    Used for the initial excess ``xi`` alone. Every other model parameter is a
+    magnitude, but ``xi`` is a *difference* between two independent levels — the
+    concentration when the source came on and the one the decay settles at — and
+    either can be the larger. A peak whose baseline is raised by some later
+    activity never returns to its pre-emission level, and is described by
+    ``xi < 0``.
+    """
+    return float(x)
+
+
 # -- full emission + decay curves (excess above background, back to background)
 # Each returns the concentration over time ``t`` (seconds from the window start)
 # for a source on from ``t0`` for a duration ``tp``. Signatures are
@@ -255,57 +279,73 @@ def _pos(x) -> float:
 
 def _zeroth_order(t, a, P0, E, t0, tp, xi=0.0):
     """Zeroth-order model ``dX/dt = E - a``: linear rise and linear decay."""
-    a, P0, E, t0, tp, xi = map(_pos, (a, P0, E, t0, tp, xi))
+    a, P0, E, t0, tp = map(_pos, (a, P0, E, t0, tp))
+    xi = _signed(xi)
     s = np.asarray(t, dtype=float) - t0
     rise = xi + (E - a) * np.clip(s, 0.0, tp)
     xmax = xi + (E - a) * tp
-    dec = xmax - a * np.clip(s - tp, 0.0, None)
+    # A linear decay reaches the background in finite time and stops there, so
+    # the *decay* excess is floored at zero. The pre-emission level is not: it
+    # may legitimately sit below the level the decay settles at.
+    dec = np.clip(xmax - a * np.clip(s - tp, 0.0, None), 0.0, None)
     x = np.where(s < 0, xi, np.where(s < tp, rise, dec))
-    return _sanitize(P0 + np.clip(x, 0.0, None))
+    return _sanitize(np.clip(P0 + x, 0.0, None))
 
 
 def _first_order(t, k, P0, E, t0, tp, xi=0.0):
     """First-order model ``dX/dt = E - k*X``: exponential rise and decay."""
-    k, P0, E, t0, tp, xi = map(_pos, (k, P0, E, t0, tp, xi))
+    k, P0, E, t0, tp = map(_pos, (k, P0, E, t0, tp))
+    xi = _signed(xi)
     s = np.asarray(t, dtype=float) - t0
     with np.errstate(over="ignore", invalid="ignore"):
         xss = E / k if k > 0 else 0.0
         # X(s) relaxes from the initial excess xi towards the steady state xss.
+        # xi < 0 (a start below the background) needs no special case: the same
+        # exponential simply relaxes upward instead of downward.
         relax = np.exp(-k * np.clip(s, 0.0, None))
         emit = xss * (1.0 - relax) + xi * relax
         relax_tp = np.exp(-k * tp)
         xmax = xss * (1.0 - relax_tp) + xi * relax_tp
         dec = xmax * np.exp(-k * np.clip(s - tp, 0.0, None))
         x = np.where(s < 0, xi, np.where(s < tp, emit, dec))
-    return _sanitize(P0 + x)
+    return _sanitize(np.clip(P0 + x, 0.0, None))
 
 
 def _second_order(t, C, P0, E, t0, tp, xi=0.0):
     """Second-order (coagulation) model ``dX/dt = E - C*X**2``."""
-    C, P0, E, t0, tp, xi = map(_pos, (C, P0, E, t0, tp, xi))
+    C, P0, E, t0, tp = map(_pos, (C, P0, E, t0, tp))
+    xi = _signed(xi)
     s = np.asarray(t, dtype=float) - t0
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         if C > 0 and E > 0:
             root = np.sqrt(E / C)  # steady-state excess
             rate = np.sqrt(E * C)
-            # X(0) = xi shifts the rising tanh by artanh(xi / root). An initial
-            # excess at or above the steady state is unreachable by a rising
-            # tanh, so clamp just short of 1 (artanh diverges there).
-            ratio = min(xi / root, 1.0 - 1e-12) if root > 0 else 0.0
+            # X(0) = xi shifts the rising tanh by artanh(xi / root); a negative
+            # shift starts it below the background. artanh diverges at +-1, so
+            # clamp just inside: |xi| at or beyond the steady state cannot be
+            # reached by a rising tanh.
+            ratio = np.clip(xi / root, -1.0 + 1e-12, 1.0 - 1e-12) if root > 0 else 0.0
             shift = float(np.arctanh(ratio))
             emit = root * np.tanh(rate * np.clip(s, 0.0, None) + shift)
             xmax = float(root * np.tanh(rate * tp + shift))
         else:
             emit = np.full_like(s, xi)
             xmax = xi
-        dec = xmax / (1.0 + C * xmax * np.clip(s - tp, 0.0, None))
+        if xmax > 0:
+            dec = xmax / (1.0 + C * xmax * np.clip(s - tp, 0.0, None))
+        else:
+            # dX/dt = -C X**2 drives a non-positive excess away from zero rather
+            # than towards it, so there is no decay to draw; hold it instead of
+            # letting the hyperbola run through its pole.
+            dec = np.full_like(s, xmax)
         x = np.where(s < 0, xi, np.where(s < tp, emit, dec))
-    return _sanitize(P0 + x)
+    return _sanitize(np.clip(P0 + x, 0.0, None))
 
 
 def _combined(t, K, C, P0, E, t0, tp, xi=0.0):
     """Combined first + second order model ``dX/dt = E - (K*X + C*X**2)``."""
-    K, C, P0, E, t0, tp, xi = map(_pos, (K, C, P0, E, t0, tp, xi))
+    K, C, P0, E, t0, tp = map(_pos, (K, C, P0, E, t0, tp))
+    xi = _signed(xi)
     s = np.asarray(t, dtype=float) - t0
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         if C > 0 and E > 0:
@@ -314,9 +354,12 @@ def _combined(t, K, C, P0, E, t0, tp, xi=0.0):
             r2 = (-K - det) / (2.0 * C)  # negative root
             # Riccati solution through X(0) = xi:
             #   (X - r1) / (X - r2) = A e^{-det s},  A = (xi - r1) / (xi - r2)
-            # A = r1 / r2 recovers the xi = 0 form.
-            denom0 = xi - r2
-            a_coef = (xi - r1) / denom0 if denom0 != 0 else 0.0
+            # A = r1 / r2 recovers the xi = 0 form. Starting below r2 puts the
+            # solution on the runaway branch (it diverges through the pole
+            # rather than rising to r1), so hold the start just inside it.
+            xi_eff = max(xi, r2 * (1.0 - 1e-9) if r2 < 0 else xi)
+            denom0 = xi_eff - r2
+            a_coef = (xi_eff - r1) / denom0 if denom0 != 0 else 0.0
 
             def _emit(se):
                 e = a_coef * np.exp(-det * np.clip(se, 0.0, None))
@@ -335,7 +378,7 @@ def _combined(t, K, C, P0, E, t0, tp, xi=0.0):
             xmax = xi
         dec = _combined_decay(np.clip(s - tp, 0.0, None), K, C, xmax)
         x = np.where(s < 0, xi, np.where(s < tp, emit, dec))
-    return _sanitize(P0 + x)
+    return _sanitize(np.clip(P0 + x, 0.0, None))
 
 
 def _combined_decay(sd, K, C, xmax):
@@ -533,12 +576,14 @@ def _invert_emission(
         loss: The model's fitted loss constant(s).
         xmax: Peak excess above the background asymptote.
         tp: Emission duration (s).
-        xi: Excess already present when the source turned on -- the elevated
-            start. The source only has to supply the difference.
+        xi: Excess already present when the source turned on. Positive when the
+            window opened above the background (the source only has to supply
+            the difference), negative when it opened below and the source has
+            further to climb.
     """
     if tp <= 0 or xmax <= 0:
         return 0.0
-    xi = max(float(xi), 0.0)
+    xi = float(xi)
     if xmax <= xi:
         # The peak is no higher than the level the window started at, so the
         # rise carries no information about a source.
@@ -630,11 +675,13 @@ class DecayFitMixin:
                 of being clipped to it. Pass ``optimize=False`` to stop at the
                 guess, which then round-trips exactly.
             start_concentration (float | None): **Initial guess** for the level
-                the series sat at when the source came on. This is a *separate*
-                quantity from ``background``: an earlier event may still be
-                decaying, leaving the window's start elevated above the true
-                background. The difference is fitted as the initial excess. When
-                ``None`` the seed is the pre-emission baseline median.
+                the series sat at when the source came on. Independent of
+                ``background`` and free to sit on either side of it: above when
+                an earlier event was still decaying, below when a later activity
+                raises the baseline so the concentration never returns to its
+                pre-emission level. The signed difference is fitted as the
+                initial excess. When ``None`` the seed is the pre-emission
+                baseline median.
             peak_concentration (float | None): **Initial guess** for the peak
                 concentration (so the peak excess seed is
                 ``peak_concentration - background``). The fit may raise the peak
@@ -868,10 +915,10 @@ class DecayFitMixin:
         percentile of the whole pre-peak segment.
 
         This is the level the series sits at when the source is switched on. It
-        is **not** necessarily the true background: an earlier event may still
-        be decaying, leaving the window's start elevated. The asymptote the
-        decay actually relaxes to is fitted separately -- see
-        :meth:`_fit_two_stage`.
+        is **not** the background: an earlier event may still be decaying,
+        leaving the start above it, or a later activity may raise the baseline,
+        leaving the start below it. The asymptote the decay actually relaxes to
+        is fitted separately -- see :meth:`_fit_two_stage`.
         """
         pre = y[: t0_idx + 1]
         if pre.size >= 3:
@@ -913,9 +960,10 @@ class DecayFitMixin:
         * ``P0`` -- the asymptote the decay relaxes to, i.e. the *true*
           background. Fitted in stage 1 against the post-peak samples.
         * ``P_start`` -- the level the series sat at when the source came on.
-          It may be **elevated above** ``P0``, e.g. because an earlier event was
-          still decaying. Carried as the initial excess ``xi = P_start - P0``
-          and fitted in stage 2.
+          Independent of ``P0``: above it when an earlier event was still
+          decaying, below it when a later activity raised the baseline so the
+          concentration never returns to its pre-emission level. Carried as the
+          signed initial excess ``xi = P_start - P0`` and fitted in stage 2.
 
         Treating the start as the background (the previous behaviour) forced the
         decay to flatten out at whatever the window happened to open at, biasing
@@ -965,7 +1013,12 @@ class DecayFitMixin:
         if background is not None:
             end_seed = max(float(background), 0.0)
         else:
-            end_seed = self._seed_within(min(start_seed, 0.95 * end_hi), 0.0, end_hi)
+            # Seeded from the decay tail alone. Taking the start level as an
+            # upper bound here (the old ``min(start_seed, ...)``) quietly
+            # reimposed "the background is no higher than where the window
+            # opened", so lowering the start dragged the background down with
+            # it instead of producing a negative initial excess.
+            end_seed = self._seed_within(0.95 * end_hi, 0.0, end_hi)
         end_bound = max(end_hi, end_seed)
 
         xmax_seed = max(peak_seed - end_seed, 1e-9)
@@ -1089,11 +1142,18 @@ class DecayFitMixin:
                 return None
 
             # -- stage 2: the rise -> the excess already there, and from it E --
-            # The start level can be dragged above the peak while the user is
-            # still adjusting, so the bound admits whatever they asked for rather
-            # than snapping the line back from under the cursor.
-            xi_seed = 0.0 if anchored else max(start_seed - P0, 0.0)
-            xi_bound = max(xmax, xi_seed, 1e-12)
+            # The two levels are independent: the window may open *above* the
+            # background (an earlier event still decaying, xi > 0) or *below* it
+            # (a later activity raises the baseline, so the concentration never
+            # returns to where it started, xi < 0). Only the concentration
+            # itself has a floor, which puts the start at P0 + xi >= 0.
+            #
+            # Both ends of the range also admit whatever the caller asked for,
+            # so a level typed or dragged past them is not snapped back from
+            # under the cursor.
+            xi_seed = 0.0 if anchored else start_seed - P0
+            xi_lo = min(-P0, xi_seed)
+            xi_hi = max(xmax, xi_seed, 1e-12)
             xi, xi_err = xi_seed, 0.0
 
             def rise_model(t_, xi_):
@@ -1108,8 +1168,8 @@ class DecayFitMixin:
                         rise_model,
                         t_rise,
                         y_rise,
-                        p0=[self._seed_within(xi_seed, 0.0, xi_bound)],
-                        bounds=([0.0], [xi_bound]),
+                        p0=[self._seed_within(xi_seed, xi_lo, xi_hi)],
+                        bounds=([xi_lo], [xi_hi]),
                         maxfev=5000,
                     )
                     xi = float(popt_r[0])
@@ -1239,7 +1299,12 @@ class DecayFitMixin:
         info = _MODELS[model]
         names = info["params"]
         popt = fit["popt"]
-        params = {nm: float(abs(v)) for nm, v in zip(names, popt)}
+        # Every parameter but the initial excess is a magnitude; ``xi`` is a
+        # signed difference between two independent levels, so it keeps its sign.
+        params = {
+            nm: (float(v) if nm == "xi" else float(abs(v)))
+            for nm, v in zip(names, popt)
+        }
         errors = {nm: 0.0 for nm in names}
         for nm, v in zip(names[: info["n_loss"]], fit["loss_err"]):
             errors[nm] = float(v)
