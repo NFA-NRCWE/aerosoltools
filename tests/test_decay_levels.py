@@ -120,6 +120,41 @@ def test_a_guessed_start_level_is_accepted_as_a_seed():
     assert res.start_concentration == pytest.approx(float(y[0]), rel=0.15)
 
 
+def test_a_background_above_the_window_minimum_is_not_clipped():
+    """The measured bound must not silently overrule an explicit value.
+
+    A decay approaching its asymptote from above cannot pass below it, so the
+    lowest post-peak sample bounds a *measured* background -- but a caller may
+    know the level from a separate measurement, and noise pushes single samples
+    under the true asymptote. Their value is taken as given instead.
+    """
+    obj, y = _first_order_peak(150.0)
+    window = (obj.time[0], obj.time[-1])
+    peak_idx = int(np.argmax(y))
+    floor = float(np.nanmin(y[peak_idx:]))
+    high = floor * 1.2
+
+    manual = obj.fit_decay(window, model="first_order", background=high, optimize=False)
+    assert manual.background == pytest.approx(high, rel=1e-9)
+
+    # And the optimiser is free to stay above the floor when seeded there.
+    fitted = obj.fit_decay(window, model="first_order", background=high)
+    assert fitted.background > 0
+
+
+def test_a_dragged_start_above_the_peak_does_not_snap_back():
+    """The GUI can hand over a start level above the peak mid-drag."""
+    obj, y = _first_order_peak(150.0)
+    high = float(y.max()) * 1.1
+    res = obj.fit_decay(
+        (obj.time[0], obj.time[-1]),
+        model="first_order",
+        start_concentration=high,
+        optimize=False,
+    )
+    assert res.start_concentration == pytest.approx(high, rel=1e-6)
+
+
 def test_optimize_false_stops_at_the_guess():
     """The GUI's live preview must show exactly what was typed/dragged."""
     obj, _ = _first_order_peak(150.0)

@@ -623,10 +623,12 @@ class DecayFitMixin:
                 (smoothed) maximum.
             background (float | None): **Initial guess** for the background
                 ``P0`` -- the asymptote the decay relaxes to. The fit is free to
-                move it (bounded above by the lowest post-peak sample, which a
-                decay approaching from above can never go under). When ``None``
-                the seed comes from the data. Pass ``optimize=False`` to stop at
-                the guess.
+                move it. When ``None`` the seed comes from the data and is
+                bounded above by the lowest post-peak sample, which a decay
+                approaching its asymptote from above cannot pass below; an
+                explicit value is taken as given and widens that bound instead
+                of being clipped to it. Pass ``optimize=False`` to stop at the
+                guess, which then round-trips exactly.
             start_concentration (float | None): **Initial guess** for the level
                 the series sat at when the source came on. This is a *separate*
                 quantity from ``background``: an earlier event may still be
@@ -950,15 +952,21 @@ class DecayFitMixin:
             # A local 3-point median, so one noisy sample cannot set the peak.
             peak_seed = float(np.median(y[max(0, peak_idx - 1) : peak_idx + 2]))
 
-        # A decay approaches its asymptote from above, so the background can
-        # never sit above the lowest post-peak sample -- a tight, physical
+        # A decay approaches its asymptote from above, so a *measured* background
+        # can never sit above the lowest post-peak sample -- a tight, physical
         # bound that keeps the extra free parameter well conditioned.
+        #
+        # An explicit background from the caller overrides it. They may know the
+        # level from a separate background measurement, and noise can push a
+        # single sample under the true asymptote, so silently clipping their
+        # value to the window's minimum would discard information rather than add
+        # any. The bound is widened to admit it instead.
         end_hi = max(float(np.nanmin(yd)), 0.0)
         if background is not None:
-            end_seed = float(np.clip(float(background), 0.0, end_hi))
+            end_seed = max(float(background), 0.0)
         else:
-            end_seed = min(start_seed, 0.95 * end_hi)
-        end_seed = self._seed_within(end_seed, 0.0, end_hi)
+            end_seed = self._seed_within(min(start_seed, 0.95 * end_hi), 0.0, end_hi)
+        end_bound = max(end_hi, end_seed)
 
         xmax_seed = max(peak_seed - end_seed, 1e-9)
         # Cap a free peak against the *observed* maximum, not against the seed,
@@ -1025,7 +1033,7 @@ class DecayFitMixin:
 
                 p0 = [*loss0, xmax_seed, end_seed]
                 lo = [1e-30] * n_loss + [0.0, 0.0]
-                hi = [np.inf] * n_loss + [xmax_hi, max(end_hi, 1e-12)]
+                hi = [np.inf] * n_loss + [xmax_hi, max(end_bound, 1e-12)]
             else:  # "split"
 
                 def decay_model(td_, *free):
@@ -1036,14 +1044,16 @@ class DecayFitMixin:
 
                 p0 = [*loss0, end_seed]
                 lo = [1e-30] * n_loss + [0.0]
-                hi = [np.inf] * n_loss + [max(end_hi, 1e-12)]
-
-            p0 = [
-                self._seed_within(v, a, b) if np.isfinite(b) else max(v, a)
-                for v, a, b in zip(p0, lo, hi)
-            ]
+                hi = [np.inf] * n_loss + [max(end_bound, 1e-12)]
 
             if optimise:
+                # curve_fit needs a starting point strictly inside its bounds.
+                # Manual mode skips this, so a value the caller typed or dragged
+                # round-trips exactly instead of coming back nudged.
+                p0 = [
+                    self._seed_within(v, a, b) if np.isfinite(b) else max(v, a)
+                    for v, a, b in zip(p0, lo, hi)
+                ]
                 try:
                     popt_d, pcov_d = curve_fit(
                         decay_model, td, yd, p0=p0, bounds=(lo, hi), maxfev=20000
@@ -1079,11 +1089,11 @@ class DecayFitMixin:
                 return None
 
             # -- stage 2: the rise -> the excess already there, and from it E --
-            xi_seed = (
-                0.0
-                if anchored
-                else self._seed_within(max(start_seed - P0, 0.0), 0.0, xmax)
-            )
+            # The start level can be dragged above the peak while the user is
+            # still adjusting, so the bound admits whatever they asked for rather
+            # than snapping the line back from under the cursor.
+            xi_seed = 0.0 if anchored else max(start_seed - P0, 0.0)
+            xi_bound = max(xmax, xi_seed, 1e-12)
             xi, xi_err = xi_seed, 0.0
 
             def rise_model(t_, xi_):
@@ -1098,8 +1108,8 @@ class DecayFitMixin:
                         rise_model,
                         t_rise,
                         y_rise,
-                        p0=[xi_seed],
-                        bounds=([0.0], [xmax]),
+                        p0=[self._seed_within(xi_seed, 0.0, xi_bound)],
+                        bounds=([0.0], [xi_bound]),
                         maxfev=5000,
                     )
                     xi = float(popt_r[0])

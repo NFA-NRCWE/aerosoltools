@@ -64,6 +64,25 @@ _T0_COLOR = "#2e8b57"
 _PEAK_COLOR = "#d1495b"
 #: Colour of the draggable background (P0) line.
 _BG_COLOR = "#7f7f7f"
+#: The three ways a fit's numbers can have been arrived at. Every one of them
+#: produces a full result -- parameters, R2, source strength -- for the curve
+#: currently drawn, recomputed on every change, so no displayed value is ever
+#: stale. The label only says *how* the curve was arrived at:
+#:
+#: * ``auto``   -- the algorithm estimated its own starting values and optimised.
+#: * ``guided`` -- the algorithm optimised, starting from values you set.
+#: * ``manual`` -- your values, used as-is; nothing was optimised.
+_FIT_MODES = {
+    "auto": "auto fit",
+    "guided": "fit from your guess",
+    "manual": "your values (not fitted)",
+}
+
+#: Colour of the draggable start-level line (where the window opened).
+_START_COLOR = "#8c6bb1"
+#: Minimum length of the draggable start-level segment, as a fraction of the
+#: fit region, so it stays grabbable when the emission starts almost at once.
+_START_SEGMENT_MIN_FRACTION = 0.25
 #: Curve colour for a manual guess preview (vs the optimised fit).
 _GUESS_COLOR = "#e08214"
 #: Fill colour of a fit's marked region (selected brighter than the rest).
@@ -252,8 +271,10 @@ class DecayTab(_PlotTab):
         self._bin_results: list = []  # per-fit list of (bin_mid, result, excluded)
         # Drawn-handle artists for the selected fit + drag bookkeeping.
         self._t0_line = self._peak_line = self._bg_line = self._peak_marker = None
+        self._start_line = None
         self._region_patches: list = []
-        self._dragging = None  # "t0" | "peak" | "bg" | "peakval" while dragging
+        # "t0" | "peak" | "bg" | "start" | "peakval" while dragging
+        self._dragging = None
 
         # ``interactive=False``: the drag rectangle is transient (it vanishes on
         # release). Each fit's region is drawn by us as an ``axvspan`` instead, so
@@ -282,10 +303,15 @@ class DecayTab(_PlotTab):
         self.fit_btn = QtWidgets.QPushButton("Fit")
         self.fit_btn.setObjectName("primary")
         self.fit_btn.setToolTip(
-            "Optimise the selected fit from the current guess. The background, "
-            "start level and peak you set are starting guesses, not fixed "
-            "values \u2014 the fit refines them. Only the emission start and "
-            "source-off times are taken as given."
+            "Optimise the selected fit. With nothing set by hand the algorithm "
+            "picks its own starting values; otherwise it starts from yours. The "
+            "background, start level and peak you set are starting guesses, not "
+            "fixed values \u2014 the fit refines them. Only the emission start "
+            "and source-off times are taken as given.\n\n"
+            "You do not have to press it: values you set by hand are used as-is, "
+            "and the table's parameters and R\u00b2 are recomputed for whatever "
+            "curve is currently drawn. The Mode column says which of the three "
+            "you are looking at."
         )
         self.fit_btn.clicked.connect(self._on_fit)
         row.addWidget(self.fit_btn)
@@ -307,10 +333,12 @@ class DecayTab(_PlotTab):
         self.start_edit = QtWidgets.QLineEdit()
         self.start_edit.setFixedWidth(80)
         self.start_edit.setToolTip(
-            "Guess for the concentration when the source came on. This is a "
-            "separate level from P\u2080: if an earlier event was still decaying, "
-            "the window opens ABOVE the true background. Leave blank to seed it "
-            "from the pre-emission baseline; the fit refines it either way."
+            "The concentration when the source came on. This is a separate level "
+            "from P\u2080: if an earlier event was still decaying, the window "
+            "opens ABOVE the true background. Leave blank to take it from the "
+            "pre-emission baseline.\n\n"
+            "Drag the coloured segment over the start of the region to set it on "
+            "the plot."
         )
         self.start_edit.editingFinished.connect(self._apply_guess_fields)
         row.addWidget(self.start_edit)
@@ -489,6 +517,20 @@ class DecayTab(_PlotTab):
         if self._sel is not None and 0 <= self._sel < len(specs):
             return specs[self._sel]
         return None
+
+    @staticmethod
+    def _fit_mode(spec: dict) -> str:
+        """Which of the three modes produced this fit's numbers.
+
+        See :data:`_FIT_MODES`. A fit is "guided" rather than "auto" as soon as
+        any manual value is set, even if it was later optimised, because the
+        result then depends on where the user pointed the optimiser.
+        """
+        overrides = spec.get("overrides") or {}
+        touched = any(v is not None for v in overrides.values())
+        if not spec.get("optimized", True):
+            return "manual"
+        return "guided" if touched else "auto"
 
     @staticmethod
     def _new_overrides() -> dict:
@@ -896,6 +938,22 @@ class DecayTab(_PlotTab):
             if px is not None and abs(event.x - px) <= 6:
                 self._grab(name)
                 return True
+        # The start segment is checked before the background line so it wins
+        # inside its own x-range; outside it, the background line is grabbed even
+        # when the two sit at the same level.
+        if self._start_line is not None and event.x is not None:
+            xs = self._start_line.get_xdata()
+            x0 = self._x_pixels(xs[0])
+            x1 = self._x_pixels(xs[-1])
+            py = self._line_y_pixels(self._start_line)
+            if (
+                py is not None
+                and event.y is not None
+                and min(x0, x1) - 4 <= event.x <= max(x0, x1) + 4
+                and abs(event.y - py) <= 6
+            ):
+                self._grab("start")
+                return True
         py = self._line_y_pixels(self._bg_line)
         if py is not None and event.y is not None and abs(event.y - py) <= 6:
             self._grab("bg")
@@ -911,8 +969,11 @@ class DecayTab(_PlotTab):
         """Screen-x (pixels) of a vertical marker line, or None."""
         if line is None:
             return None
-        xnum = line.get_xdata()[0]
-        return float(self.ax.transData.transform((mdates.date2num(xnum), 0))[0])
+        return self._x_pixels(line.get_xdata()[0])
+
+    def _x_pixels(self, when) -> float:
+        """Screen-x (pixels) of a timestamp on the current axes."""
+        return float(self.ax.transData.transform((mdates.date2num(when), 0))[0])
 
     def _line_y_pixels(self, line) -> float:
         """Screen-y (pixels) of a horizontal marker line, or None."""
@@ -937,10 +998,11 @@ class DecayTab(_PlotTab):
             line = self._t0_line if self._dragging == "t0" else self._peak_line
             num = mdates.num2date(event.xdata)
             line.set_xdata([num, num])
-        elif self._dragging == "bg":
+        elif self._dragging in ("bg", "start"):
             if event.ydata is None:
                 return
-            self._bg_line.set_ydata([event.ydata, event.ydata])
+            line = self._bg_line if self._dragging == "bg" else self._start_line
+            line.set_ydata([event.ydata] * len(line.get_ydata()))
         elif self._dragging == "peakval":
             if event.ydata is None:
                 return
@@ -963,6 +1025,8 @@ class DecayTab(_PlotTab):
             ov["t0" if name == "t0" else "peak_time"] = ts
         elif name == "bg":
             ov["background"] = float(self._bg_line.get_ydata()[0])
+        elif name == "start":
+            ov["start"] = float(self._start_line.get_ydata()[0])
         elif name == "peakval":
             ov["peakval"] = float(self._peak_marker.get_ydata()[0])
         spec["optimized"] = False
@@ -1003,6 +1067,7 @@ class DecayTab(_PlotTab):
         ax = self.ax
         ax.clear()
         self._t0_line = self._peak_line = self._bg_line = self._peak_marker = None
+        self._start_line = None
         self._region_patches = []
         times, values, unit, metric = self._series()
         ax.plot(times, values, "-", lw=0.8, color="#4c72b0", alpha=0.5)
@@ -1055,11 +1120,25 @@ class DecayTab(_PlotTab):
             return
         # Selected fit: draggable background line, peak handle and timing lines.
         self._bg_line = ax.axhline(res["background"], color=_BG_COLOR, ls="--", lw=1.2)
-        # The level the window opened at, drawn only when it sits meaningfully
-        # above the fitted background -- otherwise it would just overdraw it.
+        # The start level is drawn as a *segment* over the pre-emission part of
+        # the region rather than a full-width line. That is where it physically
+        # applies, and it gives it a grab zone that does not collide with the
+        # background line's when the two levels coincide (xi = 0), which a second
+        # full-width axhline would.
+        t0_stamp = res["window_start"] + pd.to_timedelta(
+            res["emission_start_s"], unit="s"
+        )
+        seg_end = max(t0_stamp, start + (end - start) * _START_SEGMENT_MIN_FRACTION)
         start_level = res.get("start_concentration", res["background"])
-        if start_level - res["background"] > 0.02 * max(res["peak_excess"], 1e-12):
-            ax.axhline(start_level, color=_BG_COLOR, ls=":", lw=1.0, alpha=0.8)
+        self._start_line = ax.plot(
+            [start, seg_end],
+            [start_level, start_level],
+            color=_START_COLOR,
+            ls="-",
+            lw=2.0,
+            solid_capstyle="butt",
+            zorder=8,
+        )[0]
         self._peak_marker = ax.plot(
             [res["peak_time"]],
             [res["peak_concentration"]],
@@ -1114,9 +1193,15 @@ class DecayTab(_PlotTab):
             self.result_label.setText("This region could not be fitted.")
             return
         model = res["model"].replace("_", " ")
-        state = "optimised" if spec.get("optimized", True) else "guess (press Fit)"
+        mode = self._fit_mode(spec)
+        hint = {
+            "auto": "press Fit again after editing to re-optimise",
+            "guided": "optimised from your values",
+            "manual": "press Fit to optimise from here",
+        }[mode]
         self.result_label.setText(
-            f"Selected fit {self._sel + 1}: {model}, {state} — "
+            f"Selected fit {self._sel + 1}: {model}, {_FIT_MODES[mode]} "
+            f"({hint}) — "
             f"R² = {res['r_squared']:.4f}, decay R² = {res['decay_r_squared']:.4f}. "
             "Drag the handles, scroll to change the rate, or edit the fields."
         )
@@ -1127,6 +1212,7 @@ class DecayTab(_PlotTab):
         u = unit or "conc"
         return [
             ("Fit", "fit"),
+            ("Mode", "mode"),
             ("Size bin (nm)", "bin"),
             ("Metric", "metric"),
             ("Region start", "rstart"),
@@ -1195,7 +1281,9 @@ class DecayTab(_PlotTab):
         for i, spec in enumerate(self._specs()):
             res = self._results[i] if i < len(self._results) else None
             start, end = spec["window"]
+            mode = _FIT_MODES[self._fit_mode(spec)]
             base = self._row_cells(res, str(i + 1), "", None)
+            base["mode"] = mode
             base["rstart"] = _fmt_time(start)
             base["rend"] = _fmt_time(end)
             if res is not None:
@@ -1205,6 +1293,7 @@ class DecayTab(_PlotTab):
             for mid, bres, excluded in bins:
                 note = "excluded (R²<0.5)" if excluded else ""
                 cells = self._row_cells(bres, f"{i + 1}·bin", f"{mid:g}", note)
+                cells["mode"] = mode
                 cells["rstart"] = _fmt_time(start)
                 cells["rend"] = _fmt_time(end)
                 rows.append(cells)
