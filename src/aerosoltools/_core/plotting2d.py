@@ -14,6 +14,11 @@ from numpy.typing import NDArray
 
 from . import _shading
 
+#: Width of the shared colorbar column in :meth:`plot_timeseries`, as a
+#: fraction of the panel width. Sized to match what ``fig.colorbar`` used to
+#: steal, so the figure keeps its familiar proportions.
+_CBAR_WIDTH_FRACTION = 0.035
+
 
 class Plot2DMixin:
     """Plot size distributions, PM time series and time-size heatmaps."""
@@ -475,6 +480,17 @@ class Plot2DMixin:
             ValueError: If only one of ax1 or ax2 is supplied. Provide
                 both or neither.
 
+        Warning:
+            When ``ax1``/``ax2`` are supplied, the colorbar has to steal
+            space from them and is then not managed by the figure's layout
+            engine. Calling ``fig.tight_layout()`` on such a figure
+            re-expands the panels over the colorbar and draws it through
+            the middle of the data (Matplotlib only warns). Give that
+            figure a constrained layout
+            (``plt.figure(layout="constrained")``) or leave its layout
+            alone. Figures created by this method are unaffected -- their
+            colorbar sits in its own gridspec column.
+
         Notes:
             Detailed description:
                 The method first draws the total concentration time series
@@ -519,9 +535,23 @@ class Plot2DMixin:
         if (ax1 is None) != (ax2 is None):
             raise ValueError("You must provide both ax1 and ax2, or neither.")
 
-        # Create figure/axes if not provided
+        # Create figure/axes if not provided.
+        #
+        # The shared colorbar below steals space from both panels. Attaching it
+        # with `ax=[ax1, ax2]` shrinks them at call time but leaves the colorbar
+        # outside any layout engine's control, so the next layout pass --
+        # `fig.tight_layout()`, or an embedding canvas re-laying out on resize --
+        # re-expanded the panels straight over it and drew the colorbar through
+        # the middle of the data. Giving the colorbar its own gridspec column
+        # makes it an ordinary managed axes, so it survives both.
+        cax = None
         if ax1 is None and ax2 is None:
-            fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(10, 6))
+            fig = plt.figure(figsize=(10, 6))
+            gs = fig.add_gridspec(2, 2, width_ratios=[1, _CBAR_WIDTH_FRACTION])
+            ax1 = fig.add_subplot(gs[0, 0])
+            ax2 = fig.add_subplot(gs[1, 0], sharex=ax1)
+            ax1.tick_params(labelbottom=False)  # sharex=True hides these too
+            cax = fig.add_subplot(gs[:, 1])
         else:
             assert ax1 is not None and ax2 is not None
             fig: Figure = ax1.get_figure()  # type: ignore
@@ -607,8 +637,13 @@ class Plot2DMixin:
             mdates.ConciseDateFormatter(mdates.AutoDateLocator())
         )
 
-        # Shared colorbar for both panels
-        col = fig.colorbar(mesh, ax=[ax1, ax2])
+        # Shared colorbar for both panels. With caller-supplied axes there is no
+        # gridspec of ours to carve a slot from, so fall back to stealing space
+        # -- see the layout warning in the docstring.
+        if cax is not None:
+            col = fig.colorbar(mesh, cax=cax)
+        else:
+            col = fig.colorbar(mesh, ax=[ax1, ax2])
         col.set_label(f"{clas.dtype}, {clas.unit}")
 
         # Basic styling
