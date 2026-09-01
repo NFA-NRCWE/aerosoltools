@@ -1,11 +1,18 @@
 """Emission + decay peak fitting (source strength and loss kinetics).
 
 Models a concentration peak in a well-mixed single-zone (box) chamber, where a
-source is switched on, the concentration rises from the background ``P0`` to a
-peak, the source is switched off, and the concentration decays back **towards
-that same background**. The models describe the *excess* over background,
-``X = P - P0``, so the curve starts at ``P0``, rises during emission, and
-relaxes to ``P0`` again — matching what a real decay measurement looks like.
+source is switched on, the concentration rises, the source is switched off, and
+the concentration decays back towards the background. The models describe the
+*excess* over background, ``X = P - P0``.
+
+**The start and the background are two different levels.** A measurement window
+often opens while an earlier event is still decaying, so the level the source
+switches on at sits *above* the background the decay eventually relaxes to.
+Taking the start for the background — as this module originally did — forces the
+modelled decay to flatten out too early, which biases the loss rate, the peak
+excess and every quantity derived from them. The curve therefore starts at
+``P0 + xi``, where the initial excess ``xi >= 0`` is fitted alongside the
+background ``P0``; ``xi = 0`` recovers the classic "starts at background" peak.
 
 Four loss models are offered, differing in how the excess is removed:
 
@@ -28,20 +35,26 @@ Four loss models are offered, differing in how the excess is removed:
   (coagulation) loss ``C`` together.
 
 In every model ``E`` is the volumetric emission rate (concentration per second)
-while the source is on, ``P0`` the background, and the source runs from ``t0``
-for a duration ``tp`` (so the peak is at ``t0 + tp``).
+while the source is on, ``P0`` the background, ``xi`` the excess already present
+when the source came on, and the source runs from ``t0`` for a duration ``tp``
+(so the peak is at ``t0 + tp``).
 
 **Two-stage fit.** Rather than fitting the whole rise+peak+decay at once — which
 lets the many decay points outvote the few rise points and pulls the modelled
 peak *below* the data — the fit is done in two stages:
 
 1. *Decay stage.* The loss model is fitted to the **post-peak** points only,
-   giving the loss kinetics and, by extrapolating back to the peak time, the
-   peak excess ``Xmax`` and the background ``P0``. Because it uses only the
-   monotone decay, it is robust and it anchors the peak to the data instead of
-   averaging it away.
-2. *Emission stage.* With the loss kinetics fixed, the emission rate ``E`` is
+   giving the loss kinetics, the peak excess ``Xmax`` and the background ``P0``.
+   Because it uses only the monotone decay, it is robust and it anchors the peak
+   to the data instead of averaging it away.
+2. *Emission stage.* With the loss kinetics and background fixed, the initial
+   excess ``xi`` is fitted over the pre-peak points and the emission rate ``E``
    back-solved from the anchored peak and the emission duration ``tp``.
+
+Every measured or user-supplied level (background, peak, start, decay rate) is a
+**seed** for these stages, never a hard constraint — the optimiser is free to
+move it. ``optimize=False`` stops at the seed, which is what the GUI previews
+while a guess is being dragged.
 
 Given the chamber volume the emission rate becomes a **source strength**
 (``E * volume`` → particles or µg per second). Given an independently known air
@@ -106,7 +119,13 @@ class DecayResult(Mapping):
         n_points: Number of samples in the fitted window.
         params: Fitted model parameters ``{name: value}``.
         errors: 1σ uncertainties for the fitted loss parameters ``{name: value}``.
-        background: Fixed background ``P0`` (concentration).
+        background: The fitted **asymptote** ``P0`` -- the true background the
+            decay relaxes to. Not necessarily the level the window started at.
+        start_concentration: Level the series sat at when the source came on.
+            Equals ``background + initial_excess``; it sits **above**
+            ``background`` when an earlier event was still decaying.
+        initial_excess: Excess over ``background`` already present at the
+            emission start (``xi``). Zero for a peak that starts at background.
         peak_concentration: Modelled peak concentration (``background`` + excess).
         peak_excess: Peak excess over background (``Xmax``).
         emission_rate: Volumetric emission rate ``E`` (concentration/s).
@@ -129,6 +148,8 @@ class DecayResult(Mapping):
     params: dict
     errors: dict
     background: float
+    start_concentration: float
+    initial_excess: float
     peak_concentration: float
     peak_excess: float
     emission_rate: float
@@ -230,73 +251,88 @@ def _pos(x) -> float:
 # through :func:`decay_curve` for plotting.
 
 
-def _zeroth_order(t, a, P0, E, t0, tp):
+def _zeroth_order(t, a, P0, E, t0, tp, xi=0.0):
     """Zeroth-order model ``dX/dt = E - a``: linear rise and linear decay."""
-    a, P0, E, t0, tp = map(_pos, (a, P0, E, t0, tp))
+    a, P0, E, t0, tp, xi = map(_pos, (a, P0, E, t0, tp, xi))
     s = np.asarray(t, dtype=float) - t0
-    rise = (E - a) * np.clip(s, 0.0, tp)
-    xmax = (E - a) * tp
+    rise = xi + (E - a) * np.clip(s, 0.0, tp)
+    xmax = xi + (E - a) * tp
     dec = xmax - a * np.clip(s - tp, 0.0, None)
-    x = np.where(s < 0, 0.0, np.where(s < tp, rise, dec))
+    x = np.where(s < 0, xi, np.where(s < tp, rise, dec))
     return _sanitize(P0 + np.clip(x, 0.0, None))
 
 
-def _first_order(t, k, P0, E, t0, tp):
+def _first_order(t, k, P0, E, t0, tp, xi=0.0):
     """First-order model ``dX/dt = E - k*X``: exponential rise and decay."""
-    k, P0, E, t0, tp = map(_pos, (k, P0, E, t0, tp))
+    k, P0, E, t0, tp, xi = map(_pos, (k, P0, E, t0, tp, xi))
     s = np.asarray(t, dtype=float) - t0
     with np.errstate(over="ignore", invalid="ignore"):
         xss = E / k if k > 0 else 0.0
-        emit = xss * (1.0 - np.exp(-k * np.clip(s, 0.0, None)))
-        xmax = xss * (1.0 - np.exp(-k * tp))
+        # X(s) relaxes from the initial excess xi towards the steady state xss.
+        relax = np.exp(-k * np.clip(s, 0.0, None))
+        emit = xss * (1.0 - relax) + xi * relax
+        relax_tp = np.exp(-k * tp)
+        xmax = xss * (1.0 - relax_tp) + xi * relax_tp
         dec = xmax * np.exp(-k * np.clip(s - tp, 0.0, None))
-        x = np.where(s < 0, 0.0, np.where(s < tp, emit, dec))
+        x = np.where(s < 0, xi, np.where(s < tp, emit, dec))
     return _sanitize(P0 + x)
 
 
-def _second_order(t, C, P0, E, t0, tp):
+def _second_order(t, C, P0, E, t0, tp, xi=0.0):
     """Second-order (coagulation) model ``dX/dt = E - C*X**2``."""
-    C, P0, E, t0, tp = map(_pos, (C, P0, E, t0, tp))
+    C, P0, E, t0, tp, xi = map(_pos, (C, P0, E, t0, tp, xi))
     s = np.asarray(t, dtype=float) - t0
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         if C > 0 and E > 0:
-            root = np.sqrt(E / C)
+            root = np.sqrt(E / C)  # steady-state excess
             rate = np.sqrt(E * C)
-            emit = root * np.tanh(rate * np.clip(s, 0.0, None))
-            xmax = float(root * np.tanh(rate * tp))
+            # X(0) = xi shifts the rising tanh by artanh(xi / root). An initial
+            # excess at or above the steady state is unreachable by a rising
+            # tanh, so clamp just short of 1 (artanh diverges there).
+            ratio = min(xi / root, 1.0 - 1e-12) if root > 0 else 0.0
+            shift = float(np.arctanh(ratio))
+            emit = root * np.tanh(rate * np.clip(s, 0.0, None) + shift)
+            xmax = float(root * np.tanh(rate * tp + shift))
         else:
-            emit = np.zeros_like(s)
-            xmax = 0.0
+            emit = np.full_like(s, xi)
+            xmax = xi
         dec = xmax / (1.0 + C * xmax * np.clip(s - tp, 0.0, None))
-        x = np.where(s < 0, 0.0, np.where(s < tp, emit, dec))
+        x = np.where(s < 0, xi, np.where(s < tp, emit, dec))
     return _sanitize(P0 + x)
 
 
-def _combined(t, K, C, P0, E, t0, tp):
+def _combined(t, K, C, P0, E, t0, tp, xi=0.0):
     """Combined first + second order model ``dX/dt = E - (K*X + C*X**2)``."""
-    K, C, P0, E, t0, tp = map(_pos, (K, C, P0, E, t0, tp))
+    K, C, P0, E, t0, tp, xi = map(_pos, (K, C, P0, E, t0, tp, xi))
     s = np.asarray(t, dtype=float) - t0
     with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
         if C > 0 and E > 0:
             det = np.sqrt(K * K + 4.0 * C * E)
-            r1 = (-K + det) / (2.0 * C)
-            r2 = (-K - det) / (2.0 * C)
+            r1 = (-K + det) / (2.0 * C)  # positive root = steady-state excess
+            r2 = (-K - det) / (2.0 * C)  # negative root
+            # Riccati solution through X(0) = xi:
+            #   (X - r1) / (X - r2) = A e^{-det s},  A = (xi - r1) / (xi - r2)
+            # A = r1 / r2 recovers the xi = 0 form.
+            denom0 = xi - r2
+            a_coef = (xi - r1) / denom0 if denom0 != 0 else 0.0
 
             def _emit(se):
-                e = np.exp(-det * np.clip(se, 0.0, None))
-                return r1 * (1.0 - e) / (1.0 - (r1 / r2) * e)
+                e = a_coef * np.exp(-det * np.clip(se, 0.0, None))
+                return (r1 - r2 * e) / (1.0 - e)
 
             emit = _emit(s)
             xmax = float(_emit(np.array([tp]))[0])
         elif K > 0:  # C -> 0 reduces to first order
             xss = E / K
-            emit = xss * (1.0 - np.exp(-K * np.clip(s, 0.0, None)))
-            xmax = float(xss * (1.0 - np.exp(-K * tp)))
+            relax = np.exp(-K * np.clip(s, 0.0, None))
+            emit = xss * (1.0 - relax) + xi * relax
+            relax_tp = np.exp(-K * tp)
+            xmax = float(xss * (1.0 - relax_tp) + xi * relax_tp)
         else:
-            emit = np.zeros_like(s)
-            xmax = 0.0
+            emit = np.full_like(s, xi)
+            xmax = xi
         dec = _combined_decay(np.clip(s - tp, 0.0, None), K, C, xmax)
-        x = np.where(s < 0, 0.0, np.where(s < tp, emit, dec))
+        x = np.where(s < 0, xi, np.where(s < tp, emit, dec))
     return _sanitize(P0 + x)
 
 
@@ -345,26 +381,26 @@ _DECAY_EXCESS = {
 
 #: model name -> metadata. ``func`` draws the full emission+decay curve;
 #: ``params`` are its ordered names; ``n_loss`` is how many leading parameters
-#: are loss-rate constants (the rest are ``P0, E, t0, tp``).
+#: are loss-rate constants (the rest are ``P0, E, t0, tp, xi``).
 _MODELS = {
     "zeroth_order": {
         "func": _zeroth_order,
-        "params": ["a", "P0", "E", "t0", "tp"],
+        "params": ["a", "P0", "E", "t0", "tp", "xi"],
         "n_loss": 1,
     },
     "first_order": {
         "func": _first_order,
-        "params": ["k", "P0", "E", "t0", "tp"],
+        "params": ["k", "P0", "E", "t0", "tp", "xi"],
         "n_loss": 1,
     },
     "second_order": {
         "func": _second_order,
-        "params": ["C", "P0", "E", "t0", "tp"],
+        "params": ["C", "P0", "E", "t0", "tp", "xi"],
         "n_loss": 1,
     },
     "combined": {
         "func": _combined,
-        "params": ["K", "C", "P0", "E", "t0", "tp"],
+        "params": ["K", "C", "P0", "E", "t0", "tp", "xi"],
         "n_loss": 2,
     },
 }
@@ -395,14 +431,60 @@ _MODEL_ALIASES = {
     "3": "combined",
 }
 
-#: Complexity penalties for auto-selection: a more complex/less-common model is
-#: only chosen when it improves the (1 - R²) misfit by more than this factor.
+#: Complexity/plausibility penalties for auto-selection: a model is only chosen
+#: over first order when it improves the (1 - R²) misfit by more than this
+#: factor. First order -- air exchange plus deposition -- is the workhorse
+#: indoor-aerosol loss path and so carries no penalty. Zeroth order (a constant
+#: removal rate, independent of how much is in the air) is rarely the real
+#: mechanism, so it has to fit clearly better before it wins, not merely tie.
 _MODEL_PENALTY = {
-    "zeroth_order": 1.10,
+    "zeroth_order": 1.40,
     "first_order": 1.0,
     "second_order": 1.10,
     "combined": 1.25,
 }
+
+#: How far above the observed peak excess a *freed* peak may go. The true peak
+#: can sit above the highest sample when the averaging interval straddles it,
+#: but it must not run away -- the second-order and combined models would
+#: otherwise raise the peak clear of the data to buy a better decay fit.
+_PEAK_HEADROOM = 1.25
+
+#: Freedom ladder for one model's fit. Each rung adds a degree of freedom:
+#:
+#: * ``"anchored"`` -- the classic peak: the level the window opens at *is* the
+#:   background, and the peak sits where the data put it. Only the loss
+#:   constant(s) are fitted. This is what the module did before.
+#: * ``"split"``    -- background and start level fitted separately, so a window
+#:   that opens on the tail of an earlier event is not mistaken for background.
+#: * ``"free_peak"`` -- as ``"split"``, and the peak excess is fitted too.
+#:
+#: All three are fitted and the penalised whole-window misfit picks one:
+#: ``(1 - R²) * penalty``, the same idiom :data:`_MODEL_PENALTY` uses across
+#: models.
+#:
+#: ``"split"`` is the *unpenalised* rung -- separating the two levels is the
+#: behaviour this module is supposed to have, so it wins near-ties. Measured
+#: against synthetic peaks with a known background, forcing start == background
+#: costs as little as 1.0-1.4x in misfit for a moderately elevated start while
+#: getting the loss rate 24-50 % wrong, so the raw misfit must not be allowed to
+#: choose it. ``"anchored"`` therefore carries a small penalty of its own, and
+#: ``"free_peak"`` a large one: freeing the peak as well is genuinely degenerate
+#: with the loss constant for slowly-decaying (second-order, combined) tails,
+#: which will raise the peak clear of the data to buy a better decay fit.
+_LEVEL_PENALTY = {
+    "anchored": 1.05,
+    "split": 1.0,
+    "free_peak": 1.6,
+}
+
+#: A fitted background at or below this fraction of the lowest observed decay
+#: sample is treated as *unidentified* rather than measured: it means the
+#: optimiser slid the asymptote onto the bottom of its allowed range, which a
+#: slow (hyperbolic) tail lets it do almost for free while the initial excess
+#: absorbs the difference. Such a candidate is discarded whenever another one
+#: survives.
+_COLLAPSED_BACKGROUND_FRACTION = 0.02
 
 
 def decay_curve(model: str, t, popt) -> np.ndarray:
@@ -426,38 +508,57 @@ def _r_squared(y: np.ndarray, fit: np.ndarray) -> float:
     return 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
 
 
-def _emission_peak(model: str, E: float, loss: list, tp: float) -> float:
+def _emission_peak(
+    model: str, E: float, loss: list, tp: float, xi: float = 0.0
+) -> float:
     """Excess reached at the end of the source-on phase for a trial ``E``."""
-    popt = [*loss, 0.0, E, 0.0, tp]  # P0=0, t0=0 -> curve is the excess itself
+    # P0 = 0, t0 = 0 -> the curve *is* the excess above background.
+    popt = [*loss, 0.0, E, 0.0, tp, xi]
     return float(_MODELS[model]["func"](np.array([tp]), *popt)[0])
 
 
-def _invert_emission(model: str, loss: list, xmax: float, tp: float) -> float:
+def _invert_emission(
+    model: str, loss: list, xmax: float, tp: float, xi: float = 0.0
+) -> float:
     """Back-solve the emission rate ``E`` from the anchored peak excess.
 
     The emission-phase peak excess is a monotone increasing function of ``E``
     (more source → higher peak), so it inverts cleanly. Closed forms are used
     where they exist; otherwise a bracketed root find.
+
+    Args:
+        model: Canonical model name.
+        loss: The model's fitted loss constant(s).
+        xmax: Peak excess above the background asymptote.
+        tp: Emission duration (s).
+        xi: Excess already present when the source turned on -- the elevated
+            start. The source only has to supply the difference.
     """
     if tp <= 0 or xmax <= 0:
         return 0.0
+    xi = max(float(xi), 0.0)
+    if xmax <= xi:
+        # The peak is no higher than the level the window started at, so the
+        # rise carries no information about a source.
+        return 0.0
     if model == "zeroth_order":
-        return xmax / tp + loss[0]
+        return (xmax - xi) / tp + loss[0]
     if model == "first_order":
         k = loss[0]
-        denom = 1.0 - np.exp(-k * tp)
-        return k * xmax / denom if denom > 1e-12 else xmax / tp
+        relax = np.exp(-k * tp)
+        denom = 1.0 - relax
+        return k * (xmax - xi * relax) / denom if denom > 1e-12 else (xmax - xi) / tp
     try:
         return float(
             brentq(
-                lambda E: _emission_peak(model, E, loss, tp) - xmax,
+                lambda E: _emission_peak(model, E, loss, tp, xi) - xmax,
                 1e-15,
                 1e18,
                 maxiter=200,
             )
         )
     except (ValueError, RuntimeError):
-        return xmax / tp
+        return (xmax - xi) / tp
 
 
 class DecayFitMixin:
@@ -473,6 +574,7 @@ class DecayFitMixin:
         emission_start=None,
         peak_time=None,
         background: Optional[float] = None,
+        start_concentration: Optional[float] = None,
         peak_concentration: Optional[float] = None,
         decay_rate: Optional[float] = None,
         optimize: bool = True,
@@ -517,12 +619,24 @@ class DecayFitMixin:
             peak_time: Optional explicit peak time (source-off) splitting the
                 emission from the decay. When ``None`` it is detected as the
                 (smoothed) maximum.
-            background (float | None): Override the background concentration
-                ``P0`` instead of measuring it from the pre-emission baseline.
-                Held fixed during the fit, exactly like the measured value.
-            peak_concentration (float | None): Override the peak concentration
-                (so the peak excess is ``peak_concentration - background``)
-                instead of measuring it at the source-off time. Held fixed.
+            background (float | None): **Initial guess** for the background
+                ``P0`` -- the asymptote the decay relaxes to. The fit is free to
+                move it (bounded above by the lowest post-peak sample, which a
+                decay approaching from above can never go under). When ``None``
+                the seed comes from the data. Pass ``optimize=False`` to stop at
+                the guess.
+            start_concentration (float | None): **Initial guess** for the level
+                the series sat at when the source came on. This is a *separate*
+                quantity from ``background``: an earlier event may still be
+                decaying, leaving the window's start elevated above the true
+                background. The difference is fitted as the initial excess. When
+                ``None`` the seed is the pre-emission baseline median.
+            peak_concentration (float | None): **Initial guess** for the peak
+                concentration (so the peak excess seed is
+                ``peak_concentration - background``). The fit may raise the peak
+                by up to 50 % above the guess -- the real peak can sit above the
+                highest sample when the averaging interval straddles it -- but
+                no further, so a flexible model cannot run away from the data.
             decay_rate (float | None): Seed for the loss kinetics, given as a
                 first-order-equivalent rate in **1/s** (the ``decay_rate`` key a
                 previous fit returns). With ``optimize=True`` it just seeds the
@@ -555,7 +669,9 @@ class DecayFitMixin:
             DecayResult: A typed record (also a read-only mapping, so
             ``result["r_squared"]`` still works) with fields including ``model``,
             ``unit``, ``metric``, ``r_squared`` (whole window), ``decay_r_squared``
-            (post-peak fit), ``n_points``, ``params``, ``errors``, ``background``,
+            (post-peak fit), ``n_points``, ``params``, ``errors``, ``background``
+            (the fitted asymptote), ``start_concentration`` / ``initial_excess``
+            (the possibly-elevated level the window opened at),
             ``peak_concentration``, ``peak_excess``, ``emission_rate`` /
             ``emission_rate_unit``, ``decay_rate`` / ``decay_rate_per_hour``
             (first-order-equivalent loss rate, for round-tripping into
@@ -633,6 +749,7 @@ class DecayFitMixin:
                 peak_idx,
                 t0_idx,
                 background=background,
+                start_concentration=start_concentration,
                 peak_concentration=peak_concentration,
                 decay_rate=decay_rate,
                 optimize=optimize,
@@ -738,19 +855,35 @@ class DecayFitMixin:
         return float((pd.Timestamp(when) - times[0]).total_seconds())
 
     @staticmethod
-    def _background(y: np.ndarray, t0_idx: int, peak_idx: int) -> float:
-        """Estimate the background from the pre-emission baseline.
+    def _start_level(y: np.ndarray, t0_idx: int, peak_idx: int) -> float:
+        """Estimate the pre-emission *start* level from the baseline.
 
         Uses the median of the samples before the source turns on. When too few
         such samples exist (the window starts on the rise), falls back to a low
-        percentile of the whole pre-peak segment. Held fixed during the fit.
+        percentile of the whole pre-peak segment.
+
+        This is the level the series sits at when the source is switched on. It
+        is **not** necessarily the true background: an earlier event may still
+        be decaying, leaving the window's start elevated. The asymptote the
+        decay actually relaxes to is fitted separately -- see
+        :meth:`_fit_two_stage`.
         """
         pre = y[: t0_idx + 1]
         if pre.size >= 3:
-            bg = float(np.median(pre))
+            level = float(np.median(pre))
         else:
-            bg = float(np.percentile(y[: peak_idx + 1], 10))
-        return max(bg, 0.0)
+            level = float(np.percentile(y[: peak_idx + 1], 10))
+        return max(level, 0.0)
+
+    @staticmethod
+    def _seed_within(value: float, lo: float, hi: float) -> float:
+        """Clip a seed into ``[lo, hi]``, nudged off the bounds when possible."""
+        if not np.isfinite(value):
+            value = 0.5 * (lo + hi)
+        span = hi - lo
+        if span <= 0:
+            return lo
+        return float(np.clip(value, lo + 1e-6 * span, hi - 1e-6 * span))
 
     def _fit_two_stage(
         self,
@@ -762,6 +895,7 @@ class DecayFitMixin:
         *,
         background=None,
         peak_concentration=None,
+        start_concentration=None,
         decay_rate=None,
         optimize=True,
         t0_cont=None,
@@ -769,16 +903,30 @@ class DecayFitMixin:
     ):
         """Fit one model in two stages; return an outcome dict or None.
 
-        ``background`` / ``peak_concentration`` override the measured baseline
-        and peak (both held fixed either way); ``decay_rate`` seeds (or, with
-        ``optimize=False``, *sets*) the loss kinetics; ``optimize=False`` skips
-        the stage-1 optimisation so the result is a pure manual guess.
+        The peak carries **two** distinct levels, fitted separately:
+
+        * ``P0`` -- the asymptote the decay relaxes to, i.e. the *true*
+          background. Fitted in stage 1 against the post-peak samples.
+        * ``P_start`` -- the level the series sat at when the source came on.
+          It may be **elevated above** ``P0``, e.g. because an earlier event was
+          still decaying. Carried as the initial excess ``xi = P_start - P0``
+          and fitted in stage 2.
+
+        Treating the start as the background (the previous behaviour) forced the
+        decay to flatten out at whatever the window happened to open at, biasing
+        the loss rate and the peak excess whenever the two differ.
+
+        ``background`` / ``peak_concentration`` / ``start_concentration`` /
+        ``decay_rate`` are **initial guesses**, not constraints: they seed the
+        optimiser, which is then free to move them. Pass ``optimize=False`` to
+        stop at the seed (the GUI's live preview of a manual guess).
         ``t0_cont`` / ``peak_cont`` are continuous (non-snapped) onset/source-off
         seconds: when given they set the emission timing exactly (so ``tp`` and
-        the markers can sit between samples) while the post-peak sample selection
-        still uses the nearest-sample ``peak_idx``.
+        the markers can sit between samples) while the post-peak sample
+        selection still uses the nearest-sample ``peak_idx``.
         """
         info = _MODELS[name]
+        n_loss = info["n_loss"]
         # The decay samples (post-peak) are still chosen by sample index, but the
         # peak *time* used for the arithmetic follows the continuous override when
         # one is supplied, so the fitted curve and markers are not quantised.
@@ -788,86 +936,225 @@ class DecayFitMixin:
         if td.size < 4:
             return None
 
-        # Background and peak height are both *measured* (or user-supplied) and
-        # held fixed. The decay starts at the peak, so its excess at t=0 is the
-        # observed peak excess; fitting it as a free parameter is degenerate (it
-        # lets the flexible combined model overshoot the true peak) and would
-        # reintroduce the "misses the peak" problem. Only the loss constant(s)
-        # are fitted, on the excess above background. Both P0 and the peak use a
-        # local 3-point median so a single noisy sample cannot set them.
-        if background is not None:
-            P0 = max(float(background), 0.0)
+        # -- seeds ---------------------------------------------------------
+        if start_concentration is not None:
+            start_seed = max(float(start_concentration), 0.0)
         else:
-            P0 = self._background(y, t0_idx, peak_idx)
+            start_seed = self._start_level(y, t0_idx, peak_idx)
         if peak_concentration is not None:
-            peak_val = float(peak_concentration)
+            peak_seed = float(peak_concentration)
         else:
-            peak_val = float(np.median(y[max(0, peak_idx - 1) : peak_idx + 2]))
-        xmax = max(peak_val - P0, 1e-9)
-        yd_ex = yd - P0
+            # A local 3-point median, so one noisy sample cannot set the peak.
+            peak_seed = float(np.median(y[max(0, peak_idx - 1) : peak_idx + 2]))
+
+        # A decay approaches its asymptote from above, so the background can
+        # never sit above the lowest post-peak sample -- a tight, physical
+        # bound that keeps the extra free parameter well conditioned.
+        end_hi = max(float(np.nanmin(yd)), 0.0)
+        if background is not None:
+            end_seed = float(np.clip(float(background), 0.0, end_hi))
+        else:
+            end_seed = min(start_seed, 0.95 * end_hi)
+        end_seed = self._seed_within(end_seed, 0.0, end_hi)
+
+        xmax_seed = max(peak_seed - end_seed, 1e-9)
+        # Cap a free peak against the *observed* maximum, not against the seed,
+        # so a badly dragged guess cannot unbound the fit.
+        xmax_hi = _PEAK_HEADROOM * max(float(np.nanmax(y)) - end_seed, xmax_seed, 1e-9)
 
         if decay_rate is not None:
             rate = max(float(decay_rate), 1e-12)
         else:
             rate = 1.0 / 1800.0
-            good = yd_ex > 0
+            good = (yd - end_seed) > 0
             if good.sum() >= 3:
                 try:
-                    slope = np.polyfit(td[good], np.log(yd_ex[good]), 1)[0]
+                    slope = np.polyfit(td[good], np.log(yd[good] - end_seed), 1)[0]
                     if slope < 0:
                         rate = min(max(-slope, 1e-6), 1.0)
                 except (ValueError, np.linalg.LinAlgError):
                     pass
 
-        loss0 = self._decay_loss_seed(name, rate, xmax)
+        loss0 = self._decay_loss_seed(name, rate, xmax_seed)
         kernel = _DECAY_EXCESS[name]
-
-        def excess(td_, *loss_params):
-            return kernel(td_, *loss_params, xmax)
-
-        if optimize:
-            lo = [1e-30] * info["n_loss"]
-            hi = [np.inf] * info["n_loss"]
-            try:
-                popt_d, pcov_d = curve_fit(
-                    excess, td, yd_ex, p0=loss0, bounds=(lo, hi), maxfev=20000
-                )
-            except (RuntimeError, ValueError):
-                return None
-            loss = list(popt_d)
-            with np.errstate(invalid="ignore"):
-                perr_d = np.sqrt(np.diag(pcov_d))
-            loss_err = list(np.nan_to_num(perr_d[: info["n_loss"]], nan=0.0))
-        else:
-            # No optimisation: the seed *is* the guess. This drives the GUI's
-            # live preview of the initial parameters before the user optimises.
-            loss = list(loss0)
-            loss_err = [0.0] * info["n_loss"]
-        decay_r2 = _r_squared(yd, excess(td, *loss) + P0)
-        if not np.isfinite(decay_r2):
-            return None
-
-        # Stage 2: emission rate from the anchored peak and duration.
         t0_val = float(t[t0_idx]) if t0_cont is None else float(min(t0_cont, t_peak))
         tp = max(t_peak - t0_val, float(np.median(np.diff(t)) or 1.0))
-        E = _invert_emission(name, loss, xmax, tp)
+        t_rise, y_rise = t[: peak_idx + 1], y[: peak_idx + 1]
 
-        popt = [*loss, P0, E, t0_val, tp]
-        fit = info["func"](t, *popt)
-        r2 = _r_squared(y, fit)
+        def attempt(variant: str, optimise: bool):
+            """Fit this model at one rung of the :data:`_LEVEL_PENALTY` ladder.
 
-        return {
-            "popt": popt,
-            "loss": loss,
-            "loss_err": loss_err,
-            "xmax": xmax,
-            "P0": P0,
-            "E": E,
-            "t0": t0_val,
-            "tp": tp,
-            "r2": r2,
-            "decay_r2": decay_r2,
-        }
+            ``"anchored"`` keeps the historical behaviour -- the level the window
+            opens at is the background and the peak sits where the data put it,
+            so only the loss constant(s) are fitted. ``"split"`` frees the
+            background (bounded above by the lowest post-peak sample, which a
+            decay approaching from above can never go under) and, in stage 2, the
+            initial excess. ``"free_peak"`` additionally fits the peak excess.
+
+            Each rung is genuinely useful and each is degenerate somewhere, so
+            the caller runs all three and lets the penalised whole-window misfit
+            decide -- the information stage 1 does not have on its own.
+            """
+            anchored = variant == "anchored"
+            free_peak = variant == "free_peak"
+
+            # -- stage 1: post-peak decay -> loss kinetics, background, peak --
+            if anchored:
+                # Background pinned: to the caller's value when one was given
+                # (so a typed guess still means something on this rung), else to
+                # the level the window opened at -- the classic assumption.
+                p_fixed = (
+                    end_seed if background is not None else min(start_seed, end_hi)
+                )
+
+                def decay_model(td_, *free):
+                    return p_fixed + kernel(
+                        td_, *free[:n_loss], max(peak_seed - p_fixed, 1e-9)
+                    )
+
+                p0 = list(loss0)
+                lo = [1e-30] * n_loss
+                hi = [np.inf] * n_loss
+            elif free_peak:
+
+                def decay_model(td_, *free):
+                    return free[n_loss + 1] + kernel(td_, *free[:n_loss], free[n_loss])
+
+                p0 = [*loss0, xmax_seed, end_seed]
+                lo = [1e-30] * n_loss + [0.0, 0.0]
+                hi = [np.inf] * n_loss + [xmax_hi, max(end_hi, 1e-12)]
+            else:  # "split"
+
+                def decay_model(td_, *free):
+                    p_end = free[n_loss]
+                    return p_end + kernel(
+                        td_, *free[:n_loss], max(peak_seed - p_end, 1e-9)
+                    )
+
+                p0 = [*loss0, end_seed]
+                lo = [1e-30] * n_loss + [0.0]
+                hi = [np.inf] * n_loss + [max(end_hi, 1e-12)]
+
+            p0 = [
+                self._seed_within(v, a, b) if np.isfinite(b) else max(v, a)
+                for v, a, b in zip(p0, lo, hi)
+            ]
+
+            if optimise:
+                try:
+                    popt_d, pcov_d = curve_fit(
+                        decay_model, td, yd, p0=p0, bounds=(lo, hi), maxfev=20000
+                    )
+                except (RuntimeError, ValueError):
+                    return None
+                with np.errstate(invalid="ignore"):
+                    perr_d = np.nan_to_num(np.sqrt(np.diag(pcov_d)), nan=0.0)
+            else:
+                # No optimisation: the seeds *are* the answer. This drives the
+                # GUI's live preview of a guess before the user optimises.
+                popt_d = np.asarray(p0, dtype=float)
+                perr_d = np.zeros_like(popt_d)
+
+            loss = list(popt_d[:n_loss])
+            loss_err = list(perr_d[:n_loss])
+            if anchored:
+                P0 = p_fixed
+                xmax = max(peak_seed - P0, 1e-9)
+                p0_err = xmax_err = 0.0
+            elif free_peak:
+                xmax = max(float(popt_d[n_loss]), 1e-9)
+                P0 = float(popt_d[n_loss + 1])
+                xmax_err, p0_err = float(perr_d[n_loss]), float(perr_d[n_loss + 1])
+            else:  # "split"
+                P0 = float(popt_d[n_loss])
+                xmax = max(peak_seed - P0, 1e-9)
+                p0_err = float(perr_d[n_loss])
+                xmax_err = p0_err  # the peak tracks the background one-for-one
+
+            decay_r2 = _r_squared(yd, P0 + kernel(td, *loss, xmax))
+            if not np.isfinite(decay_r2):
+                return None
+
+            # -- stage 2: the rise -> the excess already there, and from it E --
+            xi_seed = (
+                0.0
+                if anchored
+                else self._seed_within(max(start_seed - P0, 0.0), 0.0, xmax)
+            )
+            xi, xi_err = xi_seed, 0.0
+
+            def rise_model(t_, xi_):
+                # E follows from the anchored peak, so the rise has exactly one
+                # free parameter: the excess in the air when the source came on.
+                e = _invert_emission(name, loss, xmax, tp, xi_)
+                return info["func"](t_, *loss, P0, e, t0_val, tp, xi_)
+
+            if not anchored and optimise and t_rise.size >= 3 and xmax > 1e-9:
+                try:
+                    popt_r, pcov_r = curve_fit(
+                        rise_model,
+                        t_rise,
+                        y_rise,
+                        p0=[xi_seed],
+                        bounds=([0.0], [xmax]),
+                        maxfev=5000,
+                    )
+                    xi = float(popt_r[0])
+                    with np.errstate(invalid="ignore"):
+                        xi_err = float(
+                            np.nan_to_num(np.sqrt(np.diag(pcov_r))[0], nan=0.0)
+                        )
+                except (RuntimeError, ValueError):
+                    xi = xi_seed
+
+            E = _invert_emission(name, loss, xmax, tp, xi)
+            popt = [*loss, P0, E, t0_val, tp, xi]
+            r2 = _r_squared(y, info["func"](t, *popt))
+
+            return {
+                "variant": variant,
+                "popt": popt,
+                "loss": loss,
+                "loss_err": loss_err,
+                "xmax": xmax,
+                "xmax_err": xmax_err,
+                "P0": P0,
+                "P0_err": p0_err,
+                "xi": xi,
+                "xi_err": xi_err,
+                "P_start": P0 + xi,
+                "E": E,
+                "t0": t0_val,
+                "tp": tp,
+                "r2": r2,
+                "decay_r2": decay_r2,
+            }
+
+        if not optimize:
+            # A pure preview of the guess: use the rung that honours every
+            # supplied level as given.
+            return attempt("split", optimise=False)
+
+        candidates = [
+            c
+            for c in (attempt(v, optimise=True) for v in _LEVEL_PENALTY)
+            if c is not None and np.isfinite(c["r2"])
+        ]
+        if not candidates:
+            return None
+
+        # Drop candidates whose background collapsed onto the bottom of its
+        # range -- an unidentified asymptote, not a measured one. Keep them only
+        # if nothing else fitted at all.
+        floor = _COLLAPSED_BACKGROUND_FRACTION * end_hi
+        credible = [c for c in candidates if not (end_hi > 0 and c["P0"] <= floor)]
+        if credible:
+            candidates = credible
+
+        return min(
+            candidates,
+            key=lambda c: (1.0 - c["r2"]) * _LEVEL_PENALTY[c["variant"]],
+        )
 
     @staticmethod
     def _effective_rate(name, loss, xmax) -> float:
@@ -908,6 +1195,12 @@ class DecayFitMixin:
         for nm, v in zip(names[: info["n_loss"]], fit["loss_err"]):
             errors[nm] = float(v)
 
+        errors["P0"] = float(fit.get("P0_err", 0.0))
+        errors["xi"] = float(fit.get("xi_err", 0.0))
+        # Not a model parameter, but the peak excess is now fitted too, so its
+        # uncertainty is worth carrying alongside them.
+        errors["xmax"] = float(fit.get("xmax_err", 0.0))
+
         P0 = fit["P0"]
         E = fit["E"]
         t0 = fit["t0"]
@@ -924,6 +1217,8 @@ class DecayFitMixin:
             "params": params,
             "errors": errors,
             "background": P0,
+            "start_concentration": fit["P_start"],
+            "initial_excess": fit["xi"],
             "peak_concentration": peak_conc,
             "peak_excess": fit["xmax"],
             "emission_rate": E,

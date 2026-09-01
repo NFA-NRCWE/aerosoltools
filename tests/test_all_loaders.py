@@ -1643,9 +1643,15 @@ def test_decay_curve_reconstructs_the_fitted_model():
 
     curve = decay_curve(fit.model, np.array([0.0, fit.peak_time_s]), fit.model_popt)
 
-    # At t=0 the model sits at the background; at the peak time it reaches the
-    # reported peak concentration.
-    assert curve[0] == pytest.approx(fit.background, rel=1e-6)
+    # At t=0 the model sits at the level the window opened at -- which is NOT
+    # the background when an earlier event was still decaying (the background is
+    # the asymptote the decay relaxes to, fitted separately). At the peak time
+    # the curve reaches the reported peak concentration.
+    assert curve[0] == pytest.approx(fit.start_concentration, rel=1e-6)
+    assert fit.start_concentration == pytest.approx(
+        fit.background + fit.initial_excess, rel=1e-9
+    )
+    assert fit.start_concentration >= fit.background
     assert curve[1] == pytest.approx(fit.peak_concentration, rel=1e-3)
 
 

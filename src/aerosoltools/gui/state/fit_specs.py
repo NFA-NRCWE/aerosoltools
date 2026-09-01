@@ -26,7 +26,7 @@ import pandas as pd
 # timestamps, the rest floats. Kept as a plain dict on the live spec because the
 # Decay tab mutates them in place; DecayFitSpec only owns their (de)serialization.
 _DECAY_TS_OVERRIDES = ("t0", "peak_time")
-_DECAY_NUM_OVERRIDES = ("background", "peakval", "rate")
+_DECAY_NUM_OVERRIDES = ("background", "start", "peakval", "rate")
 
 
 def _ts_or_none(value):

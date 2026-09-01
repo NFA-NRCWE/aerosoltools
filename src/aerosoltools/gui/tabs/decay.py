@@ -4,7 +4,12 @@ Fits a single-zone emission + decay peak model (see
 :mod:`aerosoltools._core.decay`) to windows of a chosen metric on the active
 dataset. **Several** decays can be fitted on one plot: each marked window is a
 persistent fit (saved with the project), shown as a shaded region plus its fit
-curve. In **Adjust** mode a fit is selected by clicking inside its region — its
+curve. The background P₀ (the level the decay relaxes to) and the start level
+(where the window opened, which may be higher if an earlier event was still
+decaying) are separate, and both are fitted; the values typed or dragged in the
+Adjust row seed the fit rather than pinning it.
+
+In **Adjust** mode a fit is selected by clicking inside its region — its
 draggable handles appear and its parameters load into the fields above the plot
 — and deselected by clicking outside it (or pressing Esc); with Adjust off the
 mouse zooms/pans the plot. A results table below the canvas lists every fit's
@@ -277,8 +282,10 @@ class DecayTab(_PlotTab):
         self.fit_btn = QtWidgets.QPushButton("Fit")
         self.fit_btn.setObjectName("primary")
         self.fit_btn.setToolTip(
-            "Optimise the loss kinetics of the selected fit from the current "
-            "guess (the background, peak and timing you set are held fixed)."
+            "Optimise the selected fit from the current guess. The background, "
+            "start level and peak you set are starting guesses, not fixed "
+            "values \u2014 the fit refines them. Only the emission start and "
+            "source-off times are taken as given."
         )
         self.fit_btn.clicked.connect(self._on_fit)
         row.addWidget(self.fit_btn)
@@ -296,6 +303,18 @@ class DecayTab(_PlotTab):
         row.addWidget(self.del_btn)
 
         row.addSpacing(10)
+        row.addWidget(QtWidgets.QLabel("Start:"))
+        self.start_edit = QtWidgets.QLineEdit()
+        self.start_edit.setFixedWidth(80)
+        self.start_edit.setToolTip(
+            "Guess for the concentration when the source came on. This is a "
+            "separate level from P\u2080: if an earlier event was still decaying, "
+            "the window opens ABOVE the true background. Leave blank to seed it "
+            "from the pre-emission baseline; the fit refines it either way."
+        )
+        self.start_edit.editingFinished.connect(self._apply_guess_fields)
+        row.addWidget(self.start_edit)
+
         row.addWidget(QtWidgets.QLabel("P₀:"))
         self.bg_edit = QtWidgets.QLineEdit()
         self.bg_edit.setFixedWidth(70)
@@ -478,6 +497,7 @@ class DecayTab(_PlotTab):
             "t0": None,
             "peak_time": None,
             "background": None,
+            "start": None,
             "peakval": None,
             "rate": None,
         }
@@ -549,6 +569,7 @@ class DecayTab(_PlotTab):
                 emission_start=ov.get("t0"),
                 peak_time=ov.get("peak_time"),
                 background=ov.get("background"),
+                start_concentration=ov.get("start"),
                 peak_concentration=ov.get("peakval"),
                 decay_rate=ov.get("rate"),
                 optimize=opt,
@@ -578,6 +599,7 @@ class DecayTab(_PlotTab):
                         emission_start=ov.get("t0"),
                         peak_time=ov.get("peak_time"),
                         background=ov.get("background"),
+                        start_concentration=ov.get("start"),
                         peak_concentration=ov.get("peakval"),
                         decay_rate=ov.get("rate"),
                         optimize=True,
@@ -745,13 +767,14 @@ class DecayTab(_PlotTab):
         spec = self._selected_spec()
         if spec is None:
             return
-        fields = (self.bg_edit, self.peak_edit, self.rate_edit)
+        fields = (self.bg_edit, self.start_edit, self.peak_edit, self.rate_edit)
         if not any(f.isModified() for f in fields):
             return
         for f in fields:
             f.setModified(False)
         ov = spec["overrides"]
         ov["background"] = self._to_float(self.bg_edit.text(), None)
+        ov["start"] = self._to_float(self.start_edit.text(), None)
         ov["peakval"] = self._to_float(self.peak_edit.text(), None)
         rate_h = self._to_float(self.rate_edit.text(), None)
         ov["rate"] = (rate_h / 3600.0) if rate_h is not None else None
@@ -1032,6 +1055,11 @@ class DecayTab(_PlotTab):
             return
         # Selected fit: draggable background line, peak handle and timing lines.
         self._bg_line = ax.axhline(res["background"], color=_BG_COLOR, ls="--", lw=1.2)
+        # The level the window opened at, drawn only when it sits meaningfully
+        # above the fitted background -- otherwise it would just overdraw it.
+        start_level = res.get("start_concentration", res["background"])
+        if start_level - res["background"] > 0.02 * max(res["peak_excess"], 1e-12):
+            ax.axhline(start_level, color=_BG_COLOR, ls=":", lw=1.0, alpha=0.8)
         self._peak_marker = ax.plot(
             [res["peak_time"]],
             [res["peak_concentration"]],
@@ -1054,6 +1082,7 @@ class DecayTab(_PlotTab):
         """Reflect the selected fit's parameters into the editable fields."""
         pairs = (
             (self.bg_edit, _fmt(res.get("background")) if res else ""),
+            (self.start_edit, _fmt(res.get("start_concentration")) if res else ""),
             (self.peak_edit, _fmt(res.get("peak_concentration")) if res else ""),
             (self.rate_edit, _fmt(res.get("decay_rate_per_hour")) if res else ""),
             (self.t0_edit, _fmt_time(t0_ts)),
@@ -1109,6 +1138,8 @@ class DecayTab(_PlotTab):
             ("R²", "r2"),
             ("decay R²", "dr2"),
             (f"Background [{u}]", "bg"),
+            (f"Start level [{u}]", "start"),
+            (f"Initial excess [{u}]", "xi"),
             (f"Peak [{u}]", "peak"),
             ("Decay rate [1/h]", "rate"),
             (f"Emission rate [{u}/s]", "emis"),
@@ -1141,7 +1172,9 @@ class DecayTab(_PlotTab):
             "r2": f"{res['r_squared']:.4f}",
             "dr2": f"{res['decay_r_squared']:.4f}",
             "bg": _fmt_pm(res.get("background"), errs.get("P0")),
-            "peak": _fmt(res.get("peak_concentration")),
+            "start": _fmt(res.get("start_concentration")),
+            "xi": _fmt_pm(res.get("initial_excess"), errs.get("xi")),
+            "peak": _fmt_pm(res.get("peak_concentration"), errs.get("xmax")),
             "rate": _fmt(res.get("decay_rate_per_hour")),
             "emis": _fmt_pm(res.get("emission_rate"), errs.get("E")),
             "loss": _fmt(res.get("loss_rate_per_hour")),
