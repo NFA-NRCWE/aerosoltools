@@ -7,6 +7,10 @@ size bin, its height *and* colour both the concentration (so it reads like a
 surface with clearly separated, unequally sized bins). Drag the cursor on the
 top panel to scan through time; the colour scale is fixed to the dataset's
 global range so bars are comparable across times.
+
+The APS's leading under-range ("<") catch-all bin is left out by default -- it
+is not a sized bin and typically holds most of the counts, which flattens the
+colour scale over everything else. "Show under-range bin" brings it back.
 """
 
 from __future__ import annotations
@@ -44,6 +48,17 @@ class AeroOpticalTab(_PlotTab):
         )
         self.normalize.stateChanged.connect(self.refresh)
         self.controls.addWidget(self.normalize)
+
+        self.under_range = QtWidgets.QCheckBox("Show under-range bin")
+        self.under_range.setToolTip(
+            "Include the APS's leading '<' catch-all bin — everything detected "
+            "below the instrument's lower channel bound, lumped together. It is "
+            "not a sized bin and usually holds most of the counts, so showing it "
+            "flattens the colour scale over the bins of interest. Off by default."
+        )
+        self.under_range.stateChanged.connect(self.refresh)
+        self.controls.addWidget(self.under_range)
+
         self.controls.addStretch(1)
         self.controls.addWidget(self.save_btn)
 
@@ -85,9 +100,14 @@ class AeroOpticalTab(_PlotTab):
         if obj is not self._obj:
             self._sel = 0  # start at the first time for a newly shown dataset
         self._obj = obj
+        # Only APS records carry an under-range catch-all bin.
+        self.under_range.setEnabled(obj.under_range_bin is not None)
         # The data object owns the reshape, the physical total and the optional
         # dlogDp normalization; the tab only renders the resulting cube.
-        cube = obj.correlation_cube(normalize=self.normalize.isChecked())
+        cube = obj.correlation_cube(
+            normalize=self.normalize.isChecked(),
+            include_under_range=self.under_range.isChecked(),
+        )
         self._times = cube.times
         self._total = cube.total
         self._opt_edges = cube.optical_edges

@@ -106,7 +106,32 @@ class Aerosol3d(Aerosol2D):
         """The time-indexed optical×aerodynamic matrix (``(optical, aero)`` cols)."""
         return self._correlation
 
-    def correlation_cube(self, normalize: bool = False) -> CorrelationCube:
+    @property
+    def under_range_bin(self) -> Optional[int]:
+        """Index of the leading under-range catch-all bin, or ``None``.
+
+        TSI's APS AIM export opens its size columns with a ``"<x"`` catch-all
+        holding everything the instrument detected *below* its lower channel
+        bound (on a 3321 that is the ``<0.523 µm`` column, mid 514.5 nm). Those
+        counts are real and belong in the total, but the bin is not sized --
+        its width is set by the detection limit, not by the sizing -- so it
+        routinely carries a large share of all counts (63 % on the bundled
+        sample, 70x the next bin) and flattens the colour scale of any
+        size-resolved view.
+
+        The aerodynamic↔optical plots therefore leave it out by default; see
+        their ``include_under_range`` argument.
+        """
+        return self._meta.get("under_range_bin")
+
+    def _aero_slice(self, include_under_range: bool) -> slice:
+        """Column slice over the aerodynamic axis, optionally dropping bin 0."""
+        drop = (not include_under_range) and self.under_range_bin == 0
+        return slice(1, None) if drop else slice(None)
+
+    def correlation_cube(
+        self, normalize: bool = False, include_under_range: bool = True
+    ) -> CorrelationCube:
         """Return the correlated matrix as a dense time × optical × aero cube.
 
         Reshapes the flat :attr:`correlation` frame (whose columns run
@@ -121,6 +146,12 @@ class Aerosol3d(Aerosol2D):
                 unequal width are comparable across both size axes. The returned
                 :attr:`~CorrelationCube.total` stays the raw physical sum
                 regardless.
+            include_under_range: Keep the leading under-range catch-all bin
+                (see :attr:`under_range_bin`). Defaults to ``True`` so this
+                numeric accessor still returns every measured bin; the plots
+                that render the cube pass ``False``. The returned
+                :attr:`~CorrelationCube.total` stays the sum over *all* bins
+                either way, so the physical total is never understated.
 
         Returns:
             CorrelationCube: Times, the (optionally normalized) value cube, the
@@ -141,10 +172,15 @@ class Aerosol3d(Aerosol2D):
         # Columns are ordered (optical, aero) with optical varying slowest, so a
         # straight reshape recovers the per-time optical×aerodynamic matrix.
         matrix = corr.to_numpy(dtype=float).reshape(len(corr), n_opt, n_aero)
-        # Total is always the raw (physical) sum over both size axes.
+        # Total is always the raw (physical) sum over both size axes, taken
+        # before any trimming so dropping the catch-all bin cannot understate it.
         total = np.nansum(matrix, axis=(1, 2))
         opt_edges = np.asarray(self._optical.bin_edges, dtype=float)
         aero_edges = np.asarray(self.bin_edges, dtype=float)
+        keep = self._aero_slice(include_under_range)
+        if keep.start:
+            matrix = matrix[:, :, keep]
+            aero_edges = aero_edges[keep.start :]
         if normalize:
             dlog_opt = np.diff(np.log10(opt_edges))  # length n_opt
             dlog_aero = np.diff(np.log10(aero_edges))  # length n_aero
@@ -260,6 +296,7 @@ class Aerosol3d(Aerosol2D):
         ax=None,
         log_color: bool = True,
         cmap: str = "viridis",
+        include_under_range: bool = False,
     ):
         """Compare the aerodynamic and optical sizing of the same particles.
 
@@ -278,6 +315,11 @@ class Aerosol3d(Aerosol2D):
             ax: Existing Matplotlib axes; a new figure is made when ``None``.
             log_color: Use a logarithmic colour scale (default True).
             cmap: Matplotlib colormap name.
+            include_under_range: Draw the leading under-range catch-all bin
+                (see :attr:`under_range_bin`). Off by default: it is not a
+                sized bin and typically holds most of the counts, so including
+                it compresses the colour scale over the bins the plot is
+                actually about. Pass ``True`` to see it.
 
         Returns:
             tuple: ``(figure, axes)``.
@@ -299,6 +341,7 @@ class Aerosol3d(Aerosol2D):
 
         matrix = corr.loc[mask].sum(axis=0)  # Series indexed by (optical, aero)
         grid = matrix.unstack()  # rows: optical mid, cols: aero mid
+        grid = grid.iloc[:, self._aero_slice(include_under_range)]
         opt_mids = grid.index.to_numpy(dtype=float)
         aero_mids = grid.columns.to_numpy(dtype=float)
         z = grid.to_numpy(dtype=float)
@@ -347,6 +390,7 @@ class Aerosol3d(Aerosol2D):
         ax=None,
         max_points: int = 8000,
         cmap: str = "jet",
+        include_under_range: bool = False,
     ):
         """Interactive 3-D view of the correlated APS record over time.
 
@@ -364,6 +408,10 @@ class Aerosol3d(Aerosol2D):
             ax: Existing 3-D axes; a new figure is made when ``None``.
             max_points: Cap on the number of scatter points (largest kept).
             cmap: Colormap (default "jet", matching the 2-D heatmaps).
+            include_under_range: Draw the leading under-range catch-all bin
+                (see :attr:`under_range_bin`). Off by default -- with only the
+                strongest ``max_points`` cells drawn, that one bin would claim
+                most of them and hide the sized distribution behind it.
 
         Returns:
             tuple: ``(figure, axes3d)``.
@@ -380,6 +428,11 @@ class Aerosol3d(Aerosol2D):
         corr = self._correlation
         mask = self._corr_time_mask(activity, window)
         sub = corr.loc[mask]
+        if self._aero_slice(include_under_range).start:
+            # Columns are a (optical, aero) MultiIndex; drop every optical
+            # channel's cell for the catch-all aerodynamic bin.
+            catchall = float(self.bin_mids[0])
+            sub = sub.loc[:, sub.columns.get_level_values("aero") != catchall]
         times = sub.index
         opt = sub.columns.get_level_values("optical").to_numpy(dtype=float)
         aero = sub.columns.get_level_values("aero").to_numpy(dtype=float)

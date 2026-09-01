@@ -42,13 +42,23 @@ def _aps_bins_nm(headers, lower_um, upper_um):
     ``headers`` are the 52 size-column labels: a "<x" catch-all followed by 51
     numeric midpoints in µm. Edges are arithmetic midpoints between bin centres,
     closed with the instrument's lower/upper channel bounds.
+
+    Returns:
+        tuple: ``(mids_nm, edges_nm, under_range)`` where ``under_range`` is
+        True when the first column is the ``"<x"`` catch-all -- everything the
+        instrument saw below its lower channel bound, lumped into one bin. It is
+        a real measurement (and belongs in the total), but it is not a sized
+        bin: its width is set by the detection limit rather than by the sizing,
+        so it routinely holds a large share of all counts and swamps any
+        size-resolved view. Flagged here so the plots can leave it out.
     """
+    under_range = str(headers[0]).strip().startswith("<")
     mids_um = np.array(headers[1:], dtype=float)  # 51 numeric midpoints
     lowest = (mids_um[0] - lower_um) / 2.0 + lower_um  # centre of the catch-all
     mids_um = np.append(lowest, mids_um)
     inner = (mids_um[1:] - mids_um[:-1]) / 2.0 + mids_um[:-1]
     edges_um = np.concatenate([[lower_um], inner, [upper_um]])
-    return np.round(mids_um * 1000.0, 1), np.round(edges_um * 1000.0, 1)
+    return np.round(mids_um * 1000.0, 1), np.round(edges_um * 1000.0, 1), under_range
 
 
 def load_aps_file(file: str) -> Aerosol2D:
@@ -112,7 +122,7 @@ def load_aps_file(file: str) -> Aerosol2D:
         raise FileFormatError("APS export has fewer size columns than expected.")
 
     headers = [str(c) for c in df.columns[_AERO_SLICE]]
-    bin_mids, bin_edges = _aps_bins_nm(headers, lower_um, upper_um)
+    bin_mids, bin_edges, under_range = _aps_bins_nm(headers, lower_um, upper_um)
 
     weight = str(df.columns[3]).strip().lower()
     is_correlated = "correlat" in weight
@@ -137,7 +147,9 @@ def load_aps_file(file: str) -> Aerosol2D:
         aero_block.insert(0, "Total_conc", aero_block.sum(axis=1))
         aero_block.insert(0, "Datetime", dt.to_numpy())
         aero_block = aero_block.dropna(subset=["Datetime"])
-        return _build_aero_2d(aero_block, bin_mids, bin_edges, meta, Aerosol2D)
+        return _build_aero_2d(
+            aero_block, bin_mids, bin_edges, meta, Aerosol2D, under_range
+        )
 
     # -- correlated: 16 optical channels per sample -> reshape ---------------
     n_opt = int(pd.to_numeric(df.iloc[:, 3], errors="coerce").max())
@@ -172,7 +184,7 @@ def load_aps_file(file: str) -> Aerosol2D:
         columns=cols,
     ).dropna(how="all")
 
-    aps = _build_aero_2d(aero_df, bin_mids, bin_edges, meta, Aerosol3d)
+    aps = _build_aero_2d(aero_df, bin_mids, bin_edges, meta, Aerosol3d, under_range)
     aps._optical = optical
     aps._correlation = corr
     return aps
@@ -191,7 +203,7 @@ def _optical_bins_nm(n_opt):
     return mids, edges
 
 
-def _build_aero_2d(frame, bin_mids, bin_edges, meta, cls):
+def _build_aero_2d(frame, bin_mids, bin_edges, meta, cls, under_range=False):
     """Construct an Aerosol2D/3d from a prepared (Datetime, Total_conc, bins) df.
 
     The frame is already plain number (dN, cm⁻³), so no post-construction
@@ -217,6 +229,8 @@ def _build_aero_2d(frame, bin_mids, bin_edges, meta, cls):
             "sample_file": sample_file,
             "stokes_correction": str(meta.get("Stokes Correction", "")).strip(),
             "sample_time_s": float(meta.get("Sample Time", 0) or 0),
+            # Index of the leading under-range ("<x") catch-all bin, or None.
+            "under_range_bin": 0 if under_range else None,
         },
         to_number=False,
         unnormalize=False,
