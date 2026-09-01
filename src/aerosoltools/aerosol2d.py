@@ -12,6 +12,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from ._core.corrections import CorrectionMixin
+from ._core.deposition import LungDepositionMixin
 from ._core.fitting import FitMixin
 from ._core.fractions import FractionMixin
 from ._core.plotting2d import Plot2DMixin
@@ -28,6 +29,7 @@ except ImportError:  # pragma: no cover - typing_extensions fallback
 class Aerosol2D(
     SizeConversionMixin,
     FractionMixin,
+    LungDepositionMixin,
     FitMixin,
     CorrectionMixin,
     Plot2DMixin,

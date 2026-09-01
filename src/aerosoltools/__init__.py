@@ -89,6 +89,18 @@ load_all
     file may hold several measured components (e.g. a multi-head Ranger
     export) and the calling code must not care which.
 
+Exposure & dose
+---------------
+icrp_deposition_fraction
+    ICRP 66 regional lung-deposition fraction as a function of particle
+    size (head airways / tracheobronchial / alveolar / total). The
+    size-resolved classes expose it as ``deposition_fraction``,
+    ``deposited_size_distribution``, ``deposition_calc``,
+    ``deposited_dose`` and ``plot_deposition``.
+inhalable_fraction
+    ICRP 66 inhalability — the fraction of ambient particles drawn into
+    the airways at all.
+
 Intercomparison (multi-dataset) workflows
 -----------------------------------------
 combine_size_ranges
@@ -132,6 +144,11 @@ Typical usage example
 """
 
 from ._core.decay import DecayResult, decay_curve
+from ._core.deposition import (
+    REGION_LABELS,
+    icrp_deposition_fraction,
+    inhalable_fraction,
+)
 from ._core.fitting import PSDFitResult, lognormal_modes
 from .acsm_simple import ACSM_simple
 from .aerosol1d import Aerosol1D
@@ -210,6 +227,10 @@ __all__ = [
     # Decay fitting
     "DecayResult",
     "decay_curve",
+    # Lung deposition (ICRP 66)
+    "icrp_deposition_fraction",
+    "inhalable_fraction",
+    "REGION_LABELS",
     # Loading: auto-detect entry point + registry + error base
     "load_file",
     "load_all",

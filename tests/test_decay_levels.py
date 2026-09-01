@@ -87,7 +87,9 @@ def test_the_curve_starts_at_the_start_level_and_relaxes_to_the_background():
     assert at_start == pytest.approx(res.start_concentration, rel=1e-9)
 
     # Far past the peak the curve has relaxed towards the background.
-    far = _decay.decay_curve(res.model, [res.peak_time_s + 10 * 3600], res.model_popt)[0]
+    far = _decay.decay_curve(res.model, [res.peak_time_s + 10 * 3600], res.model_popt)[
+        0
+    ]
     assert far == pytest.approx(res.background, rel=1e-3)
 
 
