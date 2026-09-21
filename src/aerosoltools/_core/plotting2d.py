@@ -210,6 +210,7 @@ class Plot2DMixin:
         fraction: bool = False,
         cumulative: bool = False,
         mark_activities: bool | Sequence[str] = False,
+        ax=None,
     ):
         """Plot time series of one or more size-selective Pₓ metrics.
 
@@ -231,6 +232,8 @@ class Plot2DMixin:
                       successive PM_values (for example PM10 − PM2.5).
                     * True: legend reports cumulative Pₓ at each cut
                       (for example PM2.5, PM10).
+            ax (matplotlib.axes.Axes | None): Axis to plot into. If None,
+                a new figure and axes are created.
 
         Returns:
             tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]: The
@@ -309,14 +312,20 @@ class Plot2DMixin:
         # Create figure/axes. Tick and legend font sizes come from the shared
         # rcParams set on import (see aerosoltools.aerosol1d), so this figure
         # matches the rest of the library instead of hardcoding sizes.
-        figure, ax = plt.subplots()
-
+        # figure, ax = plt.subplots()
+        new_fig_created = False
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8, 5))
+            new_fig_created = True
+        else:
+            fig = ax.figure
+            
         # Highlight activities (shared helper; "All data" excluded unless asked).
         if mark_activities and hasattr(self, "_activity_periods"):
             selected = _shading.resolve_activities(
                 self._activity_periods, mark_activities
             )
-            _shading.shade_activities(ax, self._activity_periods, selected, zorder=3)
+            _shading.shade_activities(ax, self._activity_periods, selected, zorder=1)
             # Clip x-axis to actual data range
             left = float(mdates.date2num(self.time.min()))
             right = float(mdates.date2num(self.time.max()))
@@ -344,6 +353,7 @@ class Plot2DMixin:
                         alpha=0.75,
                         color=colors[i],
                         label=f"{pm}: {avg:.2f}±{sd:.2f}",
+                        zorder=3
                     )
                 else:
                     pm_1 = f"P{dtype[-1]}{PM_values[i-1]}"
@@ -357,6 +367,7 @@ class Plot2DMixin:
                             alpha=0.75,
                             color=colors[i],
                             label=f"{pm}: {avg:.2f}±{sd:.2f}",
+                            zorder=3
                         )
                     else:
                         band = PM_data[pm] - PM_data[pm_1]
@@ -369,6 +380,7 @@ class Plot2DMixin:
                             alpha=0.75,
                             color=colors[i],
                             label=f"{pm}: {avg:.2f}±{sd:.2f}",
+                            zorder=3
                         )
 
             ax2.yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
@@ -389,6 +401,7 @@ class Plot2DMixin:
                         alpha=1,
                         color=colors[i],
                         label=f"{pm}: {avg:.2f}±{sd:.2f}",
+                        zorder=3
                     )
                 else:
                     pm_1 = f"P{dtype[-1]}{PM_values[i-1]}"
@@ -400,6 +413,7 @@ class Plot2DMixin:
                             PM_data[pm],
                             color=colors[i],
                             label=f"{pm}: {avg:.2f}±{sd:.2f}",
+                            zorder=3
                         )
                     else:
                         band = PM_data[pm] - PM_data[pm_1]
@@ -410,10 +424,12 @@ class Plot2DMixin:
                             PM_data[pm],
                             color=colors[i],
                             label=f"{pm}: {avg:.2f}±{sd:.2f}",
+                            zorder=3
                         )
             ax.legend(
                 loc="best",
                 title=f"Average values ({data_copy.unit})",
+                title_fontsize=15,
             )
 
         ax.set_ylim(0)
@@ -423,7 +439,11 @@ class Plot2DMixin:
         ax.xaxis.set_major_locator(loc)
         ax.xaxis.set_major_formatter(fmt)
 
-        return ax.figure, ax
+        if new_fig_created:
+            fig.tight_layout()
+
+        return fig, ax
+        # return ax.figure, ax
 
     def plot_timeseries(
         self,

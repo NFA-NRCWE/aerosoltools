@@ -415,7 +415,12 @@ def _parse_standard_datetime(
     # Read the main date/time tokens from the header
     fmps_date = np.genfromtxt(
         file, delimiter=delimiter, encoding=encoding, max_rows=1, dtype=str
-    )[2:]
+    )
+    if len(fmps_date)==2:
+        fmps_date=fmps_date[1].split(",")[1:]
+    elif len(fmps_date)==4:
+        fmps_date=fmps_date[2:]
+        
     month_map = {
         k: v
         for v, k in enumerate(

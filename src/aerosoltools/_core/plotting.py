@@ -132,9 +132,9 @@ class Plot1DMixin:
 
         # Plot the selected data column against time.
         if parameter in self._data:
-            ax.plot(self.time, self.data[parameter], linestyle="-")
+            ax.plot(self.time, self.data[parameter], linestyle="-",zorder=3)
         elif parameter in self._extra_data:
-            ax.plot(self.time, self.extra_data[parameter], linestyle="-")
+            ax.plot(self.time, self.extra_data[parameter], linestyle="-",zorder=3)
         else:
             raise KeyError(f"Parameter '{parameter}' not found in data or extra_data")
 
@@ -159,7 +159,7 @@ class Plot1DMixin:
             selected = _shading.resolve_activities(
                 self._activity_periods, mark_activities
             )
-            _shading.shade_activities(ax, self._activity_periods, selected, zorder=3)
+            _shading.shade_activities(ax, self._activity_periods, selected, zorder=1)
 
             # Clamp x-limits to the actual data range.
             left = float(mdates.date2num(self.time.min()))

@@ -237,6 +237,9 @@ class FitMixin:
         else:
             raise ValueError("Period chosen is neither an activity or a range of data")
 
+        if ydata.shape[0]==1:
+            ydata = np.vstack((ydata[0]/1.01,ydata[0]*1.01))
+
         ymean = np.nanmean(ydata, axis=0)
 
         if len(xdata) != len(ymean):
