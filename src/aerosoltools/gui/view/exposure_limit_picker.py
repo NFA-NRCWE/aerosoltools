@@ -196,7 +196,7 @@ class ExposureLimitCombo(QtWidgets.QComboBox):
         self.set_current_name(current.name if current else None)
         self.setToolTip(
             f"Particulate substances with a limit in {limits.source.label} "
-            f"(Bilag 2, Afsnit {' and '.join(limits.source.sections)}; fibres "
+            f"(Bilag 2, Afsnit {', '.join(limits.source.sections)}; fibres "
             "excluded). Type to search. (2×) = short-term limit set to twice the "
             "8-hour limit by the order."
         )

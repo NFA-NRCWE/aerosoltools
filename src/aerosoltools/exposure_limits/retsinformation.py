@@ -30,8 +30,9 @@ reason in :attr:`ExposureLimitList.excluded`: fibres (counted per cm³), mercury
 aerosol would not be assumed to consist of (reactive chemicals, pesticides,
 industrial organics, soluble compounds of metals that have a dust entry, …;
 see :mod:`._assessment`). An Afsnit A entry none of this covers — one added by a
-later order — is left out as "needs assessment". Afsnit C (process-specific
-welding limits) is not parsed.
+later order — is left out as "needs assessment". **Afsnit C** adds the
+process-specific limits for welding and flame-cutting fume, as entries named
+"Svejserøg, <method>, <base material>[, <coating>]".
 """
 
 from __future__ import annotations
@@ -699,13 +700,111 @@ def _same_entry(a: ExposureLimit, b: ExposureLimit) -> bool:
     )
 
 
+#: A ditto mark in the welding table: "as in the row above".
+_DITTO = frozenset({"–", "-", "—", "»"})
+
+
+def _find_welding_table(root: ET.Element) -> ET.Element | None:
+    """The Afsnit C table of process-specific (welding) limits, if the order has one.
+
+    Unlike Afsnit A and B, its "Afsnit C" title is a heading above the table, so
+    the table is recognised by its "Procesbetinget GV" header instead.
+    """
+    for table in _descendants(root, "Table"):
+        first = next(_descendants(table, "Tr"), None)
+        if (
+            first is not None
+            and "procesbetinget" in " ".join(_row_cells(first)[0]).lower()
+        ):
+            return table
+    return None
+
+
+def _lower_first(text: str) -> str:
+    """Lower-case a leading capital, but leave acronyms (MIG/MAG, TIG) alone."""
+    return text if text[:2].isupper() else text[:1].lower() + text[1:]
+
+
+def _read_welding_table(table: ET.Element) -> list[ExposureLimit]:
+    """Afsnit C: process-specific limits for welding and flame-cutting fume.
+
+    Each row gives a method, base material and surface coating with one limit
+    (mg/m³); a "–" means "as in the row above". The order gives no short-term
+    value and no size fraction for these, so they have no short-term limit and
+    the order's default, total dust, applies. Entries are named
+    ``"Svejserøg, <method>, <base material>[, <coating>]"``.
+    """
+    rows = [_row_cells(tr) for tr in _descendants(table, "Tr")]
+    header, spans = rows[0]
+    starts = [start for start, _span in spans]
+    if len(starts) < 4:
+        raise RetsinformationError(
+            "The welding table's layout was not recognised — the parser needs updating."
+        )
+    method_col, material_col, coating_col, value_col = starts[:4]
+    header_mark = _split_footnote(header[value_col].strip())[1]
+    footnotes: dict[str, str] = {}
+    body = []
+    for cells, _spans in rows[1:]:
+        marker = _FOOTNOTE_ROW.match(cells[0].strip())
+        if marker:
+            text = next((c.strip() for c in cells[1:] if c.strip()), "")
+            footnotes[marker.group(1).translate(_PLAIN_DIGITS)] = text
+        else:
+            body.append(cells)
+
+    limits: list[ExposureLimit] = []
+    above = ("", None, "", None)  # material, its footnote, coating, its footnote
+    for cells in body:
+        method = _split_footnote(cells[method_col].strip())[0]
+        value = _number(cells[value_col])
+        if not method or value is None:
+            continue
+        material, material_mark = _split_footnote(cells[material_col].strip())
+        coating, coating_mark = _split_footnote(cells[coating_col].strip())
+        ditto = material in _DITTO or coating in _DITTO
+        if material in _DITTO:
+            material, material_mark = above[0], above[1]
+        if coating in _DITTO:
+            coating, coating_mark = above[2], above[3]
+        above = (material, material_mark, coating, coating_mark)
+        parts = [method.replace("-svejsning", "svejsning"), material, coating]
+        name = ", ".join(["Svejserøg"] + [_lower_first(p) for p in parts if p])
+        notes = [
+            footnotes[mark]
+            for mark in (header_mark, material_mark, coating_mark)
+            if mark and mark in footnotes
+        ]
+        if ditto:
+            notes.append(
+                "Base material and coating as in the row above ('–' in the order)."
+            )
+        limits.append(
+            ExposureLimit(name=name, twa=value, notes=tuple(notes), section="C")
+        )
+    return limits
+
+
 def _parse_sections(
     root: ET.Element, sections: tuple[str, ...], doubling_rule: bool
-) -> tuple[list[ExposureLimit], list[tuple[str, str]]]:
-    """Parse the particulate limits of ``sections``, Afsnit B first."""
+) -> tuple[list[ExposureLimit], list[tuple[str, str]], tuple[str, ...]]:
+    """Parse the particulate limits of ``sections``, Afsnit B first.
+
+    Returns:
+        The limits, the ``(name, reason)`` of entries left out, and the sections
+        actually parsed (an order without a welding table has no Afsnit C).
+    """
     limits: list[ExposureLimit] = []
     excluded: list[tuple[str, str]] = []
+    parsed: list[str] = []
     for section in sorted(sections, key=lambda s: s != "B"):
+        if section == "C":
+            table = _find_welding_table(root)
+            if table is not None:
+                limits.extend(_read_welding_table(table))
+                parsed.append("C")
+            continue
+        parsed.append(section)
         records, footnotes = _read_table(_find_section_table(root, section), section)
         for rec in records:
             built = _build_limit(rec, footnotes, doubling_rule)
@@ -719,7 +818,8 @@ def _parse_sections(
                 limits.append(limit)
             elif reason and all(name != limit.name for name, _r in excluded):
                 excluded.append((limit.name, reason))
-    return sorted(limits, key=lambda lim: lim.name.casefold()), excluded
+    limits.sort(key=lambda lim: lim.name.casefold())
+    return limits, excluded, tuple(sorted(parsed))
 
 
 def _in_force_from(text: str) -> str | None:
@@ -739,7 +839,7 @@ def parse_exposure_limits_xml(
     data: bytes | str,
     eli: str | None = None,
     retrieved: str | None = None,
-    sections: tuple[str, ...] = ("A", "B"),
+    sections: tuple[str, ...] = ("A", "B", "C"),
 ) -> ExposureLimitList:
     """Parse the particulate limits out of a limit-value order's XML.
 
@@ -748,7 +848,8 @@ def parse_exposure_limits_xml(
         eli: The order's ELI URL, recorded as the source; read from the
             document's number and year when omitted.
         retrieved: When the XML was downloaded (ISO timestamp); defaults to now.
-        sections: Which Bilag 2 sections to parse (``"A"``, ``"B"``).
+        sections: Which Bilag 2 sections to parse (``"A"``, ``"B"``,
+            ``"C"``); an order without a welding table simply has no C.
 
     Returns:
         The particulate limits (see the module docstring for which entries
@@ -777,7 +878,7 @@ def parse_exposure_limits_xml(
     number = int(meta_text("Number") or 0)
     issued = meta_text("DiesSigni") or meta_text("DiesEdicti")
     text = " ".join(root.itertext())
-    limits, excluded = _parse_sections(
+    limits, excluded, parsed = _parse_sections(
         root, tuple(sections), bool(_DOUBLING_RULE.search(text))
     )
     source = LimitSource(
@@ -790,7 +891,7 @@ def parse_exposure_limits_xml(
         accession_number=meta_text("AccessionNumber"),
         retrieved=retrieved
         or datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        sections=tuple(sorted(sections)),
+        sections=parsed,
     )
     return ExposureLimitList(
         source=source, limits=tuple(limits), excluded=tuple(excluded)

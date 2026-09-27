@@ -108,7 +108,7 @@ class ExposureLimitsDialog(QtWidgets.QDialog):
         self.header.setText(
             f"<b>{src.label}</b>{in_force} — {src.title}<br>"
             f"{len(limits)} particulate limits (Bilag 2, Afsnit "
-            f"{' and '.join(src.sections)}) · status "
+            f"{', '.join(src.sections)}) · status "
             f"'{src.status or '?'}' when retrieved on {retrieved} · "
             f"<a href='{src.eli}'>{src.eli}</a>"
         )

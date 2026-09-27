@@ -59,7 +59,7 @@ src/aerosoltools/
   exposure_limits/   Danish OELs for particles (Bilag 2: Afsnit B + the particulate
                        rows of Afsnit A; fibres/Hg/volatiles and the maintainer-assessed
                        "not the measured aerosol" list in _assessment.py left out with
-                       a reason) parsed from Retsinformation's official ELI
+                       a reason) + Afsnit C welding limits, parsed from Retsinformation's official ELI
                        /dan/xml; ships data/dk_bek_<yr>_<nr>.json (load_exposure_limits);
                        find_current_order follows the ELI .rdfa changed_by chain;
                        _fractions.py = size-fraction check (check_fraction,

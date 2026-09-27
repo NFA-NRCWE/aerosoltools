@@ -9,10 +9,11 @@
   "status": "Valid",
   "in_force_from": "2026-07-01",
   "accession_number": "B20260061305",
-  "retrieved": "2026-09-27T07:33:49+00:00",
+  "retrieved": "2026-09-27T07:45:57+00:00",
   "sections": [
    "A",
-   "B"
+   "B",
+   "C"
   ]
  },
  "excluded": [
@@ -1661,6 +1662,86 @@
    "year": 2020,
    "notes": [],
    "section": "A"
+  },
+  {
+   "name": "Svejserøg, elektrodesvejsning, almindeligt konstruktionsstål, sædvanlig primer",
+   "cas": [],
+   "twa": 1.7,
+   "stel": null,
+   "unit": "mg/m³",
+   "stel_rule": "",
+   "remarks": "",
+   "year": null,
+   "notes": [
+    "PVG’erne er beregnet ud fra et erfaringsdatamateriale.",
+    "Stål 37 – 42 – 50 (DS(12011)).",
+    "Jernoxid – og zinkprimere eller ingen overfladebehandling."
+   ],
+   "section": "C"
+  },
+  {
+   "name": "Svejserøg, elektrodesvejsning, rustfast og syrebestandigt stål",
+   "cas": [],
+   "twa": 0.5,
+   "stel": null,
+   "unit": "mg/m³",
+   "stel_rule": "",
+   "remarks": "",
+   "year": null,
+   "notes": [
+    "PVG’erne er beregnet ud fra et erfaringsdatamateriale.",
+    "Fx stål efter SIS 2332, 2343 eller tilsvarende."
+   ],
+   "section": "C"
+  },
+  {
+   "name": "Svejserøg, flammeskæring, almindeligt konstruktionsstål, sædvanlig primer",
+   "cas": [],
+   "twa": 1.7,
+   "stel": null,
+   "unit": "mg/m³",
+   "stel_rule": "",
+   "remarks": "",
+   "year": null,
+   "notes": [
+    "PVG’erne er beregnet ud fra et erfaringsdatamateriale.",
+    "Stål 37 – 42 – 50 (DS(12011)).",
+    "Jernoxid – og zinkprimere eller ingen overfladebehandling.",
+    "Base material and coating as in the row above ('–' in the order)."
+   ],
+   "section": "C"
+  },
+  {
+   "name": "Svejserøg, MIG/MAG, almindeligt konstruktionsstål, sædvanlig primer",
+   "cas": [],
+   "twa": 1.6,
+   "stel": null,
+   "unit": "mg/m³",
+   "stel_rule": "",
+   "remarks": "",
+   "year": null,
+   "notes": [
+    "PVG’erne er beregnet ud fra et erfaringsdatamateriale.",
+    "Stål 37 – 42 – 50 (DS(12011)).",
+    "Jernoxid – og zinkprimere eller ingen overfladebehandling.",
+    "Base material and coating as in the row above ('–' in the order)."
+   ],
+   "section": "C"
+  },
+  {
+   "name": "Svejserøg, TIG, rustfast og syrebestandigt stål",
+   "cas": [],
+   "twa": 1.1,
+   "stel": null,
+   "unit": "mg/m³",
+   "stel_rule": "",
+   "remarks": "",
+   "year": null,
+   "notes": [
+    "PVG’erne er beregnet ud fra et erfaringsdatamateriale.",
+    "Fx stål efter SIS 2332, 2343 eller tilsvarende."
+   ],
+   "section": "C"
   },
   {
    "name": "Sølv, pulver, støv og opløselige forbindelser, beregnet som Ag",

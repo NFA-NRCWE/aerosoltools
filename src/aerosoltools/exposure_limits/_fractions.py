@@ -69,6 +69,11 @@ class FractionCheck:
         """Whether the limit applies to the metric."""
         return self.status == "match"
 
+    @property
+    def conservative(self) -> bool:
+        """Whether the metric counts more than the limit's fraction (overestimates)."""
+        return self.status == "conservative"
+
 
 def metric_size_cut(metric: str, upper_um: float | None = None) -> float | None:
     """Largest particle size (µm) a metric covers.
@@ -174,7 +179,10 @@ def basis_note(limit: ExposureLimit) -> str:
 
 
 def applicable_limit(
-    candidates: Sequence[ExposureLimit], metric: str, size_cut_um: float | None
+    candidates: Sequence[ExposureLimit],
+    metric: str,
+    size_cut_um: float | None,
+    allow_conservative: bool = False,
 ) -> tuple[ExposureLimit, FractionCheck]:
     """Choose which fraction variant of a substance applies to a metric.
 
@@ -184,17 +192,20 @@ def applicable_limit(
             then ``"Kvarts, total"``.
         metric: The metric's name.
         size_cut_um: The metric's cut from :func:`metric_size_cut`.
+        allow_conservative: When no variant matches, accept one the metric
+            overestimates (e.g. PM10 against a respirable limit).
 
     Returns:
-        The first candidate that applies, with its check — or, if none does,
-        the first candidate with the reason it does not.
+        The first candidate that matches — else, if allowed, the first that is
+        conservative — with its check; or, failing both, the first candidate
+        with the reason it does not apply.
     """
-    first = candidates[0]
-    first_check = check_fraction(first, metric, size_cut_um)
-    if first_check.applies:
-        return first, first_check
-    for other in candidates[1:]:
-        check = check_fraction(other, metric, size_cut_um)
+    checks = [(c, check_fraction(c, metric, size_cut_um)) for c in candidates]
+    for candidate, check in checks:
         if check.applies:
-            return other, check
-    return first, first_check
+            return candidate, check
+    if allow_conservative:
+        for candidate, check in checks:
+            if check.conservative:
+                return candidate, check
+    return checks[0]

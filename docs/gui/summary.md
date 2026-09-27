@@ -51,7 +51,8 @@ Instead of typing the limits, pick the substance being measured. The dropdown
 lists the particulate limits in the Danish limit-value order (*Bekendtgørelse om
 grænseværdier for stoffer og materialer*, Bilag 2): the dusts of Afsnit B and the
 particles of Afsnit A — metals and their compounds, fumes, oil mist, carbon
-black, diesel exhaust, borax. Only substances that a measured aerosol could be
+black, diesel exhaust, borax — and the process-specific welding-fume limits of
+Afsnit C (type *svejs* to find them). Only substances that a measured aerosol could be
 assumed to consist of are listed — the crude assumption made for wood dust,
 where PM is measured and taken to be all wood dust. Each row shows the name,
 CAS number, 8-hour and short-term
@@ -68,8 +69,9 @@ chosen metric**, converted to its unit (0.1 mg/m³ becomes 100 µg/m³):
   respirabel* and summarise a *Total* channel, and *Kvarts, total* is used. When
   no variant fits — PM1 against a respirable or total-dust limit misses part of
   the fraction — the fields are cleared and no limit is listed. A metric that
-  covers *more* than the fraction (PM10 against a respirable limit) is not
-  listed either, as it would overstate exposure. Total and inhalable dust are
+  covers *more* than the fraction (PM10 against a respirable limit) is used
+  when no variant fits exactly, flagged as a **conservative** comparison: it
+  overstates exposure, and the status line and table say so. Total and inhalable dust are
   accepted from any metric reaching 10 µm, with the caveat that direct-reading
   instruments under-sample the coarsest particles. A size spectrometer's PM
   values stop at its largest size bin, so a NanoScan's "PM10" counts as PM0.42.
@@ -83,8 +85,9 @@ chosen metric**, converted to its unit (0.1 mg/m³ becomes 100 µg/m³):
 Typing a limit by hand clears the pick; typed limits are not checked.
 
 The computed table gains **Substance** (the variant used), **Limit source**
-(e.g. `BEK nr 613 af 29/06/2026`) and **Limit applies** (`yes`, or `no – …` with
-the reason, in which case the limit columns are blank), so an exported table
+(e.g. `BEK nr 613 af 29/06/2026`) and **Limit applies** (`yes`,
+`yes (conservative) – …`, or `no – …` with the reason, in which case the limit
+columns are blank), so an exported table
 always says what it was compared against. The pick is saved with the project.
 
 Keep in mind:
@@ -93,7 +96,13 @@ Keep in mind:
   refers to *§ 3, stk. 2* the short-term limit is twice the 8-hour limit. Some
   entries list their own value instead (calcium hydroxide/oxide, respirable:
   4 × the 8-hour limit) or give none (lead); these are used as the order gives
-  them.
+  them. The welding limits have no short-term value.
+- **Welding limits**
+  (Afsnit C) are per process, base material and coating (e.g. *Svejserøg,
+  MIG/MAG, almindeligt konstruktionsstål, sædvanlig primer*: 1.6 mg/m³). The
+  order gives no size fraction for them, so its default — total dust —
+  applies. Where it writes "–" for the base material and coating, that is
+  read as "as in the row above".
 - **Not listed:** fibres (counted per cm³, which these instruments do not
   measure), mercury (also a vapour), volatile metal compounds, gases, and
   substances a measured aerosol would not be assumed to consist of — reactive
@@ -101,7 +110,7 @@ Keep in mind:
   organics, chemically defined fractions (PAH), and soluble compounds of metals
   that also have a dust entry. Tools → *Occupational exposure limits…* lists
   what was left out and why; a substance added by a later order shows up there
-  as *needs assessment*. Afsnit C (welding) is not included.
+  as *needs assessment*.
 
 Tools → *Occupational exposure limits…* shows the whole list and its source.
 **Check for a newer order** asks Retsinformation whether the order is still in

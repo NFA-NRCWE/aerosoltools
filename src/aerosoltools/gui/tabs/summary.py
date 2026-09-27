@@ -411,13 +411,18 @@ class SummaryTab(QtWidgets.QWidget):
     def _resolve_pick(self, obj, key: str):
         """The picked substance's fraction variant that fits metric ``key`` of ``obj``.
 
+        A variant that matches is preferred; failing that, one the metric
+        overestimates is accepted (a conservative comparison, flagged as such).
+
         Returns:
             ``(limit, check)`` from ``exposure_limits.applicable_limit`` — e.g.
             "Kvarts, total" for a Total channel although "Kvarts, respirabel"
             was picked, or the pick with the reason no variant fits.
         """
         cut = exposure_limits.series_size_cut(obj, key)
-        return applicable_limit(record_candidates(self._oel_pick), key, cut)
+        return applicable_limit(
+            record_candidates(self._oel_pick), key, cut, allow_conservative=True
+        )
 
     def _set_limit_fields(self, twa: float | None, stel: float | None) -> None:
         """Show limits in the OEL/STEL fields (blank for none)."""
@@ -429,9 +434,12 @@ class SummaryTab(QtWidgets.QWidget):
 
         The fraction variant of the picked substance that fits the exposure
         metric is used (the total-dust limit for a Total channel, the respirable
-        one for PM4), converted to the metric's unit. When none fits — or the
-        metric is not a mass concentration — the fields are cleared and the
-        status line says why; the summary then lists no limit for that metric.
+        one for PM4), converted to the metric's unit. A metric that covers more
+        than the limit's fraction (PM10 against a respirable limit) is accepted
+        with a warning that exposure is overestimated. When nothing fits — the
+        metric misses part of the fraction, or is not a mass concentration —
+        the fields are cleared and the status line says why; the summary then
+        lists no limit for that metric.
         """
         self._sync_oel_source()
         self._sync_limit_units()
@@ -456,7 +464,7 @@ class SummaryTab(QtWidgets.QWidget):
             )
             return
         limit, check = self._resolve_pick(ds.obj, key)
-        if not check.applies:
+        if not (check.applies or check.conservative):
             self._set_limit_fields(None, None)
             self.status.setText(
                 f"No limit for {picked.base_name} applies to {key}: {check.message} "
@@ -469,6 +477,8 @@ class SummaryTab(QtWidgets.QWidget):
             f"Limits for {limit.name} ({pick.get('source')}) filled in {unit} "
             f"for {key}."
         ]
+        if check.conservative:
+            parts.insert(0, "⚠ Conservative comparison:")
         if limit.name != picked.name:
             parts.append(f"Its {limit.fraction} variant is the one that fits {key}.")
         if limit.stel_derived:
@@ -499,7 +509,7 @@ class SummaryTab(QtWidgets.QWidget):
                 "applies": f"no – {key} is not a mass concentration",
             }
         limit, check = self._resolve_pick(obj, key)
-        if not check.applies:
+        if not (check.applies or check.conservative):
             return {
                 "limit": limit,
                 "twa": None,
@@ -513,7 +523,8 @@ class SummaryTab(QtWidgets.QWidget):
             "limit": limit,
             "twa": limit.twa_in(unit),
             "stel": limit.stel_in(unit),
-            "applies": "yes" + (" – " + " ".join(notes) if notes else ""),
+            "applies": ("yes (conservative)" if check.conservative else "yes")
+            + (" – " + " ".join(notes) if notes else ""),
         }
 
     def _tag_limits(self, df: pd.DataFrame, info: dict) -> pd.DataFrame:

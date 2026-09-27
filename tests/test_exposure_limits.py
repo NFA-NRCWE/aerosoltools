@@ -65,9 +65,9 @@ def test_section_b_rows(parsed):
     assert (src.number, src.date, src.status) == (613, "2026-06-29", "Valid")
     assert src.in_force_from == "2026-07-01"
     assert src.eli == "https://www.retsinformation.dk/eli/lta/2026/613"
-    assert src.sections == ("A", "B")
+    assert src.sections == ("A", "B", "C")
 
-    assert len(parsed) == 90
+    assert len(parsed) == 95
     assert sum(lim.section == "B" for lim in parsed) == 24
     assert parsed.names() == sorted(parsed.names(), key=str.casefold)
     quartz = parsed["Kvarts, respirabel"]
@@ -395,3 +395,34 @@ def test_check_fraction_thoracic(metric, status):
     """A thoracic limit fits PM10 (none is in the current list; rule kept)."""
     mist = ExposureLimit(name="Tåge, thorakal fraktion", twa=0.05)
     assert check_fraction(mist, metric, metric_size_cut(metric)).status == status
+
+
+def test_welding_limits(parsed):
+    """Afsnit C's process-specific welding limits, '–' read as 'as above'."""
+    welding = [lim for lim in parsed if lim.section == "C"]
+    assert len(welding) == 5
+    mig = parsed["Svejserøg, MIG/MAG, almindeligt konstruktionsstål, sædvanlig primer"]
+    assert (mig.twa, mig.stel, mig.fraction) == (1.6, None, "total")
+    assert any("row above" in note for note in mig.notes)
+    assert any("erfaringsdatamateriale" in note for note in mig.notes)
+    tig = parsed["Svejserøg, TIG, rustfast og syrebestandigt stål"]
+    assert tig.twa == 1.1 and not any("row above" in n for n in tig.notes)
+    assert (
+        parsed["Svejserøg, elektrodesvejsning, rustfast og syrebestandigt stål"].twa
+        == 0.5
+    )
+
+
+def test_applicable_limit_can_accept_a_conservative_variant(parsed):
+    """With no matching variant, a conservative one is used only if allowed."""
+    silica = parsed["Krystallinsk siliciumdioxid, respirabelt støv"]
+    limit, check = applicable_limit([silica], "PM10", 10.0)
+    assert limit is silica and check.status == "conservative" and not check.applies
+    limit, check = applicable_limit([silica], "PM10", 10.0, allow_conservative=True)
+    assert limit is silica and check.conservative
+    # A match still wins over a conservative variant.
+    quartz = parsed["Kvarts, respirabel"]
+    limit, check = applicable_limit(
+        [quartz, *parsed.siblings(quartz)], "Total", math.inf, allow_conservative=True
+    )
+    assert limit.name == "Kvarts, total" and check.applies

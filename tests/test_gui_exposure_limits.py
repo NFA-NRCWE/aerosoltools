@@ -129,6 +129,30 @@ def test_summary_lists_no_limit_for_a_mismatched_fraction(app):
     assert "No exposure limit applies" in tab.status.text()
 
 
+def test_summary_lists_conservative_comparisons_with_a_warning(app):
+    """PM10 against a respirable-only limit is listed, flagged as conservative."""
+    _win, tab = _summary_tab("Sample_DustTrak.csv", "DustTrak", "PM10")
+    _pick(tab, "Krystallinsk siliciumdioxid, respirabelt støv")
+    assert tab.long_limit.text() == "100" and tab.short_limit.text() == "200"
+    assert tab.status.text().startswith("⚠ Conservative comparison:")
+    assert "overestimated" in tab.status.text()
+    tab._compute()
+    df = tab.model.dataframe
+    assert set(df["Exposure limit [µg/m³]"]) == {100.0}
+    assert all(v.startswith("yes (conservative) – ") for v in df["Limit applies"])
+
+
+def test_summary_welding_limit_has_no_short_term_value(app):
+    """A welding limit fills the OEL only; the STEL columns stay blank."""
+    _win, tab = _summary_tab("Sample_DustTrak.csv", "DustTrak", "Total")
+    _pick(tab, "Svejserøg, MIG/MAG, almindeligt konstruktionsstål, sædvanlig primer")
+    assert tab.long_limit.text() == "1600" and tab.short_limit.text() == ""
+    tab._compute()
+    df = tab.model.dataframe
+    assert set(df["Exposure limit [µg/m³]"]) == {1600.0}
+    assert df["STEL [µg/m³]"].isna().all()
+
+
 def test_summary_pick_refuses_number_metric(app):
     """A mass-based limit is not written into a number-concentration summary."""
     _win, tab = _summary_tab("Sample_OPS2.txt", "OPS", "PNC")

@@ -77,9 +77,9 @@ class ExposureLimit:
             :data:`REMARK_CODES`.
         year: Year the entry was added or last changed (the order's *Årstal*).
         notes: Footnotes and later-dated values attached to the entry.
-        section: The Bilag 2 section the entry comes from: ``"B"`` (dust) or
+        section: The Bilag 2 section the entry comes from: ``"B"`` (dust),
             ``"A"`` (the particulate entries of the gases/vapours/particles
-            list).
+            list) or ``"C"`` (process-specific welding-fume limits).
     """
 
     name: str
