@@ -190,6 +190,18 @@ def test_new_activity_from_a_list_and_copy_all(app, monkeypatch):
     assert rows[0] == "Activity\tStart\tEnd"
     assert len(rows) == 3 and all(r.startswith("Pasted\t") for r in rows[1:])
 
+    # Nothing usable on the clipboard: say so, and create nothing.
+    told = []
+    monkeypatch.setattr(
+        QtWidgets.QMessageBox, "information", staticmethod(lambda *a: told.append(a))
+    )
+    QtWidgets.QApplication.clipboard().setText("no times here")
+    monkeypatch.setattr(
+        QtWidgets.QInputDialog, "getItem", staticmethod(lambda *a: ("Empty", True))
+    )
+    tab._new_from_list()
+    assert told and "Empty" not in proj.activities
+
 
 def test_add_activity_keeps_its_scope(app):
     """set_activity_periods' new ``scope`` must not reset add_activity's scope."""

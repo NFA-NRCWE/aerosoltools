@@ -654,6 +654,16 @@ class TimeSeriesTab(_PlotTab):
         """Create an activity, or add to one, from periods on the clipboard."""
         if self.obj is None:
             return
+        text = QtWidgets.QApplication.clipboard().text()
+        span = (pd.Timestamp(self.obj.time.min()), pd.Timestamp(self.obj.time.max()))
+        if not period_text.parse_periods(text, *span).periods:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Activity from a list",
+                "No start/end pairs found on the clipboard. Copy two columns — "
+                "start and end times, e.g. from Excel — then try again.",
+            )
+            return
         existing = self.main.project.user_activities()
         default = f"Task {len(existing) + 1}"
         items = existing + [default]
