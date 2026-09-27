@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import traceback
 
-from ..logic import helpers
+from ..logic import exposure_limits, helpers
 from ..qt import QtCore, QtWidgets
 from ..view.widgets import ThresholdControls
 from ._base import _PlotTab
@@ -84,7 +84,7 @@ class HeatmapTab(_PlotTab):
 
         # Concentration-threshold (e.g. OEL) overlay on the top (total-conc)
         # panel; state persists on the project across tab rebuilds and saves.
-        self.threshold = ThresholdControls()
+        self.threshold = ThresholdControls(limits_provider=exposure_limits.active_list)
         self.threshold.set_state(self.main.project.plot_thresholds.get(self.export_tag))
         self.threshold.changed.connect(self._on_threshold_changed)
         self.controls.addWidget(self.threshold)
@@ -122,7 +122,7 @@ class HeatmapTab(_PlotTab):
         # cached view is read-only; normalisation mutates, so copy first when it's
         # on.
         disp = self.dtype.currentText()
-        base, _ = self._converted_active(disp)
+        base, unit = self._converted_active(disp)
         if self.normalize.isChecked():
             target = base.copy_self()
             target.normalize_logdp()
@@ -154,9 +154,10 @@ class HeatmapTab(_PlotTab):
         # axis is already log, and its colour scale is handled separately).
         if self.log_top.isChecked():
             ax1.set_yscale("log")
-        # Threshold line (e.g. OEL) on the top total-concentration panel.
+        # Threshold line (e.g. OEL) on the top total-concentration panel, whose
+        # unit is the display basis' (a linked exposure limit converts to it).
         helpers.draw_threshold(
-            ax1, self.threshold.threshold_value(), self.threshold.legend_text()
+            ax1, self.threshold.threshold_value(unit), self.threshold.legend_text()
         )
         return floored
 

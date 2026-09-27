@@ -19,7 +19,7 @@ from matplotlib.lines import Line2D
 from ..._core import _shading
 from ..._core.metrics import _CANONICAL_METRICS as _ENV_METRICS
 from ..._core.metrics import BASIS_QUANTITY, QUANTITY_BASIS, canonical_metric_for
-from ..logic import helpers
+from ..logic import exposure_limits, helpers
 from ..qt import QtCore, QtWidgets
 from ..view.widgets import ThresholdControls, WheelLineEdit
 from . import _autoscale
@@ -248,7 +248,7 @@ class OverlayTab(_PlotTab):
 
         # Concentration-threshold (e.g. OEL) overlay lives on the second row to
         # keep the metric row (and thus the middle pane's minimum width) narrow.
-        self.threshold = ThresholdControls()
+        self.threshold = ThresholdControls(limits_provider=exposure_limits.active_list)
         self.threshold.set_state(self.main.project.plot_thresholds.get(self.export_tag))
         self.threshold.changed.connect(self._on_threshold_changed)
         self.controls2.addWidget(self.threshold)
@@ -673,6 +673,9 @@ class OverlayTab(_PlotTab):
         """Draw each included dataset's series, grouping metrics onto their axes."""
         ax.clear()
         self._clear_extra_axes()
+        # Unit of the primary (left) axis, set by _draw_multi_axis; stays None
+        # on the normalised 0–1 axis, where no exposure limit can be drawn.
+        self._primary_unit = None
         normalize = self.normalize.isChecked()
         entries = self._gather_entries(normalize)
         cycle = _active_color_cycle()
@@ -715,7 +718,7 @@ class OverlayTab(_PlotTab):
             _shading.shade_activities(ax, periods, selected, zorder=1, legend=False)
 
         # Threshold line on the primary axis (drawn without its own legend).
-        tv = self.threshold.threshold_value()
+        tv = self.threshold.threshold_value(self._primary_unit)
         threshold_handle = None
         if tv is not None and np.isfinite(tv):
             ax.axhline(
@@ -814,6 +817,8 @@ class OverlayTab(_PlotTab):
             unit = next(iter(canon)) if len(canon) == 1 else ""
             label = ", ".join(names[:2]) + ("…" if len(names) > 2 else "")
             target.set_ylabel(f"{label} [{unit}]" if unit else label)
+            if target is ax:
+                self._primary_unit = unit or None
             is_log = self.axis_log[uaxis - 1].isChecked()
             target.set_yscale("log" if is_log else "linear")
             self._apply_axis_limits(target, uaxis, is_log)

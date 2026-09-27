@@ -9,11 +9,18 @@ keyboard-shortcut reference.
 
 from __future__ import annotations
 
-from typing import Iterable, Optional, Tuple
+from typing import Callable, Iterable, Optional, Tuple
 
 import numpy as np
 
+from ...exposure_limits import ExposureLimit, ExposureLimitList
 from ..qt import Figure, FigureCanvas, QtCore, QtWidgets
+from .exposure_limit_picker import (
+    describe_limit,
+    format_value,
+    pick_record,
+    record_limit,
+)
 
 
 class ThresholdControls(QtWidgets.QWidget):
@@ -21,19 +28,38 @@ class ThresholdControls(QtWidgets.QWidget):
 
     A check-box switches a horizontal limit line on/off; the value field sets
     where it sits (in the plot's *current* y-units) and the label field sets its
-    legend text. :attr:`changed` fires whenever any of the three is edited, so
-    the owning tab can persist the state and redraw. Kept presentation-only —
-    the actual line is drawn by :func:`helpers.draw_threshold`.
+    legend text. The *OEL* button sets the line from a substance's occupational
+    exposure limit instead: the line then stays linked to that limit — converted
+    to the plotted unit on every draw and hidden when the plotted series is not
+    a comparable concentration — until the value is typed over.
+    :attr:`changed` fires whenever any of these is edited, so the owning tab can
+    persist the state and redraw. Kept presentation-only — the actual line is
+    drawn by :func:`helpers.draw_threshold`.
     """
 
-    #: Emitted when the enable box, value or label changes.
+    #: Emitted when the enable box, value, label or linked limit changes.
     changed = QtCore.pyqtSignal()
 
-    def __init__(self, parent=None):
-        """Build the enable check-box plus value and legend-text fields."""
+    def __init__(
+        self,
+        parent=None,
+        limits_provider: Optional[Callable[[], ExposureLimitList]] = None,
+    ):
+        """Build the enable check-box, value and legend-text fields.
+
+        Args:
+            parent: Parent widget.
+            limits_provider: Returns the exposure-limit list the *OEL* button
+                offers; without one the button is hidden.
+        """
         super().__init__(parent)
         lay = QtWidgets.QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
+        # The linked exposure limit (a pick_record plus "kind": "twa"/"stel"),
+        # and the y-unit of the axis at the last draw.
+        self._oel: Optional[dict] = None
+        self._unit: Optional[str] = None
+        self._limits_provider = limits_provider
 
         self.enable = QtWidgets.QCheckBox("Threshold")
         self.enable.setToolTip(
@@ -52,20 +78,37 @@ class ThresholdControls(QtWidgets.QWidget):
         self.label.setFixedWidth(120)
         self.label.setToolTip("Legend text shown next to the threshold line.")
 
+        self.oel_btn = QtWidgets.QToolButton()
+        self.oel_btn.setText("OEL")
+        self.oel_btn.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        self.oel_btn.setToolTip(
+            "Set the line to a substance's occupational exposure limit (Danish "
+            "limit-value order), converted to the plotted unit."
+        )
+        self._oel_menu = QtWidgets.QMenu(self.oel_btn)
+        self._oel_menu.setToolTipsVisible(True)
+        self._oel_menu.aboutToShow.connect(self._fill_oel_menu)
+        self.oel_btn.setMenu(self._oel_menu)
+        self.oel_btn.setVisible(limits_provider is not None)
+
         lay.addWidget(self.enable)
         lay.addWidget(self.value)
         lay.addWidget(self.label)
+        lay.addWidget(self.oel_btn)
 
         self.enable.stateChanged.connect(lambda _state: self.changed.emit())
         self.value.editingFinished.connect(self.changed.emit)
         self.label.editingFinished.connect(self.changed.emit)
+        # Typing a value by hand replaces a linked exposure limit.
+        self.value.textEdited.connect(self._unlink)
 
     def state(self) -> dict:
-        """Return the current ``{"on", "value", "label"}`` state (JSON-safe)."""
+        """Return the current ``{"on", "value", "label", "oel"}`` state (JSON-safe)."""
         return {
             "on": self.enable.isChecked(),
             "value": self.value.text().strip(),
             "label": self.label.text().strip(),
+            "oel": dict(self._oel) if self._oel else None,
         }
 
     def set_state(self, state: Optional[dict]) -> None:
@@ -80,15 +123,137 @@ class ThresholdControls(QtWidgets.QWidget):
         self.label.setText(str(state.get("label", "")))
         for w in widgets:
             w.blockSignals(False)
+        oel = state.get("oel")
+        self._oel = dict(oel) if isinstance(oel, dict) else None
+        self._sync_value_tip()
 
-    def threshold_value(self) -> Optional[float]:
-        """The float threshold when enabled and parseable, else ``None``."""
+    def threshold_value(self, unit: Optional[str] = None) -> Optional[float]:
+        """The threshold to draw on an axis in ``unit``, or ``None`` for no line.
+
+        A typed value is used as-is (it is in the plot's y-units by definition).
+        A linked exposure limit is converted to ``unit`` — and the value field
+        updated to match — or gives ``None`` when ``unit`` is not a comparable
+        concentration (e.g. a number concentration for a mass-based limit).
+
+        Args:
+            unit: The y-unit of the axis the line goes on (``None`` if unknown,
+                e.g. a normalised 0–1 axis). Also remembered for the *OEL* menu.
+        """
+        self._unit = unit
+        if self._oel is not None:
+            value = self._linked_value(unit)
+            self._show_value(value)
+            return value if self.enable.isChecked() else None
         if not self.enable.isChecked():
             return None
         try:
             return float(self.value.text().strip())
         except ValueError:
             return None
+
+    # -- linked exposure limit ---------------------------------------------
+    def _linked_value(self, unit: Optional[str]) -> Optional[float]:
+        """The linked limit in ``unit``, or ``None`` when it can't be expressed."""
+        limit = record_limit(self._oel)
+        if not limit.is_comparable_to(unit):
+            return None
+        if self._oel.get("kind") == "stel":
+            return limit.stel_in(unit)
+        return limit.twa_in(unit)
+
+    def _show_value(self, value: Optional[float]) -> None:
+        """Show a linked limit's converted value (or a dash) in the value field."""
+        self.value.blockSignals(True)
+        self.value.setText(format_value(value) if value is not None else "–")
+        self.value.blockSignals(False)
+        self._sync_value_tip()
+
+    def _sync_value_tip(self) -> None:
+        """Explain in the value field's tooltip what a linked line shows."""
+        if self._oel is None:
+            self.value.setToolTip(
+                "Threshold level, in the units currently shown on the y-axis."
+            )
+            return
+        rec = self._oel
+        kind = "short-term" if rec.get("kind") == "stel" else "8-hour"
+        tip = (
+            f"Linked to the {kind} limit for {rec.get('substance')} "
+            f"({rec.get('source')}), converted to the plotted unit. "
+            "Type a value to replace it."
+        )
+        if not record_limit(rec).is_comparable_to(self._unit):
+            tip += (
+                f"\nHidden: the plotted series is in {self._unit or 'an unknown unit'}"
+                f", but the limit is in {rec.get('unit')}."
+            )
+        self.value.setToolTip(tip)
+
+    def _unlink(self, *_args) -> None:
+        """Drop the linked exposure limit (the value becomes a typed one)."""
+        if self._oel is not None:
+            self._oel = None
+            self._sync_value_tip()
+
+    def _fill_oel_menu(self) -> None:
+        """(Re)build the *OEL* menu: one sub-menu per substance, for the current unit."""
+        menu = self._oel_menu
+        menu.clear()
+        if self._limits_provider is None:
+            return
+        limits = self._limits_provider()
+        unit = self._unit
+        usable = bool(limits.limits) and limits.limits[0].is_comparable_to(unit)
+        head = menu.addAction(f"Exposure limits — {limits.source.label}")
+        head.setEnabled(False)
+        if not usable:
+            note = menu.addAction(
+                f"The plotted series is in {unit or 'an unknown unit'}; these "
+                "limits apply to a mass concentration."
+            )
+            note.setEnabled(False)
+        menu.addSeparator()
+        for lim in limits:
+            extra = "; ".join(p for p in (", ".join(lim.cas), lim.remarks) if p)
+            sub = menu.addMenu(f"{lim.name}  ({extra})" if extra else lim.name)
+            sub.setToolTipsVisible(True)
+            sub.setEnabled(usable)
+            tip = describe_limit(lim, limits.source.label)
+            for kind, text, value in (
+                ("twa", "8-hour limit", lim.twa),
+                ("stel", "Short-term limit (15 min)", lim.stel),
+            ):
+                if value is None:
+                    continue
+                label = f"{text}: {format_value(value)} {lim.unit}"
+                if kind == "stel" and lim.stel_derived:
+                    label += " (2 × 8-hour)"
+                if usable and unit and unit != lim.unit:
+                    converted = lim.twa_in(unit) if kind == "twa" else lim.stel_in(unit)
+                    label += f"  =  {format_value(converted)} {unit}"
+                act = sub.addAction(label)
+                act.setToolTip(tip)
+                act.triggered.connect(
+                    lambda _checked=False, lim=lim, kind=kind: self._apply_limit(
+                        lim, limits, kind
+                    )
+                )
+
+    def _apply_limit(
+        self, limit: ExposureLimit, limits: ExposureLimitList, kind: str
+    ) -> None:
+        """Link the line to ``limit``'s 8-hour (``"twa"``) or short-term limit."""
+        self._oel = {**pick_record(limit, limits), "kind": kind}
+        what = "short-term limit" if kind == "stel" else "8-h OEL"
+        widgets = (self.enable, self.label)
+        for w in widgets:
+            w.blockSignals(True)
+        self.enable.setChecked(True)
+        self.label.setText(f"{limit.name} – {what} ({limits.source.short_label})")
+        for w in widgets:
+            w.blockSignals(False)
+        self._show_value(self._linked_value(self._unit))
+        self.changed.emit()
 
     def legend_text(self) -> str:
         """The user's legend text (may be empty)."""

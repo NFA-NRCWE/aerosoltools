@@ -18,8 +18,15 @@ import pandas as pd
 
 from ..._core import _stats
 from ..._core.metrics import canonical_unit, convert_value, unit_key
+from ..logic import exposure_limits
 from ..qt import QtCore, QtWidgets
 from ..state.summary_cache import SummaryCacheEntry
+from ..view.exposure_limit_picker import (
+    ExposureLimitCombo,
+    format_value,
+    pick_record,
+    record_limit,
+)
 from ..view.metric_picker import MetricPickerDialog, default_keys, metric_catalog
 from ..view.models import PandasTableModel
 from ._base import _export_table, _tune_table
@@ -130,6 +137,32 @@ class SummaryTab(QtWidgets.QWidget):
             self.act_bar.addWidget(box)
         right.addLayout(self.act_bar)
 
+        # Substance row (exposure only): picking what is being measured from the
+        # Danish limit-value order fills the STEL/OEL fields below — converted to
+        # the metric's unit — and records the order's number and date with the
+        # result, so it is clear which limits a summary was compared against.
+        self.oel_bar = QtWidgets.QHBoxLayout()
+        self.oel_label = QtWidgets.QLabel("Substance:")
+        self.oel_combo = ExposureLimitCombo()
+        self.oel_combo.set_limits(exposure_limits.active_list())
+        self.oel_combo.picked.connect(self._on_oel_picked)
+        self.oel_source = QtWidgets.QLabel("")
+        self.oel_source.setStyleSheet("color: palette(mid);")
+        tip = (
+            "The substance being measured. Its 8-hour and short-term limits from "
+            "the Danish limit-value order fill the OEL and STEL fields, converted "
+            "to the chosen metric's unit. Typing a limit by hand clears the pick."
+        )
+        self.oel_label.setToolTip(tip)
+        self.oel_bar.addWidget(self.oel_label)
+        self.oel_bar.addWidget(self.oel_combo)
+        self.oel_bar.addWidget(self.oel_source, stretch=1)
+        right.addLayout(self.oel_bar)
+        # The picked substance (a view.exposure_limit_picker.pick_record), or None
+        # when the limits were typed.
+        self._oel_pick: dict | None = None
+        self._sync_oel_source()
+
         # Third row: exposure-limit parameters (only shown for exposure).
         self.exp_bar = QtWidgets.QHBoxLayout()
         self.short_limit = self._add_field(
@@ -137,7 +170,8 @@ class SummaryTab(QtWidgets.QWidget):
             "1.0",
             width=80,
             tip="Short-term exposure limit. The highest short-window average is "
-            "compared against this value (same unit as the chosen metric).",
+            "compared against this value (in the unit shown next to it).",
+            unit=True,
         )
         self.short_window = self._add_field(
             "over",
@@ -151,7 +185,8 @@ class SummaryTab(QtWidgets.QWidget):
             "1.0",
             width=80,
             tip="Occupational exposure limit. The time-weighted average is "
-            "compared against this value (same unit as the chosen metric).",
+            "compared against this value (in the unit shown next to it).",
+            unit=True,
         )
         self.twa_window = self._add_field(
             "TWA window",
@@ -166,6 +201,9 @@ class SummaryTab(QtWidgets.QWidget):
         # inputs, so re-evaluate staleness as the user types.
         for field in self._limit_fields():
             field.editingFinished.connect(self._recheck_stale)
+        # A limit typed by hand no longer matches the picked substance.
+        for field in (self.short_limit, self.long_limit):
+            field.textEdited.connect(self._clear_oel_pick)
         for box in self.act_stat_boxes.values():
             box.stateChanged.connect(self._recheck_stale)
 
@@ -202,7 +240,12 @@ class SummaryTab(QtWidgets.QWidget):
 
     # -- small helpers -----------------------------------------------------
     def _add_field(
-        self, label: str, default: str, width: int, tip: str | None = None
+        self,
+        label: str,
+        default: str,
+        width: int,
+        tip: str | None = None,
+        unit: bool = False,
     ) -> QtWidgets.QLineEdit:
         """Add a labelled line-edit to the exposure-parameter row and return it.
 
@@ -211,6 +254,8 @@ class SummaryTab(QtWidgets.QWidget):
             default: Initial text.
             width: Fixed field width in pixels.
             tip: Optional tooltip applied to both the label and the field.
+            unit: Add a label after the field showing the metric's unit (kept
+                current by :meth:`_sync_limit_units`).
         """
         lbl = QtWidgets.QLabel(label)
         edit = QtWidgets.QLineEdit(default)
@@ -221,6 +266,10 @@ class SummaryTab(QtWidgets.QWidget):
         self.exp_bar.addWidget(lbl)
         self.exp_bar.addWidget(edit)
         edit._label = lbl  # type: ignore[attr-defined]
+        edit._unit = None  # type: ignore[attr-defined]
+        if unit:
+            edit._unit = QtWidgets.QLabel("")  # type: ignore[attr-defined]
+            self.exp_bar.addWidget(edit._unit)
         return edit
 
     def _selected_datasets(self) -> list:
@@ -233,12 +282,15 @@ class SummaryTab(QtWidgets.QWidget):
 
     def _exposure_widgets(self):
         """Widgets (and their labels) shown only in Exposure mode."""
-        widgets = []
+        widgets = [self.oel_label, self.oel_combo, self.oel_source]
         for field in self._limit_fields():
             widgets.append(field)
-            label = getattr(field, "_label", None)
-            if label is not None:
-                widgets.append(label)
+            for extra in (
+                getattr(field, "_label", None),
+                getattr(field, "_unit", None),
+            ):
+                if extra is not None:
+                    widgets.append(extra)
         return widgets
 
     def _activity_widgets(self):
@@ -276,6 +328,8 @@ class SummaryTab(QtWidgets.QWidget):
             keys = keys[:1]
         self._metric_keys_by_kind[self.kind.currentText()] = keys
         self._update_metric_summary()
+        if single:
+            self._apply_oel_pick()  # re-express the limits in the new metric's unit
         self._recheck_stale()
 
     def _update_metric_summary(self) -> None:
@@ -286,6 +340,94 @@ class SummaryTab(QtWidgets.QWidget):
         self.metric_summary.setText(
             "Metrics: " + (prefix + ", ".join(keys) if keys else "none available")
         )
+        self._sync_limit_units()
+
+    # -- exposure limits (substance pick) -----------------------------------
+    def _exposure_unit(self) -> str | None:
+        """Unit of the exposure metric's column — the unit the limit fields use."""
+        datasets = self._selected_datasets()
+        keys = self._current_metric_keys()[:1]
+        if not datasets or not keys:
+            return None
+        return self._canonical_units(datasets).get(keys[0])
+
+    def _sync_limit_units(self) -> None:
+        """Show the exposure metric's unit next to the STEL/OEL fields."""
+        unit = self._exposure_unit() or ""
+        for field in (self.short_limit, self.long_limit):
+            if getattr(field, "_unit", None) is not None:
+                field._unit.setText(unit)
+
+    def _sync_oel_source(self) -> None:
+        """Describe the picked substance's source (or the list offered)."""
+        pick = self._oel_pick
+        if pick is None:
+            source = self.oel_combo.limits()
+            self.oel_source.setText(
+                f"Limits from {source.source.label}" if source else ""
+            )
+            self.oel_source.setToolTip("")
+            return
+        limit = record_limit(pick)
+        self.oel_source.setText(
+            f"from {pick.get('source')} · {limit.fraction} fraction"
+        )
+        self.oel_source.setToolTip(
+            f"{pick.get('eli')}\nCompare against a measurement of the "
+            f"{limit.fraction} fraction."
+        )
+
+    def _on_oel_picked(self) -> None:
+        """A substance (or "none") was chosen: record it and fill the limits."""
+        limit = self.oel_combo.current_limit()
+        limits = self.oel_combo.limits()
+        self._oel_pick = pick_record(limit, limits) if limit is not None else None
+        self._apply_oel_pick()
+        self._recheck_stale()
+
+    def _clear_oel_pick(self, *_args) -> None:
+        """A limit was typed by hand: it no longer belongs to the picked substance."""
+        if self._oel_pick is not None:
+            self._oel_pick = None
+            self.oel_combo.set_current_name(None)
+            self._sync_oel_source()
+
+    def _apply_oel_pick(self) -> None:
+        """Fill the STEL/OEL fields from the picked substance, in the metric's unit.
+
+        Leaves the fields alone (and says why) when the exposure metric is not a
+        mass concentration, since a mass-based limit cannot be compared to it.
+        """
+        self._sync_oel_source()
+        self._sync_limit_units()
+        pick = self._oel_pick
+        if pick is None:
+            return
+        limit = record_limit(pick)
+        unit = self._exposure_unit()
+        if not limit.is_comparable_to(unit):
+            metric = (self._current_metric_keys() or ["—"])[0]
+            self.status.setText(
+                f"{limit.name}: its limits are in {limit.unit}, but the exposure "
+                f"metric '{metric}' is in {unit or 'no known unit'}. Choose a mass "
+                "metric with “Choose metrics…” to fill the limits."
+            )
+            return
+        filled = []
+        for field, value, what in (
+            (self.long_limit, limit.twa_in(unit), "OEL"),
+            (self.short_limit, limit.stel_in(unit), "STEL"),
+        ):
+            if value is not None:
+                field.setText(format_value(value))
+                filled.append(what)
+        note = f"{' and '.join(filled)} filled in {unit} for {limit.name} "
+        note += f"({pick.get('source')})."
+        if limit.stel_derived:
+            note += f" STEL = 2 × OEL ({limit.stel_rule})."
+        if limit.stel is None:
+            note += " The order gives no short-term limit; STEL left unchanged."
+        self.status.setText(note)
 
     def _canonical_units(self, datasets) -> dict:
         """Map each metric key → the unit its merged column should use.
@@ -425,6 +567,9 @@ class SummaryTab(QtWidgets.QWidget):
         # The available metrics may change with the selection (e.g. a dataset
         # added/removed), so refresh the metric-summary label.
         self._update_metric_summary()
+        # ...and with it the unit the limit fields are in.
+        if self.kind.currentText() == "Exposure summary":
+            self._apply_oel_pick()
         # A different dataset selection means the shown table no longer matches.
         self._recheck_stale()
 
@@ -436,6 +581,14 @@ class SummaryTab(QtWidgets.QWidget):
         cached table and re-evaluate staleness.
         """
         self._sync_datasets()
+        # Offer the newest limit list (a newer order may have been fetched).
+        latest = exposure_limits.active_list()
+        if self.oel_combo.limits() is not latest:
+            self.oel_combo.set_limits(latest)
+            self.oel_combo.set_current_name(
+                self._oel_pick["substance"] if self._oel_pick else None
+            )
+        self._sync_oel_source()
         proj = self.main.project
         if self._restored_proj_id != id(proj):
             self._restored_proj_id = id(proj)
@@ -493,10 +646,17 @@ class SummaryTab(QtWidgets.QWidget):
                 try:
                     if exposure:
                         key = applicable[0]
+                        # The limit fields are in the merged column's unit;
+                        # the core compares in this dataset's own unit.
+                        short = self._to_float(self.short_limit.text(), 1.0)
+                        long_ = self._to_float(self.long_limit.text(), 1.0)
+                        if canon.get(key) and native.get(key):
+                            short = convert_value(short, canon[key], native[key])
+                            long_ = convert_value(long_, canon[key], native[key])
                         df = obj.summarize_exposure(
                             metric=key,
-                            short_limit=self._to_float(self.short_limit.text(), 1.0),
-                            long_limit=self._to_float(self.long_limit.text(), 1.0),
+                            short_limit=short,
+                            long_limit=long_,
                             short_window=self.short_window.text().strip() or "15min",
                             twa_window=self.twa_window.text().strip() or "8h",
                         )
@@ -531,6 +691,10 @@ class SummaryTab(QtWidgets.QWidget):
             return
 
         combined = pd.concat(frames, ignore_index=True, sort=False)
+        if exposure and self._oel_pick is not None:
+            # Record which substance's limits (and which order) were compared.
+            combined["Substance"] = self._oel_pick.get("substance")
+            combined["Limit source"] = self._oel_pick.get("source")
         self.model.set_dataframe(combined)
         # Persist the result + inputs on the project so reopening shows it
         # directly, and record the input signature for staleness detection.
@@ -592,6 +756,7 @@ class SummaryTab(QtWidgets.QWidget):
             "short_window": self.short_window.text().strip(),
             "long_limit": self.long_limit.text().strip(),
             "twa_window": self.twa_window.text().strip(),
+            "oel": dict(self._oel_pick) if self._oel_pick else None,
         }
 
     def _activity_params(self) -> dict:
@@ -638,6 +803,13 @@ class SummaryTab(QtWidgets.QWidget):
                     "twa_window",
                 )
             }
+            # Only when picked, so summaries cached before substance picks
+            # existed are not all flagged stale.
+            if p["oel"]:
+                sig["params"]["oel"] = [
+                    p["oel"].get("substance"),
+                    p["oel"].get("source"),
+                ]
         elif kind == "Activity summary":
             sig["params"] = self._activity_params()
         return sig
@@ -723,6 +895,12 @@ class SummaryTab(QtWidgets.QWidget):
                 widget.blockSignals(True)
                 widget.setText(str(value))
                 widget.blockSignals(False)
+        oel = params.get("oel")
+        self._oel_pick = dict(oel) if isinstance(oel, dict) else None
+        self.oel_combo.set_current_name(
+            self._oel_pick["substance"] if self._oel_pick else None
+        )
+        self._sync_oel_source()
 
     def _export(self) -> None:
         """Save the combined table to an .xlsx or .csv file."""

@@ -6,7 +6,7 @@ import matplotlib.dates as mdates
 import pandas as pd
 from matplotlib.widgets import SpanSelector
 
-from ..logic import helpers
+from ..logic import exposure_limits, helpers
 from ..qt import QtCore, QtWidgets
 from ..view.widgets import ThresholdControls
 from ._base import _PlotTab
@@ -280,7 +280,7 @@ class TimeSeriesTab(_PlotTab):
 
         # Concentration-threshold (e.g. OEL) overlay. State lives on the project
         # so it survives tab rebuilds and is saved with the project.
-        self.threshold = ThresholdControls()
+        self.threshold = ThresholdControls(limits_provider=exposure_limits.active_list)
         self.threshold.set_state(self.main.project.plot_thresholds.get(self.export_tag))
         self.threshold.changed.connect(self._on_threshold_changed)
         self.controls.addWidget(self.threshold)
@@ -674,9 +674,10 @@ class TimeSeriesTab(_PlotTab):
             ax.set_yscale("log")
         if self.show_acts.isChecked():
             helpers.shade_activities(ax, self.obj)
-        # Threshold line drawn last so it sits on top of the data/shading.
+        # Threshold line drawn last so it sits on top of the data/shading. A
+        # line linked to an exposure limit is converted to this series' unit.
         helpers.draw_threshold(
-            ax, self.threshold.threshold_value(), self.threshold.legend_text()
+            ax, self.threshold.threshold_value(unit), self.threshold.legend_text()
         )
 
     def refresh(self, reset_view: bool | None = None) -> None:

@@ -43,6 +43,7 @@ from ..view.widgets import (
     KeyboardShortcutsDialog,
     TwoRowTabs,
 )
+from .exposure_limits_dialog import ExposureLimitsDialog
 from .sidebar import DatasetSidebar
 
 
@@ -313,6 +314,16 @@ class MainWindow(QtWidgets.QMainWindow):
         view_menu.addAction(self._dock_action)
         self._shortcut_help.append(("Ctrl+D", "Show / hide the datasets panel"))
 
+        tools_menu = mb.addMenu("&Tools")
+        tools_menu.setToolTipsVisible(True)
+        self._menu_action(
+            tools_menu,
+            "Occupational exposure limits…",
+            self._show_exposure_limits,
+            tip="Browse the Danish exposure limits for dust used by the Summary "
+            "and threshold pickers, and check Retsinformation for a newer order.",
+        )
+
         help_menu = mb.addMenu("&Help")
         help_menu.setToolTipsVisible(True)
         self._menu_action(
@@ -346,6 +357,13 @@ class MainWindow(QtWidgets.QMainWindow):
             act.setToolTip(tip)
             act.setStatusTip(tip)
         return act
+
+    def _show_exposure_limits(self) -> None:
+        """Browse the exposure-limit list; refresh the tabs if a newer one was saved."""
+        dlg = ExposureLimitsDialog(self)
+        dlg.exec_()
+        if dlg.changed:
+            self.refresh_all(reset_view=False)
 
     def _show_shortcuts(self) -> None:
         """Open the read-only keyboard-shortcuts reference dialog."""
