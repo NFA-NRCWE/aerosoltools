@@ -82,7 +82,8 @@ shift is for finding the offset; the Time series one is for fixing it.
 can see how different instruments behaved within the same task window.
 
 **Threshold** draws a reference line with an optional legend label on the left
-y-axis; its **OEL** button sets it from a substance's exposure limit, as on
+y-axis; its **OEL…** button draws a substance's 8-hour and short-term limits
+instead, with the same unit and size-fraction checks as on
 [Time series](time-series.md) (not shown in normalised view).
 
 ## Under the hood

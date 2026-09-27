@@ -29,11 +29,16 @@ legend.
 
 **Threshold** draws a horizontal reference line — an occupational exposure limit,
 say. Enter the value and, optionally, a label for the legend such as `OEL`. Or
-use the **OEL** button next to it: pick a substance and its 8-hour or short-term
-limit from the Danish limit-value order (see [Summary](summary.md), *Substance*).
-The line then follows the plotted unit — 0.1 mg/m³ is drawn at 100 on a µg/m³
-axis — and is hidden while a series that is not a mass concentration is shown.
-Typing a value replaces it with a plain threshold.
+use the **OEL…** button next to it and pick a substance from the Danish
+limit-value order (see [Summary](summary.md), *Substance*): its 8-hour limit
+(dashed) and short-term limit (dotted) are drawn together, since both apply at
+once — untick either in the same dialog. The lines follow the plotted unit
+(0.1 mg/m³ is drawn at 100 on a µg/m³ axis) and disappear, with a note on the
+plot, while a series that is not a mass concentration is shown. When the
+series' size fraction does not fit the limit — PM1 against a respirable limit,
+say — a warning is written on the plot, naming the variant of the substance
+that would fit where there is one. Typing a value replaces the lines with a
+plain threshold.
 
 Scroll to zoom, right-drag to pan, and use the toolbar's home button to get back.
 

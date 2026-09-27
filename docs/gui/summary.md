@@ -48,32 +48,54 @@ limit is converted to each dataset's own unit before comparing.
 ### Substance
 
 Instead of typing the limits, pick the substance being measured. The dropdown
-lists every dust limit in the Danish limit-value order (*Bekendtgørelse om
-grænseværdier for stoffer og materialer*, Bilag 2, Afsnit B) with its name, CAS
-number, 8-hour and short-term limits in mg/m³, and the order's remarks
-(**E** EU limit exists · **L** ceiling value · **H** skin uptake · **K**
-carcinogenic). Hover a row for the full explanation.
+lists the particulate limits in the Danish limit-value order (*Bekendtgørelse om
+grænseværdier for stoffer og materialer*, Bilag 2): the dusts of Afsnit B and the
+particles of Afsnit A — metals and their compounds, fumes, mists, carbon black,
+diesel exhaust. Each row shows the name, CAS number, 8-hour and short-term
+limits in mg/m³ and the order's remarks (**E** EU limit exists · **L** ceiling
+value · **H** skin uptake · **K** carcinogenic). Type part of a name to search;
+hover a row for the full explanation.
 
-Picking one fills **OEL** and **STEL**, converted to the metric's unit
-(0.1 mg/m³ becomes 100 µg/m³). A mass-based limit cannot be compared with a
-number concentration, so if the chosen metric is not a mass the fields are left
-alone and the status line says why — choose a mass metric first. Typing a limit
-by hand clears the pick.
+Picking one fills **OEL** and **STEL** with the limits that **apply to the
+chosen metric**, converted to its unit (0.1 mg/m³ becomes 100 µg/m³):
+
+- **Size fraction.** A limit applies to one fraction — respirable (≈ PM4),
+  thoracic (≈ PM10), inhalable, or total dust when the order names none. The
+  variant of the substance that fits the metric is used: pick *Kvarts,
+  respirabel* and summarise a *Total* channel, and *Kvarts, total* is used. When
+  no variant fits — PM1 against a respirable or total-dust limit misses part of
+  the fraction — the fields are cleared and no limit is listed. A metric that
+  covers *more* than the fraction (PM10 against a respirable limit) is not
+  listed either, as it would overstate exposure. Total and inhalable dust are
+  accepted from any metric reaching 10 µm, with the caveat that direct-reading
+  instruments under-sample the coarsest particles. A size spectrometer's PM
+  values stop at its largest size bin, so a NanoScan's "PM10" counts as PM0.42.
+- **Diesel exhaust** is limited as elemental carbon: it applies to a black-carbon
+  metric (aethalometer), not to particle mass.
+- **"Beregnet som Ti"** limits are for the element's mass; comparing a particle
+  mass concentration with them is conservative (noted in the table).
+- **Not a mass concentration** (e.g. number concentration): nothing is filled —
+  choose a mass metric first.
+
+Typing a limit by hand clears the pick; typed limits are not checked.
+
+The computed table gains **Substance** (the variant used), **Limit source**
+(e.g. `BEK nr 613 af 29/06/2026`) and **Limit applies** (`yes`, or `no – …` with
+the reason, in which case the limit columns are blank), so an exported table
+always says what it was compared against. The pick is saved with the project.
 
 Keep in mind:
 
 - **Short-term values marked (2×)** are not printed in the order: where it
-  refers to *§ 3, stk. 2* the short-term limit is twice the 8-hour limit.
-- **Fraction matters.** Most limits name a fraction (respirable, inhalable);
-  one that names none applies to total dust. The fraction is shown after the
-  pick — compare against a measurement of that fraction.
-- **Fibres are not listed**: their limits are counts per cm³, which these
-  instruments do not measure. Afsnit A (gases, vapours and some metal dusts and
-  fumes) and Afsnit C (welding) are not included.
-
-The computed table gains **Substance** and **Limit source** columns (e.g.
-`BEK nr 613 af 29/06/2026`), so an exported table always says which order it
-was compared against. The pick is saved with the project.
+  refers to *§ 3, stk. 2* the short-term limit is twice the 8-hour limit. Some
+  entries list their own value instead (calcium hydroxide/oxide, respirable:
+  4 × the 8-hour limit), give none (lead), or give only a short-term limit
+  (lithium hydride, inhalable); these are used as the order gives them.
+- **Not listed:** fibres (counted per cm³, which these instruments do not
+  measure), mercury (also a vapour), volatile metal compounds, gases, and the
+  Afsnit A substances not clearly particulate (mostly organic compounds such as
+  pesticides and phthalates). Tools → *Occupational exposure limits…* lists what
+  was left out and why. Afsnit C (welding) is not included.
 
 Tools → *Occupational exposure limits…* shows the whole list and its source.
 **Check for a newer order** asks Retsinformation whether the order is still in
