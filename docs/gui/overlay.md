@@ -81,7 +81,9 @@ shift is for finding the offset; the Time series one is for fixing it.
 **Show activities** shades the project's activities across every dataset, so you
 can see how different instruments behaved within the same task window.
 
-**Threshold** draws a reference line with an optional legend label.
+**Threshold** draws a reference line with an optional legend label on the left
+y-axis; its **OEL** button sets it from a substance's exposure limit, as on
+[Time series](time-series.md) (not shown in normalised view).
 
 ## Under the hood
 

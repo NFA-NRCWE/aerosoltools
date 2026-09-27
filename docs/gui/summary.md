@@ -40,8 +40,47 @@ against the limits you set. It reveals the extra fields:
 | **OEL (8h limit)** | Occupational exposure limit. The time-weighted average is compared against it. |
 | **TWA window** | Averaging window for the time-weighted average — `8h` by default. |
 
-Both limits are in the **same unit as the metric you chose**, so if you are
-summarising a mass concentration in µg/m³, enter the limit in µg/m³.
+Both limits are in the **unit shown next to them** — the unit of the metric you
+chose, so if you are summarising a mass concentration in µg/m³, enter the limit
+in µg/m³. When several datasets report that metric at different scales, the
+limit is converted to each dataset's own unit before comparing.
+
+### Substance
+
+Instead of typing the limits, pick the substance being measured. The dropdown
+lists every dust limit in the Danish limit-value order (*Bekendtgørelse om
+grænseværdier for stoffer og materialer*, Bilag 2, Afsnit B) with its name, CAS
+number, 8-hour and short-term limits in mg/m³, and the order's remarks
+(**E** EU limit exists · **L** ceiling value · **H** skin uptake · **K**
+carcinogenic). Hover a row for the full explanation.
+
+Picking one fills **OEL** and **STEL**, converted to the metric's unit
+(0.1 mg/m³ becomes 100 µg/m³). A mass-based limit cannot be compared with a
+number concentration, so if the chosen metric is not a mass the fields are left
+alone and the status line says why — choose a mass metric first. Typing a limit
+by hand clears the pick.
+
+Keep in mind:
+
+- **Short-term values marked (2×)** are not printed in the order: where it
+  refers to *§ 3, stk. 2* the short-term limit is twice the 8-hour limit.
+- **Fraction matters.** Most limits name a fraction (respirable, inhalable);
+  one that names none applies to total dust. The fraction is shown after the
+  pick — compare against a measurement of that fraction.
+- **Fibres are not listed**: their limits are counts per cm³, which these
+  instruments do not measure. Afsnit A (gases, vapours and some metal dusts and
+  fumes) and Afsnit C (welding) are not included.
+
+The computed table gains **Substance** and **Limit source** columns (e.g.
+`BEK nr 613 af 29/06/2026`), so an exported table always says which order it
+was compared against. The pick is saved with the project.
+
+Tools → *Occupational exposure limits…* shows the whole list and its source.
+**Check for a newer order** asks Retsinformation whether the order is still in
+force and, if it was replaced, offers the new one; you can also fetch an order
+by number. A fetched list is shown against the current one before you accept
+it, then used for new picks — picks already saved in a project keep their
+values.
 
 ## Choose metrics…
 
@@ -89,6 +128,31 @@ data.summarize_exposure(
     short_limit=1.0,      # STEL
     short_window="15min", # over
 )
+
+# Substance: limits from the Danish limit-value order (bundled, offline)
+limits = at.load_exposure_limits()
+quartz = limits["Kvarts, respirabel"]
+limits.source.label                  # 'BEK nr 613 af 29/06/2026'
+data.summarize_exposure(
+    metric="PM4.2",
+    long_limit=quartz.twa_in("µg/m³"),   # 100.0
+    short_limit=quartz.stel_in("µg/m³"), # 200.0
+)
+```
+
+To check for, and fetch, a newer order from a script or the command line:
+
+```python
+from aerosoltools.exposure_limits import fetch_exposure_limits, find_current_order
+
+current = find_current_order()          # follows replaced orders to the one in force
+newer = fetch_exposure_limits(current.current.eli)
+newer.to_json("limits.json")            # at.load_exposure_limits("limits.json")
+```
+
+```bash
+python -m aerosoltools.exposure_limits check
+python -m aerosoltools.exposure_limits fetch --latest -o limits.json
 ```
 
 See [4 — Statistics and exposure](../examples/04-statistics-and-exposure.ipynb).

@@ -56,6 +56,10 @@ src/aerosoltools/
                        loaders/support/ (parsing.py — the delimiter/encoding sniffer +
                        folder batch-loader, formerly Common.py; exceptions.py — the
                        LoaderError hierarchy).
+  exposure_limits/   Danish OELs (dust, Bilag 2 Afsnit B, fibres excluded) parsed
+                       from Retsinformation's ELI /xml; ships data/dk_bek_<yr>_<nr>.json
+                       (load_exposure_limits); find_current_order follows the ELI
+                       .rdfa changed_by chain; `python -m aerosoltools.exposure_limits`.
   intercomparison/   Public multi-dataset workflows: combination.py
                        (combine_measurements, combine_size_ranges), correlation.py
                        (plot_correlation, bland_altman_analysis, fit_data),

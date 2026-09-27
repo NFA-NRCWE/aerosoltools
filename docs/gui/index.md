@@ -73,8 +73,10 @@ Aero ↔ Optical. Single-channel instruments get neither. Each tab page below
 states its own requirement.
 
 **The menu bar (top).** File handles projects and importing; View switches
-between the dark and light themes and hides the sidebar; Help lists the keyboard
-shortcuts (**F1**) and shows the About box.
+between the dark and light themes and hides the sidebar; Tools → *Occupational
+exposure limits…* shows the Danish limit list the pickers use and checks
+Retsinformation for a newer order (see [Summary](summary.md)); Help
+lists the keyboard shortcuts (**F1**) and shows the About box.
 
 **The status bar (bottom).** Describes the active dataset: its position in the
 project, instrument, data class, current distribution basis, unit, number of time
