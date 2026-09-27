@@ -637,12 +637,14 @@ class TimeSeriesTab(_PlotTab):
             series = conv.total_concentration
             quantity = helpers.BASIS_QUANTITY.get(name, helpers.base_dtype(conv.dtype))
             ylabel = f"{quantity}, {unit}".strip(", ")
+            metric = quantity
         elif kind == "total":
             # Name the primary series by its measured quantity (e.g. "Cl₂") so a
             # gas/BC dataset is not mislabelled as a generic "Total concentration".
             series = helpers.series_for(self.obj, kind, name)
             mname, unit = helpers.measurement_label(self.obj)
             ylabel = f"{mname}, {unit}".strip(", ")
+            metric = str(getattr(series, "name", None) or mname)
         else:
             # A named data/extra channel: label it by the column's own name
             # (as the Overlay and Decay panes do), not the object's primary
@@ -655,6 +657,7 @@ class TimeSeriesTab(_PlotTab):
             series = helpers.series_for(self.obj, kind, name)
             unit = helpers.column_unit(self.obj, name)
             ylabel = str(name) if unit is None else f"{name}, {unit}".strip(", ")
+            metric = str(name)
 
         # Draw the line in the active dataset's stable colour so the same
         # instrument reads the same across the single-dataset panes.
@@ -674,11 +677,13 @@ class TimeSeriesTab(_PlotTab):
             ax.set_yscale("log")
         if self.show_acts.isChecked():
             helpers.shade_activities(ax, self.obj)
-        # Threshold line drawn last so it sits on top of the data/shading. A
-        # line linked to an exposure limit is converted to this series' unit.
-        helpers.draw_threshold(
-            ax, self.threshold.threshold_value(unit), self.threshold.legend_text()
+        # Threshold / exposure-limit lines drawn last so they sit on top of the
+        # data and shading; linked limits are converted to this series' unit
+        # and checked against its size fraction.
+        lines = self.threshold.threshold_lines(
+            unit, [(metric, exposure_limits.series_size_cut(self.obj, metric))]
         )
+        helpers.draw_thresholds(ax, lines, self.threshold.warning)
 
     def refresh(self, reset_view: bool | None = None) -> None:
         """Redraw the selected series and re-sync the selectors.

@@ -34,6 +34,8 @@ __all__ = [
     "user_activities",
     "shade_activities",
     "draw_threshold",
+    "draw_thresholds",
+    "draw_limit_warning",
     "delete_activity",
     "set_activity_periods",
 ]
@@ -46,14 +48,65 @@ TOTAL = "<total>"
 THRESHOLD_COLOR = "#d62728"
 
 
-def draw_threshold(ax, value, label: str | None = None) -> None:
-    """Draw a horizontal threshold line (e.g. an OEL) across ``ax``.
+def draw_thresholds(ax, lines, warning: str = "") -> None:
+    """Draw threshold / exposure-limit lines across ``ax``, and a warning.
 
     Used by the time-series-style plots so it is visually obvious at which times
-    the concentration rose above (or fell below) a user-defined limit such as an
-    occupational exposure limit. The line is added with a legend entry and the
-    legend is (re)drawn so the label shows alongside any activity/series labels
-    already present.
+    the concentration rose above (or fell below) a limit — a typed threshold, or
+    a substance's 8-hour and short-term exposure limits drawn together. Each
+    line gets a legend entry and the legend is (re)drawn so the labels show
+    alongside any activity/series labels already present.
+
+    Args:
+        ax: Axis to draw on.
+        lines: ``{"value", "label", "linestyle"}`` dicts (see
+            ``ThresholdControls.threshold_lines``), values in the axis' current
+            y-units. Missing or non-finite values are skipped.
+        warning: Text shown at the top of the axis, e.g. that the limit's size
+            fraction does not fit the plotted series.
+    """
+    drawn = False
+    for line in lines:
+        try:
+            y = float(line.get("value"))
+        except (TypeError, ValueError):
+            continue
+        if not pd.notna(y):
+            continue
+        label = (line.get("label") or "").strip() or f"Threshold ({y:g})"
+        ax.axhline(
+            y,
+            color=THRESHOLD_COLOR,
+            linestyle=line.get("linestyle") or "--",
+            linewidth=1.6,
+            zorder=5,
+            label=label,
+        )
+        drawn = True
+    if drawn:
+        # Rebuild the legend so the lines appear next to any existing labels.
+        ax.legend(loc="upper right", fontsize=8)
+    if warning:
+        draw_limit_warning(ax, warning)
+
+
+def draw_limit_warning(ax, text: str, y: float = 0.99) -> None:
+    """Write a limit warning (e.g. a size-fraction mismatch) at the top of ``ax``."""
+    ax.text(
+        0.5,
+        y,
+        text,
+        transform=ax.transAxes,
+        ha="center",
+        va="top",
+        fontsize=8,
+        color=THRESHOLD_COLOR,
+        zorder=6,
+    )
+
+
+def draw_threshold(ax, value, label: str | None = None) -> None:
+    """Draw one horizontal threshold line across ``ax`` (see :func:`draw_thresholds`).
 
     Args:
         ax: Axis to draw on.
@@ -61,20 +114,8 @@ def draw_threshold(ax, value, label: str | None = None) -> None:
             ``None`` or not finite.
         label: Legend text; defaults to ``"Threshold (<value>)"``.
     """
-    if value is None:
-        return
-    try:
-        y = float(value)
-    except (TypeError, ValueError):
-        return
-    if not pd.notna(y):
-        return
-    text = label.strip() if (label and label.strip()) else f"Threshold ({y:g})"
-    ax.axhline(
-        y, color=THRESHOLD_COLOR, linestyle="--", linewidth=1.6, zorder=5, label=text
-    )
-    # Rebuild the legend so the threshold appears next to any existing labels.
-    ax.legend(loc="upper right", fontsize=8)
+    if value is not None:
+        draw_thresholds(ax, [{"value": value, "label": label or ""}])
 
 
 def is_2d(obj) -> bool:

@@ -154,11 +154,14 @@ class HeatmapTab(_PlotTab):
         # axis is already log, and its colour scale is handled separately).
         if self.log_top.isChecked():
             ax1.set_yscale("log")
-        # Threshold line (e.g. OEL) on the top total-concentration panel, whose
-        # unit is the display basis' (a linked exposure limit converts to it).
-        helpers.draw_threshold(
-            ax1, self.threshold.threshold_value(unit), self.threshold.legend_text()
+        # Threshold / exposure-limit lines on the top total-concentration panel,
+        # whose unit and size range are the display basis' over the instrument's
+        # whole size range (linked limits convert to it and are fraction-checked).
+        metric = helpers.BASIS_QUANTITY.get(disp, disp)
+        lines = self.threshold.threshold_lines(
+            unit, [(metric, exposure_limits.series_size_cut(self.obj, metric))]
         )
+        helpers.draw_thresholds(ax1, lines, self.threshold.warning)
         return floored
 
     def _warn_floor(self) -> None:

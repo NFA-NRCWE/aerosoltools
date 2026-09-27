@@ -18,6 +18,7 @@ import pandas as pd
 
 from ..._core import _stats
 from ..._core.metrics import canonical_unit, convert_value, unit_key
+from ...exposure_limits import applicable_limit, basis_note
 from ..logic import exposure_limits
 from ..qt import QtCore, QtWidgets
 from ..state.summary_cache import SummaryCacheEntry
@@ -25,6 +26,7 @@ from ..view.exposure_limit_picker import (
     ExposureLimitCombo,
     format_value,
     pick_record,
+    record_candidates,
     record_limit,
 )
 from ..view.metric_picker import MetricPickerDialog, default_keys, metric_catalog
@@ -368,13 +370,13 @@ class SummaryTab(QtWidgets.QWidget):
             )
             self.oel_source.setToolTip("")
             return
-        limit = record_limit(pick)
-        self.oel_source.setText(
-            f"from {pick.get('source')} · {limit.fraction} fraction"
-        )
+        variants = record_candidates(pick)
+        fractions = " / ".join(dict.fromkeys(v.fraction for v in variants))
+        self.oel_source.setText(f"from {pick.get('source')} · {fractions}")
         self.oel_source.setToolTip(
-            f"{pick.get('eli')}\nCompare against a measurement of the "
-            f"{limit.fraction} fraction."
+            f"{pick.get('eli')}\nLimits exist for the {fractions} fraction(s); the "
+            "one that fits the exposure metric is used, and none when no fraction "
+            "fits it."
         )
 
     def _on_oel_picked(self) -> None:
@@ -392,42 +394,144 @@ class SummaryTab(QtWidgets.QWidget):
             self.oel_combo.set_current_name(None)
             self._sync_oel_source()
 
-    def _apply_oel_pick(self) -> None:
-        """Fill the STEL/OEL fields from the picked substance, in the metric's unit.
+    def _metric_dataset(self):
+        """``(dataset, key)``: the first ticked dataset providing the exposure metric."""
+        keys = self._current_metric_keys()[:1]
+        if not keys:
+            return None, None
+        for ds in self._selected_datasets():
+            try:
+                specs = ds.obj.available_metrics()
+            except Exception:
+                continue
+            if any(m.key == keys[0] for m in specs):
+                return ds, keys[0]
+        return None, keys[0]
 
-        Leaves the fields alone (and says why) when the exposure metric is not a
-        mass concentration, since a mass-based limit cannot be compared to it.
+    def _resolve_pick(self, obj, key: str):
+        """The picked substance's fraction variant that fits metric ``key`` of ``obj``.
+
+        Returns:
+            ``(limit, check)`` from ``exposure_limits.applicable_limit`` — e.g.
+            "Kvarts, total" for a Total channel although "Kvarts, respirabel"
+            was picked, or the pick with the reason no variant fits.
+        """
+        cut = exposure_limits.series_size_cut(obj, key)
+        return applicable_limit(record_candidates(self._oel_pick), key, cut)
+
+    def _set_limit_fields(self, twa: float | None, stel: float | None) -> None:
+        """Show limits in the OEL/STEL fields (blank for none)."""
+        self.long_limit.setText(format_value(twa))
+        self.short_limit.setText(format_value(stel))
+
+    def _apply_oel_pick(self) -> None:
+        """Fill the STEL/OEL fields with the limits that apply to the metric.
+
+        The fraction variant of the picked substance that fits the exposure
+        metric is used (the total-dust limit for a Total channel, the respirable
+        one for PM4), converted to the metric's unit. When none fits — or the
+        metric is not a mass concentration — the fields are cleared and the
+        status line says why; the summary then lists no limit for that metric.
         """
         self._sync_oel_source()
         self._sync_limit_units()
         pick = self._oel_pick
         if pick is None:
             return
-        limit = record_limit(pick)
+        picked = record_limit(pick)
+        ds, key = self._metric_dataset()
         unit = self._exposure_unit()
-        if not limit.is_comparable_to(unit):
-            metric = (self._current_metric_keys() or ["—"])[0]
+        if ds is None:
             self.status.setText(
-                f"{limit.name}: its limits are in {limit.unit}, but the exposure "
-                f"metric '{metric}' is in {unit or 'no known unit'}. Choose a mass "
-                "metric with “Choose metrics…” to fill the limits."
+                f"{picked.name}: tick a dataset that provides the exposure metric "
+                "to fill in its limits."
             )
             return
-        filled = []
-        for field, value, what in (
-            (self.long_limit, limit.twa_in(unit), "OEL"),
-            (self.short_limit, limit.stel_in(unit), "STEL"),
-        ):
-            if value is not None:
-                field.setText(format_value(value))
-                filled.append(what)
-        note = f"{' and '.join(filled)} filled in {unit} for {limit.name} "
-        note += f"({pick.get('source')})."
+        if not picked.is_comparable_to(unit):
+            self._set_limit_fields(None, None)
+            self.status.setText(
+                f"{picked.name}: its limits are in {picked.unit}, but '{key}' is in "
+                f"{unit or 'no known unit'}. Choose a mass metric with “Choose "
+                "metrics…”."
+            )
+            return
+        limit, check = self._resolve_pick(ds.obj, key)
+        if not check.applies:
+            self._set_limit_fields(None, None)
+            self.status.setText(
+                f"No limit for {picked.base_name} applies to {key}: {check.message} "
+                "The summary lists no limit for it."
+            )
+            return
+        self._set_limit_fields(limit.twa_in(unit), limit.stel_in(unit))
+        self.short_window.setText(f"{limit.stel_minutes}min")
+        parts = [
+            f"Limits for {limit.name} ({pick.get('source')}) filled in {unit} "
+            f"for {key}."
+        ]
+        if limit.name != picked.name:
+            parts.append(f"Its {limit.fraction} variant is the one that fits {key}.")
         if limit.stel_derived:
-            note += f" STEL = 2 × OEL ({limit.stel_rule})."
+            parts.append(f"STEL = 2 × OEL ({limit.stel_rule}).")
+        if limit.twa is None:
+            parts.append("The order gives no 8-hour limit.")
         if limit.stel is None:
-            note += " The order gives no short-term limit; STEL left unchanged."
-        self.status.setText(note)
+            parts.append("The order gives no short-term limit.")
+        if limit.ceiling:
+            parts.append("The short-term value is a ceiling: compare it with Max.")
+        parts.extend(n for n in (check.message, basis_note(limit)) if n)
+        self.status.setText(" ".join(parts))
+
+    def _pick_limits_for(self, obj, key: str, unit: str | None) -> dict:
+        """The picked substance's limits for one dataset's metric, in its unit.
+
+        Returns:
+            ``{"limit", "twa", "stel", "applies"}`` — ``twa``/``stel`` are
+            ``None`` when that limit does not exist or does not apply, and
+            ``applies`` is the text for the table's "Limit applies" column.
+        """
+        picked = record_limit(self._oel_pick)
+        if not unit or not picked.is_comparable_to(unit):
+            return {
+                "limit": picked,
+                "twa": None,
+                "stel": None,
+                "applies": f"no – {key} is not a mass concentration",
+            }
+        limit, check = self._resolve_pick(obj, key)
+        if not check.applies:
+            return {
+                "limit": limit,
+                "twa": None,
+                "stel": None,
+                "applies": f"no – {check.message}",
+            }
+        notes = [n for n in (check.message, basis_note(limit)) if n]
+        if limit.ceiling:
+            notes.append("the short-term value is a ceiling: compare it with Max")
+        return {
+            "limit": limit,
+            "twa": limit.twa_in(unit),
+            "stel": limit.stel_in(unit),
+            "applies": "yes" + (" – " + " ".join(notes) if notes else ""),
+        }
+
+    def _tag_limits(self, df: pd.DataFrame, info: dict) -> pd.DataFrame:
+        """Blank limit columns that do not apply and record which limit was used."""
+        limit = info["limit"]
+        for col in df.columns:
+            name = str(col)
+            if info["twa"] is None and name.startswith("Exposure limit"):
+                df[col] = np.nan
+            stel_gone = info["stel"] is None or (
+                limit.ceiling and not name.startswith("STEL [")
+            )
+            if stel_gone and name.startswith("STEL") and "window" not in name:
+                df[col] = np.nan
+        df["Substance"] = limit.name
+        df["Limit source"] = self._oel_pick.get("source")
+        df["Limit applies"] = info["applies"]
+        return df
 
     def _canonical_units(self, datasets) -> dict:
         """Map each metric key → the unit its merged column should use.
@@ -628,6 +732,7 @@ class SummaryTab(QtWidgets.QWidget):
 
         frames: list[pd.DataFrame] = []
         skipped: list[str] = []
+        not_applied: list[str] = []  # datasets the picked substance's limits miss
         # The core summarize_* methods print their result table to stdout; with
         # many datasets that is just noise (the user reads the GUI table), and on
         # a non-UTF-8 console the unit glyphs (µg/m³, cm⁻³) can even raise an
@@ -646,13 +751,21 @@ class SummaryTab(QtWidgets.QWidget):
                 try:
                     if exposure:
                         key = applicable[0]
-                        # The limit fields are in the merged column's unit;
-                        # the core compares in this dataset's own unit.
-                        short = self._to_float(self.short_limit.text(), 1.0)
-                        long_ = self._to_float(self.long_limit.text(), 1.0)
-                        if canon.get(key) and native.get(key):
-                            short = convert_value(short, canon[key], native[key])
-                            long_ = convert_value(long_, canon[key], native[key])
+                        info = None
+                        if self._oel_pick is not None:
+                            # A picked substance: the limits that apply to this
+                            # dataset's metric, in its own unit (or none).
+                            info = self._pick_limits_for(obj, key, native.get(key))
+                            short = info["stel"] if info["stel"] is not None else 1.0
+                            long_ = info["twa"] if info["twa"] is not None else 1.0
+                        else:
+                            # The limit fields are in the merged column's unit;
+                            # the core compares in this dataset's own unit.
+                            short = self._to_float(self.short_limit.text(), 1.0)
+                            long_ = self._to_float(self.long_limit.text(), 1.0)
+                            if canon.get(key) and native.get(key):
+                                short = convert_value(short, canon[key], native[key])
+                                long_ = convert_value(long_, canon[key], native[key])
                         df = obj.summarize_exposure(
                             metric=key,
                             short_limit=short,
@@ -660,6 +773,10 @@ class SummaryTab(QtWidgets.QWidget):
                             short_window=self.short_window.text().strip() or "15min",
                             twa_window=self.twa_window.text().strip() or "8h",
                         )
+                        if info is not None:
+                            df = self._tag_limits(df.copy(), info)
+                            if info["twa"] is None and info["stel"] is None:
+                                not_applied.append(ds.label)
                         df = self._unify_exposure_units(
                             df, native.get(key), canon.get(key)
                         )
@@ -691,15 +808,17 @@ class SummaryTab(QtWidgets.QWidget):
             return
 
         combined = pd.concat(frames, ignore_index=True, sort=False)
-        if exposure and self._oel_pick is not None:
-            # Record which substance's limits (and which order) were compared.
-            combined["Substance"] = self._oel_pick.get("substance")
-            combined["Limit source"] = self._oel_pick.get("source")
         self.model.set_dataframe(combined)
         # Persist the result + inputs on the project so reopening shows it
         # directly, and record the input signature for staleness detection.
         self._store_cache(combined)
         note = f"{len(frames)} dataset(s) combined, {len(combined)} rows."
+        if not_applied:
+            note += (
+                "  No exposure limit applies to the metric of: "
+                + ", ".join(not_applied)
+                + " (see the 'Limit applies' column)."
+            )
         if skipped:
             note += "  Skipped — " + "; ".join(skipped)
         self.status.setText(note)

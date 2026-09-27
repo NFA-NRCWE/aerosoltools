@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...exposure_limits import ExposureLimitList, load_exposure_limits
+from ...exposure_limits import ExposureLimitList, load_exposure_limits, metric_size_cut
 from ..qt import QtCore
 
 _active: ExposureLimitList | None = None
@@ -71,6 +71,23 @@ def reload() -> None:
     """Forget the cached active list (re-read on the next :func:`active_list`)."""
     global _active
     _active = None
+
+
+def series_size_cut(obj, metric: str) -> float | None:
+    """Largest particle size (µm) that ``metric`` of dataset ``obj`` covers.
+
+    A size-resolved instrument's range caps its PM metrics and defines its total
+    mass (a NanoScan's "PM10" only reaches 0.42 µm); see
+    :func:`aerosoltools.exposure_limits.metric_size_cut`.
+    """
+    upper = None
+    edges = getattr(obj, "bin_edges", None)
+    try:
+        if edges is not None and len(edges):
+            upper = float(edges[-1]) / 1000.0  # nm → µm
+    except (TypeError, ValueError):
+        upper = None
+    return metric_size_cut(metric, upper)
 
 
 def compare_lists(old: ExposureLimitList, new: ExposureLimitList) -> list[str]:

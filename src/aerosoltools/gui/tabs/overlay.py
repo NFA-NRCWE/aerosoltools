@@ -673,9 +673,13 @@ class OverlayTab(_PlotTab):
         """Draw each included dataset's series, grouping metrics onto their axes."""
         ax.clear()
         self._clear_extra_axes()
-        # Unit of the primary (left) axis, set by _draw_multi_axis; stays None
-        # on the normalised 0–1 axis, where no exposure limit can be drawn.
+        # Unit and (name, size cut) of the series on the primary (left) axis, set
+        # by _draw_multi_axis; unset on the normalised 0–1 axis, where no
+        # exposure limit can be drawn. _overflow_warned: the axis-overflow note
+        # already sits at the top of the plot.
         self._primary_unit = None
+        self._primary_metrics: list = []
+        self._overflow_warned = False
         normalize = self.normalize.isChecked()
         entries = self._gather_entries(normalize)
         cycle = _active_color_cycle()
@@ -717,23 +721,35 @@ class OverlayTab(_PlotTab):
             selected = _shading.resolve_activities(periods, True)
             _shading.shade_activities(ax, periods, selected, zorder=1, legend=False)
 
-        # Threshold line on the primary axis (drawn without its own legend).
-        tv = self.threshold.threshold_value(self._primary_unit)
-        threshold_handle = None
-        if tv is not None and np.isfinite(tv):
+        # Threshold / exposure-limit lines on the primary axis (their legend
+        # entries go into the grouped legend), fraction-checked against every
+        # series on that axis.
+        threshold_handles = []
+        for line in self.threshold.threshold_lines(
+            self._primary_unit, self._primary_metrics
+        ):
+            value = line.get("value")
+            if value is None or not np.isfinite(value):
+                continue
+            style = line.get("linestyle") or "--"
             ax.axhline(
-                tv,
+                value,
                 color=helpers.THRESHOLD_COLOR,
-                linestyle="--",
+                linestyle=style,
                 linewidth=1.6,
                 zorder=5,
             )
-            text = self.threshold.legend_text() or f"Threshold ({tv:g})"
-            threshold_handle = (
-                Line2D([], [], color=helpers.THRESHOLD_COLOR, ls="--", lw=1.6),
-                text,
+            threshold_handles.append(
+                (
+                    Line2D([], [], color=helpers.THRESHOLD_COLOR, ls=style, lw=1.6),
+                    line["label"],
+                )
             )
-        self._build_legend(ax, entries, normalize, threshold_handle)
+        if self.threshold.warning:
+            helpers.draw_limit_warning(
+                ax, self.threshold.warning, y=0.93 if self._overflow_warned else 0.99
+            )
+        self._build_legend(ax, entries, normalize, threshold_handles)
 
     def _draw_normalized(self, ax, entries, cycle) -> None:
         """Draw all series on one axis, scaled to 0–1 (colour=dataset, style=slot)."""
@@ -819,6 +835,10 @@ class OverlayTab(_PlotTab):
             target.set_ylabel(f"{label} [{unit}]" if unit else label)
             if target is ax:
                 self._primary_unit = unit or None
+                self._primary_metrics = [
+                    (e["name"], exposure_limits.series_size_cut(e["ds"].obj, e["name"]))
+                    for e in ax_entries
+                ]
             is_log = self.axis_log[uaxis - 1].isChecked()
             target.set_yscale("log" if is_log else "linear")
             self._apply_axis_limits(target, uaxis, is_log)
@@ -826,6 +846,7 @@ class OverlayTab(_PlotTab):
         # Warn (on the plot) about any metric that could not get its own unit
         # axis because all three axes are already taken by other units.
         if overflow:
+            self._overflow_warned = True
             dropped = list(
                 dict.fromkeys(
                     f"{e['name']} [{_canon_unit(e['unit'])}]" for e in overflow
@@ -857,20 +878,18 @@ class OverlayTab(_PlotTab):
             hi = umax
         target.set_ylim(lo, hi)
 
-    def _build_legend(self, ax, entries, normalize: bool, threshold_handle) -> None:
+    def _build_legend(self, ax, entries, normalize: bool, threshold_handles) -> None:
         """Build one legend, grouped under a header for each y-axis.
 
         Each axis gets a "── Left/Right axis — <metric> ──" separator header,
         then one entry per dataset drawn on it (labelled with the metric too when
         the axis carries more than one). This keeps the axis *labels* clean while
-        still making it obvious which lines belong to which axis.
+        still making it obvious which lines belong to which axis. The threshold
+        / exposure-limit lines (``(handle, label)`` pairs) come first.
         """
         multi_metric = len({e["slot"] for e in entries}) > 1
-        handles: list = []
-        labels: list = []
-        if threshold_handle is not None:
-            handles.append(threshold_handle[0])
-            labels.append(threshold_handle[1])
+        handles: list = [h for h, _label in threshold_handles]
+        labels: list = [label for _h, label in threshold_handles]
 
         def _entry_label(e) -> str:
             lbl = e["ds"].label
