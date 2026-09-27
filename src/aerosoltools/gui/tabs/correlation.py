@@ -273,7 +273,7 @@ class CorrelationTab(_PlotTab):
 
     def _open_calibration(self) -> None:
         """Open the per-instrument calibration dialog for the current X/Y pair."""
-        from ..calibration import CalibrationDialog
+        from ..logic.calibration import CalibrationDialog
 
         xds = self._dataset(self.x_combo.currentData())
         yds = self._dataset(self.y_combo.currentData())

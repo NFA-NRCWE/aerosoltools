@@ -113,7 +113,7 @@ def _coarser(rule_a: str, rule_b: str) -> str:
     return rule_a if to_s(rule_a) >= to_s(rule_b) else rule_b
 
 
-def _select_column_from_obj(obj, parameter: str) -> pd.Series:
+def _select_column_from_obj(obj, parameter: str | int) -> pd.Series:
     """Select a named column from an aerosol-like object.
 
     The function looks for the requested parameter first in ``obj.data`` and, if
@@ -123,15 +123,20 @@ def _select_column_from_obj(obj, parameter: str) -> pd.Series:
     Args:
         obj: Object exposing at least a ``data`` attribute (pandas DataFrame)
             and optionally an ``extra_data`` attribute (pandas DataFrame).
-        parameter: Column name to retrieve.
+        parameter: Column name to retrieve, or an ``int`` position in
+            ``obj.data.columns`` (as :func:`fit_data` documents).
 
     Returns:
         pandas.Series: The selected column as a Series with time index.
 
     Raises:
         KeyError: If the column is not found in either ``data`` or
-            ``extra_data``.
+            ``extra_data``, or an ``int`` position is out of range.
     """
+    if isinstance(parameter, (int, np.integer)) and not isinstance(parameter, bool):
+        if -len(obj.data.columns) <= parameter < len(obj.data.columns):
+            return obj.data.iloc[:, int(parameter)]
+        raise KeyError(f"Column position {parameter} is out of range for obj.data.")
     if parameter in obj.data.columns:
         return obj.data[parameter]
     # extra_data may be empty or missing
@@ -166,7 +171,7 @@ def _resolve_unit(obj, parameter: str | None = None) -> str:
 
 def _extract_series(
     obj,
-    parameter: str,
+    parameter: str | int,
     start_time: pd.Timestamp | str | None = None,
     end_time: pd.Timestamp | str | None = None,
 ) -> pd.Series:
@@ -180,7 +185,8 @@ def _extract_series(
     Args:
         obj: Object exposing ``data`` and/or ``extra_data`` and optionally
             ``timecrop``. Typically an :class:`Aerosol1D` or :class:`Aerosol2D`.
-        parameter: Name of the column to extract from ``data`` or ``extra_data``.
+        parameter: Name of the column to extract from ``data`` or ``extra_data``
+            (or an ``int`` position in ``data.columns``).
         start_time: Optional start of the time window. May be a
             :class:`pandas.Timestamp` or a string parseable by
             :func:`pandas.to_datetime`.
@@ -240,7 +246,7 @@ def _activity_period_mask(index, X, Y, activity: str) -> NDArray[np.bool_]:
 def _align_series(
     X,
     Y,
-    parameter: str | tuple,
+    parameter: str | int | tuple,
     start_time: pd.Timestamp | str | None,
     end_time: pd.Timestamp | str | None,
     *,
@@ -268,7 +274,8 @@ def _align_series(
             :class:`Aerosol2D`.
         Y: Second aerosol-like object.
         parameter: Name of the variable or variables to extract from each object.
-            If tuple the parameters are read as (parameter_X, parameter_Y)
+            If tuple the parameters are read as (parameter_X, parameter_Y); an
+            ``int`` is a position in each object's ``data.columns``.
         start_time: Optional start of the analysis window (string or
             :class:`pandas.Timestamp`).
         end_time: Optional end of the analysis window (string or
@@ -284,14 +291,14 @@ def _align_series(
         tuple[np.ndarray, np.ndarray]: Two 1D NumPy arrays (x, y) containing
         aligned, finite values suitable for regression or plotting.
     """
-    if type(parameter) is str:
-        sx = _extract_series(X, parameter, start_time, end_time).rename("x")
-        sy = _extract_series(Y, parameter, start_time, end_time).rename("y")
-    elif type(parameter) is tuple:
-        sx = _extract_series(X, parameter[0], start_time, end_time).rename("x")
-        sy = _extract_series(Y, parameter[1], start_time, end_time).rename("y")
+    if isinstance(parameter, tuple):
+        p_x, p_y = parameter
+    elif isinstance(parameter, (str, int, np.integer)):
+        p_x = p_y = parameter
     else:
-        raise ValueError("Parameter not str or tuple.")
+        raise ValueError("Parameter not str, int or tuple.")
+    sx = _extract_series(X, p_x, start_time, end_time).rename("x")
+    sy = _extract_series(Y, p_y, start_time, end_time).rename("y")
     # If one side has no data at all in this window, fail early
     if sx.empty or sy.empty:
         raise ValueError(
@@ -342,15 +349,15 @@ def _align_series(
         st = _ts(start_time) if start_time is not None else None
         et = _ts(end_time) if end_time is not None else None
 
-        def _rb(obj):
+        def _rb(obj, column):
             tmp = obj.timerebin(
                 freq=target, start=st, end=et, method=rebin_method, inplace=False
             )
-            s = _select_column_from_obj(tmp, parameter)
+            s = _select_column_from_obj(tmp, column)
             return pd.to_numeric(s, errors="coerce").sort_index()
 
-        sxr = _rb(X).rename("x")
-        syr = _rb(Y).rename("y")
+        sxr = _rb(X, p_x).rename("x")
+        syr = _rb(Y, p_y).rename("y")
         xy = pd.concat([sxr, syr], axis=1, join="inner")
 
     else:

@@ -48,10 +48,12 @@ def launch(path: Optional[str] = None, instrument: Optional[str] = None) -> int:
     except ImportError as exc:  # pragma: no cover - depends on environment
         raise ImportError(_MISSING_QT_MSG) from exc
 
+    from .app.excepthook import install_excepthook
     from .app.main_window import MainWindow
     from .view.theme import apply_mpl_theme, apply_qt_theme
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    install_excepthook()  # a bug in one handler must not close the app
     apply_qt_theme(app)
     apply_mpl_theme()  # after aerosoltools import, to override its big defaults
     window = MainWindow(path=path, instrument=instrument)
