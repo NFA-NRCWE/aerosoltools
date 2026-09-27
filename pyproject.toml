@@ -78,6 +78,8 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.package-data]
 "aerosoltools.gui.view" = ["*.ico"]
+# Parsed snapshot of the Danish limit-value order (see exposure_limits/).
+"aerosoltools.exposure_limits" = ["data/*.json"]
 
 [tool.setuptools.exclude-package-data]
 "*" = ["pytest.ini", "tests/*"]

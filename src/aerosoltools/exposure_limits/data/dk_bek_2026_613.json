@@ -1,0 +1,350 @@
+{
+ "format": "aerosoltools.exposure_limits",
+ "format_version": 1,
+ "source": {
+  "title": "Bekendtgørelse om grænseværdier for stoffer og materialer (kemiske agenser) i arbejdsmiljøet",
+  "number": 613,
+  "date": "2026-06-29",
+  "eli": "https://www.retsinformation.dk/eli/lta/2026/613",
+  "status": "Valid",
+  "in_force_from": "2026-07-01",
+  "accession_number": "B20260061305",
+  "retrieved": "2026-09-27T05:31:23+00:00",
+  "sections": [
+   "B"
+  ]
+ },
+ "excluded": [
+  "Asbest",
+  "Attapulgitfibre",
+  "Erionitfibre",
+  "Glasuldsfibre",
+  "Keramiske fibre",
+  "Slaggeuldsfibre",
+  "Stenuldsfibre",
+  "Talkum med asbest i form af fibre",
+  "Wollastonitfibre"
+ ],
+ "limits": [
+  {
+   "name": "Bisphenol A, inhalerbar",
+   "cas": [
+    "80-05-7"
+   ],
+   "twa": 2.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": 2018,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Bomuldstøv (råbomuld)",
+   "cas": [],
+   "twa": 0.5,
+   "stel": 1.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Cristobalit, total",
+   "cas": [
+    "14464-46-1"
+   ],
+   "twa": 0.15,
+   "stel": 0.3,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Cristobalit, respirabel",
+   "cas": [
+    "14464-46-1"
+   ],
+   "twa": 0.05,
+   "stel": 0.1,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Diatoméjord, naturlig, ucalcineret uden indhold af kvarts, respirabel",
+   "cas": [],
+   "twa": 1.5,
+   "stel": 3.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Grafit, naturlig, respirabel",
+   "cas": [
+    "7782-42-5"
+   ],
+   "twa": 2.5,
+   "stel": 5.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Kaolin, respirabel",
+   "cas": [
+    "1332-58-7"
+   ],
+   "twa": 2.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": 1996,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Kiselsyre, SiO₂, amorf",
+   "cas": [
+    "1343-98-2"
+   ],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Kiselsyre, SiO₂, amorf, respirabel",
+   "cas": [
+    "1343-98-2"
+   ],
+   "twa": 2.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Krystallinsk siliciumdioxid, respirabelt støv",
+   "cas": [],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "EK",
+   "year": 2022,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Kulstøv, respirabel",
+   "cas": [],
+   "twa": 2.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Kvarts, total",
+   "cas": [
+    "14808-60-7"
+   ],
+   "twa": 0.3,
+   "stel": 0.6,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Kvarts, respirabel",
+   "cas": [
+    "14808-60-7"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": 2020,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Mangan, pulver, støv og uorganiske forbindelser, inhalerbar, beregnet som Mn",
+   "cas": [
+    "7439-96-5"
+   ],
+   "twa": 0.2,
+   "stel": 0.4,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": 2018,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Mangan, pulver, støv og uorganiske forbindelser, respirabel, beregnet som Mn",
+   "cas": [
+    "7439-96-5"
+   ],
+   "twa": 0.05,
+   "stel": 0.1,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": 2018,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Mineralsk støv, inert",
+   "cas": [],
+   "twa": 10.0,
+   "stel": 20.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Mineralsk støv, inert, respirabel",
+   "cas": [],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Organisk støv, total",
+   "cas": [],
+   "twa": 3.0,
+   "stel": 6.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Siliciumdioxid-aerosol, respirabel",
+   "cas": [
+    "69012-64-2"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": 2022,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Silikatglas, respirabel",
+   "cas": [
+    "60676-86-0"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": 1994,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Tobaksstøv (organisk støvfraktion på arbejdssteder hvor tobak håndteres)",
+   "cas": [],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [
+    "Ved organisk støv forstås den organiske fraktion af en total støvmåling."
+   ],
+   "section": "B"
+  },
+  {
+   "name": "Tridymit, total",
+   "cas": [
+    "15468-32-3"
+   ],
+   "twa": 0.15,
+   "stel": 0.3,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Tridymit, respirabel",
+   "cas": [
+    "15468-32-3"
+   ],
+   "twa": 0.05,
+   "stel": 0.1,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Træstøv, inhalerbart",
+   "cas": [],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "EK",
+   "year": 2020,
+   "notes": [],
+   "section": "B"
+  }
+ ]
+}

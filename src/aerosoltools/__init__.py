@@ -100,6 +100,11 @@ icrp_deposition_fraction
 inhalable_fraction
     ICRP 66 inhalability — the fraction of ambient particles drawn into
     the airways at all.
+load_exposure_limits
+    Danish occupational exposure limits for dust (Bilag 2, Afsnit B of the
+    limit-value order), parsed from Retsinformation and tagged with the
+    order's number and date. Fetching a newer order lives in
+    :mod:`aerosoltools.exposure_limits`.
 
 Intercomparison (multi-dataset) workflows
 -----------------------------------------
@@ -159,6 +164,7 @@ from .discmini import DiSCmini
 from .dusttrak import DustTrak
 from .elpi import ELPI
 from .environmental import Environmental1D
+from .exposure_limits import ExposureLimit, ExposureLimitList, load_exposure_limits
 from .gas1d import Gas1D
 from .intercomparison import (
     bland_altman_analysis,
@@ -231,6 +237,10 @@ __all__ = [
     "icrp_deposition_fraction",
     "inhalable_fraction",
     "REGION_LABELS",
+    # Occupational exposure limits
+    "load_exposure_limits",
+    "ExposureLimit",
+    "ExposureLimitList",
     # Loading: auto-detect entry point + registry + error base
     "load_file",
     "load_all",
