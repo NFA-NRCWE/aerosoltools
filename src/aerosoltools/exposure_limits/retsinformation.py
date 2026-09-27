@@ -23,13 +23,15 @@ given document.
 Parsed are the particulate entries of Bilag 2: all of **Afsnit B** (dust), and
 the entries of **Afsnit A** (gases, vapours and particulate pollution) that are
 particles — a dust, powder, fume, mist or particle form, a size fraction, a
-metal or metalloid compound (*beregnet som* a metal), or one of a few named
-substances (carbon black, diesel exhaust, …). Left out, with a reason in
-:attr:`ExposureLimitList.excluded`: fibres (counted per cm³), mercury (also a
-vapour), volatile metal compounds, and the remaining Afsnit A entries that have
-no ppm limit but are not clearly particulate (mostly organic compounds), which
-need a person's assessment. Afsnit C (process-specific welding limits) is not
-parsed.
+metal or metalloid compound (*beregnet som* a metal), or a substance named in
+:mod:`._assessment` (carbon black, diesel exhaust, borax, …). Left out, with a
+reason in :attr:`ExposureLimitList.excluded`: fibres (counted per cm³), mercury
+(also a vapour), volatile metal compounds, and the substances the measured
+aerosol would not be assumed to consist of (reactive chemicals, pesticides,
+industrial organics, soluble compounds of metals that have a dust entry, …;
+see :mod:`._assessment`). An Afsnit A entry none of this covers — one added by a
+later order — is left out as "needs assessment". Afsnit C (process-specific
+welding limits) is not parsed.
 """
 
 from __future__ import annotations
@@ -42,6 +44,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 
+from ._assessment import NOT_AEROSOL_NAMES, PARTICLE_NAMES
 from ._model import ExposureLimit, ExposureLimitList, LimitSource
 
 #: ELI root for Danish administrative regulations (*lovtidende A*).
@@ -100,32 +103,17 @@ _METAL_BASIS = re.compile(
     r"beregnet som\s+(?:Ag|Al|As|Ba|Be|Bi|Ca|Cd|Co|Cr|Cs|Cu|Fe|Hf|In|Ir|Li|Mg|Mn|"
     r"Mo|Nb|Ni|Os|Pb|Pd|Pt|Rh|Ru|Sb|Se|Sn|Sr|Ta|Te|Ti|Tl|U|V|W|Y|Zn|Zr)\b"
 )
-#: Particulate Afsnit A entries whose name gives neither of the above.
-_PARTICULATE_NAMES = frozenset(
-    {
-        "carbon black",
-        "emissioner fra dieseludstødning",
-        "calciumhydroxid",
-        "calciumoxid",
-        "lithiumhydrid",
-        "silicium",
-        "boroxid",
-        "vismuttellurid",
-        "vismuttellurid, tilsat selen",
-    }
-)
 #: Metal compounds that are volatile — airborne as vapour, not particles.
 _VOLATILE_METAL = re.compile(
     r"carbonyl|alkyl|tetraethyl|tetramethyl|cyclopentadienyl", re.IGNORECASE
 )
-#: Matches of the rules above that still need a person's judgement.
-_ASSESS_PREFIXES = ("tinforbindelser, organiske",)  # organotins: often volatile
 
 #: Reasons recorded in :attr:`ExposureLimitList.excluded`.
 REASON_FIBRE = "fibre: limit in fibres per cm³"
 REASON_MERCURY = "mercury: also present as vapour"
 REASON_VOLATILE = "volatile metal compound (vapour)"
-REASON_UNASSESSED = "not classified as particulate: needs assessment"
+REASON_NOT_AEROSOL = "not assumed to make up the measured aerosol"
+REASON_UNASSESSED = "not yet assessed: needs assessment"
 #: § 3, stk. 2 of the order: where Bilag 2 refers to it, the short-term limit
 #: is twice the 8-hour limit. Checked against the text, not assumed.
 _DOUBLING_RULE = re.compile(
@@ -683,15 +671,15 @@ def _exclusion(limit: ExposureLimit, has_ppm: bool) -> str | None:
         return REASON_MERCURY
     if _VOLATILE_METAL.search(name):
         return REASON_VOLATILE
-    if name.startswith(_ASSESS_PREFIXES):
-        return REASON_UNASSESSED
+    if name in NOT_AEROSOL_NAMES:
+        return REASON_NOT_AEROSOL
     if (
         _PARTICLE_WORDS.search(limit.name)
         or _METAL_BASIS.search(limit.name)
-        or name in _PARTICULATE_NAMES
+        or name in PARTICLE_NAMES
     ):
         return None
-    return REASON_UNASSESSED
+    return REASON_UNASSESSED  # e.g. a substance new in a later order
 
 
 def _same_entry(a: ExposureLimit, b: ExposureLimit) -> bool:

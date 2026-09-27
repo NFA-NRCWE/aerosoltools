@@ -50,8 +50,11 @@ limit is converted to each dataset's own unit before comparing.
 Instead of typing the limits, pick the substance being measured. The dropdown
 lists the particulate limits in the Danish limit-value order (*Bekendtgørelse om
 grænseværdier for stoffer og materialer*, Bilag 2): the dusts of Afsnit B and the
-particles of Afsnit A — metals and their compounds, fumes, mists, carbon black,
-diesel exhaust. Each row shows the name, CAS number, 8-hour and short-term
+particles of Afsnit A — metals and their compounds, fumes, oil mist, carbon
+black, diesel exhaust, borax. Only substances that a measured aerosol could be
+assumed to consist of are listed — the crude assumption made for wood dust,
+where PM is measured and taken to be all wood dust. Each row shows the name,
+CAS number, 8-hour and short-term
 limits in mg/m³ and the order's remarks (**E** EU limit exists · **L** ceiling
 value · **H** skin uptake · **K** carcinogenic). Type part of a name to search;
 hover a row for the full explanation.
@@ -89,13 +92,16 @@ Keep in mind:
 - **Short-term values marked (2×)** are not printed in the order: where it
   refers to *§ 3, stk. 2* the short-term limit is twice the 8-hour limit. Some
   entries list their own value instead (calcium hydroxide/oxide, respirable:
-  4 × the 8-hour limit), give none (lead), or give only a short-term limit
-  (lithium hydride, inhalable); these are used as the order gives them.
+  4 × the 8-hour limit) or give none (lead); these are used as the order gives
+  them.
 - **Not listed:** fibres (counted per cm³, which these instruments do not
-  measure), mercury (also a vapour), volatile metal compounds, gases, and the
-  Afsnit A substances not clearly particulate (mostly organic compounds such as
-  pesticides and phthalates). Tools → *Occupational exposure limits…* lists what
-  was left out and why. Afsnit C (welding) is not included.
+  measure), mercury (also a vapour), volatile metal compounds, gases, and
+  substances a measured aerosol would not be assumed to consist of — reactive
+  chemicals (NaOH, P₂O₅ …), pesticides, plasticisers and other industrial
+  organics, chemically defined fractions (PAH), and soluble compounds of metals
+  that also have a dust entry. Tools → *Occupational exposure limits…* lists
+  what was left out and why; a substance added by a later order shows up there
+  as *needs assessment*. Afsnit C (welding) is not included.
 
 Tools → *Occupational exposure limits…* shows the whole list and its source.
 **Check for a newer order** asks Retsinformation whether the order is still in

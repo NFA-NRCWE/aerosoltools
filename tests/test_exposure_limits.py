@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import math
 import os
+import xml.etree.ElementTree as ET
 
 import pytest
 
@@ -66,7 +67,7 @@ def test_section_b_rows(parsed):
     assert src.eli == "https://www.retsinformation.dk/eli/lta/2026/613"
     assert src.sections == ("A", "B")
 
-    assert len(parsed) == 100
+    assert len(parsed) == 90
     assert sum(lim.section == "B" for lim in parsed) == 24
     assert parsed.names() == sorted(parsed.names(), key=str.casefold)
     quartz = parsed["Kvarts, respirabel"]
@@ -98,7 +99,8 @@ def test_afsnit_a_particles(parsed):
     assert "elementært kulstof" in diesel.notes[0]
     tio2 = parsed["Titandioxid, beregnet som Ti"]
     assert (tio2.twa, tio2.stel, tio2.basis) == (6.0, 12.0, "Ti")
-    assert parsed["Svovlsyre, tåge, thorakal fraktion"].fraction == "thoracic"
+    borax = parsed["Natriumtetraborat, decahydrat"]
+    assert (borax.section, borax.twa, borax.remarks) == ("A", 2.0, "H")
     # Value-less heading + fraction-only sub-rows become two named entries.
     fume = parsed["Manganrøg, beregnet som Mn, respirabel"]
     assert (fume.twa, fume.remarks, fume.fraction) == (0.05, "E", "respirable")
@@ -106,18 +108,22 @@ def test_afsnit_a_particles(parsed):
     assert parsed.get("Respirabel") is None and parsed.get("Manganrøg") is None
 
 
-def test_short_term_exceptions(parsed):
+def test_short_term_exceptions(parsed, xml_bytes):
     """Listed short-term values are used as given; none is invented."""
+    root = ET.fromstring(xml_bytes)
     assert parsed["Bly og dets uorganiske forbindelser, beregnet som Pb"].stel is None
     lime = parsed["Calciumhydroxid, respirabel fraktion"]
     assert (lime.twa, lime.stel, lime.stel_derived) == (1.0, 4.0, False)
-    hydride = parsed["Lithiumhydrid, inhalerbar"]
+    # A row with only a short-term limit parses (it is then excluded).
+    records, notes = ri._read_table(ri._find_section_table(root, "A"), "A")
+    rec = next(r for r in records if r["name"] == "Lithiumhydrid, inhalerbar")
+    hydride, _has_ppm = ri._build_limit(rec, notes, True)
     assert (hydride.twa, hydride.stel) == (None, 0.02)
     assert all(lim.stel_minutes == 15 for lim in parsed)
 
 
 def test_exclusions(parsed):
-    """Fibres, mercury, volatile metal compounds and unclear entries are left out."""
+    """Fibres, mercury, volatile metals and non-aerosol substances are left out."""
     reasons = dict(parsed.excluded)
     assert reasons["Asbest"] == ri.REASON_FIBRE
     assert reasons["Keramiske fibre"] == ri.REASON_FIBRE
@@ -126,8 +132,26 @@ def test_exclusions(parsed):
         "Kviksølv og uorganiske forbindelser inkl. dampe, beregnet som Hg"
     ] == (ri.REASON_MERCURY)
     assert reasons["Cobaltcarbonyl, beregnet som Co"] == ri.REASON_VOLATILE
-    assert reasons["Natriumhydroxid"] == ri.REASON_UNASSESSED
-    assert reasons["Dibutylphthalat"] == ri.REASON_UNASSESSED
+    # The maintainer's assessment: substances the measured aerosol would not
+    # be assumed to consist of — reactive chemicals, organics, soluble
+    # compounds of metals that also have a dust entry, …
+    for name in (
+        "Natriumhydroxid",
+        "Dibutylphthalat",
+        "Terephthalsyre",
+        "Lithiumhydrid",
+        "Diquat, respirabel",
+        "Jernsalte, opløselige, beregnet som Fe",
+    ):
+        assert reasons[name] == ri.REASON_NOT_AEROSOL, name
+        assert parsed.get(name) is None
+    assert ri.REASON_UNASSESSED not in reasons.values()
+    # Soluble Ba/Tl compounds are the only limits for those metals: kept.
+    assert parsed.get("Bariumforbindelser, opløselige, beregnet som Ba")
+    assert parsed.get("Bitumenrøg, cyclohexanholdig fraktion af totalstøv")
+    # A substance new in a later order is flagged, not silently dropped.
+    new = ExposureLimit(name="Nyt stof", twa=1.0, section="A")
+    assert ri._exclusion(new, has_ppm=False) == ri.REASON_UNASSESSED
     # Gases (ppm limits) are neither kept nor listed; Afsnit A repeats of
     # Afsnit B dusts are dropped silently (even when spelled differently).
     assert "Acetaldehyd" not in reasons and parsed.get("Acetaldehyd") is None
@@ -172,8 +196,6 @@ def test_metric_size_cut():
         ("Kvarts, total", "Total", "match"),
         ("Kvarts, total", "PM10", "match"),
         ("Kvarts, total", "PM1", "underestimates"),
-        ("Svovlsyre, tåge, thorakal fraktion", "PM10", "match"),
-        ("Svovlsyre, tåge, thorakal fraktion", "PM2.5", "underestimates"),
         ("Emissioner fra dieseludstødning", "IR BCc", "match"),
         ("Emissioner fra dieseludstødning", "PM2.5", "conservative"),
         ("Kvarts, respirabel", "Org", "unknown"),
@@ -363,3 +385,13 @@ def test_cli_show_prints_bundled_list(capsys):
     assert main(["show"]) == 0
     out = capsys.readouterr().out
     assert "BEK nr 613 af 29/06/2026" in out and "Kvarts, respirabel" in out
+
+
+@pytest.mark.parametrize(
+    "metric, status",
+    [("PM10", "match"), ("PM2.5", "underestimates"), ("Total", "conservative")],
+)
+def test_check_fraction_thoracic(metric, status):
+    """A thoracic limit fits PM10 (none is in the current list; rule kept)."""
+    mist = ExposureLimit(name="Tåge, thorakal fraktion", twa=0.05)
+    assert check_fraction(mist, metric, metric_size_cut(metric)).status == status
