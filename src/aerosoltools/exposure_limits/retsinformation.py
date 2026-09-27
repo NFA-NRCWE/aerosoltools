@@ -6,10 +6,12 @@ order under a stable European Legislation Identifier (ELI), e.g.
 ``https://www.retsinformation.dk/eli/lta/2026/613``, with two machine-readable
 views that this module uses:
 
-* ``<eli>/xml`` — the full order as LexDania XML, tables included. This is what
-  :func:`parse_exposure_limits_xml` reads.
-* ``<eli>.rdfa`` — a small ELI-metadata record (JSON) with the order's in-force
-  status and its ``changed_by`` / ``changes`` relations. A revised limit list is
+* ``<eli>/dan/xml`` — the full order as LexDania XML, tables included, which
+  the order's ELI metadata declares an *official* embodiment (publisher
+  Civilstyrelsen). This is what :func:`parse_exposure_limits_xml` reads; no web
+  page is scraped.
+* ``<eli>.rdfa`` — the order's ELI-metadata record (JSON) with its in-force
+  status and ``changed_by`` / ``changes`` relations. A revised limit list is
   issued as a **new order** that repeals the old one, so there is no fixed URL
   for "the latest"; :func:`find_current_order` instead follows ``changed_by``
   from a known order to the one currently in force.
@@ -18,10 +20,15 @@ The official *høsteservice* API (``api.retsinformation.dk``) is not used: it is
 change feed of the last 10 days for nightly harvesting and cannot look up a
 given document.
 
-Only **Bilag 2, Afsnit B** (dust) is parsed, and its fibre entries (limits in
-fibres/cm³) are left out, since aerosoltools reports mass and number
-concentrations rather than fibre counts. Afsnit A (gases, vapours *and* some
-particulate substances) and Afsnit C (process-specific welding limits) are not
+Parsed are the particulate entries of Bilag 2: all of **Afsnit B** (dust), and
+the entries of **Afsnit A** (gases, vapours and particulate pollution) that are
+particles — a dust, powder, fume, mist or particle form, a size fraction, a
+metal or metalloid compound (*beregnet som* a metal), or one of a few named
+substances (carbon black, diesel exhaust, …). Left out, with a reason in
+:attr:`ExposureLimitList.excluded`: fibres (counted per cm³), mercury (also a
+vapour), volatile metal compounds, and the remaining Afsnit A entries that have
+no ppm limit but are not clearly particulate (mostly organic compounds), which
+need a person's assessment. Afsnit C (process-specific welding limits) is not
 parsed.
 """
 
@@ -70,12 +77,55 @@ _MONTHS = {
 _SUBSCRIPT = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 _SUPERSCRIPT = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
 _PLAIN_DIGITS = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")
-_FOOTNOTE_DIGITS = "0-9⁰¹²³⁴⁵⁶⁷⁸⁹"
-#: A trailing footnote marker on a name or value: ``"Glasuldsfibre 1)"``.
-_TRAILING_FOOTNOTE = re.compile(rf"\s+([{_FOOTNOTE_DIGITS}]+)\)$")
+_SUPERSCRIPT_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹"
+#: A trailing footnote marker on a name or value: ``"Glasuldsfibre 1)"``, or a
+#: superscript one attached as in ``"0,005⁴)"``.
+_TRAILING_FOOTNOTE = re.compile(rf"(?:\s+([0-9]+)|\s*([{_SUPERSCRIPT_DIGITS}]+))\)$")
 #: The first cell of a footnote row at the foot of a table: ``"1)"``.
-_FOOTNOTE_ROW = re.compile(rf"^([{_FOOTNOTE_DIGITS}]+)\)$")
+_FOOTNOTE_ROW = re.compile(rf"^([0-9{_SUPERSCRIPT_DIGITS}]+)\)$")
 _NUMBER = re.compile(r"^\d+(?:[.,]\d+)?$")
+#: A row named only by a size fraction ("Inhalerbar"), sub-entry of the row above.
+_BARE_FRACTION = re.compile(r"(?:respirabel|inhalerbar|thorakal|total)(?:\s+fraktion)?")
+
+# -- which Afsnit A entries are particles --------------------------------------
+#: Name words marking a particulate form (dust, powder, fume, mist, particles,
+#: aerosol) or a size fraction.
+_PARTICLE_WORDS = re.compile(
+    r"støv|pulver|røg|tåge|partik|aerosol|respirab|inhalerb|thorak|\btotal",
+    re.IGNORECASE,
+)
+#: "beregnet som <metal or metalloid>": such compounds are airborne as particles
+#: (their gaseous hydrides are separate entries with a ppm limit).
+_METAL_BASIS = re.compile(
+    r"beregnet som\s+(?:Ag|Al|As|Ba|Be|Bi|Ca|Cd|Co|Cr|Cs|Cu|Fe|Hf|In|Ir|Li|Mg|Mn|"
+    r"Mo|Nb|Ni|Os|Pb|Pd|Pt|Rh|Ru|Sb|Se|Sn|Sr|Ta|Te|Ti|Tl|U|V|W|Y|Zn|Zr)\b"
+)
+#: Particulate Afsnit A entries whose name gives neither of the above.
+_PARTICULATE_NAMES = frozenset(
+    {
+        "carbon black",
+        "emissioner fra dieseludstødning",
+        "calciumhydroxid",
+        "calciumoxid",
+        "lithiumhydrid",
+        "silicium",
+        "boroxid",
+        "vismuttellurid",
+        "vismuttellurid, tilsat selen",
+    }
+)
+#: Metal compounds that are volatile — airborne as vapour, not particles.
+_VOLATILE_METAL = re.compile(
+    r"carbonyl|alkyl|tetraethyl|tetramethyl|cyclopentadienyl", re.IGNORECASE
+)
+#: Matches of the rules above that still need a person's judgement.
+_ASSESS_PREFIXES = ("tinforbindelser, organiske",)  # organotins: often volatile
+
+#: Reasons recorded in :attr:`ExposureLimitList.excluded`.
+REASON_FIBRE = "fibre: limit in fibres per cm³"
+REASON_MERCURY = "mercury: also present as vapour"
+REASON_VOLATILE = "volatile metal compound (vapour)"
+REASON_UNASSESSED = "not classified as particulate: needs assessment"
 #: § 3, stk. 2 of the order: where Bilag 2 refers to it, the short-term limit
 #: is twice the 8-hour limit. Checked against the text, not assumed.
 _DOUBLING_RULE = re.compile(
@@ -380,7 +430,7 @@ def _cell_text(td: ET.Element) -> str:
             parts.append(text)
         lines.append("".join(parts))
     text = " ".join(lines) if lines else "".join(td.itertext())
-    return " ".join(text.split())
+    return " ".join(text.replace("\xad", "").split())  # drop soft hyphens
 
 
 def _row_cells(tr: ET.Element) -> tuple[list[str], list[tuple[int, int]]]:
@@ -400,7 +450,7 @@ def _row_cells(tr: ET.Element) -> tuple[list[str], list[tuple[int, int]]]:
 
 def _number(text: str) -> float | None:
     """A Danish-formatted number (``"0,05"``), ignoring a footnote marker."""
-    text = _TRAILING_FOOTNOTE.sub("", text or "").strip()
+    text = _split_footnote(text or "")[0].strip()
     return float(text.replace(",", ".")) if _NUMBER.match(text) else None
 
 
@@ -409,7 +459,8 @@ def _split_footnote(text: str) -> tuple[str, str | None]:
     m = _TRAILING_FOOTNOTE.search(text)
     if not m:
         return text, None
-    return text[: m.start()].rstrip(), m.group(1).translate(_PLAIN_DIGITS)
+    marker = (m.group(1) or m.group(2)).translate(_PLAIN_DIGITS)
+    return text[: m.start()].rstrip(), marker
 
 
 def _find_section_table(root: ET.Element, section: str) -> ET.Element:
@@ -425,73 +476,110 @@ def _find_section_table(root: ET.Element, section: str) -> ET.Element:
     )
 
 
-def _header_columns(tr: ET.Element) -> dict[str, tuple[int, int]]:
-    """Map the header row's cells to ``{field: (start column, span)}``."""
-    cells, spans = _row_cells(tr)
-    keys = (
-        ("cas", "cas"),
-        ("name", "stof"),
-        ("year", "årstal"),
-        ("twa", "8-timers"),
-        ("stel", "korttid"),
-        ("remarks", "anmærkning"),
-    )
-    columns: dict[str, tuple[int, int]] = {}
+def _header_columns(
+    rows: list[tuple[list[str], list[tuple[int, int]]]], h: int
+) -> dict[str, int]:
+    """Column of each field, read from header row ``h`` (and the group row above).
+
+    Two layouts occur. Afsnit B has one header row whose "8-timers grænseværdi"
+    spans the value and its unit. Afsnit A has group headers ("8-timers
+    grænseværdi", "Korttidsgrænseværdi") over sub-headers "ppm" and "mg/m³".
+    """
+    cells, spans = rows[h]
+    cols: dict[str, int] = {}
     for start, span in spans:
-        head = cells[start].lower()
-        for key, word in keys:
-            if key not in columns and head.startswith(word):
-                columns[key] = (start, span)
-    return columns
+        head = cells[start].strip().lower()
+        for key, word in (
+            ("cas", "cas"),
+            ("name", "stof"),
+            ("year", "årstal"),
+            ("remarks", "anmærkning"),
+        ):
+            if head.startswith(word):
+                cols.setdefault(key, start)
+    if any(c.strip().lower() == "ppm" for c in cells) and h > 0:
+        group_cells, group_spans = rows[h - 1]
+        groups = [
+            (s, n, group_cells[s].strip().lower())
+            for s, n in group_spans
+            if group_cells[s].strip()
+        ]
+        for start, _span in spans:
+            head = cells[start].strip().lower()
+            if head not in ("ppm", "mg/m³", "mg/m3"):
+                continue
+            group = next((g for s, n, g in groups if s <= start < s + n), "")
+            period = (
+                "twa"
+                if group.startswith("8-timers")
+                else "stel" if group.startswith("korttid") else None
+            )
+            if period:
+                cols.setdefault(
+                    f"{period}_{'ppm' if head == 'ppm' else 'value'}", start
+                )
+        for s, _n, g in groups:
+            if g.startswith("anmærkning"):
+                cols.setdefault("remarks", s)
+    else:
+        for start, span in spans:
+            head = cells[start].strip().lower()
+            if head.startswith("8-timers"):
+                cols.setdefault("twa_value", start)
+                if span >= 2:
+                    cols.setdefault("twa_unit", start + 1)
+            elif head.startswith("korttid"):
+                cols.setdefault("stel_value", start)
+    return cols
 
 
-def _parse_section_b(
-    table: ET.Element, doubling_rule: bool
-) -> tuple[list[ExposureLimit], list[str]]:
-    """Parse the Afsnit B (dust) table into limits and excluded fibre names."""
-    rows = list(_descendants(table, "Tr"))
-    header = next(
+def _read_table(table: ET.Element, section: str) -> tuple[list[dict], dict[str, str]]:
+    """Read a Bilag 2 table into raw row records plus its footnotes.
+
+    Handles the table's quirks: rows that only add a CAS number to the entry
+    above, later-dated values ("Fra den 21. december 2029"), value-less heading
+    rows whose sub-rows are named only by a fraction ("Manganrøg, beregnet som
+    Mn" → "Inhalerbar", "Respirabel"), and the footnote rows at the foot.
+    """
+    rows = [_row_cells(tr) for tr in _descendants(table, "Tr")]
+    h = next(
         (
             i
-            for i, tr in enumerate(rows)
-            if any(c.lower().startswith("cas") for c in _row_cells(tr)[0])
+            for i, (cells, _spans) in enumerate(rows)
+            if any(c.strip().lower().startswith("cas") for c in cells)
         ),
         None,
     )
-    if header is None:
-        raise RetsinformationError("The Afsnit B table has no header row.")
-    columns = _header_columns(rows[header])
-    missing = {"name", "twa"} - columns.keys()
+    if h is None:
+        raise RetsinformationError(f"The Afsnit {section} table has no header row.")
+    cols = _header_columns(rows, h)
+    missing = {"name", "twa_value"} - cols.keys()
     if missing:
         raise RetsinformationError(
-            f"The Afsnit B header lacks {sorted(missing)} — the parser needs updating."
+            f"The Afsnit {section} header lacks {sorted(missing)} — the parser "
+            "needs updating."
         )
 
-    def col(cells: list[str], key: str, offset: int = 0) -> str:
-        if key not in columns:
-            return ""
-        i = columns[key][0] + offset
-        return cells[i] if i < len(cells) else ""
-
-    # The 8-hour header spans two columns: the value, then its unit.
-    twa_has_unit_column = columns["twa"][1] >= 2
+    def cell(cells: list[str], key: str) -> str:
+        i = cols.get(key)
+        return cells[i].strip() if i is not None and i < len(cells) else ""
 
     records: list[dict] = []
     footnotes: dict[str, str] = {}
-    for tr in rows[header + 1 :]:
-        cells, _spans = _row_cells(tr)
-        if not any(cells):
+    heading: dict | None = None
+    for cells, _spans in rows[h + 1 :]:
+        if not any(c.strip() for c in cells):
             continue
-        marker = _FOOTNOTE_ROW.match(cells[0])
+        marker = _FOOTNOTE_ROW.match(cells[0].strip())
         if marker:
-            text = next((c for c in cells[1:] if c), "")
+            text = next((c.strip() for c in cells[1:] if c.strip()), "")
             footnotes[marker.group(1).translate(_PLAIN_DIGITS)] = text
             continue
-        cas, name = col(cells, "cas"), col(cells, "name")
-        value = col(cells, "twa")
-        unit = col(cells, "twa", 1) if twa_has_unit_column else ""
-        if not twa_has_unit_column and value:
-            value, _, unit = value.partition(" ")
+        rec = {
+            key: cell(cells, key)
+            for key in ("twa_value", "twa_unit", "stel_value", "twa_ppm", "stel_ppm")
+        }
+        cas, name = cell(cells, "cas"), cell(cells, "name")
         if not name:
             # A continuation row carrying another CAS number of the entry above.
             if cas and records:
@@ -499,57 +587,151 @@ def _parse_section_b(
             continue
         if name.lower().startswith("fra d") and not cas and records:
             # A later-dated value for the entry above ("Fra den 21. december …").
-            records[-1]["notes"].append(f"{name}: {value} {unit}".strip())
-            continue
-        records.append(
-            {
-                "name": name,
-                "cas": [cas] if cas else [],
-                "year": col(cells, "year"),
-                "value": value,
-                "unit": unit,
-                "stel": col(cells, "stel"),
-                "remarks": col(cells, "remarks"),
-                "notes": [],
-            }
-        )
-
-    limits: list[ExposureLimit] = []
-    excluded: list[str] = []
-    for rec in records:
-        name, marker = _split_footnote(rec["name"])
-        notes = list(rec["notes"])
-        if marker and marker in footnotes:
-            notes.insert(0, footnotes[marker])
-        # The order's legend: particulate pollution is given in mg/m³.
-        unit = rec["unit"] or "mg/m³"
-        if "fiber" in unit.lower() or "fibre" in unit.lower():
-            excluded.append(name)
-            continue
-        twa = _number(rec["value"])
-        stel_text = rec["stel"].strip()
-        stel_rule = ""
-        if stel_text.lower().startswith("jf"):
-            stel_rule = stel_text
-            stel = 2.0 * twa if (doubling_rule and twa is not None) else None
-        else:
-            stel = _number(stel_text)
-        year = int(rec["year"]) if rec["year"].isdigit() else None
-        limits.append(
-            ExposureLimit(
-                name=name,
-                cas=tuple(rec["cas"]),
-                twa=twa,
-                stel=stel,
-                unit=unit,
-                stel_rule=stel_rule,
-                remarks=rec["remarks"],
-                year=year,
-                notes=tuple(notes),
-                section="B",
+            later = " ".join(
+                v for v in (rec["twa_value"], rec["twa_unit"]) if v and v != "-"
             )
+            records[-1]["notes"].append(f"{name}: {later}".strip(": "))
+            continue
+        rec.update(
+            name=name,
+            cas=[cas] if cas else [],
+            year=cell(cells, "year"),
+            remarks=cell(cells, "remarks"),
+            notes=[],
+            section=section,
         )
-    return limits, excluded
+        valued = any(
+            _number(rec[k]) is not None
+            for k in ("twa_value", "stel_value", "twa_ppm", "stel_ppm")
+        )
+        if _BARE_FRACTION.fullmatch(name.lower()) and heading is not None:
+            # A fraction sub-row of a value-less heading row above.
+            rec["name"] = f"{heading['name']}, {name.lower()}"
+            rec["cas"] = rec["cas"] or list(heading["cas"])
+            rec["year"] = rec["year"] or heading["year"]
+            rec["remarks"] = rec["remarks"] or heading["remarks"]
+        elif not valued:
+            heading = rec
+        else:
+            heading = None
+        records.append(rec)
+    return records, footnotes
+
+
+def _build_limit(
+    rec: dict, footnotes: dict[str, str], doubling_rule: bool
+) -> tuple[ExposureLimit, bool] | None:
+    """Turn a raw row into an :class:`ExposureLimit` (+ whether it has a ppm limit).
+
+    Returns ``None`` for a row without any mass limit (a heading or a
+    cross-reference such as "…, se bitumenrøg").
+    """
+    name, marker = _split_footnote(rec["name"])
+    twa_text, twa_marker = _split_footnote(rec["twa_value"])
+    stel_text, stel_marker = _split_footnote(rec["stel_value"])
+    notes = []
+    for mark in (marker, twa_marker, stel_marker):
+        note = footnotes.get(mark or "")
+        if note and note not in notes:
+            notes.append(note)
+    notes.extend(rec["notes"])
+    unit = rec["twa_unit"]
+    if not unit:
+        # Afsnit A puts a fibre limit's unit in the mg/m³ column ("1 fiber/cm³");
+        # otherwise the order's legend applies: particulate limits are mg/m³.
+        m = re.match(r"^([\d.,]+)\s+(\S.*)$", twa_text)
+        if m:
+            twa_text, unit = m.group(1), m.group(2)
+    unit = unit or "mg/m³"
+    twa = _number(twa_text)
+    stel_rule = ""
+    if stel_text.lower().startswith("jf"):
+        stel_rule = stel_text
+        stel = 2.0 * twa if (doubling_rule and twa is not None) else None
+    else:
+        stel = _number(stel_text)
+    if twa is None and stel is None:
+        return None
+    has_ppm = (
+        _number(rec["twa_ppm"]) is not None or _number(rec["stel_ppm"]) is not None
+    )
+    limit = ExposureLimit(
+        name=name,
+        cas=tuple(rec["cas"]),
+        twa=twa,
+        stel=stel,
+        unit=unit,
+        stel_rule=stel_rule,
+        remarks=rec["remarks"],
+        year=int(rec["year"]) if rec["year"].isdigit() else None,
+        notes=tuple(notes),
+        section=rec["section"],
+    )
+    return limit, has_ppm
+
+
+def _exclusion(limit: ExposureLimit, has_ppm: bool) -> str | None:
+    """Why an entry is left out (``""``: silently, as a gas), or ``None`` to keep it."""
+    if "fiber" in limit.unit.lower() or "fibre" in limit.unit.lower():
+        return REASON_FIBRE
+    if limit.section != "A":
+        return None  # Afsnit B is dust throughout
+    if has_ppm:
+        return ""  # a gas or vapour
+    name = limit.name.casefold()
+    if "kviksølv" in name:
+        return REASON_MERCURY
+    if _VOLATILE_METAL.search(name):
+        return REASON_VOLATILE
+    if name.startswith(_ASSESS_PREFIXES):
+        return REASON_UNASSESSED
+    if (
+        _PARTICLE_WORDS.search(limit.name)
+        or _METAL_BASIS.search(limit.name)
+        or name in _PARTICULATE_NAMES
+    ):
+        return None
+    return REASON_UNASSESSED
+
+
+def _same_entry(a: ExposureLimit, b: ExposureLimit) -> bool:
+    """Whether two entries (one per section) are the same limit.
+
+    Afsnit A repeats many Afsnit B dusts, sometimes spelled differently
+    ("Christobalit" / "Cristobalit"); the same CAS numbers, fraction and values
+    then identify them.
+    """
+    if a.name.casefold() == b.name.casefold():
+        return True
+    return (
+        bool(a.cas)
+        and set(a.cas) == set(b.cas)
+        and a.fraction == b.fraction
+        and (a.twa, a.stel) == (b.twa, b.stel)
+    )
+
+
+def _parse_sections(
+    root: ET.Element, sections: tuple[str, ...], doubling_rule: bool
+) -> tuple[list[ExposureLimit], list[tuple[str, str]]]:
+    """Parse the particulate limits of ``sections``, Afsnit B first."""
+    limits: list[ExposureLimit] = []
+    excluded: list[tuple[str, str]] = []
+    for section in sorted(sections, key=lambda s: s != "B"):
+        records, footnotes = _read_table(_find_section_table(root, section), section)
+        for rec in records:
+            built = _build_limit(rec, footnotes, doubling_rule)
+            if built is None:
+                continue
+            limit, has_ppm = built
+            if any(_same_entry(limit, kept) for kept in limits):
+                continue  # Afsnit A repeating an Afsnit B dust
+            reason = _exclusion(limit, has_ppm)
+            if reason is None:
+                limits.append(limit)
+            elif reason and all(name != limit.name for name, _r in excluded):
+                excluded.append((limit.name, reason))
+    return sorted(limits, key=lambda lim: lim.name.casefold()), excluded
 
 
 def _in_force_from(text: str) -> str | None:
@@ -566,18 +748,23 @@ def _in_force_from(text: str) -> str | None:
 
 
 def parse_exposure_limits_xml(
-    data: bytes | str, eli: str | None = None, retrieved: str | None = None
+    data: bytes | str,
+    eli: str | None = None,
+    retrieved: str | None = None,
+    sections: tuple[str, ...] = ("A", "B"),
 ) -> ExposureLimitList:
     """Parse the particulate limits out of a limit-value order's XML.
 
     Args:
-        data: The order as LexDania XML (``<eli>/xml``).
+        data: The order as LexDania XML (``<eli>/dan/xml``).
         eli: The order's ELI URL, recorded as the source; read from the
             document's number and year when omitted.
         retrieved: When the XML was downloaded (ISO timestamp); defaults to now.
+        sections: Which Bilag 2 sections to parse (``"A"``, ``"B"``).
 
     Returns:
-        The Afsnit B (dust) limits, fibres excluded, with the order's details.
+        The particulate limits (see the module docstring for which entries
+        count), with the order's details and the entries left out.
 
     Raises:
         RetsinformationError: If ``data`` is not the limit-value order or its
@@ -602,8 +789,8 @@ def parse_exposure_limits_xml(
     number = int(meta_text("Number") or 0)
     issued = meta_text("DiesSigni") or meta_text("DiesEdicti")
     text = " ".join(root.itertext())
-    limits, excluded = _parse_section_b(
-        _find_section_table(root, "B"), bool(_DOUBLING_RULE.search(text))
+    limits, excluded = _parse_sections(
+        root, tuple(sections), bool(_DOUBLING_RULE.search(text))
     )
     source = LimitSource(
         title=" ".join(title.split()),
@@ -615,7 +802,7 @@ def parse_exposure_limits_xml(
         accession_number=meta_text("AccessionNumber"),
         retrieved=retrieved
         or datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        sections=("B",),
+        sections=tuple(sorted(sections)),
     )
     return ExposureLimitList(
         source=source, limits=tuple(limits), excluded=tuple(excluded)
@@ -625,9 +812,10 @@ def parse_exposure_limits_xml(
 def fetch_exposure_limits(
     eli: str = BUNDLED_ELI, timeout: float = 60.0
 ) -> ExposureLimitList:
-    """Download a limit-value order from Retsinformation and parse its dust limits.
+    """Download a limit-value order from Retsinformation and parse its particle limits.
 
-    Use :func:`find_current_order` first to learn which order is in force.
+    Reads the order's official XML embodiment (``<eli>/dan/xml``). Use
+    :func:`find_current_order` first to learn which order is in force.
 
     Args:
         eli: The order (see :func:`eli_url` for accepted forms).
@@ -638,4 +826,4 @@ def fetch_exposure_limits(
             limit-value order.
     """
     url = eli_url(eli)
-    return parse_exposure_limits_xml(_http_get(url + "/xml", timeout), eli=url)
+    return parse_exposure_limits_xml(_http_get(url + "/dan/xml", timeout), eli=url)

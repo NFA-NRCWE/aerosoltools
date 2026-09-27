@@ -31,7 +31,14 @@ def _print_list(limits) -> None:
     src = limits.source
     print(f"{src.label} — {src.title}")
     print(f"  {src.eli}  (status {src.status or '?'}, retrieved {src.retrieved})")
-    print(f"  {len(limits)} particulate limits; excluded: {', '.join(limits.excluded)}")
+    print(
+        f"  {len(limits)} particulate limits (Bilag 2, Afsnit {', '.join(src.sections)})"
+    )
+    reasons: dict[str, int] = {}
+    for _name, reason in limits.excluded:
+        reasons[reason] = reasons.get(reason, 0) + 1
+    for reason, count in reasons.items():
+        print(f"  left out: {count} × {reason}")
     table = limits.to_dataframe()[
         ["Substance", "CAS", "8-h limit", "Short-term limit", "Unit", "Remarks"]
     ]

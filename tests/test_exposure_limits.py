@@ -1,22 +1,29 @@
 """Tests for the Danish occupational-exposure-limit parser and bundled list.
 
 ``tests/data/exposure_limits/Sample_BEK_graensevaerdier.xml`` is the real BEK
-nr 613 af 29/06/2026 (Retsinformation ``/xml``) trimmed to its metadata,
-paragraphs and Bilag 2 Afsnit B table, so everything here runs offline. (It sits
-in a subfolder because ``tests/data`` itself must hold only instrument files.)
+nr 613 af 29/06/2026 (Retsinformation ``/dan/xml``) trimmed to its metadata,
+paragraphs and the Bilag 2 Afsnit A and B tables, so everything here runs
+offline. (It sits in a subfolder because ``tests/data`` itself must hold only
+instrument files.)
 """
 
 from __future__ import annotations
 
+import math
 import os
 
 import pytest
 
 from aerosoltools.exposure_limits import (
+    ExposureLimit,
     ExposureLimitList,
     RetsinformationError,
+    applicable_limit,
+    basis_note,
+    check_fraction,
     eli_url,
     load_exposure_limits,
+    metric_size_cut,
     parse_exposure_limits_xml,
 )
 from aerosoltools.exposure_limits import retsinformation as ri
@@ -57,8 +64,11 @@ def test_section_b_rows(parsed):
     assert (src.number, src.date, src.status) == (613, "2026-06-29", "Valid")
     assert src.in_force_from == "2026-07-01"
     assert src.eli == "https://www.retsinformation.dk/eli/lta/2026/613"
+    assert src.sections == ("A", "B")
 
-    assert len(parsed) == 24
+    assert len(parsed) == 100
+    assert sum(lim.section == "B" for lim in parsed) == 24
+    assert parsed.names() == sorted(parsed.names(), key=str.casefold)
     quartz = parsed["Kvarts, respirabel"]
     assert quartz.cas == ("14808-60-7",)
     assert (quartz.twa, quartz.stel, quartz.unit) == (0.1, 0.2, "mg/m³")
@@ -79,12 +89,130 @@ def test_section_b_rows(parsed):
     assert parsed.get("Bomuldstøv (råbomuld)") is not None
 
 
-def test_fibres_are_excluded(parsed):
-    """Fibre limits (fibres/cm³) are dropped and listed as excluded."""
+def test_afsnit_a_particles(parsed):
+    """Afsnit A contributes metals, fumes, carbon black, diesel exhaust, mists."""
+    carbon = parsed["Carbon black"]
+    assert (carbon.section, carbon.twa, carbon.remarks) == ("A", 3.5, "K")
+    diesel = parsed["Emissioner fra dieseludstødning"]
+    assert diesel.twa == 0.005 and diesel.basis == "elemental carbon"
+    assert "elementært kulstof" in diesel.notes[0]
+    tio2 = parsed["Titandioxid, beregnet som Ti"]
+    assert (tio2.twa, tio2.stel, tio2.basis) == (6.0, 12.0, "Ti")
+    assert parsed["Svovlsyre, tåge, thorakal fraktion"].fraction == "thoracic"
+    # Value-less heading + fraction-only sub-rows become two named entries.
+    fume = parsed["Manganrøg, beregnet som Mn, respirabel"]
+    assert (fume.twa, fume.remarks, fume.fraction) == (0.05, "E", "respirable")
+    assert parsed.get("Manganrøg, beregnet som Mn, inhalerbar").twa == 0.2
+    assert parsed.get("Respirabel") is None and parsed.get("Manganrøg") is None
+
+
+def test_short_term_exceptions(parsed):
+    """Listed short-term values are used as given; none is invented."""
+    assert parsed["Bly og dets uorganiske forbindelser, beregnet som Pb"].stel is None
+    lime = parsed["Calciumhydroxid, respirabel fraktion"]
+    assert (lime.twa, lime.stel, lime.stel_derived) == (1.0, 4.0, False)
+    hydride = parsed["Lithiumhydrid, inhalerbar"]
+    assert (hydride.twa, hydride.stel) == (None, 0.02)
+    assert all(lim.stel_minutes == 15 for lim in parsed)
+
+
+def test_exclusions(parsed):
+    """Fibres, mercury, volatile metal compounds and unclear entries are left out."""
+    reasons = dict(parsed.excluded)
+    assert reasons["Asbest"] == ri.REASON_FIBRE
+    assert reasons["Keramiske fibre"] == ri.REASON_FIBRE
+    assert sum(r == ri.REASON_FIBRE for r in reasons.values()) == 9
+    assert reasons[
+        "Kviksølv og uorganiske forbindelser inkl. dampe, beregnet som Hg"
+    ] == (ri.REASON_MERCURY)
+    assert reasons["Cobaltcarbonyl, beregnet som Co"] == ri.REASON_VOLATILE
+    assert reasons["Natriumhydroxid"] == ri.REASON_UNASSESSED
+    assert reasons["Dibutylphthalat"] == ri.REASON_UNASSESSED
+    # Gases (ppm limits) are neither kept nor listed; Afsnit A repeats of
+    # Afsnit B dusts are dropped silently (even when spelled differently).
+    assert "Acetaldehyd" not in reasons and parsed.get("Acetaldehyd") is None
+    assert "Christobalit, respirabel" not in reasons
+    assert parsed.get("Christobalit, respirabel") is None
+    assert parsed["Cristobalit, respirabel"].section == "B"
     assert all(lim.unit == "mg/m³" for lim in parsed)
-    assert "Asbest" in parsed.excluded and "Keramiske fibre" in parsed.excluded
-    assert len(parsed.excluded) == 9
     assert not any("fibre" in lim.name.lower() for lim in parsed)
+
+
+def test_fraction_variants(parsed):
+    """Fraction variants of one substance share a base name."""
+    quartz = parsed["Kvarts, respirabel"]
+    assert quartz.base_name == "Kvarts"
+    assert {lim.name for lim in parsed.siblings(quartz)} == {
+        "Kvarts, respirabel",
+        "Kvarts, total",
+    }
+    nickel = parsed["Nikkelforbindelser, respirabel fraktion, beregnet som Ni"]
+    assert nickel.base_name == "Nikkelforbindelser, beregnet som Ni"
+    assert len(parsed.siblings(nickel)) == 2
+    assert parsed.siblings(parsed["Carbon black"]) == [parsed["Carbon black"]]
+
+
+def test_metric_size_cut():
+    """PM names give their cut, capped by the instrument's size range."""
+    assert metric_size_cut("PM2.5") == 2.5
+    assert metric_size_cut("PM10", upper_um=0.42) == 0.42  # NanoScan "PM10"
+    assert metric_size_cut("Total") == math.inf
+    assert metric_size_cut("MASS", upper_um=10.0) == 10.0
+    assert metric_size_cut("Mass concentration") is None
+    assert metric_size_cut("Org") is None
+
+
+@pytest.mark.parametrize(
+    "name, metric, status",
+    [
+        ("Kvarts, respirabel", "PM4", "match"),
+        ("Kvarts, respirabel", "PM1", "underestimates"),
+        ("Kvarts, respirabel", "PM10", "conservative"),
+        ("Kvarts, respirabel", "Total", "conservative"),
+        ("Kvarts, total", "Total", "match"),
+        ("Kvarts, total", "PM10", "match"),
+        ("Kvarts, total", "PM1", "underestimates"),
+        ("Svovlsyre, tåge, thorakal fraktion", "PM10", "match"),
+        ("Svovlsyre, tåge, thorakal fraktion", "PM2.5", "underestimates"),
+        ("Emissioner fra dieseludstødning", "IR BCc", "match"),
+        ("Emissioner fra dieseludstødning", "PM2.5", "conservative"),
+        ("Kvarts, respirabel", "Org", "unknown"),
+    ],
+)
+def test_check_fraction(parsed, name, metric, status):
+    """A limit applies only to a metric covering its size fraction."""
+    check = check_fraction(parsed[name], metric, metric_size_cut(metric))
+    assert check.status == status
+    assert check.applies == (status == "match")
+    if status != "match":
+        assert check.message
+
+
+def test_applicable_limit_picks_the_matching_variant(parsed):
+    """The fraction variant that fits the metric is chosen, if any."""
+    quartz = parsed["Kvarts, respirabel"]
+    candidates = [quartz, *parsed.siblings(quartz)]
+    limit, check = applicable_limit(candidates, "Total", math.inf)
+    assert limit.name == "Kvarts, total" and check.applies
+    limit, check = applicable_limit(candidates, "PM4", 4.0)
+    assert limit is quartz and check.applies
+    limit, check = applicable_limit(candidates, "PM1", 1.0)
+    assert limit is quartz and check.status == "underestimates"
+
+
+def test_basis_note(parsed):
+    """Limits 'beregnet som' an element carry a conservative-comparison caveat."""
+    assert "Ti content" in basis_note(parsed["Titandioxid, beregnet som Ti"])
+    assert basis_note(parsed["Kvarts, respirabel"]) == ""
+    assert basis_note(parsed["Emissioner fra dieseludstødning"]) == ""
+
+
+def test_short_term_reference_period_from_note():
+    """A footnoted reference period overrides the default 15 minutes."""
+    lim = ExposureLimit(
+        name="X", twa=1.0, notes=("Med en referenceperiode på 1 minut.",)
+    )
+    assert lim.stel_minutes == 1
 
 
 def test_unit_conversion(parsed):
@@ -113,6 +241,9 @@ def test_json_roundtrip(parsed, tmp_path):
     again = load_exposure_limits(path)
     assert again == parsed
     assert len(again.to_dataframe()) == len(parsed)
+    # Early files listed excluded entries as bare (fibre) names.
+    legacy = {**parsed.to_dict(), "excluded": ["Asbest"]}
+    assert ExposureLimitList.from_dict(legacy).excluded == (("Asbest", "fibre"),)
 
 
 def test_doubling_rule_is_read_not_assumed(xml_bytes):

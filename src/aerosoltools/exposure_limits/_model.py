@@ -38,6 +38,17 @@ _FRACTIONS = (
     ("thorak", "thoracic"),
 )
 
+#: A size-fraction qualifier in a name ("…, respirabel fraktion", "…, totalstøv"),
+#: removed to find the entries that are fraction variants of one substance.
+_FRACTION_QUALIFIER = re.compile(
+    r",?\s*\b(?:respirab|inhalerb|thorak|total)\w*(?:\s+(?:fraktion|støv))?\b",
+    re.IGNORECASE,
+)
+#: "beregnet som Ti" — the limit applies to that element's (or group's) mass.
+_CALCULATED_AS = re.compile(r"beregnet som\s+([^\s,]+)")
+#: A footnote giving a short-term reference period other than 15 minutes.
+_REFERENCE_PERIOD = re.compile(r"referenceperiode på (\d+) minut", re.IGNORECASE)
+
 #: Serialisation tag + version of the JSON files written by :meth:`to_json`.
 _FORMAT = "aerosoltools.exposure_limits"
 _FORMAT_VERSION = 1
@@ -53,9 +64,11 @@ class ExposureLimit:
             to the CAS numbers.
         cas: CAS numbers listed for the substance (may be empty, and the order
             notes the list is not always exhaustive).
-        twa: 8-hour time-weighted-average limit, in :attr:`unit`.
-        stel: Short-term (15-min) limit, in :attr:`unit`; ``None`` when the
-            order gives none.
+        twa: 8-hour time-weighted-average limit, in :attr:`unit`; ``None`` when
+            the order gives only a short-term limit.
+        stel: Short-term limit (average over :attr:`stel_minutes`, normally 15
+            min; a ceiling when :attr:`ceiling`), in :attr:`unit`; ``None``
+            when the order gives none.
         unit: Unit of :attr:`twa` / :attr:`stel` (``"mg/m³"`` for dust).
         stel_rule: The order's reference when :attr:`stel` is *derived* rather
             than listed — e.g. ``"Jf. § 3, stk. 2"``, which makes the short-term
@@ -64,7 +77,9 @@ class ExposureLimit:
             :data:`REMARK_CODES`.
         year: Year the entry was added or last changed (the order's *Årstal*).
         notes: Footnotes and later-dated values attached to the entry.
-        section: The Bilag 2 section the entry comes from (``"B"`` for dust).
+        section: The Bilag 2 section the entry comes from: ``"B"`` (dust) or
+            ``"A"`` (the particulate entries of the gases/vapours/particles
+            list).
     """
 
     name: str
@@ -107,6 +122,39 @@ class ExposureLimit:
             if stem in low:
                 return fraction
         return "total"
+
+    @property
+    def base_name(self) -> str:
+        """The name without its fraction qualifier, shared by fraction variants.
+
+        ``"Kvarts, total"`` and ``"Kvarts, respirabel"`` both give ``"Kvarts"``.
+        """
+        base = _FRACTION_QUALIFIER.sub("", self.name)
+        return " ".join(base.replace(" ,", ",").split()).strip(" ,")
+
+    @property
+    def basis(self) -> str | None:
+        """What the limit is expressed as, when not the substance's own mass.
+
+        The element or group of *"beregnet som …"* (e.g. ``"Ti"`` for titanium
+        dioxide), or ``"elemental carbon"`` for diesel exhaust. ``None`` when
+        the limit applies to the substance itself.
+        """
+        m = _CALCULATED_AS.search(self.name)
+        if m:
+            return m.group(1)
+        if any("elementært kulstof" in note.lower() for note in self.notes):
+            return "elemental carbon"
+        return None
+
+    @property
+    def stel_minutes(self) -> int:
+        """Reference period of the short-term limit, in minutes (15 unless noted)."""
+        for note in self.notes:
+            m = _REFERENCE_PERIOD.search(note)
+            if m:
+                return int(m.group(1))
+        return 15
 
     def twa_in(self, unit: str) -> float | None:
         """The 8-hour limit expressed in ``unit`` (``None`` when there is none).
@@ -225,14 +273,17 @@ class ExposureLimitList:
 
     Attributes:
         source: Which order (number, date, ELI) the limits were parsed from.
-        limits: The substances, in the order's own order.
-        excluded: Names of entries deliberately left out (fibres, whose limits
-            are counts per cm³ rather than a mass concentration).
+        limits: The substances, sorted by name.
+        excluded: ``(name, reason)`` for entries with a mass limit that were
+            deliberately left out — fibres (counted per cm³), mercury (also a
+            vapour), volatile metal compounds, and Afsnit A entries not
+            classified as particulate. Gases and vapours with a ppm limit are
+            not listed.
     """
 
     source: LimitSource
     limits: tuple[ExposureLimit, ...] = ()
-    excluded: tuple[str, ...] = field(default=())
+    excluded: tuple[tuple[str, str], ...] = field(default=())
 
     def __iter__(self) -> Iterator[ExposureLimit]:
         return iter(self.limits)
@@ -263,6 +314,15 @@ class ExposureLimitList:
             raise KeyError(f"No exposure limit named {name!r}.{hint}")
         return lim
 
+    def siblings(self, limit: ExposureLimit) -> list[ExposureLimit]:
+        """The fraction variants of ``limit``'s substance (``limit`` included).
+
+        E.g. ``"Kvarts, total"`` and ``"Kvarts, respirabel"``.
+        """
+        base = limit.base_name.casefold()
+        found = [lim for lim in self.limits if lim.base_name.casefold() == base]
+        return found or [limit]
+
     def to_dataframe(self) -> pd.DataFrame:
         """The list as a table (one row per substance)."""
         rows = [
@@ -275,6 +335,8 @@ class ExposureLimitList:
                 "Short-term rule": lim.stel_rule,
                 "Remarks": lim.remarks,
                 "Fraction": lim.fraction,
+                "Basis": lim.basis or "",
+                "Section": lim.section,
                 "Year": lim.year,
                 "Notes": " ".join(lim.notes),
             }
@@ -288,7 +350,7 @@ class ExposureLimitList:
             "format": _FORMAT,
             "format_version": _FORMAT_VERSION,
             "source": self.source.to_dict(),
-            "excluded": list(self.excluded),
+            "excluded": [list(pair) for pair in self.excluded],
             "limits": [lim.to_dict() for lim in self.limits],
         }
 
@@ -307,10 +369,15 @@ class ExposureLimitList:
                 "This exposure-limit list was written by a newer aerosoltools; "
                 "update aerosoltools to read it."
             )
+        # Early lists stored excluded entries as bare names (all fibres).
+        excluded = tuple(
+            (item, "fibre") if isinstance(item, str) else (str(item[0]), str(item[1]))
+            for item in data.get("excluded") or ()
+        )
         return cls(
             source=LimitSource.from_dict(data["source"]),
             limits=tuple(ExposureLimit.from_dict(d) for d in data.get("limits", [])),
-            excluded=tuple(data.get("excluded") or ()),
+            excluded=excluded,
         )
 
     def to_json(self, path: str | Path) -> None:

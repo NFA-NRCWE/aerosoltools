@@ -107,7 +107,8 @@ class ExposureLimitsDialog(QtWidgets.QDialog):
         in_force = f", in force from {src.in_force_from}" if src.in_force_from else ""
         self.header.setText(
             f"<b>{src.label}</b>{in_force} — {src.title}<br>"
-            f"{len(limits)} limits for dust (Bilag 2, Afsnit B) · status "
+            f"{len(limits)} particulate limits (Bilag 2, Afsnit "
+            f"{' and '.join(src.sections)}) · status "
             f"'{src.status or '?'}' when retrieved on {retrieved} · "
             f"<a href='{src.eli}'>{src.eli}</a>"
         )
@@ -120,10 +121,17 @@ class ExposureLimitsDialog(QtWidgets.QDialog):
         )
         self.model.set_dataframe(df)
         self.table.resizeColumnsToContents()
+        by_reason: dict[str, list[str]] = {}
+        for name, reason in limits.excluded:
+            by_reason.setdefault(reason, []).append(name)
+        left_out = "; ".join(f"{len(n)} × {r}" for r, n in by_reason.items())
         self.excluded.setText(
-            "Not listed: fibres, whose limits are counts per cm³ ("
-            + ", ".join(limits.excluded)
-            + "). Short-term rule “Jf. § 3, stk. 2” = twice the 8-hour limit."
+            f"Not listed (hover for names): {left_out or 'nothing'}. Gases and "
+            "vapours with a ppm limit are not included. Short-term rule "
+            "“Jf. § 3, stk. 2” = twice the 8-hour limit."
+        )
+        self.excluded.setToolTip(
+            "\n\n".join(f"{r}:\n" + ", ".join(n) for r, n in by_reason.items())
         )
 
     def _check(self) -> None:

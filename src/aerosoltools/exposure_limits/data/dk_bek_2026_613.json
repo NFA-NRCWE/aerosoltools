@@ -9,23 +9,839 @@
   "status": "Valid",
   "in_force_from": "2026-07-01",
   "accession_number": "B20260061305",
-  "retrieved": "2026-09-27T05:31:23+00:00",
+  "retrieved": "2026-09-27T06:31:20+00:00",
   "sections": [
+   "A",
    "B"
   ]
  },
  "excluded": [
-  "Asbest",
-  "Attapulgitfibre",
-  "Erionitfibre",
-  "Glasuldsfibre",
-  "Keramiske fibre",
-  "Slaggeuldsfibre",
-  "Stenuldsfibre",
-  "Talkum med asbest i form af fibre",
-  "Wollastonitfibre"
+  [
+   "Asbest",
+   "fibre: limit in fibres per cm³"
+  ],
+  [
+   "Attapulgitfibre",
+   "fibre: limit in fibres per cm³"
+  ],
+  [
+   "Erionitfibre",
+   "fibre: limit in fibres per cm³"
+  ],
+  [
+   "Glasuldsfibre",
+   "fibre: limit in fibres per cm³"
+  ],
+  [
+   "Keramiske fibre",
+   "fibre: limit in fibres per cm³"
+  ],
+  [
+   "Slaggeuldsfibre",
+   "fibre: limit in fibres per cm³"
+  ],
+  [
+   "Stenuldsfibre",
+   "fibre: limit in fibres per cm³"
+  ],
+  [
+   "Talkum med asbest i form af fibre",
+   "fibre: limit in fibres per cm³"
+  ],
+  [
+   "Wollastonitfibre",
+   "fibre: limit in fibres per cm³"
+  ],
+  [
+   "Acetylsalicylsyre",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Acrylamid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Adipinsyre",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Aldrin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Aluminium, alkyler, beregnet som Al",
+   "volatile metal compound (vapour)"
+  ],
+  [
+   "Amitrol",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Ammoniumperfluoroctanoat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Ammoniumsulfamat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "ANTU",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Atrazin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Azinphosmethyl",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Benomyl",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "1,2,4-Benzentricarboxylsyre-1,2-anhydrid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Benzoylperoxid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Benzylbutylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Bromacil",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "1,4-butyndiol",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Calciumcyanamid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Camphechlor",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Captafol",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Captan",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Carbaryl",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Carbofuran",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Chlordan",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Chlorphenol og salte heraf, beregnet som",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Chlorpyrifos",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Clopidol",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Cobaltcarbonyl, beregnet som Co",
+   "volatile metal compound (vapour)"
+  ],
+  [
+   "Cobalthydrocarbonyl, beregnet som Co",
+   "volatile metal compound (vapour)"
+  ],
+  [
+   "Crufomat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Cyanider, alkalimetal, beregnet som CN",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Cæsiumhydroxid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "2,4-D",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "DDT",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Diallylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Diazinon",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Dibenzylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Dibrom",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "2,6-Di-tert-butyl-p-cresol",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Dibutylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "1,3-Dichlor-5,5-dimethylhydantoin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Dicrotophos",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Dicyclohexylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Dieldrin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Di(2-ethylhexyl)phthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Diethylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Diisobutylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Diisocyanater",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Diisodecylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Diisononylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Diisooctylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Dimethylphthalat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Dinitro-o-cresol",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "2,4-Dinitrotoluen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "2,6-Dinitrotoluen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Dinitrotoluen, alle isomere",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Dioxathion",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Diphenylamin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Disul",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Disulfiram",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Disyston",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Diuron",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Endosulfan",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Endrin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "EPN",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Ethion",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Fenamiphos",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Fenthion",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Ferbam",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Fluorider, undtagen de andetsteds i listen nævnte, beregnet som F",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Fonofos",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Heptachlor",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Hexachlorbenzen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "1,2,3,4,5,6-Hexachlorcyclohexan, teknisk",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Hexachlornaphthalen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Hydroquinon",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Kaliumhydroxid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Kviksølv og uorganiske forbindelser inkl. dampe, beregnet som Hg",
+   "mercury: also present as vapour"
+  ],
+  [
+   "Kviksølv, alkylforbindelser, beregnet som Hg",
+   "mercury: also present as vapour"
+  ],
+  [
+   "Kviksølv, organiske forbindelser undtagen alkylforbindelser, beregnet som Hg",
+   "mercury: also present as vapour"
+  ],
+  [
+   "Lindan",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Malathion",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Mangancyclopentadienyltricarbonyl, beregnet som Mn",
+   "volatile metal compound (vapour)"
+  ],
+  [
+   "Methomyl",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Methoxychlor",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "4-Methoxyphenol",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "4,4'-Methylenbis(2-chloranilin)",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "4,4'-Methylendianilin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Methylethylketonperoxid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Metribuzin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Monocrotophos",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Natriumazid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Natriumfluoracetat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Natriumhydrogensulfit",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Natriumhydroxid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Natriumpyrithion",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Natriumpyrosulfit",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Natriumtetraborat, decahydrat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Natriumtetraborat, pentahydrat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Natriumtetraborat, vandfri",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Nicotin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Octachlornaphthalen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Oxalsyre",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Paraquat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Parathion",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Parathionmethyl",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Pentachlornaphthalen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Pentachlornitrobenzen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Persulfater, alkalimetal, beregnet som S₂O₈",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Phenothiazin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "m-Phenylendiamin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "o-Phenylendiamin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "p-Phenylendiamin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Phorat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Phosphor, gult",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Phosphorpentachlorid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Phosphorpentaoxid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Phosphorpentasulfid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Phosphorsyre",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Phtalater (estere), der ikke er nævnt andet sted i listen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "m-Phthalodinitril",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Phthalsyreanhydrid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Picloram",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Picrinsyre",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Piperazin og salte heraf, beregnet som piperazin, se dog piperazindihydrochlorid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Piperazindihydrochlorid",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "2-Pivaloyl-1,3-indandion",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Plictran",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Polychlorerede biphenyler",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Polyethylenglycol (PEG) med middelmolvægt på 200-600",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Propoxur",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Pyrethrum",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "RDX",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Ronnel",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Rotenon",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Stenkulstjærebeg, flygtige bestanddele, benzenopløselig fraktion",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Stryknin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Subtilisiner",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Sulfometuron-methyl",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Sulprofos",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "2,4,5-T",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Terephthalsyre",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Tetrachlornaphthalen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Tetranatriumpyrophosphat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "4,4'-Thiobis(6-tert-butyl-m-cresol)",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Thiram",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Tinforbindelser, organiske, beregnet som Sn, se dog tri-n-butyltinforbindelser",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Trichloreddikesyre",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Trichlornaphthalen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "2,4,6-Trichlorphenol",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Trichlorphenol og salte heraf, beregnet som",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Tri-o-cresylphosphat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "2,4,6-Trinitrophenylmethylnitramin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "2,4,6-Trinitrotoluen",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Triphenylamin",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Triphenylphosphat",
+   "not classified as particulate: needs assessment"
+  ],
+  [
+   "Warfarin",
+   "not classified as particulate: needs assessment"
+  ]
  ],
  "limits": [
+  {
+   "name": "2-Oxohexamethylenimin, pulver og støv",
+   "cas": [
+    "105-60-2"
+   ],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "",
+   "remarks": "E",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Aluminium, opløselige salte, beregnet som Al",
+   "cas": [],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": 2005,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Aluminium, pulver og støv, respirabel",
+   "cas": [],
+   "twa": 2.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": 2005,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Aluminium, pulver og støv, total",
+   "cas": [
+    "7429-90-5"
+   ],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": 2005,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Aluminiumoxid, beregnet som Al, respirabel",
+   "cas": [],
+   "twa": 2.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": 2005,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Aluminiumoxid, beregnet som Al, total",
+   "cas": [
+    "1344-28-1"
+   ],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": 2005,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Aluminiumrøg, beregnet som Al",
+   "cas": [],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Ammoniumchloridrøg",
+   "cas": [
+    "12125-02-9"
+   ],
+   "twa": 10.0,
+   "stel": 20.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Antimon, pulver og forbindelser, beregnet som Sb, se dog stibin",
+   "cas": [
+    "7440-36-0"
+   ],
+   "twa": 0.5,
+   "stel": 1.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Arsen og uorganiske forbindelser, beregnet som As",
+   "cas": [
+    "7440-38-2"
+   ],
+   "twa": 0.0028,
+   "stel": 0.0056,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "EK",
+   "year": 2021,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Bariumforbindelser, opløselige, beregnet som Ba",
+   "cas": [
+    "7440-39-3"
+   ],
+   "twa": 0.5,
+   "stel": 1.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Beryllium, pulver og forbindelser, beregnet som Be",
+   "cas": [
+    "7440-41-7"
+   ],
+   "twa": 2e-05,
+   "stel": 4e-05,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "EK Hud- og luftvejssensibiliserende",
+   "year": 2021,
+   "notes": [],
+   "section": "A"
+  },
   {
    "name": "Bisphenol A, inhalerbar",
    "cas": [
@@ -41,6 +857,30 @@
    "section": "B"
   },
   {
+   "name": "Bitumenrøg, cyclohexanholdig fraktion af totalstøv",
+   "cas": [],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": 2000,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Bly og dets uorganiske forbindelser, beregnet som Pb",
+   "cas": [],
+   "twa": 0.03,
+   "stel": null,
+   "unit": "mg/m³",
+   "stel_rule": "",
+   "remarks": "E Reproduktionstoksisk stof uden nedre grænse",
+   "year": 2026,
+   "notes": [],
+   "section": "A"
+  },
+  {
    "name": "Bomuldstøv (råbomuld)",
    "cas": [],
    "twa": 0.5,
@@ -48,6 +888,158 @@
    "unit": "mg/m³",
    "stel_rule": "Jf. § 3, stk. 2",
    "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
+   "name": "Boroxid",
+   "cas": [
+    "1303-86-2"
+   ],
+   "twa": 10.0,
+   "stel": 20.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Cadmium, pulver, støv, røg og uorganiske forbindelser, beregnet som Cd",
+   "cas": [
+    "7440-43-9"
+   ],
+   "twa": 0.001,
+   "stel": 0.002,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "EK",
+   "year": 2021,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Calciumhydroxid",
+   "cas": [
+    "1305-62-0"
+   ],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Calciumhydroxid, respirabel fraktion",
+   "cas": [
+    "1305-62-0"
+   ],
+   "twa": 1.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "",
+   "remarks": "E",
+   "year": 2022,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Calciumoxid",
+   "cas": [
+    "1305-78-8"
+   ],
+   "twa": 2.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Calciumoxid, respirabel fraktion",
+   "cas": [
+    "1305-78-8"
+   ],
+   "twa": 1.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "",
+   "remarks": "E",
+   "year": 2022,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Carbon black",
+   "cas": [
+    "1333-86-4"
+   ],
+   "twa": 3.5,
+   "stel": 7.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Chrom, pulver og opløselige chromi- og chromosalte, beregnet som Cr",
+   "cas": [
+    "7440-47-3"
+   ],
+   "twa": 0.5,
+   "stel": 1.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Chromsyre og chromater, Chrom (VI)-forbindelser, beregnet som Cr, undtagen strontiumchromat",
+   "cas": [],
+   "twa": 0.00025,
+   "stel": 0.0005,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "EK",
+   "year": 2025,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Cobalt, pulver, støv, røg og uorganiske forbindelser, beregnet som Co",
+   "cas": [
+    "7440-48-4"
+   ],
+   "twa": 0.01,
+   "stel": 0.02,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": 2000,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Cristobalit, respirabel",
+   "cas": [
+    "14464-46-1"
+   ],
+   "twa": 0.05,
+   "stel": 0.1,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
    "year": null,
    "notes": [],
    "section": "B"
@@ -67,20 +1059,6 @@
    "section": "B"
   },
   {
-   "name": "Cristobalit, respirabel",
-   "cas": [
-    "14464-46-1"
-   ],
-   "twa": 0.05,
-   "stel": 0.1,
-   "unit": "mg/m³",
-   "stel_rule": "Jf. § 3, stk. 2",
-   "remarks": "K",
-   "year": null,
-   "notes": [],
-   "section": "B"
-  },
-  {
    "name": "Diatoméjord, naturlig, ucalcineret uden indhold af kvarts, respirabel",
    "cas": [],
    "twa": 1.5,
@@ -91,6 +1069,76 @@
    "year": null,
    "notes": [],
    "section": "B"
+  },
+  {
+   "name": "Diquat, respirabel",
+   "cas": [
+    "2764-72-9"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "H",
+   "year": 1996,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Diquat, totalstøv",
+   "cas": [
+    "2764-72-9"
+   ],
+   "twa": 0.5,
+   "stel": 1.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "H",
+   "year": 1996,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Emissioner fra dieseludstødning",
+   "cas": [],
+   "twa": 0.005,
+   "stel": 0.01,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "EK",
+   "year": 2025,
+   "notes": [
+    "Målt som elementært kulstof."
+   ],
+   "section": "A"
+  },
+  {
+   "name": "Ethylenglycol, forstøvet",
+   "cas": [
+    "107-21-1"
+   ],
+   "twa": 10.0,
+   "stel": 20.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Ferrovanadium, pulver eller støv",
+   "cas": [
+    "12604-58-9"
+   ],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
   },
   {
    "name": "Grafit, naturlig, respirabel",
@@ -105,6 +1153,60 @@
    "year": null,
    "notes": [],
    "section": "B"
+  },
+  {
+   "name": "Hafnium, pulver eller støv",
+   "cas": [
+    "7440-58-6"
+   ],
+   "twa": 0.5,
+   "stel": 1.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Indium, pulver, støv og forbindelser, beregnet som In",
+   "cas": [
+    "7440-74-6"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Jernoxid, beregnet som Fe",
+   "cas": [
+    "1309-37-1"
+   ],
+   "twa": 3.5,
+   "stel": 7.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Jernsalte, opløselige, beregnet som Fe",
+   "cas": [],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
   },
   {
    "name": "Kaolin, respirabel",
@@ -149,6 +1251,34 @@
    "section": "B"
   },
   {
+   "name": "Kobber, pulver og støv",
+   "cas": [
+    "7440-50-8"
+   ],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Kobberrøg, beregnet som Cu",
+   "cas": [
+    "7440-50-8"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
    "name": "Krystallinsk siliciumdioxid, respirabelt støv",
    "cas": [],
    "twa": 0.1,
@@ -173,6 +1303,20 @@
    "section": "B"
   },
   {
+   "name": "Kvarts, respirabel",
+   "cas": [
+    "14808-60-7"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": 2020,
+   "notes": [],
+   "section": "B"
+  },
+  {
    "name": "Kvarts, total",
    "cas": [
     "14808-60-7"
@@ -187,18 +1331,46 @@
    "section": "B"
   },
   {
-   "name": "Kvarts, respirabel",
+   "name": "Lithiumhydrid",
    "cas": [
-    "14808-60-7"
+    "7580-67-8"
    ],
-   "twa": 0.1,
-   "stel": 0.2,
+   "twa": 0.025,
+   "stel": 0.05,
    "unit": "mg/m³",
    "stel_rule": "Jf. § 3, stk. 2",
-   "remarks": "K",
-   "year": 2020,
+   "remarks": "E",
+   "year": null,
    "notes": [],
-   "section": "B"
+   "section": "A"
+  },
+  {
+   "name": "Lithiumhydrid, inhalerbar",
+   "cas": [
+    "7580-67-8"
+   ],
+   "twa": null,
+   "stel": 0.02,
+   "unit": "mg/m³",
+   "stel_rule": "",
+   "remarks": "E",
+   "year": 2018,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Magnesiumoxid, beregnet som Mg",
+   "cas": [
+    "1309-48-4"
+   ],
+   "twa": 6.0,
+   "stel": 12.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
   },
   {
    "name": "Mangan, pulver, støv og uorganiske forbindelser, inhalerbar, beregnet som Mn",
@@ -229,6 +1401,30 @@
    "section": "B"
   },
   {
+   "name": "Manganrøg, beregnet som Mn, inhalerbar",
+   "cas": [],
+   "twa": 0.2,
+   "stel": 0.4,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": 2018,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Manganrøg, beregnet som Mn, respirabel",
+   "cas": [],
+   "twa": 0.05,
+   "stel": 0.1,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": 2018,
+   "notes": [],
+   "section": "A"
+  },
+  {
    "name": "Mineralsk støv, inert",
    "cas": [],
    "twa": 10.0,
@@ -253,6 +1449,118 @@
    "section": "B"
   },
   {
+   "name": "Molybdænforbindelser, opløselige, beregnet som Mo",
+   "cas": [],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Molybdænforbindelser, uopløselige, beregnet som Mo",
+   "cas": [],
+   "twa": 10.0,
+   "stel": 20.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Nikkel, pulver og støv, beregnet som Ni",
+   "cas": [
+    "7440-02-0"
+   ],
+   "twa": 0.05,
+   "stel": 0.1,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": 1994,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Nikkelforbindelser, inhalerbar fraktion, beregnet som Ni",
+   "cas": [],
+   "twa": 0.05,
+   "stel": 0.1,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "EK Hudsensibiliserende og sensibiliserende ved indånding",
+   "year": 2024,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Nikkelforbindelser, respirabel fraktion, beregnet som Ni",
+   "cas": [],
+   "twa": 0.01,
+   "stel": 0.02,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "EK Hudsensibiliserende og sensibiliserende ved indånding",
+   "year": 2024,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Niobium, pulver, støv og uopløselige forbindelser, beregnet som Nb",
+   "cas": [
+    "7440-03-1"
+   ],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Niobiumforbindelser, opløselige, beregnet som Nb",
+   "cas": [],
+   "twa": 0.5,
+   "stel": 1.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Niobiumrøg",
+   "cas": [],
+   "twa": 0.5,
+   "stel": 1.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Olietåge, mineraloliepartikler",
+   "cas": [],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": 1994,
+   "notes": [],
+   "section": "A"
+  },
+  {
    "name": "Organisk støv, total",
    "cas": [],
    "twa": 3.0,
@@ -263,6 +1571,112 @@
    "year": null,
    "notes": [],
    "section": "B"
+  },
+  {
+   "name": "Paraffinrøg",
+   "cas": [
+    "8002-74-2"
+   ],
+   "twa": 2.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Platin, pulver og støv",
+   "cas": [
+    "7440-06-4"
+   ],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Platinforbindelser, opløselige, beregnet som Pt",
+   "cas": [],
+   "twa": 0.002,
+   "stel": 0.004,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Polyaromatiske carbonhydrider (partikulære, benzenopløselig fraktion)",
+   "cas": [],
+   "twa": 0.2,
+   "stel": 0.4,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "H",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Rhodium, pulver, støv og røg, beregnet som Rh",
+   "cas": [
+    "7440-16-6"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Rhodiumforbindelser, opløselige, beregnet som Rh",
+   "cas": [],
+   "twa": 0.001,
+   "stel": 0.002,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Selen og forbindelser, beregnet som Se, se dog hydrogenselenid og selenhexafluorid",
+   "cas": [
+    "7782-49-2"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Silicium",
+   "cas": [
+    "7440-21-3"
+   ],
+   "twa": 10.0,
+   "stel": 20.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
   },
   {
    "name": "Siliciumdioxid-aerosol, respirabel",
@@ -293,6 +1707,130 @@
    "section": "B"
   },
   {
+   "name": "Strontiumchromat, beregnet som Cr",
+   "cas": [
+    "7789-06-2"
+   ],
+   "twa": 0.0005,
+   "stel": 0.001,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": 2020,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Svovlsyre, tåge, thorakal fraktion",
+   "cas": [
+    "7664-93-9"
+   ],
+   "twa": 0.05,
+   "stel": 0.1,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": 2011,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Sølv, pulver, støv og opløselige forbindelser, beregnet som Ag",
+   "cas": [
+    "7440-22-4"
+   ],
+   "twa": 0.01,
+   "stel": 0.02,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Tantal, pulver, beregnet som Ta",
+   "cas": [
+    "7440-25-7"
+   ],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Tantaloxid, beregnet som Ta",
+   "cas": [
+    "1314-61-0"
+   ],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Tellur, pulver og forbindelser, beregnet som Te",
+   "cas": [
+    "13494-80-9"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Thalliumforbindelser, opløselige, beregnet som Tl",
+   "cas": [
+    "7440-28-0"
+   ],
+   "twa": 0.1,
+   "stel": 0.2,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "H",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Tinforbindelser, uorganiske, beregnet som Sn",
+   "cas": [],
+   "twa": 2.0,
+   "stel": 4.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "E",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Titandioxid, beregnet som Ti",
+   "cas": [
+    "13463-67-7"
+   ],
+   "twa": 6.0,
+   "stel": 12.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
    "name": "Tobaksstøv (organisk støvfraktion på arbejdssteder hvor tobak håndteres)",
    "cas": [],
    "twa": 1.0,
@@ -304,20 +1842,6 @@
    "notes": [
     "Ved organisk støv forstås den organiske fraktion af en total støvmåling."
    ],
-   "section": "B"
-  },
-  {
-   "name": "Tridymit, total",
-   "cas": [
-    "15468-32-3"
-   ],
-   "twa": 0.15,
-   "stel": 0.3,
-   "unit": "mg/m³",
-   "stel_rule": "Jf. § 3, stk. 2",
-   "remarks": "",
-   "year": null,
-   "notes": [],
    "section": "B"
   },
   {
@@ -335,6 +1859,20 @@
    "section": "B"
   },
   {
+   "name": "Tridymit, total",
+   "cas": [
+    "15468-32-3"
+   ],
+   "twa": 0.15,
+   "stel": 0.3,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "B"
+  },
+  {
    "name": "Træstøv, inhalerbart",
    "cas": [],
    "twa": 1.0,
@@ -345,6 +1883,142 @@
    "year": 2020,
    "notes": [],
    "section": "B"
+  },
+  {
+   "name": "Uranforbindelser, beregnet som U",
+   "cas": [
+    "7440-61-1"
+   ],
+   "twa": 0.2,
+   "stel": 0.4,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Vanadiumpentoxid, pulver, støv og røg, beregnet som V",
+   "cas": [
+    "1314-62-1"
+   ],
+   "twa": 0.03,
+   "stel": 0.06,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "K",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Vismuttellurid",
+   "cas": [
+    "1304-82-1"
+   ],
+   "twa": 10.0,
+   "stel": 20.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Vismuttellurid, tilsat selen",
+   "cas": [],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Wolfram, pulver, støv og uopløselige forbindelser, beregnet som W",
+   "cas": [
+    "7440-33-7"
+   ],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Wolframforbindelser, opløselige, beregnet som W",
+   "cas": [],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Yttrium, pulver og forbindelser, beregnet som Y",
+   "cas": [
+    "7440-65-5"
+   ],
+   "twa": 1.0,
+   "stel": 2.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Zinkchlorid og zinkchloridrøg, beregnet som Zn",
+   "cas": [
+    "7646-85-7"
+   ],
+   "twa": 0.5,
+   "stel": 1.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Zinkoxid og zinkoxidrøg, beregnet som Zn",
+   "cas": [
+    "1314-13-2"
+   ],
+   "twa": 4.0,
+   "stel": 8.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
+  },
+  {
+   "name": "Zirconiumforbindelser, beregnet som Zr",
+   "cas": [
+    "7440-67-7"
+   ],
+   "twa": 5.0,
+   "stel": 10.0,
+   "unit": "mg/m³",
+   "stel_rule": "Jf. § 3, stk. 2",
+   "remarks": "",
+   "year": null,
+   "notes": [],
+   "section": "A"
   }
  ]
 }
