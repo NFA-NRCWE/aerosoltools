@@ -148,6 +148,40 @@ class ActivityMixin:
         self._activities[self._activities.index(old_name)] = new_name
         self._activity_periods[new_name] = self._activity_periods.pop(old_name)
 
+    def delete_activity(self, name: str) -> None:
+        """Remove an activity: its mask column and its stored periods.
+
+        Args:
+            name (str): Name of the activity to remove.
+
+        Returns:
+            None: The object is modified in place: the boolean mask column is
+                dropped from self.data and the activity is removed from
+                self.activities and self.activity_periods.
+
+        Raises:
+            ValueError: If name is not a known activity, or is the built-in
+                "All data" activity, which covers the whole record and is
+                the default for the summaries and plots.
+
+        Examples:
+            Discard automatically detected peaks and start over:
+
+            .. code-block:: python
+
+                data.Peak_finder(ratio=2.0)
+                data.delete_activity("Peak")
+                data.Peak_finder(ratio=3.0)
+        """
+        if name == "All data":
+            raise ValueError("The built-in 'All data' activity cannot be deleted.")
+        if name not in self._activities:
+            raise ValueError(f"No activity named {name!r} to delete.")
+
+        self._data.drop(columns=[name], inplace=True, errors="ignore")
+        self._activities.remove(name)
+        self._activity_periods.pop(name, None)
+
     def get_activity_data(self, activity_name):
         """Return main data restricted to one or more activity periods.
 

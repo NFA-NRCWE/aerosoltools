@@ -392,17 +392,12 @@ def set_activity_periods(obj: Aerosol1D, name: str, periods) -> None:
 def delete_activity(obj: Aerosol1D, name: str) -> None:
     """Remove an activity and its mask column from a single object.
 
-    The aerosoltools classes have no public delete method, so this manipulates
-    the (package-internal) activity bookkeeping directly. It is a no-op for the
-    built-in ``"All data"`` activity.
+    A no-op for the built-in ``"All data"`` activity and for an activity the
+    object does not carry (an activity may be scoped to only some datasets).
     """
-    if name == "All data":
+    if name == "All data" or name not in getattr(obj, "_activities", []):
         return
-    if name in obj.data.columns:
-        obj._data = obj._data.drop(columns=[name])
-    if name in obj._activities:
-        obj._activities.remove(name)
-    obj._activity_periods.pop(name, None)
+    obj.delete_activity(name)
 
 
 def rename_activity(obj: Aerosol1D, old_name: str, new_name: str) -> None:
