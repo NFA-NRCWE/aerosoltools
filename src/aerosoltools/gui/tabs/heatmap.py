@@ -36,9 +36,12 @@ class HeatmapTab(_PlotTab):
         self.controls.addWidget(self.dtype)
 
         self.normalize = QtWidgets.QCheckBox("Normalize (dx/dlogDp)")
+        # On by default, as in the PSD panes: unequal bin widths otherwise make
+        # a wide bin look more concentrated than a narrow one (GitHub #40).
+        self.normalize.setChecked(True)
         self.normalize.setToolTip(
             "Divide each size bin by Δlog₁₀(Dp) so colours are comparable across "
-            "unequal bin widths (e.g. dN/dlogDp). Leave off to show the raw "
+            "unequal bin widths (e.g. dN/dlogDp). Untick to show the raw "
             "per-bin concentration."
         )
         self.normalize.stateChanged.connect(self.refresh)

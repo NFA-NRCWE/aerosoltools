@@ -40,8 +40,8 @@ surface and volume all depend on the particle density set on the
 
 Divides each bin by its width in log-diameter space. Size bins are not equally
 wide, so without this a wide bin looks more concentrated simply because it
-collects more particles. Leave it **on** to compare bins fairly; turn it off to
-read the raw per-bin concentration.
+collects more particles. It is **on** by default, so bins compare fairly; turn
+it off to read the raw per-bin concentration.
 
 ## Colour scale
 
@@ -68,7 +68,8 @@ This is the two-panel figure `plot_timeseries` produces for size-resolved data:
 import aerosoltools as at
 
 data = at.load_ops_file("measurement.csv")
-data.plot_timeseries(log=True, mark_activities=True, dtype="dN")
+view = data.normalize_logdp(inplace=False)  # dN/dlogDp, as the tab shows by default
+view.plot_timeseries(log=True, mark_activities=True, dtype="dN")
 ```
 
 See [5 — Plotting](../examples/05-plotting.ipynb).
