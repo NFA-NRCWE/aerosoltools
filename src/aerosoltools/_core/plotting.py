@@ -10,7 +10,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from . import _shading
-from ._labels import base_dtype
+from ._labels import channel_label
 
 
 class Plot1DMixin:
@@ -69,15 +69,12 @@ class Plot1DMixin:
                 * Plots the selected column against the object’s time index.
                 * Configures the x-axis with a concise datetime formatter via
                   :mod:`matplotlib.dates`.
-                * Determines the appropriate ``dtype`` and ``unit``:
-
-                  - if global (scalar), they are used as-is;
-                  - if per-column mappings, the entry for the chosen
-                    ``parameter`` is used.
-
-                  The y-axis label is constructed from the base dtype
-                  (e.g. ``"dN"`` from ``"dN/dlogDp"`` when applicable)
-                  and the corresponding unit.
+                * Labels the y-axis: a particle instrument's total
+                  concentration by its base dtype and unit (``"dN, cm⁻³"``);
+                  any other channel by its own name, plus its own unit when
+                  one is on record (``"PM2.5, µg/m³"``, ``"LDSA, nm²/cm³"``,
+                  ``"Sample Length, s"``). A gas monitor's main series is
+                  named by its gas (``"Cl₂, ppm"``).
 
                 * Optionally shades activity periods defined by
                   :meth:`Aerosol1D.mark_activities` when ``mark_activities`` is
@@ -146,11 +143,9 @@ class Plot1DMixin:
 
         ax.set_xlabel("Time")
 
-        # Resolve dtype/unit for the chosen parameter (scalar-or-per-column aware).
-        Dtype = self.dtype_of(parameter)
-        Unit = self.unit_of(parameter)
-
-        ax.set_ylabel(f"{base_dtype(Dtype)}, {Unit}")
+        # The total concentration by its dtype; any other channel by its own
+        # name and unit — the dtype/unit describe the primary series only.
+        ax.set_ylabel(channel_label(self, parameter))
         ax.grid(True)
 
         # Optionally highlight activity periods as shaded regions (shared helper

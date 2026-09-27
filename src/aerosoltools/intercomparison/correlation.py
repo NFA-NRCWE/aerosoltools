@@ -19,6 +19,7 @@ from numpy.typing import NDArray
 from scipy.optimize import curve_fit
 from scipy.stats import norm, theilslopes
 
+from .._core._labels import channel_label
 from ._alignment import _align_series, _resolve_unit
 
 
@@ -935,15 +936,11 @@ def wind_rose(
             speed_edges[0],
             speed_edges[-1],
         )
-    # Addition of unit and dtype to the color scale
-    if isinstance(data._meta["unit"], dict):
-        fig.colorbar(
-            pcm,
-            ax=ax,
-            label=f"{data._meta['dtype'][parameter]} ({data._meta['unit'][parameter]})",
-        )
-    else:
-        fig.colorbar(pcm, ax=ax, label=f"{data._meta['dtype']} ({data._meta['unit']})")
+    # Colour-scale label: the parameter's own name and unit. Indexing the
+    # per-column dtype/unit dicts raised for a column they do not list (and for
+    # a dtype of None), and the scalar form labelled any column by the primary
+    # series' dtype.
+    fig.colorbar(pcm, ax=ax, label=channel_label(data, parameter))
     # Finishing touches for the
     ax.set_title(f"{data._meta['instrument']} \n{parameter}", loc="left")
     ax.text(

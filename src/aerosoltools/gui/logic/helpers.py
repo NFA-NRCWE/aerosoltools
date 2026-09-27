@@ -12,7 +12,7 @@ from typing import List, Tuple
 
 import pandas as pd
 
-from ..._core import _shading
+from ..._core import _labels, _shading
 from ..._core._labels import base_dtype  # re-exported for GUI use
 from ..._core.metrics import BASIS_QUANTITY  # re-exported for GUI use
 from ..._core.nonparticle import _NonParticleMixin
@@ -158,17 +158,12 @@ def column_unit(obj: Aerosol1D, column: str | None) -> str | None:
 
     Unlike :meth:`~aerosoltools.Aerosol1D.unit_of` — which deliberately *falls
     back* to the object's scalar (or first per-column) unit for an unknown column
-    — this returns ``None`` when ``column`` carries no unit of its own. A unit is
-    only reported when it is genuinely known:
-
-    * a per-column ``unit`` **dict** that contains ``column`` (e.g. a Partector's
-      ``Flow`` → ``l/min``), or
-    * the object's single **scalar** unit when ``column`` is the primary channel.
-
-    For a housekeeping / ``extra_data`` column, or a secondary column on a
-    scalar-unit object, there is no reliable unit, so the caller should label the
-    series by its header text alone (which often already embeds the unit, e.g.
-    ``"Temperature (C)"``) rather than mislabel it with the primary series' unit.
+    — this returns ``None`` when ``column`` carries no unit of its own, so the
+    caller labels the series by its header text alone (which often already
+    embeds the unit, e.g. ``"Temperature (C)"``) rather than mislabel it with the
+    primary series' unit. Delegates to the core's
+    :func:`~aerosoltools._core._labels.channel_unit`, which the core plots use
+    too.
 
     Args:
         obj: The aerosol object.
@@ -177,20 +172,7 @@ def column_unit(obj: Aerosol1D, column: str | None) -> str | None:
     Returns:
         The unit string when known, else ``None``.
     """
-    # Loader-resolved canonical units (core + extra columns) are the single
-    # source of truth when present.
-    column_units = getattr(obj, "column_units", None) or {}
-    if column in column_units:
-        return str(column_units[column])
-    # Fall back to the primary/dict ``unit`` metadata for objects (or columns)
-    # without a resolved canonical unit.
-    meta = getattr(obj, "_meta", {}).get("unit")
-    if isinstance(meta, dict):
-        return str(meta[column]) if column in meta else None
-    primary_name = getattr(getattr(obj, "_primary", None), "name", None)
-    if column is None or column == primary_name:
-        return str(meta) if meta else None
-    return None
+    return _labels.channel_unit(obj, column)
 
 
 def converted_copy(obj, basis: str):

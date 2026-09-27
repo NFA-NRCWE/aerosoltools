@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
+from ._labels import PX_UNITS
+
 try:
     from typing import override  # Python 3.12+
 except ImportError:  # pragma: no cover - typing_extensions fallback
@@ -403,12 +405,7 @@ class FractionMixin:
 
         dchar, upper_cut, lower_cut = parsed
         dtype_map = {"M": "dM", "N": "dN", "S": "dS", "V": "dV"}
-        unit_map = {
-            "M": "µg/m³",
-            "N": "cm⁻³",
-            "S": "nm²/cm³",
-            "V": "nm³/cm³",
-        }
+        unit_map = PX_UNITS
 
         # Canonical label used by PM_calc / _px_fraction_series
         if lower_cut <= 0:
