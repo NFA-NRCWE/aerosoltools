@@ -3,8 +3,9 @@
 The non-widget behaviour the tabs and window drive: file loading / instrument
 detection (:mod:`~aerosoltools.gui.logic.loaders`), the calibration workflow and
 dialog glue (:mod:`~aerosoltools.gui.logic.calibration`), the crop/rebin/smooth
-adjustments box (:mod:`~aerosoltools.gui.logic.adjustments`) and shared data
-helpers (:mod:`~aerosoltools.gui.logic.helpers`). These sit between the pure
+adjustments box (:mod:`~aerosoltools.gui.logic.adjustments`), activity periods
+to and from clipboard text (:mod:`~aerosoltools.gui.logic.periods`) and shared
+data helpers (:mod:`~aerosoltools.gui.logic.helpers`). These sit between the pure
 :mod:`~aerosoltools.gui.state` model and the :mod:`~aerosoltools.gui.view`
 widgets.
 """

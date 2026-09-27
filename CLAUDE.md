@@ -87,8 +87,9 @@ subpackages (plus `qt.py` — the single PyQt5/backend binding point — and the
 `__init__.py`/`__main__.py`/`shortcut.py` entry-point modules at the top;
 `shortcut.py` is the `aerosoltools-gui-shortcut` console script and stays at the
 top level so its pip-generated launcher path doesn't break on a reorg):
-- `app/` — application shell / lifecycle: `main_window.py` (`MainWindow`) and
-  `sidebar.py`.
+- `app/` — application shell / lifecycle: `main_window.py` (`MainWindow`),
+  `sidebar.py`, and `excepthook.py` (installed by `launch()`: an exception
+  escaping a slot is shown in a dialog instead of PyQt5 aborting the app).
 - `state/` — the Qt-free data model + persistence: `project.py` (`Project`:
   datasets + active id + shared activity registry), `projectio.py` (save/load to
   a movable self-contained folder, schema-versioned with a migration seam), and
@@ -98,7 +99,9 @@ top level so its pip-generated launcher path doesn't break on a reorg):
   `models.py` (pandas Qt table model), `metric_picker.py`, and `assets.py`
   (+ the bundled `aerosoltools.ico`).
 - `logic/` — Qt-light domain workflows: `helpers.py`, `calibration.py`,
-  `adjustments.py`, `loaders.py` (GUI file-open shim over the loader registry).
+  `adjustments.py`, `loaders.py` (GUI file-open shim over the loader registry),
+  `exposure_limits.py` (the OEL list in use), `periods.py` (activity periods
+  to/from clipboard text).
 - `tabs/` — one module per tab, with `_base.py` providing the `_PlotTab` base
   (embedded Matplotlib figure, the publication export pipeline, table helpers).
 

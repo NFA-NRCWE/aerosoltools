@@ -331,15 +331,25 @@ class Project:
         periods.append((pd.Timestamp(start), pd.Timestamp(end)))
         self.set_activity_periods(name, periods)
 
-    def set_activity_periods(self, name: str, periods) -> None:
+    def set_activity_periods(
+        self, name: str, periods, scope: Optional[Set[int]] = None
+    ) -> None:
         """Replace a task's full period list and sync it onto its datasets.
 
         Editing a task changes which samples it covers, so any stored PSD fit
         for it is now stale and is dropped (the user re-fits the new data).
+        ``scope`` sets the datasets a *new* task applies to (None = all); an
+        existing task keeps its scope, as in :meth:`add_activity`.
         """
         norm: List[Period] = [(pd.Timestamp(s), pd.Timestamp(e)) for s, e in periods]
+        if name not in self.activity_scopes:
+            # A new task takes ``scope``; an existing task without a recorded
+            # scope (projects saved before scoping existed) applies to all.
+            new = name not in self.activities
+            self.activity_scopes[name] = (
+                set(scope) if new and scope is not None else None
+            )
         self.activities[name] = norm
-        self.activity_scopes.setdefault(name, None)
         for ds in self.datasets:
             self._project_activity(ds, name, norm)
             ds.psd_fits.pop(name, None)

@@ -7,6 +7,7 @@ import pandas as pd
 from matplotlib.widgets import SpanSelector
 
 from ..logic import exposure_limits, helpers
+from ..logic import periods as period_text
 from ..qt import QtCore, QtWidgets
 from ..view.widgets import ThresholdControls
 from ._base import _PlotTab
@@ -16,28 +17,32 @@ class ActivityEditorDialog(QtWidgets.QDialog):
     """Add, remove, or adjust the time periods of a single activity.
 
     Lets the user fine-tune a task's occurrences (each a start/end pair)
-    without deleting and re-marking the whole activity.
+    without deleting and re-marking the whole activity. Periods can also be
+    pasted from the clipboard — two columns, start and end, e.g. copied from
+    Excel — and copied back out the same way.
     """
 
     def __init__(self, parent, name, periods, default_start, default_end):
-        """Build the period table and add/remove controls.
+        """Build the period table and add/remove/paste/copy controls.
 
         Args:
             parent: Parent widget.
             name: Activity being edited.
             periods: Existing ``(start, end)`` pairs.
-            default_start: Default start for newly added rows.
+            default_start: Default start for newly added rows (the start of the
+                data, which also dates pasted clock times such as ``10:30``).
             default_end: Default end for newly added rows.
         """
         super().__init__(parent)
         self.setWindowTitle(f"Edit periods — {name}")
-        self.resize(480, 320)
+        self.resize(520, 340)
         self._default = (default_start, default_end)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(
             QtWidgets.QLabel(
-                f"Periods for '{name}'. Adjust the start/end times, or add/remove rows."
+                f"Periods for '{name}'. Adjust the start/end times, add/remove "
+                "rows, or paste a list of periods."
             )
         )
 
@@ -50,6 +55,9 @@ class ActivityEditorDialog(QtWidgets.QDialog):
 
         for start, end in periods:
             self._add_row(start, end)
+        # An activity without periods gets one editable placeholder row, which a
+        # paste replaces rather than keeps.
+        self._placeholder = not periods
         if not periods:
             self._add_row()
 
@@ -58,10 +66,30 @@ class ActivityEditorDialog(QtWidgets.QDialog):
         add_btn.clicked.connect(lambda: self._add_row())
         rem_btn = QtWidgets.QPushButton("Remove selected")
         rem_btn.clicked.connect(self._remove_row)
+        paste_btn = QtWidgets.QPushButton("Paste periods")
+        paste_btn.setToolTip(
+            "Add periods from the clipboard: two columns, start and end — e.g. "
+            "copied from Excel. Extra columns (a name, a row number) and a header "
+            "row are ignored. Times without a date are placed on the first day of "
+            "the data; dd-mm-yyyy vs mm-dd-yyyy is decided by which fits the data."
+        )
+        paste_btn.clicked.connect(self._paste)
+        copy_btn = QtWidgets.QPushButton("Copy periods")
+        copy_btn.setToolTip(
+            "Copy these periods to the clipboard as two tab-separated columns — "
+            "they paste into Excel as Start/End columns, or into another activity."
+        )
+        copy_btn.clicked.connect(self._copy)
         row.addWidget(add_btn)
         row.addWidget(rem_btn)
         row.addStretch(1)
+        row.addWidget(paste_btn)
+        row.addWidget(copy_btn)
         layout.addLayout(row)
+
+        self.status = QtWidgets.QLabel("")
+        self.status.setWordWrap(True)
+        layout.addWidget(self.status)
 
         buttons = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
@@ -93,12 +121,66 @@ class ActivityEditorDialog(QtWidgets.QDialog):
         if r >= 0:
             self.table.removeRow(r)
 
+    def _row_values(self, r: int) -> tuple[pd.Timestamp, pd.Timestamp]:
+        """The start and end shown in row ``r``."""
+        start = pd.Timestamp(self.table.cellWidget(r, 0).dateTime().toPyDateTime())
+        end = pd.Timestamp(self.table.cellWidget(r, 1).dateTime().toPyDateTime())
+        return start, end
+
+    def _only_placeholder(self) -> bool:
+        """True while the table holds just the untouched placeholder row."""
+        if not self._placeholder or self.table.rowCount() != 1:
+            return False
+        shown = tuple(t.floor("s") for t in self._row_values(0))
+        default = tuple(pd.Timestamp(t).floor("s") for t in self._default)
+        return shown == default
+
+    def _paste(self) -> None:
+        """Add the periods on the clipboard."""
+        self.paste_text(QtWidgets.QApplication.clipboard().text())
+
+    def paste_text(self, text: str) -> None:
+        """Add the periods found in ``text`` and say what was read.
+
+        Args:
+            text: Rows of start/end pairs, as
+                :func:`~aerosoltools.gui.logic.periods.parse_periods` reads them
+                (tab-, semicolon- or comma-separated, …).
+        """
+        parsed = period_text.parse_periods(text, *self._default)
+        if not parsed.periods:
+            self.status.setText(
+                "No start/end pairs found on the clipboard. Copy two columns — "
+                "start and end times — and paste again."
+            )
+            return
+        if self._only_placeholder():
+            self.table.setRowCount(0)
+        self._placeholder = False
+        for start, end in parsed.periods:
+            self._add_row(start, end)
+        msg = f"Pasted {len(parsed.periods)} period(s)."
+        if parsed.dayfirst is not None:
+            order = "day-month-year" if parsed.dayfirst else "month-day-year"
+            msg += f" Dates were read as {order}."
+        if parsed.skipped:
+            msg += (
+                f" {parsed.skipped} row(s) had no valid start and end (or an end "
+                "not after the start) and were skipped."
+            )
+        self.status.setText(msg)
+
+    def _copy(self) -> None:
+        """Put the periods on the clipboard as Start/End columns."""
+        periods = self.periods()
+        QtWidgets.QApplication.clipboard().setText(period_text.format_periods(periods))
+        self.status.setText(f"Copied {len(periods)} period(s) to the clipboard.")
+
     def periods(self) -> list:
         """Return the edited list of ``(start, end)`` pairs (end > start only)."""
         out = []
         for r in range(self.table.rowCount()):
-            start = pd.Timestamp(self.table.cellWidget(r, 0).dateTime().toPyDateTime())
-            end = pd.Timestamp(self.table.cellWidget(r, 1).dateTime().toPyDateTime())
+            start, end = self._row_values(r)
             if end > start:
                 out.append((start, end))
         return out
@@ -329,21 +411,36 @@ class TimeSeriesTab(_PlotTab):
         self.rename_btn.clicked.connect(self._rename_selected)
         self.del_btn = QtWidgets.QPushButton("Delete selected activity")
         self.del_btn.clicked.connect(self._delete_selected)
+        self.copy_all_btn = QtWidgets.QPushButton("Copy all periods")
+        self.copy_all_btn.setToolTip(
+            "Copy every activity's periods to the clipboard as Activity / Start / "
+            "End columns — e.g. to paste into Excel or a report."
+        )
+        self.copy_all_btn.clicked.connect(self._copy_all_periods)
+        self.from_list_btn = QtWidgets.QPushButton("New activity from a list…")
+        self.from_list_btn.setToolTip(
+            "Create an activity — or add to one — from start/end times on the "
+            "clipboard, e.g. two columns copied from Excel."
+        )
+        self.from_list_btn.clicked.connect(self._new_from_list)
         side = QtWidgets.QVBoxLayout()
         side.addWidget(QtWidgets.QLabel("Activities:"))
         side.addWidget(self.act_list, stretch=1)
         side.addWidget(self.mark_mode)
+        side.addWidget(self.from_list_btn)
         # The Extract-range toggle now lives in the Data adjustments box (see
         # attach_adjust_controls), a more logical home than the activities panel.
         side.addWidget(self.scope_btn)
         side.addWidget(self.edit_btn)
         side.addWidget(self.rename_btn)
         side.addWidget(self.del_btn)
+        side.addWidget(self.copy_all_btn)
         hint = QtWidgets.QLabel(
             "Tip: click 'Mark activities', then drag across the plot to add a "
             "task period (pick an existing task name to add another occurrence). "
             "New tasks apply to the active dataset only — use 'Applies to…' to "
-            "share them. Double-click a task to edit its periods."
+            "share them. Double-click a task to edit its periods, or to paste a "
+            "list of them."
         )
         hint.setWordWrap(True)
         side.addWidget(hint)
@@ -521,6 +618,19 @@ class TimeSeriesTab(_PlotTab):
             return
         self.main.refresh_all(reset_view=False)
 
+    def _copy_all_periods(self) -> None:
+        """Copy every activity's periods as Activity/Start/End columns."""
+        activities = self.main.project.activities
+        QtWidgets.QApplication.clipboard().setText(
+            period_text.format_activities(activities)
+        )
+        n = sum(len(p) for p in activities.values())
+        self.main.statusBar().showMessage(
+            f"Copied {n} period(s) of {len(activities)} activity(ies) to the "
+            "clipboard.",
+            5000,
+        )
+
     def _scope_selected(self) -> None:
         """Edit which datasets the selected activity applies to."""
         name = self._selected_activity()
@@ -538,16 +648,51 @@ class TimeSeriesTab(_PlotTab):
         name = self._selected_activity()
         if name is None:
             return
+        self._edit_periods(name)
+
+    def _new_from_list(self) -> None:
+        """Create an activity, or add to one, from periods on the clipboard."""
+        if self.obj is None:
+            return
+        existing = self.main.project.user_activities()
+        default = f"Task {len(existing) + 1}"
+        items = existing + [default]
+        name, ok = QtWidgets.QInputDialog.getItem(
+            self,
+            "Activity from a list",
+            "Add the pasted periods to an existing task, or type a new name:",
+            items,
+            len(items) - 1,  # preselect the new default
+            True,  # editable
+        )
+        if ok and name.strip():
+            self._edit_periods(name.strip(), paste=True)
+
+    def _edit_periods(self, name: str, paste: bool = False) -> None:
+        """Open the period editor for ``name`` (optionally pasting first).
+
+        A task that does not exist yet is created when the dialog is accepted
+        with at least one period; like a marked task, it applies to the active
+        dataset only.
+        """
+        proj = self.main.project
         # Periods live on the project registry (the active dataset may be out of
         # this task's scope and so not carry it), keyed by task name.
-        periods = list(self.main.project.activities.get(name, []))
+        periods = list(proj.activities.get(name, []))
         tmin = pd.Timestamp(self.obj.time.min())
         tmax = pd.Timestamp(self.obj.time.max())
         dlg = ActivityEditorDialog(self, name, periods, tmin, tmax)
+        if paste:
+            dlg._paste()
         if dlg.exec_() != QtWidgets.QDialog.Accepted:
             return
+        edited = dlg.periods()
+        if name not in proj.activities and not edited:
+            return
+        active_id = proj.active_id
+        scope = {active_id} if active_id is not None else None
         # Replace the task's periods across its in-scope datasets.
-        self.main.project.set_activity_periods(name, dlg.periods())
+        proj.set_activity_periods(name, edited, scope=scope)
         self.main.refresh_all(reset_view=False)
 
     # -- rendering ---------------------------------------------------------

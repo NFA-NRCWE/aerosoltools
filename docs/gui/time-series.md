@@ -69,9 +69,35 @@ The remaining buttons act on the task selected in the list:
   Double-clicking a task in the list does the same thing.
 - **Rename selected activity** — rename it everywhere it applies.
 - **Delete selected activity** — remove it from the project.
+- **Copy all periods** — puts every task's periods on the clipboard as
+  *Activity / Start / End* columns, ready to paste into Excel or a report.
 
 Each entry in the list is annotated with the datasets it applies to, so you can
 see and manage scoped tasks from any dataset.
+
+### Pasting a list of periods
+
+When the periods already exist in a spreadsheet or a field log, you do not have
+to mark them one by one. Copy two columns — start and end — and click **New
+activity from a list…**: name the task (or pick an existing one to add to it),
+and the periods on the clipboard are pasted into its period editor. Each row
+becomes one period. Inside **Edit selected activity**, **Paste periods** does
+the same for the task you opened.
+
+- Tab-separated (as Excel copies), semicolon- or comma-separated text all work.
+  Extra columns such as a name or a row number, and a header row, are ignored.
+- Dates can be ISO (`2026-09-03 10:00`), day-first (`03-09-2026 10:00`,
+  `03.09.2026 10.00`) or month-first (`09/03/2026 10:00 AM`). Where a date could
+  be read either way, the reading that fits the data is used — day-first if both
+  fit — and the dialog says which.
+- Times without a date (`10:00`) are placed on the first day of the data; a
+  period that ends after midnight rolls over to the next day.
+- If the activity had no periods yet, the pasted ones replace the placeholder
+  row; otherwise they are added. Check them in the table before pressing
+  **OK**. Like a marked task, a new one applies to the active dataset only.
+
+**Copy periods** in the same dialog does the reverse for one task: two columns
+that paste into Excel, or into another task.
 
 ## Adjusting the data
 
