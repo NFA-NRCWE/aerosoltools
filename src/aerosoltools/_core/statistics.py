@@ -412,6 +412,7 @@ class SummaryMixin(_Host):
         twa_window: str = "8h",
         peak_ratio: float = 2.5,
         filename: Optional[str] = None,
+        sheet_name: Optional[str] = None,
         activities: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
         """Summarize exposure metrics for one 1D metric across activities.
@@ -849,12 +850,14 @@ class SummaryMixin(_Host):
                     existing = pd.read_excel(fname)
                     combined = pd.concat([existing, result], ignore_index=True)
                 else:
-                    combined = result
-                combined.to_excel(fname, index=False)
+                    result.to_excel(fname, sheet_name=shname, index=False)
             else:
                 raise ValueError(
                     f"Unsupported file extension for '{filename}'. Use .csv or .xlsx."
                 )
+
+            print(f"\nActivity summary appended to: {filename}")
+
 
         # --- pretty terminal print (transposed) --------------------------------
         if not result.empty:

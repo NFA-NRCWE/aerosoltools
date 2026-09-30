@@ -147,6 +147,7 @@ from .intercomparison import (
     fit_data,
     plot_correlation,
     wind_rose,
+    wind_rose_inv,
 )
 from .loaders import (
     INSTRUMENT_LOADERS,
@@ -199,6 +200,7 @@ __all__ = [
     "combine_measurements",
     "calibrate_against_reference",
     "wind_rose",
+    "wind_rose_inv",
     # Size-distribution fitting
     "lognormal_modes",
     "PSDFitResult",

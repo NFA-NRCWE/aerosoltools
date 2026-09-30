@@ -324,8 +324,8 @@ class FitMixin:
 
         for i in range(0, len(binding)):
             if binding[i]:
-                low_bounds[i] = init_guess[i] * (1 - tolerance)
-                up_bounds[i] = init_guess[i] * (1 + tolerance)
+                low_bounds[i] = max(low_bounds[i],init_guess[i] * (1 - tolerance))
+                up_bounds[i] = min(up_bounds[i],init_guess[i] * (1 + tolerance))
 
         # Build the model and the (optional) per-bin weights. log_scaling fits
         # log10(dx/dlogDp) so modes of very different population get comparable
@@ -385,3 +385,204 @@ class FitMixin:
         # `result[0]`/`result[1]` keep working) carrying the fitted modes, their
         # uncertainty, and an evaluate() helper for the fitted curve.
         return PSDFitResult(Modes, Error)
+
+
+    def dataset_psd_fitting(self,
+                            def_fit: dict = 
+                            {'mu'   : [50,150,1500],
+                            'sigma' : [2,2,2],
+                            'factor': [5E6,2E7,1E7]},
+                            error_lim: float|int = 5,
+                            nan_lim: int = 9):
+    
+        """
+        A function to fit one or multiple peaks following lognormal distribution,
+        with the option for tethering values to set values.
+    
+        An example would be an OPS dataset, with a pronounced shoulder from a mode
+        below its diameter range. A guess for mu1 could then be 100nm,
+        which can be bound by providing the "binding" list of [True]
+    
+        Parameters
+        ----------
+        mu : list of floats, optinonal
+            If specified, acts as the initial guess of the particle modes, meaning
+            the size where the particle size distribution peaks.
+            The default is 150, but more modes can be added to the list.
+        sigma : list of floats, optional
+            Initial guess for the geometric standard deviation factor. A good guess
+            is the size at peak height divided by the size at 2/3 peak height in
+            the decending direction. E.g. the PSD peaks at 200 nm and is at 2/3
+            height at 140 nm, so the sigma_guess parameter should be 200/140 = 1.4.
+            The default is 2, but more modes can be added to the list.
+        factor : list of floats, optional
+            Initial guess for the parameter used to scale the lognormal distribution.
+            Getting a good estimate can be difficult, but a guess in the same order
+            of magnitude as the peak height, is a good start.
+            As the dtype is changed to dS, the factors are high compared to the
+            usual levels for dN. The value is in nm2/cm3.
+    
+        error_lim: float, optional
+            Determines the maximum 
+            
+        nan_lime: int, optional
+            Percentage value around which the bound values can be fitted
+    
+        Returns
+        -------
+        data
+            An updated data set with 
+            A ``NamedTuple`` ``(modes, errors)`` — so it still unpacks as
+            ``modes, errors = data.fit_psd(...)`` — where ``modes`` and
+            ``errors`` are ``{"mu": array, "sigma": array, "factor": array}``
+            dicts (fitted parameters and their 1σ uncertainties). Use
+            ``result.evaluate(dp)`` to reconstruct the fitted dx/dlogDp curve.
+        """
+    
+        data=self.copy_self()
+        bins=data._sizebin_headers
+        #Turn all 0 values to nan.
+        data._data[data.data[bins]==0] = np.nan
+        #Save old total data, to allow for comparison
+        data._extra_data['Old_total']=data._data['Total_conc']
+        # Due to the relevant bins being in the region of 150-300 nm, the data is
+        # converted to dS, where the middle sized modes become the most dominant.
+        data.dtype_converter('dS')
+    
+        #Make a fit based off of the def_fit to one 
+        try:
+            fit,error=data.fit_psd(
+                period="All data",
+                mu      = def_fit['mu'],
+                sigma   = def_fit['sigma'],
+                factor  = def_fit['factor'],
+                log_scaling=True,
+                weighting = "uniform"
+            )
+        except:
+            raise ValueError("Chosen fitting parameters not suitbale. Try new ones.")
+        
+        def_fit=fit
+        #Make a column called 'PSD fit' that will be used to designate fitted bins
+        data._data['PSD fit']=[0]*len(data.data['All data'])
+    
+        fit_test=0
+        for t in range(0,len(data.time)):
+            Time=data.time[t]
+            for b in range(0,12):
+                #Removes all the low bins seen right before empty bins for ns
+                bin_more=bins[b:b+2]
+                bin_m=bin_more[0]
+                bin_more=bin_more[1]
+                if data.data.loc[Time,bin_more] > 0:
+                    pass
+        
+                else:
+                    data._data.loc[Time,bin_m] = np.nan
+                    # data._data[bin_m][time] = np.nan
+                    
+            if data.data.loc[Time].isnull().sum()>=nan_lim:
+                if np.mod(t,200)==0:
+                    print('testing testing')
+                pass #If number of nan along the row is too high no fit is attempted.
+            elif data.data.loc[Time][bins[0:12]].isnull().sum()<2:
+                if np.mod(t,200)==0:
+                    print('testing testing')
+                pass #If number of nan along the row is too high no fit is attempted.
+            else:
+                if fit_test==0:
+                    #If there is no succesfull fit to the previous rows initial guess goes to default.
+                    try:
+                        if np.mod(t,200)==0:
+                            print('we are trying')
+                        fit,error=data.fit_psd(
+                            period=(Time,Time),#"All data",
+                            mu      = def_fit['mu'],
+                            sigma   = def_fit['sigma'],
+                            factor  = def_fit['factor'],
+                            log_scaling=True,
+                        )
+                        fit_test=1
+                    except:                
+                        pass
+                else: #Use previous points with binding
+                    try:
+                        if len(fit['mu'])==len(def_fit['mu']):
+                            fit,error=data.fit_psd(
+                                    period=(Time,Time),#"All data",
+                                    mu      = fit['mu'],
+                                    sigma   = fit['sigma'],
+                                    factor  = fit['factor'],
+                                    log_scaling=True,
+                                    binding=[True,True,True]*len(fit['mu']),
+                                    tolerance=40,
+                                )
+                            fit_test=1
+                        else: #if fit uses fewer points than def, re-add the last mode from default.
+                            fit,error=data.fit_psd(
+                                    period=(Time,Time),
+                                    mu      = def_fit['mu'],
+                                    sigma   = def_fit['sigma'],
+                                    factor  = def_fit['factor'],
+                                    log_scaling=True,
+                                )
+                            fit_test=1 
+                    except:
+                        fit_test=0
+                #Test the quality of the fit 
+                if fit_test==1:
+                    for i in range(0,len(fit['mu'])):
+                        if abs(error['mu'][i] /fit['mu'][i]*2) > error_lim:
+                            fit_test=2
+                            break
+                        elif abs(error['sigma'][i]/fit['sigma'][i]*5)>error_lim:
+                            fit_test=2
+                            break 
+                        elif abs(error['factor'][i]/fit['factor'][i])>error_lim:
+                            fit_test=2
+                            break 
+                     
+                if fit_test==2:
+                    try:
+                        fit,error=data.fit_psd(
+                                period=(Time,Time),
+                                mu      = fit['mu'][:-1],
+                                sigma   = fit['sigma'][:-1],
+                                factor  = fit['factor'][:-1],
+                                log_scaling=True,
+                                binding=[True,True,True]*(len(fit['mu'])-1),
+                                tolerance=40,
+                            )
+                        fit_test=1
+                        for i in range(0,len(fit['mu'])):
+                            if abs(error['mu'][i] /fit['mu'][i]*4) > error_lim:
+                                fit_test=0
+                                break
+                            elif abs(error['sigma'][i]/fit['sigma'][i]*10)>error_lim:
+                                fit_test=0
+                                break 
+                            elif abs(error['factor'][i]/fit['factor'][i]*2)>error_lim:
+                                fit_test=0
+                                break 
+                    except:
+                        fit_test=0
+                                                       
+                if fit_test==1:
+                    modes = list(zip(fit["mu"], fit["sigma"], fit["factor"]))
+                    bin_fit, additional_modes=lognormal_modes(bins, modes)
+                    bin_fit = bin_fit*np.diff(np.log10(data.bin_edges)).astype(np.float64)
+                    
+                    if min(bin_fit)<0:
+                        raise ValueError('Fit has resulted in negative values at time {Time}')
+                    for i in range(0,len(bins)):
+                        b=bins[i]
+                        if data._data.loc[Time,b]>0:
+                            pass
+                        else:
+                            data._data.loc[Time,b]=bin_fit[i]
+                            #Mark the fitted row with a number equal to the bins changed. 
+                            data._data.loc[Time,'PSD fit']=data._data.loc[Time,'PSD fit']+2**i             
+                            
+        data.dtype_converter('dN')
+        
+        return data
