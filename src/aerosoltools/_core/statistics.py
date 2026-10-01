@@ -840,6 +840,10 @@ class SummaryMixin(_Host):
         if filename and not result.empty:
             fname = str(filename)
             lower = fname.lower()
+            if sheet_name:
+                shname = str(sheet_name)
+            else:
+                shname = f"{self.instrument} summary"
             if lower.endswith(".csv"):
                 if os.path.exists(fname):
                     result.to_csv(fname, mode="a", header=False, index=False)
@@ -847,8 +851,13 @@ class SummaryMixin(_Host):
                     result.to_csv(fname, mode="w", header=True, index=False)
             elif lower.endswith((".xlsx", ".xls")):
                 if os.path.exists(fname):
-                    existing = pd.read_excel(fname)
-                    combined = pd.concat([existing, result], ignore_index=True)
+                    with pd.ExcelWriter(
+                        filename,
+                        engine="openpyxl",
+                        mode="a",
+                        if_sheet_exists="replace",  # requires pandas ≥ 1.4
+                    ) as writer:
+                        result.to_excel(writer, sheet_name=shname, index=False)
                 else:
                     result.to_excel(fname, sheet_name=shname, index=False)
             else:
