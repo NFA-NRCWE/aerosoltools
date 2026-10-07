@@ -393,18 +393,42 @@ class FitMixin:
                             'sigma' : [2,2,2],
                             'factor': [5E6,2E7,1E7]},
                             error_lim: float|int = 5,
-                            nan_lim: int = 9):
+                            nan_lim: int = 9,
+                            inplace: bool = True,):
     
         """
         A function to fit one or multiple peaks following lognormal distribution,
-        with the option for tethering values to set values.
-    
-        An example would be an OPS dataset, with a pronounced shoulder from a mode
-        below its diameter range. A guess for mu1 could then be 100nm,
-        which can be bound by providing the "binding" list of [True]
-    
+        throughout a complete dataset. The function is made with NS+OPS in mind, as
+        the NS data can suffer from empty bins based on the type of particles 
+        and abundance. For that reason the dtype is also converted to dS,
+        as that shifts the relevence of modes towards medium sized particles 
+        (100-1000 nm).The function first changes all values of 0 to np.nan. followed
+        by running through each column and change a bin to np.nan if the following
+        bin is np.nan. The reason for this is that when NS has empty bins,
+        the preceding bins population also is reduced from what is expected
+        based on the observable mode.
+        With these bin data set tp np.nan, the script will go through each row,
+        and if the number of empty bins is not equal or above the nan_lim value,
+        it will try to fit a PSD based on the default fit. The quality of the fit will
+        be compared to the error_lim which discards insuficient fits. If the quality
+        is not good enough, another attempt of fitting will be done with one peak less.
+        If fit passes the quality control, it will be used to generate bin values
+        for the empty bins of that row. This fit will then be used as the first guess
+        for the next row, as the following row is expected to be similiar to the previous.
+        An additional column has also been generated to the extra_data called 'PSD_fit',
+        which is equal to the binary number of the bin with a fitted value.
+        eg. if bin 1,4,5 and 11 is fitted, "PSD_fit"= 2^1 + 2^4 + 2^5 + 2^11 = 2097
+        Currently this value is not usable, but is intended for potentially marking
+        fitted | true values.
+        Finally the total value will be recalculatde based on returning to the
+        dtype to dN, and the old has been saved in extra_data as "Old_total".
+        
         Parameters
         ----------
+        def_fit : dict, optional
+            Default guess for particle distribution. Buildt up from mu, sigma and factor.
+            The base number of modes will be determined by this, by the number of values
+            within the three variables. Default is three modes.
         mu : list of floats, optinonal
             If specified, acts as the initial guess of the particle modes, meaning
             the size where the particle size distribution peaks.
@@ -421,25 +445,22 @@ class FitMixin:
             of magnitude as the peak height, is a good start.
             As the dtype is changed to dS, the factors are high compared to the
             usual levels for dN. The value is in nm2/cm3.
-    
         error_lim: float, optional
             Determines the maximum 
-            
         nan_lime: int, optional
             Percentage value around which the bound values can be fitted
+        inplace (bool): If True, modify the current object and return
+            it. If False, return a cropped deep copy.
     
         Returns
         -------
         data
-            An updated data set with 
-            A ``NamedTuple`` ``(modes, errors)`` — so it still unpacks as
-            ``modes, errors = data.fit_psd(...)`` — where ``modes`` and
-            ``errors`` are ``{"mu": array, "sigma": array, "factor": array}``
-            dicts (fitted parameters and their 1σ uncertainties). Use
-            ``result.evaluate(dp)`` to reconstruct the fitted dx/dlogDp curve.
+            Aerodsol2D, with an updated dataset where values of zero has been 
+            replaced by fitted values if sufficient fit has been found. A marker
+            for the fitted values has been saved in extra_data as "PSD_fit" together
+            with the old total concentration saved in extra_data as "Old_total"
         """
-    
-        data=self.copy_self()
+        data = self if inplace else self.copy_self()
         bins=data._sizebin_headers
         #Turn all 0 values to nan.
         data._data[data.data[bins]==0] = np.nan
@@ -459,12 +480,11 @@ class FitMixin:
                 log_scaling=True,
                 weighting = "uniform"
             )
-        except:
-            raise ValueError("Chosen fitting parameters not suitbale. Try new ones.")
+        except: raise ValueError("Chosen fitting parameters not suitbale. Try new ones.")
         
         def_fit=fit
         #Make a column called 'PSD fit' that will be used to designate fitted bins
-        data._data['PSD fit']=[0]*len(data.data['All data'])
+        data._extra_data['PSD fit']=[0]*len(data.data['All data'])
     
         fit_test=0
         for t in range(0,len(data.time)):
@@ -503,8 +523,7 @@ class FitMixin:
                             log_scaling=True,
                         )
                         fit_test=1
-                    except:                
-                        pass
+                    except: pass
                 else: #Use previous points with binding
                     try:
                         if len(fit['mu'])==len(def_fit['mu']):
@@ -527,8 +546,7 @@ class FitMixin:
                                     log_scaling=True,
                                 )
                             fit_test=1 
-                    except:
-                        fit_test=0
+                    except: fit_test=0
                 #Test the quality of the fit 
                 if fit_test==1:
                     for i in range(0,len(fit['mu'])):
@@ -564,8 +582,7 @@ class FitMixin:
                             elif abs(error['factor'][i]/fit['factor'][i]*2)>error_lim:
                                 fit_test=0
                                 break 
-                    except:
-                        fit_test=0
+                    except: fit_test=0
                                                        
                 if fit_test==1:
                     modes = list(zip(fit["mu"], fit["sigma"], fit["factor"]))
@@ -581,7 +598,7 @@ class FitMixin:
                         else:
                             data._data.loc[Time,b]=bin_fit[i]
                             #Mark the fitted row with a number equal to the bins changed. 
-                            data._data.loc[Time,'PSD fit']=data._data.loc[Time,'PSD fit']+2**i             
+                            data._extra_data.loc[Time,'PSD fit']=data._extra_data.loc[Time,'PSD fit']+2**i             
                             
         data.dtype_converter('dN')
         

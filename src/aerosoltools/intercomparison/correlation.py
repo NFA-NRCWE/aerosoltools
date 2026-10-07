@@ -988,7 +988,7 @@ def _axes_bound_image(
     ax_map = fig.add_axes(pos)
 
     map_radius = 3000
-    if scalar==None:
+    if scalar is None:
         scalar = [1,0,0]
  
     image_scale, x_offset, y_offset = scalar
@@ -1062,8 +1062,8 @@ def wind_rose_inv(X,Y,
            windspeeds spreadout in logspace. Default is False.
         wind_resolution (tuple, optional):
            Provides the number of bins along each wind dimension. The default
-           (8,15) result in 8 sections around the compass with 15 sections 
-           along the radial axis marking the wind speed. 
+           (8,15) result in 8 sections around the compass with 15 sections
+           along the radial axis marking the wind speed.
        ax_in (matplotlib.axes.Axes | None, optional):
            Existing Matplotlib axes to draw on. If ``None``, a new figure
            and axes are created. Default is None.
@@ -1090,36 +1090,28 @@ def wind_rose_inv(X,Y,
            supported). ``None`` (default) or ``\"All data\"`` uses the full
            overlapping record. The viable activities must be marked in dataset X.
        min_observations (int, optional):
-           The minimum number of datapoints going into the calculation of a 
+           The minimum number of datapoints going into the calculation of a
            bin average. Depending on the rebin freq this migth remain low,
            if freq is high. Default is 3.
-    
     Returns:
         tuple[Figure, Axes]:
             The figure and axes containing the wind-rose polar heatmap, with
             colorbar to the right and details of parameter and instrument to
             the top left.
-    
-    
+
     Notes:
         Detailed description:
             ``wind_rose`` is creating a depiction of the average of a chosen
             parameter data using a radial heat-map to associate the desired
             parameter of interest with wind speed and direction. 
-    
             * Extracts the requested ``parameter`` from dataset Y.
             * Aligns the series in time using the selected timrebin
             * Removes rows where either series is NaN or infinite.
             * Create bins in the polar space according to the chosen resolution.
             * Plots polar heatmap showning the average concentration/strength
             of the chosen parameter in color along the compass directions.
-    
             Axis labels are automatically derived from ``X.instrument`` and
             ``Y.instrument``.
-    
-        Theory:
-            The regression models used are simple linear relationships:
-    
     """
     # ------------------------------------------------------------------
     # Construct dataframe and remove invalid observations
@@ -1127,7 +1119,7 @@ def wind_rose_inv(X,Y,
     
     # Always return a top-level Figure 
     alpha=1
-    if type(img)==str:
+    if isinstance(img,str):
         fig,ax = _axes_bound_image(img,img_scalar)
         alpha = 0.7
         dist_log=False
@@ -1291,7 +1283,7 @@ def wind_rose_inv(X,Y,
     if dist_log:
         ax.set_rscale("log")
         ax.set_rlim(dist_edges[0], dist_edges[-1])
-    elif distance==None:
+    elif distance is None:  
         ax.set_rlim(0, dist_edges[-1])
     else:
         ax.set_rlim(0, distance)
