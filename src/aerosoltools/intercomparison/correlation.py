@@ -1043,7 +1043,7 @@ def wind_rose_inv(X,Y,
     The functions combines the simultatious data of wind speed and wind direction
     from an environmental class and combines it with a data set to recreate the
     average parameter of a source a defined number of seconds ago.
-    This function also allows for combination with a picture, that is intended to 
+    This function also allows for combination with a picture, that is intended to
     be used to plot the heat-map inverse wind-rose ontop of an actual map.
 
     Args:
@@ -1103,7 +1103,7 @@ def wind_rose_inv(X,Y,
         Detailed description:
             ``wind_rose`` is creating a depiction of the average of a chosen
             parameter data using a radial heat-map to associate the desired
-            parameter of interest with wind speed and direction. 
+            parameter of interest with wind speed and direction.
             * Extracts the requested ``parameter`` from dataset Y.
             * Aligns the series in time using the selected timrebin
             * Removes rows where either series is NaN or infinite.
