@@ -482,7 +482,7 @@ class FitMixin:
                 log_scaling=True,
                 weighting = "uniform"
             )
-        except:
+        except Exception as e:
             raise ValueError("Chosen fitting parameters not suitbale. Try new ones.")
         
         def_fit=fit
@@ -526,7 +526,7 @@ class FitMixin:
                             log_scaling=True,
                         )
                         fit_test=1
-                    except:
+                    except Exception as e:
                         pass
                 else: #Use previous points with binding
                     try:
@@ -550,7 +550,7 @@ class FitMixin:
                                     log_scaling=True,
                                 )
                             fit_test=1 
-                    except:
+                    except Exception as e:
                         fit_test=0
                 #Test the quality of the fit 
                 if fit_test==1:
@@ -587,7 +587,7 @@ class FitMixin:
                             elif abs(error['factor'][i]/fit['factor'][i]*2)>error_lim:
                                 fit_test=0
                                 break 
-                    except:
+                    except Exception as e:
                         fit_test=0
                                                        
                 if fit_test==1:
