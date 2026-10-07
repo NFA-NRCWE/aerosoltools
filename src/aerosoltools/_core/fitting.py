@@ -399,9 +399,9 @@ class FitMixin:
         """
         A function to fit one or multiple peaks following lognormal distribution,
         throughout a complete dataset. The function is made with NS+OPS in mind, as
-        the NS data can suffer from empty bins based on the type of particles 
+        the NS data can suffer from empty bins based on the type of particles
         and abundance. For that reason the dtype is also converted to dS,
-        as that shifts the relevence of modes towards medium sized particles 
+        as that shifts the relevence of modes towards medium sized particles
         (100-1000 nm).The function first changes all values of 0 to np.nan. followed
         by running through each column and change a bin to np.nan if the following
         bin is np.nan. The reason for this is that when NS has empty bins,
@@ -422,7 +422,7 @@ class FitMixin:
         fitted | true values.
         Finally the total value will be recalculatde based on returning to the
         dtype to dN, and the old has been saved in extra_data as "Old_total".
-        
+
         Parameters
         ----------
         def_fit : dict, optional
@@ -446,16 +446,18 @@ class FitMixin:
             As the dtype is changed to dS, the factors are high compared to the
             usual levels for dN. The value is in nm2/cm3.
         error_lim: float, optional
-            Determines the maximum 
+            Determines the maximum value of error allowed for the fit parameters.
+            error_lim < error_par[i]/value_par[i] * weight_par.
+            With weight_par: 'mu'=2, 'sigma'=5, 'factor'=1.
         nan_lime: int, optional
             Percentage value around which the bound values can be fitted
         inplace (bool): If True, modify the current object and return
             it. If False, return a cropped deep copy.
-    
+
         Returns
         -------
         data
-            Aerodsol2D, with an updated dataset where values of zero has been 
+            Aerodsol2D, with an updated dataset where values of zero has been
             replaced by fitted values if sufficient fit has been found. A marker
             for the fitted values has been saved in extra_data as "PSD_fit" together
             with the old total concentration saved in extra_data as "Old_total"
@@ -480,7 +482,8 @@ class FitMixin:
                 log_scaling=True,
                 weighting = "uniform"
             )
-        except: raise ValueError("Chosen fitting parameters not suitbale. Try new ones.")
+        except:
+            raise ValueError("Chosen fitting parameters not suitbale. Try new ones.")
         
         def_fit=fit
         #Make a column called 'PSD fit' that will be used to designate fitted bins
@@ -523,7 +526,8 @@ class FitMixin:
                             log_scaling=True,
                         )
                         fit_test=1
-                    except: pass
+                    except:
+                        pass
                 else: #Use previous points with binding
                     try:
                         if len(fit['mu'])==len(def_fit['mu']):
@@ -546,7 +550,8 @@ class FitMixin:
                                     log_scaling=True,
                                 )
                             fit_test=1 
-                    except: fit_test=0
+                    except:
+                        fit_test=0
                 #Test the quality of the fit 
                 if fit_test==1:
                     for i in range(0,len(fit['mu'])):
@@ -582,7 +587,8 @@ class FitMixin:
                             elif abs(error['factor'][i]/fit['factor'][i]*2)>error_lim:
                                 fit_test=0
                                 break 
-                    except: fit_test=0
+                    except:
+                        fit_test=0
                                                        
                 if fit_test==1:
                     modes = list(zip(fit["mu"], fit["sigma"], fit["factor"]))
